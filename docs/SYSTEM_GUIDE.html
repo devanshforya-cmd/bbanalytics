@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Brand Bucket Command Center — Master System & Operations Reference Manual</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.55;
+      color: #1e293b;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .cover-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+      color: #ffffff;
+      padding: 32px 28px;
+      border-radius: 12px;
+      margin-bottom: 28px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+      page-break-after: avoid;
+    }
+
+    .cover-header h1 {
+      color: #ffffff !important;
+      font-size: 20pt !important;
+      margin: 0 0 10px 0 !important;
+      padding: 0 !important;
+      border-bottom: none !important;
+      letter-spacing: -0.5px;
+    }
+
+    .cover-header p {
+      margin: 4px 0;
+      font-size: 10pt;
+      color: #cbd5e1;
+    }
+
+    .badge-bar {
+      margin-top: 14px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(255, 255, 255, 0.15);
+      color: #f8fafc;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    h1, h2, h3, h4 {
+      color: #0f172a;
+      font-weight: 700;
+      page-break-after: avoid;
+    }
+
+    h1 {
+      font-size: 16pt;
+      margin-top: 28px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #e2e8f0;
+      color: #1e1b4b;
+    }
+
+    h2 {
+      font-size: 13pt;
+      margin-top: 24px;
+      margin-bottom: 10px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #2563eb;
+    }
+
+    h3 {
+      font-size: 11pt;
+      margin-top: 18px;
+      margin-bottom: 6px;
+      color: #334155;
+    }
+
+    h4 {
+      font-size: 10pt;
+      margin-top: 14px;
+      margin-bottom: 4px;
+      color: #475569;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: #334155;
+    }
+
+    blockquote {
+      margin: 12px 0;
+      padding: 10px 14px;
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      border-radius: 4px;
+      font-size: 9.5pt;
+      color: #475569;
+      page-break-inside: avoid;
+    }
+
+    blockquote strong {
+      color: #0f172a;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      margin: 14px 0;
+      page-break-inside: avoid;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9pt;
+      margin-bottom: 8px;
+    }
+
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 6px 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      font-weight: 700;
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    /* Lists */
+    ul, ol {
+      margin: 6px 0 12px 18px;
+      padding: 0;
+      color: #334155;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    /* Code & Pre */
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 8.5pt;
+      background: #f1f5f9;
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: #0369a1;
+      border: 1px solid #e2e8f0;
+    }
+
+    pre.code-block {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 8pt;
+      line-height: 1.45;
+      overflow-x: auto;
+      margin: 12px 0;
+      page-break-inside: avoid;
+    }
+
+    pre.code-block code {
+      background: transparent;
+      padding: 0;
+      color: inherit;
+      border: none;
+    }
+
+    /* Math */
+    .math {
+      background: #fdf4ff;
+      border: 1px solid #f0abfc;
+      color: #86198f;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-size: 8.5pt;
+    }
+
+    .math-display {
+      background: #fdf4ff;
+      border-left: 4px solid #c026d3;
+      padding: 8px 12px;
+      margin: 10px 0;
+      font-family: ui-monospace, monospace;
+      font-size: 9pt;
+      color: #701a75;
+      page-break-inside: avoid;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #e2e8f0;
+      margin: 20px 0;
+    }
+
+    a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+
+    .print-footer {
+      margin-top: 30px;
+      padding-top: 12px;
+      border-top: 1px solid #cbd5e1;
+      font-size: 8pt;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cover-header">
+    <h1>Brand Bucket Command Center</h1>
+    <p><strong>Master Architecture, Operational Engines & Specifications Manual</strong></p>
+    <p>Version 2.0.0 (Production Enterprise Edition) &bull; Primary Territory: Nepal</p>
+    <div class="badge-bar">
+      <span class="badge">Next.js 14 App Router</span>
+      <span class="badge">TypeScript</span>
+      <span class="badge">Bikram Sambat BS 2083</span>
+      <span class="badge">Supabase DB</span>
+      <span class="badge">Catalog-Driven Extractor</span>
+      <span class="badge">Smart Selling Assist</span>
+      <span class="badge">Karma Score 0-100</span>
+    </div>
+  </div>
+
+  <h1 id="Brand%20Bucket%20Command%20Center%20%E2%80%94%20Master%20System%20%26%20Operations%20Reference%20Manual">Brand Bucket Command Center — Master System & Operations Reference Manual</h1>
+<blockquote><strong>Comprehensive Technical Architecture & Operations Guide</strong></blockquote>
+<blockquote><em>Platform: Brand Bucket Command Center 2.0 (Production Enterprise Edition)</em></blockquote>
+<blockquote><em>Technology Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase / Modular DB Service, IndexedDB (PWA Offline Support)</em></blockquote>
+<blockquote><em>Primary Market: Nepal (Kathmandu Valley & Outstations)</em></blockquote>
+<blockquote><em>Calendar Systems: Dual Bikram Sambat (BS 2083) & Gregorian (AD)</em></blockquote>
+<hr />
+<h2 id="Table%20of%20Contents">Table of Contents</h2>
+<ol>
+<li><a href="#1-executive-summary--system-architecture" target="_blank">Executive Summary & System Architecture</a></li>
+<li><a href="#2-dual-calendar-system-bikram-sambat--gregorian-ad" target="_blank">Dual Calendar System (Bikram Sambat & Gregorian AD)</a></li>
+<li><a href="#3-role-based-access-control--user-roles" target="_blank">Role-Based Access Control & User Roles</a></li>
+<li><a href="#4-dynamic-whatsapp-extractor-engine-fix-67--72" target="_blank">Dynamic WhatsApp Extractor Engine (Fix 67 & 72)</a></li>
+<li><a href="#5-daily-orders-live-cross-check-engine-fix-68" target="_blank">Daily Orders Live Cross-Check Engine (Fix 68)</a></li>
+<li><a href="#6-smart-selling-assist-engine-fix-46" target="_blank">Smart Selling Assist Engine (Fix 46)</a></li>
+<li><a href="#7-customer-karma--360-intelligence-fix-69" target="_blank">Customer Karma & 360 Intelligence (Fix 69)</a></li>
+<li><a href="#8-offline-field-sales--beat-operations-fix-44-45-48-49" target="_blank">Offline Field Sales & Beat Operations (Fix 44, 45, 48, 49)</a></li>
+<li><a href="#9-store-health-score-engine-fix-34" target="_blank">Store Health Score Engine (Fix 34)</a></li>
+<li><a href="#10-marketing--influencer-seeding-pipeline-fix-60--71" target="_blank">Marketing & Influencer Seeding Pipeline (Fix 60 & 71)</a></li>
+<li><a href="#11-product-combo--pricing-catalog-management-fix-70b--72" target="_blank">Product, Combo & Pricing Catalog Management (Fix 70b & 72)</a></li>
+<li><a href="#12-order-delivery-failures-vs-true-returns-fix-22--23" target="_blank">Order Delivery Failures vs. True Returns (Fix 22 & 23)</a></li>
+<li><a href="#13-operations-core-tasks-calendar--audit-activity-fix-37-38-66" target="_blank">Operations Core: Tasks, Calendar & Audit Activity (Fix 37, 38, 66)</a></li>
+<li><a href="#14-automated-cron-services--holiday-calendar-fix-32--33" target="_blank">Automated Cron Services & Holiday Calendar (Fix 32 & 33)</a></li>
+<li><a href="#15-excel-data-import--master-google-sheets-export-fix-39-42-43" target="_blank">Excel Data Import & Master Google Sheets Export (Fix 39, 42, 43)</a></li>
+<li><a href="#16-production-database-schema--performance-indexing-fix-59" target="_blank">Production Database Schema & Performance Indexing (Fix 59)</a></li>
+<li><a href="#17-complete-route-map--file-directory-index" target="_blank">Complete Route Map & File Directory Index</a></li>
+</ol>
+<hr />
+<h2 id="1.%20Executive%20Summary%20%26%20System%20Architecture">1. Executive Summary & System Architecture</h2>
+<p>The <strong>Brand Bucket Command Center</strong> is a multi-brand distribution and omnichannel management platform engineered specifically for consumer FMCG and cosmetics brands operating in Nepal (including <strong>Forya</strong>, <strong>Pee Safe & FURR</strong>, and <strong>Renée Cosmetics</strong>). </p>
+<p>The platform unifies two traditionally disconnected operational worlds into a single real-time dashboard:</p>
+<ol>
+<li><strong>D2C & Social Commerce</strong>: High-volume retail orders originating from WhatsApp, Instagram DMs, Facebook Messenger, TikTok, and Web.</li>
+<li><strong>Offline Retail & General Trade (GT / MT)</strong>: Field sales representatives visiting retail pharmacies, modern supermarkets (Bhatbhateni, Saleways), and regional distributor stockists across Kathmandu Valley and outstation provinces.</li>
+</ol>
+<h3 id="High-Level%20System%20Architecture">High-Level System Architecture</h3>
+<pre class="code-block language-"><code>                               ┌────────────────────────────────────────────────────────┐
+                               │                    Ingestion Layer                     │
+                               │   WhatsApp Chats · Instagram/TikTok · Field Booking    │
+                               └──────────────────────────┬─────────────────────────────┘
+                                                          │
+                                                          ▼
+                               ┌────────────────────────────────────────────────────────┐
+                               │              Unified Database Service                  │
+                               │         (db-service.ts / Supabase Client)              │
+                               └──────┬───────────────────┬───────────────────┬─────────┘
+                                      │                   │                   │
+               ┌──────────────────────┴───────┐   ┌───────┴──────┐   ┌────────┴────────────────────┐
+               ▼                              ▼   ▼              ▼   ▼                             ▼
+    ┌────────────────────┐          ┌────────────────┐ ┌────────────────┐         ┌─────────────────────────┐
+    │ Dynamic Extractor  │          │ Customer Karma │ │ Smart Selling  │         │    Live Pub/Sub Engine  │
+    │  Catalog-Driven    │          │  Engine (0-100)│ │ (Haversine 3km)│         │ (OrderRealtimeEvents)   │
+    └──────────┬─────────┘          └────────┬───────┘ └────────┬───────┘         └────────────┬────────────┘
+               │                             │                  │                              │
+               ▼                             ▼                  ▼                              ▼
+    ┌────────────────────┐          ┌────────────────┐ ┌────────────────┐         ┌─────────────────────────┐
+    │ Batch Order Review │          │ Customer 360 &amp; │ │ Store Intel &amp;  │         │ Daily Orders Live Table │
+    │   &amp; Validation     │          │ Brand Timeline │ │ 1-Tap Booking  │         │ (Real-Time Flash UI)    │
+    └────────────────────┘          └────────────────┘ └────────────────┘         └─────────────────────────┘</code></pre>
+<hr />
+<h2 id="2.%20Dual%20Calendar%20System%20(Bikram%20Sambat%20%26%20Gregorian%20AD)">2. Dual Calendar System (Bikram Sambat & Gregorian AD)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/lib/nepali-calendar.ts" target="_blank"><code>src/lib/nepali-calendar.ts</code></a></li>
+</ul>
+<p>In Nepal, government compliance, tax filing, distributor settlements, and consumer holiday shopping follow the <strong>Bikram Sambat (BS)</strong> solar calendar (approx. 56.7 years ahead of Gregorian AD). The platform provides bidirectional conversions without external dependencies:</p>
+<h3 id="Mathematical%20Conversion%20Model">Mathematical Conversion Model</h3>
+<ul>
+<li><strong>Reference Anchor Point</strong>: <code>2080-01-01 BS</code> <span class="math font-mono">\leftrightarrow</span> <code>2023-04-14 AD</code>.</li>
+<li><strong>Month Durations</strong>: Nepali months (Baisakh, Jestha, Ashadh, Shrawan, Bhadra, Ashwin, Kartik, Mangsir, Poush, Magh, Falgun, Chaitra) have dynamic lengths ranging from 29 to 32 days depending on the astronomical solar transit.</li>
+<li><strong>Conversion Methods</strong>:</li>
+<li><code>adToBs(dateAd: Date | string)</code>: Computes cumulative days elapsed from the anchor epoch and maps to the corresponding Nepali year, month, and day.</li>
+<li><code>bsToAd(bsYear, bsMonth, bsDay)</code>: Resolves exact Gregorian date.</li>
+<li><code>getTodayBs()</code>: Emits human-readable formatted string (e.g. <code>Bhadra 26, 2083</code>).</li>
+<li><strong>Data Persistence</strong>: Every entity in the system (Orders, Cheques, Store Audits, Dispatches) stores dual timestamp properties: <code>orderDateAd</code> and <code>orderDateBs</code>.</li>
+</ul>
+<hr />
+<h2 id="3.%20Role-Based%20Access%20Control%20%26%20User%20Roles">3. Role-Based Access Control & User Roles</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/lib/auth.ts" target="_blank"><code>src/lib/auth.ts</code></a>, <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/components/common/PageGuard.tsx" target="_blank"><code>src/components/common/PageGuard.tsx</code></a></li>
+</ul>
+<p>The application enforces role-based access at both the page route level (via <code><PageGuard></code>) and the data filtering layer:</p>
+<div class="table-container"><table>
+<thead><tr>
+<th>User Role</th>
+<th>Default Landing Page</th>
+<th>Scope of Permissions & Visibility</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><strong><code>SUPER_ADMIN</code></strong></td>
+<td><code>/dashboard</code></td>
+<td>Complete unconstrained read/write access to all brands, staff accounts, system settings, database migrations, and financial configurations.</td>
+</tr>
+<tr>
+<td><strong><code>ADMIN</code></strong></td>
+<td><code>/dashboard</code></td>
+<td>Full operational management across orders, field teams, inventory dispatches, and review logs. Cannot delete brands or super admin users.</td>
+</tr>
+<tr>
+<td><strong><code>BRAND_MANAGER</code></strong></td>
+<td><code>/dashboard</code> (Brand-Filtered)</td>
+<td>Restricted strictly to their assigned brand portfolio (e.g. Forya only, or Pee Safe & FURR only). Sees filtered orders, customers, and revenue.</td>
+</tr>
+<tr>
+<td><strong><code>SALES_OFFICER</code></strong></td>
+<td><code>/offline-sales/beat-plan</code></td>
+<td>Optimized for mobile view. Sees only their assigned beat stores, own call logs, own collected cheques, own shelf photos, and personal compliance scorecard.</td>
+</tr>
+<tr>
+<td><strong><code>DATA_ENTRY</code></strong></td>
+<td><code>/orderflow/extractor</code></td>
+<td>Dedicated access to order intake, WhatsApp extractor, manual entry, delivery failure resolution, and returns processing.</td>
+</tr>
+<tr>
+<td><strong><code>VIEWER</code></strong></td>
+<td><code>/dashboard</code> (Read-Only)</td>
+<td>Read-only executive reporting access. All creation, editing, and status update actions are disabled.</td>
+</tr>
+</tbody></table></div>
+<hr />
+<h2 id="4.%20Dynamic%20WhatsApp%20Extractor%20Engine%20(Fix%2067%20%26%2072)">4. Dynamic WhatsApp Extractor Engine (Fix 67 & 72)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/lib/whatsapp-extractor.ts" target="_blank"><code>src/lib/whatsapp-extractor.ts</code></a>, <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/orderflow/extractor/page.tsx" target="_blank"><code>src/app/orderflow/extractor/page.tsx</code></a></li>
+</ul>
+<h3 id="Core%20Operating%20Principle">Core Operating Principle</h3>
+<p>The extractor never hardcodes product names, combos, prices, or keywords in source code. On every extraction execution, it pulls live catalog definitions from <code>db.getProducts()</code> and <code>db.getCombos()</code>.</p>
+<h3 id="Key%20Capabilities%3A">Key Capabilities:</h3>
+<ol>
+<li><strong>Multi-Message Batch Ingestion</strong>:</li>
+</ol>
+<ul>
+<li>Supports pasting individual orders or batches separated by <code>---</code> dividers or WhatsApp timestamp export headers:</li>
+</ul>
+<p>     <code>[12/09/26, 10:15:30 AM] Customer Name: ...</code></p>
+<ol>
+<li><strong>Customer & Delivery Info Extraction</strong>:</li>
+</ol>
+<ul>
+<li>Matches Nepali mobile numbers (<code>+977</code>, <code>98XXXXXXXX</code>, <code>97XXXXXXXX</code>).</li>
+<li>Identifies address, landmarks, and delivery instructions.</li>
+<li>Maps locations against standard Nepal provinces and districts.</li>
+</ul>
+<ol>
+<li><strong>Keyword Tag Matching & Nicknames</strong>:</li>
+</ol>
+<ul>
+<li>Matches raw text against each product's <code>extractorKeywords</code> array.</li>
+<li>Recognizes abbreviations and transliterated terms (e.g., <code>rollon</code>, <code>peach roll on</code>, <code>serum</code>, <code>acne patch</code>, <code>ph lipstick</code>).</li>
+</ul>
+<ol>
+<li><strong>Mixed Orders & Price-Based Combo Collapse</strong>:</li>
+</ol>
+<ul>
+<li>Seamlessly extracts orders containing both combo bundles and standalone SKUs.</li>
+<li><strong>Price Collapse Rule</strong>: When a combo has <code>priceDetectionEnabled: true</code> and the customer message states a total price matching that combo (e.g. <code>Rs. 999</code>), the engine automatically collapses ambiguous item text into that combo.</li>
+</ul>
+<ol>
+<li><strong>Price Discrepancy Validation</strong>:</li>
+</ol>
+<ul>
+<li><strong>Delta <span class="math font-mono">< 5\%</span></strong>: Accepted automatically.</li>
+<li><strong>Delta <span class="math font-mono">5\% \text{–} 15\%</span></strong>: Displays amber warning pill (<code>⚠️ Stated Rs. 1,000 vs calc Rs. 1,100 (9.1% diff)</code>).</li>
+<li><strong>Delta <span class="math font-mono">> 15\%</span></strong>: Flagged for mandatory review (<code>🚨 Large Price Discrepancy</code>).</li>
+<li><strong>Stated Price <span class="math font-mono">></span> Calculated MRP</strong>: Flagged (<code>⚠️ Stated price exceeds catalog MRP</code>).</li>
+</ul>
+<ol>
+<li><strong>Live Catalog Sync Status Bar</strong>:</li>
+</ol>
+<ul>
+<li>Displays real-time status: <code>🟢 Catalog Synced • 14 SKUs, 6 Combos loaded • Last updated just now</code>.</li>
+</ul>
+<hr />
+<h2 id="5.%20Daily%20Orders%20Live%20Cross-Check%20Engine%20(Fix%2068)">5. Daily Orders Live Cross-Check Engine (Fix 68)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/orderflow/daily-orders/page.tsx" target="_blank"><code>src/app/orderflow/daily-orders/page.tsx</code></a></li>
+</ul>
+<p>A real-time monitoring and cross-checking dashboard designed for office order coordinators to verify incoming WhatsApp orders against warehouse dispatch slips.</p>
+<h3 id="Visual%20%26%20Event%20Feedback%20Architecture">Visual & Event Feedback Architecture</h3>
+<ul>
+<li><strong>Pub/Sub System</strong>: Subscribes to <code>OrderRealtimeEvent</code> from <code>db-service.ts</code>.</li>
+<li><strong>Live Indicator</strong>: Header displays <code>🟢 LIVE · 2 Viewers</code> with active listener indicators.</li>
+<li><strong>Green Slide-In Flash</strong>: Triggers whenever an order is entered via Extractor or Manual Entry with a toast notification.</li>
+<li><strong>Amber Flash & Audit Trail</strong>: Triggers when an order is updated, showing an audit trail tag (e.g., <code>Edited by Sita Sharma: Updated address</code>).</li>
+<li><strong>Fade-Out Animation</strong>: Triggers when an order is cancelled or deleted.</li>
+<li><strong>Stated vs. Calculated Price Cross-Check</strong>: Highlights price differences in dedicated comparison columns.</li>
+<li><strong>Segregated Marketing Sends</strong>: Marketing and influencer seeding orders display with a distinct purple left border and <code>MARKETING</code> pill.</li>
+<li><strong>Sticky Metrics Footer</strong>: Displays Total Orders, Commercial Revenue, Average Order Value (AOV), Delivery Failures, and Marketing Sends.</li>
+</ul>
+<hr />
+<h2 id="6.%20Smart%20Selling%20Assist%20Engine%20(Fix%2046)">6. Smart Selling Assist Engine (Fix 46)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/lib/db/db-service.ts#L2625" target="_blank"><code>src/lib/db/db-service.ts</code></a>, [<code>src/app/offline-sales/stores/[id]/page.tsx</code>](file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/offline-sales/stores/[id]/page.tsx#L661)</li>
+</ul>
+<p>Designed for field sales officers visiting retail pharmacies and grocery marts to maximize secondary order bookings using location-based intelligence.</p>
+<h3 id="The%204%20Analytical%20Layers">The 4 Analytical Layers</h3>
+<h4 id="A.%203km%20Neighborhood%20Bestsellers%20(%60getAreaBestsellers%60)">A. 3km Neighborhood Bestsellers (<code>getAreaBestsellers</code>)</h4>
+<p>Uses the spherical <strong>Haversine formula</strong> to measure distances to all surrounding retail outlets:</p>
+<div class="math-display">d = 2 R \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta \text{lat}}{2}\right) + \cos(\text{lat}_1)\cos(\text{lat}_2)\sin^2\left(\frac{\Delta \text{lon}}{2}\right)} \right)</div>
+<p>where <span class="math font-mono">R = 6,371\text{ km}</span>. It aggregates all secondary bookings within <span class="math font-mono">3\text{ km}</span> and ranks the Top 5 fastest-selling SKUs.</p>
+<h4 id="B.%20Distribution%20Whitespace%20Gaps%20(%60getDistributionGaps%60)">B. Distribution Whitespace Gaps (<code>getDistributionGaps</code>)</h4>
+<p>Cross-references the <span class="math font-mono">3\text{ km}</span> bestsellers against the current store's ordering history:</p>
+<div class="math-display">\text{Whitespace Gaps} = \{ \text{Neighborhood Bestsellers} \} \setminus \{ \text{SKUs Carried by Current Store} \}</div>
+<p>Flags high-velocity products that neighboring competitors sell successfully but this store does not carry.</p>
+<h4 id="C.%20Shelf%20Depletion%20%26%20Restock%20Forecasting%20(%60getRestockRecommendations%60)">C. Shelf Depletion & Restock Forecasting (<code>getRestockRecommendations</code>)</h4>
+<p>Evaluates shelf audits over the previous 7-day audit cycle:</p>
+<div class="math-display">\text{Daily Depletion Rate} = \frac{\text{Previous Audit Stock} - \text{Current Shelf Stock}}{7\text{ days}}</div>
+<div class="math-display">\text{Days Until Empty} = \frac{\text{Current Shelf Stock}}{\text{Daily Depletion Rate}}</div>
+<ul>
+<li><strong>Urgent Warning</strong>: Triggered if <span class="math font-mono">\text{Days Until Empty} \le 3\text{ days}</span>.</li>
+<li><strong>Suggested Order</strong>: Quantities calculated to cover a <strong>20-day buffer</strong>, rounded to box case sizes (6, 12, or 24 units).</li>
+</ul>
+<h4 id="D.%201-Tap%20Quick%20Booking">D. 1-Tap Quick Booking</h4>
+<p>The <code>[⚡ Book 1-Tap Replenishment Order]</code> button automatically composes a balanced secondary order containing the top neighborhood bestsellers and critical restock items directly into the dispatch queue.</p>
+<hr />
+<h2 id="7.%20Customer%20Karma%20%26%20360%20Intelligence%20(Fix%2069)">7. Customer Karma & 360 Intelligence (Fix 69)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/lib/karma-calculator.ts" target="_blank"><code>src/lib/karma-calculator.ts</code></a>, [<code>src/app/customers/[phone]/page.tsx</code>](file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/customers/[phone]/page.tsx)</li>
+</ul>
+<h3 id="Customer%20Karma%20Score%3A%200%20to%20100%20Scale">Customer Karma Score: 0 to 100 Scale</h3>
+<p>Starting baseline: <strong>70 points</strong> (or <strong>85 points</strong> upon placing first order).</p>
+<div class="math-display">\text{Updated Score} = \max\Big(0, \min\big(100, \text{Current Score} + \sum \Delta \text{Points}\big)\Big)</div>
+<h3 id="Karma%20Scoring%20Rules">Karma Scoring Rules</h3>
+<div class="table-container"><table>
+<thead><tr>
+<th>Event Trigger</th>
+<th>Points Delta</th>
+<th>Business Impact</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><strong>Order Placed</strong></td>
+<td><strong>+2</strong></td>
+<td>Customer initiates an order</td>
+</tr>
+<tr>
+<td><strong>Order Delivered</strong></td>
+<td><strong>+1</strong></td>
+<td>Package successfully accepted</td>
+</tr>
+<tr>
+<td><strong>Prepaid Payment</strong></td>
+<td><strong>+1</strong></td>
+<td>Zero COD risk payment</td>
+</tr>
+<tr>
+<td><strong>Review Submitted</strong></td>
+<td><strong>+3</strong></td>
+<td>Engaged customer feedback</td>
+</tr>
+<tr>
+<td><strong>Positive Rating Bonus</strong></td>
+<td><strong>+2</strong></td>
+<td>4 or 5 star rating</td>
+</tr>
+<tr>
+<td><strong>5 Clean Orders Milestone</strong></td>
+<td><strong>+10</strong></td>
+<td>5 consecutive delivered orders with 0 returns/failures</td>
+</tr>
+<tr>
+<td><strong>Complaint Filed</strong></td>
+<td><strong>-2</strong></td>
+<td>Service or packaging dissatisfaction</td>
+</tr>
+<tr>
+<td><strong>Actual Return</strong></td>
+<td><strong>-3</strong></td>
+<td>Return of delivered goods</td>
+</tr>
+<tr>
+<td><strong>Delivery Failure</strong></td>
+<td><strong>-5</strong></td>
+<td>Phone unanswered, unreachable at door</td>
+</tr>
+<tr>
+<td><strong>Order Cancellation</strong></td>
+<td><strong>-5</strong></td>
+<td>Cancelled after packing/dispatch</td>
+</tr>
+<tr>
+<td><strong>COD Refusal at Doorstep</strong></td>
+<td><strong>-8</strong></td>
+<td>Rider arrives but customer refuses to accept/pay</td>
+</tr>
+</tbody></table></div>
+<h3 id="Automatic%20Tiers%20%26%20Risk%20Flags">Automatic Tiers & Risk Flags</h3>
+<ul>
+<li><strong><code>< 20</code></strong>: <code>BLACKLISTED</code> — Advance payment mandatory before dispatch; COD strictly disabled.</li>
+<li><strong><code>20 – 39</code></strong>: <code>AT_RISK</code> — High failure risk; requires telephone confirmation call before dispatch.</li>
+<li><strong><code>40 – 74</code></strong>: <code>REGULAR</code> — Standard operational handling.</li>
+<li><strong><code>≥ 75</code> (5+ orders)</strong>: <code>LOYAL</code> — Preferred customer status.</li>
+<li><strong><code>≥ 85</code> (10+ orders, 0 returns)</strong>: <code>VIP</code> — White-glove handling, free gift samples, priority dispatch.</li>
+<li><strong>Behavioral Flags</strong>:</li>
+<li><code>Returns ≥ 3</code> <span class="math font-mono">\rightarrow</span> <code>Serial Returner</code></li>
+<li><code>Delivery Failures ≥ 2</code> <span class="math font-mono">\rightarrow</span> <code>Non-Receiver</code></li>
+<li><code>Cancellations ≥ 3</code> <span class="math font-mono">\rightarrow</span> <code>Order Canceller</code></li>
+</ul>
+<hr />
+<h2 id="8.%20Offline%20Field%20Sales%20%26%20Beat%20Operations%20(Fix%2044%2C%2045%2C%2048%2C%2049)">8. Offline Field Sales & Beat Operations (Fix 44, 45, 48, 49)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/offline-sales/beat-plan/page.tsx" target="_blank"><code>src/app/offline-sales/beat-plan/page.tsx</code></a>, <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/lib/route-optimizer.ts" target="_blank"><code>src/lib/route-optimizer.ts</code></a></li>
+</ul>
+<h3 id="Sales%20Officer%20Daily%20Workflow">Sales Officer Daily Workflow</h3>
+<ol>
+<li><strong>Morning Shift Start</strong>: Sales officer toggles shift status (🟢 Online / ⚪ Offline). Pinned morning directives from management display at the top.</li>
+<li><strong>Smart Day Planner (Route Optimization)</strong>:</li>
+</ol>
+<ul>
+<li>Groups stores by priority: <strong>★★★ High Priority</strong> (must visit today), <strong>★★ Medium Priority</strong>, <strong>★ Routine</strong>.</li>
+<li>Solves the Traveling Salesperson Problem (TSP) using GPS coordinates to order visits by nearest-neighbor distance.</li>
+</ul>
+<ol>
+<li><strong>GPS Check-In</strong>:</li>
+</ol>
+<ul>
+<li>Validates that the officer is within <strong>100 meters</strong> of the store’s recorded latitude/longitude.</li>
+<li>If outside 100m, prompts for reason (e.g. "GPS drift", "Meeting manager at cafe") and logs an override flag for admin review.</li>
+</ul>
+<ol>
+<li><strong>In-Store Execution Hub</strong>:</li>
+</ol>
+<ul>
+<li><strong>Physical Stock Count</strong>: Audits shelf inventory against safety threshold levels.</li>
+<li><strong>Secondary Booking</strong>: Books new orders with Smart Selling Assist recommendations.</li>
+<li><strong>Before/After Shelf Photos</strong>: Captures planogram compliance and counter display placement.</li>
+<li><strong>Cheque Collection</strong>: Records cheque number, issuing bank, due date, amount, and photo of physical cheque.</li>
+</ul>
+<ol>
+<li><strong>GPS Check-Out</strong>: Records total visit duration and moves to the next route stop.</li>
+<li><strong>End-of-Day Scorecard</strong>:</li>
+</ol>
+<ul>
+<li>Calculates beat compliance percentage, total calls made, cheques collected, and secondary revenue.</li>
+<li>Automatically dispatches a daily summary push notification to admins.</li>
+</ul>
+<hr />
+<h2 id="9.%20Store%20Health%20Score%20Engine%20(Fix%2034)">9. Store Health Score Engine (Fix 34)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/lib/db/db-service.ts#L2540" target="_blank"><code>src/lib/db/db-service.ts</code></a></li>
+</ul>
+<p>Evaluates the commercial relationship and financial health of distributor branches and retail accounts on a <strong>0 to 100 scale</strong>:</p>
+<div class="math-display">\text{Store Health Score} = S_{\text{Regularity}} + S_{\text{Payment}} + S_{\text{Stock}} + S_{\text{Cooperation}} + S_{\text{Issues}}</div>
+<h3 id="The%205%20Weighted%20Factors">The 5 Weighted Factors</h3>
+<ol>
+<li><strong>Order Regularity (25 pts)</strong>: Frequency of reorders (Monthly = 25 pts, Bi-monthly = 15 pts, Irregular = 0 pts).</li>
+<li><strong>Payment Discipline (25 pts)</strong>: Percentage of cheques cashed on time (100% on time = 25 pts; deductions for bounced cheques).</li>
+<li><strong>Stock Maintenance (20 pts)</strong>: Consistency of shelf stock levels remaining above minimum threshold.</li>
+<li><strong>Visit Cooperation (15 pts)</strong>: Percentage of scheduled beat visits where the sales officer was permitted to conduct audits.</li>
+<li><strong>Issue Rate (15 pts)</strong>: Ratio of returns/complaints to total orders (<span class="math font-mono">0\text{–}2\% = 15\text{ pts}</span>, <span class="math font-mono">>10\% = 0\text{ pts}</span>).</li>
+</ol>
+<hr />
+<h2 id="10.%20Marketing%20%26%20Influencer%20Seeding%20Pipeline%20(Fix%2060%20%26%2071)">10. Marketing & Influencer Seeding Pipeline (Fix 60 & 71)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/orderflow/manual-entry/page.tsx" target="_blank"><code>src/app/orderflow/manual-entry/page.tsx</code></a>, <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/marketing/influencers/page.tsx" target="_blank"><code>src/app/marketing/influencers/page.tsx</code></a></li>
+</ul>
+<h3 id="Complete%20Commercial%20Segregation">Complete Commercial Segregation</h3>
+<ol>
+<li><strong>Zero Revenue Impact</strong>:</li>
+</ol>
+<ul>
+<li>All PR packages and influencer product seeding orders have <code>totalAmount: 0</code>.</li>
+<li>Excluded from commercial delivery failure rates, return rates, average order value, and gross revenue metrics.</li>
+</ul>
+<ol>
+<li><strong>Influencer Directory Search & Preview</strong>:</li>
+</ol>
+<ul>
+<li>Search by creator name, social handle, or niche category.</li>
+<li>Preview card displays star rating (<code>⭐⭐⭐ Great</code>), platform (<code>Instagram</code>), follower count, total sends count, and content deliverables received.</li>
+</ul>
+<ol>
+<li><strong>Delivery Defaulting</strong>:</li>
+</ol>
+<ul>
+<li>Checking "Marketing / Influencer Send" automatically defaults delivery method to <code>Pick-up</code> (or Direct Send).</li>
+</ul>
+<ol>
+<li><strong>Auto-Increment Counter</strong>:</li>
+</ol>
+<ul>
+<li>Order submission automatically calls <code>db.incrementInfluencerSends(influencerId)</code>.</li>
+</ul>
+<hr />
+<h2 id="11.%20Product%2C%20Combo%20%26%20Pricing%20Catalog%20Management%20(Fix%2070b%20%26%2072)">11. Product, Combo & Pricing Catalog Management (Fix 70b & 72)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/products/page.tsx" target="_blank"><code>src/app/products/page.tsx</code></a></li>
+</ul>
+<h3 id="Catalog%20Architecture">Catalog Architecture</h3>
+<ul>
+<li><strong>Odoo References</strong>: Completely eradicated project-wide.</li>
+<li><strong>Pricing Hygiene</strong>: Internal financial pricing fields (<code>wholesalePrice</code>, <code>dtpPrice</code>, <code>costPrice</code>) are eliminated from product creation forms. Only customer-facing catalog <code>mrp</code> and <code>unitPrice: mrp</code> are managed.</li>
+<li><strong>Extractor Keyword Tag Editor</strong>:</li>
+<li>Interactive keyword pills for every product and combo.</li>
+<li><strong><code>[🔄 Auto-Suggest]</code> Engine</strong>: Generates brand-less names, individual product tokens, and transliterated terms (e.g. <code>roll on</code>, <code>rollon</code>, <code>peach roll on</code>, <code>serum</code>, <code>nose strips</code>).</li>
+<li><strong>Promotional Combo Builder</strong>:</li>
+<li>Bundles 1 to 3 component SKUs with quantities.</li>
+<li>Dynamically calculates total individual MRP, bundle combo price, and consumer savings percentage.</li>
+<li><strong>Price-Based Collapse Toggle</strong>: Enables WhatsApp extractor to match the combo whenever total price is stated.</li>
+<li><strong>Audit Trail</strong>: Records date, modifier, and price change history.</li>
+</ul>
+<hr />
+<h2 id="12.%20Order%20Delivery%20Failures%20vs.%20True%20Returns%20(Fix%2022%20%26%2023)">12. Order Delivery Failures vs. True Returns (Fix 22 & 23)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/orderflow/delivery-failures/page.tsx" target="_blank"><code>src/app/orderflow/delivery-failures/page.tsx</code></a>, <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/reviews/returns/page.tsx" target="_blank"><code>src/app/reviews/returns/page.tsx</code></a></li>
+</ul>
+<p>The platform strictly separates <strong>logistical delivery attempts</strong> from <strong>product returns</strong>:</p>
+<h3 id="Delivery%20Failures%20(Logistics%20Non-Delivery)">Delivery Failures (Logistics Non-Delivery)</h3>
+<ul>
+<li><strong>Definition</strong>: The customer never received the package (e.g. "Call Not Received", "Customer Out of Valley", "Incomplete Address", "Customer Refused COD").</li>
+<li><strong>Workflow</strong>: Logged under <code>/orderflow/delivery-failures</code>. Supports scheduling re-attempts (Attempt 1, 2, or 3), rider reassignment, and phone follow-up logging. Deducts 5 karma points.</li>
+</ul>
+<h3 id="Actual%20Returns%20(Delivered%20Product%20Issues)">Actual Returns (Delivered Product Issues)</h3>
+<ul>
+<li><strong>Definition</strong>: The package was delivered, but the customer returned the product due to product/order quality issues.</li>
+<li><strong>Categories</strong>: Leaking Product, Damaged Packaging, Wrong Product Sent, Expired Product, Product Reaction/Allergy.</li>
+<li><strong>Workflow</strong>: Logged under <code>/reviews/returns</code>. Tracks return inspection status, customer replacement dispatch, or refund issuance.</li>
+</ul>
+<hr />
+<h2 id="13.%20Operations%20Core%3A%20Tasks%2C%20Calendar%20%26%20Audit%20Activity%20(Fix%2037%2C%2038%2C%2066)">13. Operations Core: Tasks, Calendar & Audit Activity (Fix 37, 38, 66)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/opscore/tasks/page.tsx" target="_blank"><code>src/app/opscore/tasks/page.tsx</code></a>, <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/opscore/calendar-tasks/page.tsx" target="_blank"><code>src/app/opscore/calendar-tasks/page.tsx</code></a>, <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/opscore/activity/page.tsx" target="_blank"><code>src/app/opscore/activity/page.tsx</code></a></li>
+</ul>
+<ol>
+<li><strong>Predefined Task Templates (Fix 37)</strong>:</li>
+</ol>
+<ul>
+<li>Allows 1-click creation of multi-step task workflows:</li>
+<li><strong>New Store Onboarding</strong> (5 steps: Introduce portfolio <span class="math font-mono">\rightarrow</span> Photograph shelf <span class="math font-mono">\rightarrow</span> First stock count <span class="math font-mono">\rightarrow</span> Collect first order <span class="math font-mono">\rightarrow</span> Upload agreement).</li>
+<li><strong>Cheque Recovery Sequence</strong> (3 steps: Call vendor <span class="math font-mono">\rightarrow</span> Visit store <span class="math font-mono">\rightarrow</span> Escalate to Admin).</li>
+<li><strong>Complaint Resolution</strong> (4 steps: Contact customer <span class="math font-mono">\rightarrow</span> Investigate batch <span class="math font-mono">\rightarrow</span> Provide replacement <span class="math font-mono">\rightarrow</span> 3-day follow-up).</li>
+<li><strong>Monthly Stock Audit</strong> (3 steps: Complete stock count <span class="math font-mono">\rightarrow</span> Photograph shelf <span class="math font-mono">\rightarrow</span> Discrepancy report).</li>
+</ul>
+<ol>
+<li><strong>Bikram Sambat Visual Calendar (Fix 66)</strong>:</li>
+</ol>
+<ul>
+<li>Day, Week, and Month matrix plotting tasks, scheduled store beats, and public holidays side-by-side.</li>
+</ul>
+<ol>
+<li><strong>Admin Field Push Summaries (Fix 38)</strong>:</li>
+</ol>
+<ul>
+<li>When a sales officer taps "End My Day", an automated summary push notification is dispatched to all Admins summarizing stores visited, compliance percentage, calls made, cheques collected, and field time.</li>
+</ul>
+<hr />
+<h2 id="14.%20Automated%20Cron%20Services%20%26%20Holiday%20Calendar%20(Fix%2032%20%26%2033)">14. Automated Cron Services & Holiday Calendar (Fix 32 & 33)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/api/cron/daily-alerts/route.ts" target="_blank"><code>src/app/api/cron/daily-alerts/route.ts</code></a>, <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/api/cron/weekly-report/route.ts" target="_blank"><code>src/app/api/cron/weekly-report/route.ts</code></a></li>
+</ul>
+<ol>
+<li><strong>Daily Morning Alerts (8:00 AM NPT)</strong>:</li>
+</ol>
+<ul>
+<li>Evaluates system state for critical conditions:</li>
+<li>🔴 <strong>Red Alerts</strong>: Bounced cheques, customer karma dropped <span class="math font-mono">< 20</span>, urgent unassigned complaints, GPS check-in overrides.</li>
+<li>🟡 <strong>Amber Alerts</strong>: Cheques overdue by 1 day, stores unvisited for <span class="math font-mono">>10</span> days, delivery failure rate <span class="math font-mono">>15\%</span>, low distributor stock.</li>
+</ul>
+<ol>
+<li><strong>Friday Operations Email Report (8:00 PM NPT)</strong>:</li>
+</ol>
+<ul>
+<li>Computes 7-day rolling performance: total orders by brand, delivery failure rates, actual returns breakdown, beat compliance per sales officer, and cash flow summary.</li>
+</ul>
+<ol>
+<li><strong>Holiday Calendar Engine (Fix 33a)</strong>:</li>
+</ol>
+<ul>
+<li>Pre-loaded with Nepali public holidays (Dashain, Tihar, Chhath, Teej, Holi, etc.).</li>
+<li>Adjusts field compliance expectations (e.g. a 5-day working week does not penalize officers for festival days).</li>
+</ul>
+<hr />
+<h2 id="15.%20Excel%20Data%20Import%20%26%20Master%20Google%20Sheets%20Export%20(Fix%2039%2C%2042%2C%2043)">15. Excel Data Import & Master Google Sheets Export (Fix 39, 42, 43)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/settings/components/DataImport.tsx" target="_blank"><code>src/app/settings/components/DataImport.tsx</code></a>, <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/src/app/opscore/export/page.tsx" target="_blank"><code>src/app/opscore/export/page.tsx</code></a></li>
+</ul>
+<h3 id="Data%20Import%20Engine%20(Fix%2039)">Data Import Engine (Fix 39)</h3>
+<p>Seamlessly ingests legacy Excel spreadsheets across 4 standardized formats:</p>
+<ol>
+<li><strong>Orders Import</strong>: Reads monthly tabs from <code>FORYA_MasterOrderEntry</code> format.</li>
+<li><strong>Returns Import</strong>: Reads per-brand tabs from <code>BB_RETURN_SHEET</code> format and separates true returns from delivery failures.</li>
+<li><strong>Offline Sales Import</strong>: Reads stores, branches, stock counts, and dispatches from <code>PEESAFE_OFFLINE_SALES</code> format.</li>
+<li><strong>Daily Order Counts</strong>: Ingests historical channel tallies from <code>Forya_SOCIAL_ORDER_COUNT</code>.</li>
+</ol>
+<h3 id="Google%20Sheets%20Aligned%20Export%20(Fix%2042%20%26%2043)">Google Sheets Aligned Export (Fix 42 & 43)</h3>
+<p>Exports data in the exact column layouts expected by corporate management:</p>
+<ul>
+<li><strong>Orders Export</strong>: <code>S.N. | Order ID | Order Type | Order Date (BS) | Order Date (AD) | Platform | Customer Name | Phone Number | Province | District | Brand | Product Category | Product Name | Qty | Delivery Status | Remarks</code></li>
+<li><strong>Daily Social Order Counts Table</strong>: Auto-computes daily date rows with columns for Website, Instagram, Facebook, WhatsApp, TikTok, Total, and individual product volumes.</li>
+</ul>
+<hr />
+<h2 id="16.%20Production%20Database%20Schema%20%26%20Performance%20Indexing%20(Fix%2059)">16. Production Database Schema & Performance Indexing (Fix 59)</h2>
+<ul>
+<li><strong>Source Code</strong>: <a href="file:///Users/devanshagarwal/Documents/TEST/forya-admin/supabase/schema.sql" target="_blank"><code>supabase/schema.sql</code></a></li>
+</ul>
+<p>The production Postgres database is configured with <strong>16 specialized performance indexes</strong> to ensure sub-10ms query times at scale:</p>
+<ol>
+<li><code>idx_orders_brand_date</code> ON <code>orders(brand_id, order_date_ad DESC)</code></li>
+<li><code>idx_orders_customer_phone</code> ON <code>orders(customer_phone)</code></li>
+<li><code>idx_orders_delivery_status</code> ON <code>orders(delivery_status)</code></li>
+<li><code>idx_orders_platform</code> ON <code>orders(platform)</code></li>
+<li><code>idx_delivery_failures_date</code> ON <code>delivery_failures(date_ad DESC)</code></li>
+<li><code>idx_delivery_failures_reason</code> ON <code>delivery_failures(reason)</code></li>
+<li><code>idx_returns_brand_date</code> ON <code>returns(brand_id, date_ad DESC)</code></li>
+<li><code>idx_feedback_brand_sentiment</code> ON <code>feedback_entries(brand_id, sentiment)</code></li>
+<li><code>idx_cheques_status_cash_date</code> ON <code>cheques(status, cash_date_ad)</code></li>
+<li><code>idx_cheques_store</code> ON <code>cheques(store_id)</code></li>
+<li><code>idx_beat_officer_date</code> ON <code>beat_plans(officer_id, date_ad)</code></li>
+<li><code>idx_beat_status</code> ON <code>beat_plans(status)</code></li>
+<li><code>idx_stock_counts_entity_date</code> ON <code>stock_counts(entity_id, date_ad DESC)</code></li>
+<li><code>idx_customers_phone</code> ON <code>customers(phone)</code></li>
+<li><code>idx_customers_karma</code> ON <code>customers(karma_score)</code></li>
+<li><code>idx_activity_trail_entity</code> ON <code>activity_logs(entity_type, entity_id)</code></li>
+</ol>
+<hr />
+<h2 id="17.%20Complete%20Route%20Map%20%26%20File%20Directory%20Index">17. Complete Route Map & File Directory Index</h2>
+<pre class="code-block language-"><code>src/
+├── app/
+│   ├── layout.tsx                                 # Global Root Layout (Fonts, Metadata, PWA meta)
+│   ├── page.tsx                                   # Root Redirect (Role-based auth redirect)
+│   ├── login/page.tsx                             # Authentication Screen (Phone/Password)
+│   ├── dashboard/page.tsx                         # Executive Command Dashboard (Morning Brief, KPIs)
+│   ├── orderflow/
+│   │   ├── extractor/page.tsx                     # Dynamic WhatsApp Extractor (Catalog-Driven)
+│   │   ├── daily-orders/page.tsx                  # Daily Orders Live Cross-Check (Pub/Sub Flash)
+│   │   ├── manual-entry/page.tsx                  # Manual Order Entry (Drafts, Influencers)
+│   │   └── delivery-failures/page.tsx             # Delivery Failures Logging &amp; Re-Attempts
+│   ├── offline-sales/
+│   │   ├── beat-plan/page.tsx                     # Sales Officer "My Day" Beat Hub
+│   │   ├── stores/page.tsx                        # Store Directory &amp; Health Badges
+│   │   ├── stores/[id]/page.tsx                   # Store 360 Intel &amp; Smart Selling Assist
+│   │   ├── calls/page.tsx                         # Field &amp; Telephonic Call Logger
+│   │   ├── cheques/page.tsx                       # Cheque Tracking &amp; Custody Handover
+│   │   ├── dispatch/page.tsx                      # Warehouse Dispatches &amp; Packing Slips
+│   │   ├── documents/page.tsx                     # Field Document Vault (Invoices, Agreements)
+│   │   ├── shelf-photos/page.tsx                  # Merchandising Before/After Photos
+│   │   ├── live-tracking/page.tsx                 # Live GPS Field Officer Map
+│   │   └── scorecard/page.tsx                     # Officer Compliance &amp; Revenue Scorecard
+│   ├── customers/
+│   │   ├── page.tsx                               # Customer 360 Directory (Brand Filter Pills)
+│   │   ├── [phone]/page.tsx                       # Customer Profile (Brand Engagement &amp; Timeline)
+│   │   └── insights/page.tsx                      # Retention Analytics (Cohorts, Churn, Funnel)
+│   ├── products/
+│   │   ├── page.tsx                               # SKU &amp; Combo Master (Extractor Keywords)
+│   │   └── [id]/page.tsx                          # Product 360 Intel &amp; Seasonal Trend Sparklines
+│   ├── reviews/
+│   │   ├── feedback/page.tsx                      # Customer Reviews &amp; Photo Evidence
+│   │   ├── returns/page.tsx                       # Actual Returns Processing
+│   │   └── categories/page.tsx                    # Dynamic Checkbox Categories &amp; Tags
+│   ├── marketing/
+│   │   ├── influencers/page.tsx                   # Influencer Directory &amp; Ratings
+│   │   ├── influencers/[id]/page.tsx              # Influencer Portfolio &amp; Deliverables
+│   │   └── sends/page.tsx                         # PR Seeding Send Records
+│   ├── opscore/
+│   │   ├── tasks/page.tsx                         # Task Manager &amp; Templates
+│   │   ├── calendar-tasks/page.tsx                # Bikram Sambat Visual Calendar
+│   │   ├── activity/page.tsx                      # Audit Trail &amp; EOD Officer Logs
+│   │   └── export/page.tsx                        # Excel &amp; Google Sheets Aligned Export
+│   ├── settings/page.tsx                          # System Settings, Holidays &amp; Excel Import
+│   └── shared/[token]/page.tsx                    # Tokenized External Read-Only Reports
+└── lib/
+    ├── db/
+    │   ├── db-service.ts                          # Unified Data Layer &amp; Real-Time Pub/Sub
+    │   ├── mock-data.ts                           # Seeded Catalog, Beats, Stores &amp; Orders
+    │   ├── supabase-client.ts                     # Supabase Browser Client
+    │   └── supabase-server.ts                     # Supabase Server Client
+    ├── nepali-calendar.ts                         # Bikram Sambat (BS) ↔ Gregorian (AD) Engine
+    ├── karma-calculator.ts                        # Customer Karma Scoring &amp; Segmentation
+    ├── whatsapp-extractor.ts                      # Catalog-Driven Order Extractor Engine
+    ├── route-optimizer.ts                         # Traveling Salesperson Beat Optimizer
+    ├── auth.ts                                    # Authentication &amp; Session Handlers
+    ├── validation.ts                              # Nepali Phone &amp; Field Validators
+    └── types.ts                                   # Full TypeScript Contracts &amp; Interfaces</code></pre>
+<hr />
+<p><em>Manual compiled and verified for Brand Bucket Command Center 2.0.</em></p>
+
+
+  <div class="print-footer">
+    <span>Brand Bucket Command Center &bull; Confidential &amp; Proprietary</span>
+    <span>Generated for Devansh Agarwal &bull; September 2026</span>
+  </div>
+
+</body>
+</html>

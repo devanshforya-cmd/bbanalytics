@@ -1,0 +1,22 @@
+# Brand Bucket Command Center — Netlify Configuration
+# Next.js 14 App Router Deployment
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_PUBLIC_DATA_SOURCE = "mock"
+
+# Custom HTTP Headers for Security & PWA
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), geolocation=(self), microphone=()"
