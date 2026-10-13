@@ -8,8 +8,7 @@ export type UserRole =
   | 'DATA_ENTRY'
   | 'VIEWER';
 
-export type KnownBrandCode = 'ALL' | 'FORYA' | 'PEE_SAFE' | 'RENEE' | 'MAMAEARTH';
-export type BrandCode = KnownBrandCode | (string & {});
+export type BrandCode = string;
 
 export type DutyStatus = 'ONLINE' | 'IN_FIELD' | 'ON_BREAK' | 'OFFLINE' | 'ON_LEAVE';
 

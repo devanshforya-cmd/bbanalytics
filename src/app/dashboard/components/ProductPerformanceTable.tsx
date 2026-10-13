@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Product, Order, ReturnEntry, DeliveryFailure, FeedbackEntry, BrandCode } from '@/lib/types';
+import { Product, Order, ReturnEntry, DeliveryFailure, FeedbackEntry, BrandCode, Brand } from '@/lib/types';
+import { db } from '@/lib/db/db-service';
 import { Search, ArrowUpDown, ChevronDown, ChevronUp, Package, AlertTriangle } from 'lucide-react';
 import ProductDetailModal from './ProductDetailModal';
 
@@ -165,23 +166,26 @@ export default function ProductPerformanceTable({
         </div>
 
         {/* Brand Selector */}
-        <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-xs font-semibold self-start sm:self-auto">
-          {(['ALL', 'FORYA', 'PEE_SAFE', 'FURR', 'RENEE'] as const).map((b) => (
-            <button
-              key={b}
-              onClick={() => {
-                setBrandFilter(b);
-                setCurrentPage(1);
-              }}
-              className={`px-2.5 py-1 rounded transition-colors ${
-                brandFilter === b
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              {b === 'ALL' ? 'All Brands' : b.replace('_', ' ')}
-            </button>
-          ))}
+        <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-xs font-semibold self-start sm:self-auto overflow-x-auto max-w-full">
+          {['ALL', ...db.getBrands().map((b: Brand) => b.code)].map((b) => {
+            const brandObj = db.getBrands().find((item: Brand) => item.code === b);
+            return (
+              <button
+                key={b}
+                onClick={() => {
+                  setBrandFilter(b);
+                  setCurrentPage(1);
+                }}
+                className={`px-2.5 py-1 rounded transition-colors whitespace-nowrap ${
+                  brandFilter === b
+                    ? 'bg-white text-slate-900 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {b === 'ALL' ? 'All Brands' : brandObj?.name || b}
+              </button>
+            );
+          })}
         </div>
       </div>
 

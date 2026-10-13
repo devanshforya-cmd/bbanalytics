@@ -57,9 +57,8 @@ export default function LoginPage() {
             BB
           </div>
           <div>
-            <h1 className="font-bold text-base leading-tight tracking-wide text-slate-900 flex items-center gap-2">
-              <span>Brand Bucket Command Center</span>
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+            <h1 className="font-bold text-base leading-tight tracking-wide text-slate-900">
+              Brand Bucket Command Center
             </h1>
             <p className="text-[11px] text-slate-500 font-medium">Enterprise Field Operations &bull; Secondary Sales Telemetry</p>
           </div>
@@ -152,13 +151,8 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Brand Badges Footer */}
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500">
-          <span>Brands:</span>
-          <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-medium border border-emerald-200">Forya</span>
-          <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-medium border border-purple-200">Pee Safe</span>
-          <span className="px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 font-medium border border-violet-200">FURR</span>
-          <span className="px-2 py-0.5 rounded-md bg-pink-50 text-pink-700 font-medium border border-pink-200">Renee</span>
+        <div className="mt-6 text-center text-xs text-slate-500 font-medium">
+          Operational Intelligence Platform
         </div>
       </div>
 

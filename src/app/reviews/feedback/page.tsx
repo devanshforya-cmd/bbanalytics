@@ -72,7 +72,7 @@ function FeedbackContent() {
   const [entryType, setEntryType] = useState<FeedbackType>('REVIEW');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [brandCode, setBrandCode] = useState<BrandCode>('FORYA');
+  const [brandCode, setBrandCode] = useState<BrandCode>(() => db.getBrands('ACTIVE')[0]?.code || 'ALL');
   const products = db.getProducts();
   const [productId, setProductId] = useState(products[0]?.id || '');
   const [channel, setChannel] = useState('Instagram DM');

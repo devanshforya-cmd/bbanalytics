@@ -21,6 +21,7 @@ import * as usersService from './users-service';
 import * as activityService from './activity-service';
 import * as notificationsService from './notifications-service';
 import * as analyticsService from './analytics-service';
+import * as brandsService from './brands-service';
 
 /**
  * Unified `db` instance supporting all methods.
@@ -47,6 +48,7 @@ export {
   activityService,
   notificationsService,
   analyticsService,
+  brandsService,
 };
 
 export default db;

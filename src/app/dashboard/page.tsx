@@ -199,6 +199,29 @@ export default function DashboardPage() {
         {/* Fix 31: Daily Morning Brief Card */}
         <MorningBriefCard />
 
+        {/* Fix 1d: Prompt when brands table is empty */}
+        {db.getBrands('ACTIVE').length === 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Add your first brand in Settings to get started</h3>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Configure your brand portfolio in Settings. Once added, brands appear dynamically across all dropdowns, header tabs, and product forms.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/settings"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs whitespace-nowrap"
+            >
+              <span>+ Add Brands in Settings</span>
+            </Link>
+          </div>
+        )}
+
         {/* Top Welcome & Brand Filter Indicator */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>

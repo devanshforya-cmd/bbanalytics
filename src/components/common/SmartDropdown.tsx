@@ -25,13 +25,23 @@ interface SmartDropdownProps {
   className?: string;
 }
 
-const BRAND_COLORS: Record<string, { bg: string; text: string }> = {
-  FORYA: { bg: 'bg-emerald-100', text: 'text-emerald-800' },
-  PEE_SAFE: { bg: 'bg-cyan-100', text: 'text-cyan-800' },
-  RENEE: { bg: 'bg-purple-100', text: 'text-purple-800' },
-  FURR: { bg: 'bg-amber-100', text: 'text-amber-800' },
-  MAMAEARTH: { bg: 'bg-green-100', text: 'text-green-800' },
-};
+const BRAND_COLOR_CLASSES = [
+  { bg: 'bg-emerald-100', text: 'text-emerald-800' },
+  { bg: 'bg-cyan-100', text: 'text-cyan-800' },
+  { bg: 'bg-purple-100', text: 'text-purple-800' },
+  { bg: 'bg-amber-100', text: 'text-amber-800' },
+  { bg: 'bg-blue-100', text: 'text-blue-800' },
+  { bg: 'bg-rose-100', text: 'text-rose-800' },
+  { bg: 'bg-indigo-100', text: 'text-indigo-800' },
+];
+
+function getBrandStyle(brand: string) {
+  let hash = 0;
+  for (let i = 0; i < brand.length; i++) {
+    hash = (hash << 5) - hash + brand.charCodeAt(i);
+  }
+  return BRAND_COLOR_CLASSES[Math.abs(hash) % BRAND_COLOR_CLASSES.length];
+}
 
 export default function SmartDropdown({
   items,
@@ -118,8 +128,8 @@ export default function SmartDropdown({
               {selectedItem.group && (
                 <span
                   className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                    BRAND_COLORS[selectedItem.group]?.bg || 'bg-slate-100'
-                  } ${BRAND_COLORS[selectedItem.group]?.text || 'text-slate-700'}`}
+                    getBrandStyle(selectedItem.group).bg
+                  } ${getBrandStyle(selectedItem.group).text}`}
                 >
                   {selectedItem.group}
                 </span>
@@ -163,8 +173,8 @@ export default function SmartDropdown({
                 <div key={group}>
                   <div
                     className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                      BRAND_COLORS[group]?.bg || 'bg-slate-100'
-                    } ${BRAND_COLORS[group]?.text || 'text-slate-700'}`}
+                      getBrandStyle(group).bg
+                    } ${getBrandStyle(group).text}`}
                   >
                     {group}
                   </div>

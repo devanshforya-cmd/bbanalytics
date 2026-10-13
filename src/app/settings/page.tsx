@@ -45,7 +45,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'STAFF' as SettingsTab, label: 'Staff & Roles', icon: Users },
     { id: 'FIELD_SALES' as SettingsTab, label: 'Field Sales & Beats', icon: Compass },
-    { id: 'BRANDS' as SettingsTab, label: 'Brand Portfolio', icon: Tag },
+    { id: 'BRANDS' as SettingsTab, label: 'Brand Management', icon: Tag },
     { id: 'CHANNELS' as SettingsTab, label: 'Channels & Logistics', icon: Share2 },
     { id: 'RULES' as SettingsTab, label: 'Alert Rules', icon: Bell },
     { id: 'HOLIDAYS' as SettingsTab, label: 'Holiday Calendar', icon: Calendar },

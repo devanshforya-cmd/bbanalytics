@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Search } from 'lucide-react';
-import { Order, ReturnEntry, BrandCode } from '@/lib/types';
+import { Order, ReturnEntry, BrandCode, Brand } from '@/lib/types';
+import { db } from '@/lib/db/db-service';
 import DrillDownShell from './DrillDownShell';
 import EmptyState from '../EmptyState';
 import { statusColor as getStatusColor, brandColor as getBrandColor } from '@/lib/ui-utils';
@@ -319,12 +320,8 @@ function OrdersByProductTab({ orders }: { orders: Order[] }) {
         <div className="space-y-2.5">
           {list.map((p) => {
             const barWidth = Math.round((p.units / maxUnits) * 100);
-            const brandBg =
-              p.brand === 'FORYA'
-                ? 'bg-emerald-500'
-                : p.brand === 'PEE_SAFE' || p.brand === 'FURR'
-                ? 'bg-purple-500'
-                : 'bg-pink-500';
+            const brandObj = db.getBrands().find((b: Brand) => b.code.toUpperCase() === p.brand?.toUpperCase());
+            const brandColor = brandObj?.color || '#3b82f6';
 
             return (
               <div key={p.name} className="space-y-1">
@@ -334,8 +331,8 @@ function OrdersByProductTab({ orders }: { orders: Order[] }) {
                 </div>
                 <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className={`h-full ${brandBg} rounded-full transition-all duration-300`}
-                    style={{ width: `${barWidth}%` }}
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${barWidth}%`, backgroundColor: brandColor }}
                   />
                 </div>
               </div>

@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { supabase } from '@/lib/db/supabase-client';
+
 interface BrandDropdownProps {
   currentBrand: BrandCode;
   onBrandChange: (brand: BrandCode) => void;
@@ -34,7 +36,33 @@ export default function BrandDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setBrands(db.getBrands());
+    async function load() {
+      try {
+        const { data } = await supabase
+          .from('brands')
+          .select('*')
+          .eq('is_active', true)
+          .order('name');
+        if (data && data.length > 0) {
+          setBrands(
+            data.map((b) => ({
+              id: b.id,
+              code: b.code,
+              name: b.name,
+              color: b.color || '#3b82f6',
+              description: b.description || '',
+              isActive: b.is_active !== false,
+              status: b.is_active !== false ? 'ACTIVE' : 'ARCHIVED',
+            }))
+          );
+        } else {
+          setBrands(db.getBrands('ACTIVE'));
+        }
+      } catch {
+        setBrands(db.getBrands('ACTIVE'));
+      }
+    }
+    load();
     setCurrentUser(db.getCurrentUser());
   }, []);
 
@@ -96,6 +124,18 @@ export default function BrandDropdown({
     currentUser?.role === 'ADMIN' ||
     currentUser?.role === 'SUPER_ADMIN' ||
     currentUser?.role === 'BRAND_MANAGER';
+
+  if (brands.length === 0) {
+    return (
+      <Link
+        href="/settings?tab=brands"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-blue-300 bg-blue-50/50 text-[11px] font-semibold text-blue-700 hover:bg-blue-100/60 transition"
+      >
+        <Plus className="w-3.5 h-3.5 text-blue-600" />
+        <span>+ Add Brands in Settings</span>
+      </Link>
+    );
+  }
 
   return (
     <div className={`relative inline-block text-left ${className}`} ref={dropdownRef}>

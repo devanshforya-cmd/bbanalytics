@@ -9,7 +9,7 @@ const DEFAULT_SUPER_ADMIN: User = {
   isSuperAdmin: true,
   dutyStatus: 'ONLINE',
   active: true,
-  assignedBrands: ['ALL', 'FORYA', 'PEESAFE', 'FURR', 'RENEE'],
+  assignedBrands: ['ALL'],
   territory: 'ALL',
   permissions: {
     canViewAnalytics: true,
@@ -23,12 +23,7 @@ const DEFAULT_SUPER_ADMIN: User = {
   customPermissions: SUPER_ADMIN_TEMPLATE,
 };
 
-const DEFAULT_BRANDS: Brand[] = [
-  { id: 'brand_forya', code: 'FORYA', name: 'Forya', color: '#10b981', description: 'Personal care & beauty products', isActive: true, status: 'ACTIVE' },
-  { id: 'brand_peesafe', code: 'PEESAFE', name: 'Pee Safe', color: '#8b5cf6', description: 'Hygiene & personal wellness', isActive: true, status: 'ACTIVE' },
-  { id: 'brand_furr', code: 'FURR', name: 'FURR', color: '#7c3aed', description: 'Grooming & skincare essentials', isActive: true, status: 'ACTIVE' },
-  { id: 'brand_renee', code: 'RENEE', name: 'Renee', color: '#ec4899', description: 'High-performance color cosmetics', isActive: true, status: 'ACTIVE' },
-];
+const DEFAULT_BRANDS: Brand[] = [];
 
 import {
   User,
@@ -3236,13 +3231,12 @@ export class DatabaseService {
 
     // Provide default fallback bestsellers if local order history is sparse
     if (Object.keys(countsByProduct).length === 0) {
-      return [
-        { productId: 'prod_forya_1', name: 'Forya Roll-On Peach (50ml)', unitsMoved: 142, storeCount: 8 },
-        { productId: 'prod_forya_3', name: 'Forya Hair Growth Serum (30ml)', unitsMoved: 89, storeCount: 6 },
-        { productId: 'prod_furr_1', name: 'FURR Hydrocolloid Acne Patches', unitsMoved: 67, storeCount: 7 },
-        { productId: 'prod_pees_1', name: 'Pee Safe Toilet Seat Spray (75ml)', unitsMoved: 54, storeCount: 5 },
-        { productId: 'prod_forya_4', name: 'Forya Exfoliating Body Wash (200ml)', unitsMoved: 41, storeCount: 4 },
-      ];
+      return this.products.slice(0, 5).map((p, idx) => ({
+        productId: p.id,
+        name: p.name,
+        unitsMoved: (5 - idx) * 20,
+        storeCount: Math.max(1, 5 - idx),
+      }));
     }
 
     return Object.entries(countsByProduct)
@@ -3275,26 +3269,15 @@ export class DatabaseService {
   public getRestockRecommendations(storeId: string) {
     const storeStocks = this.stockCounts.filter((s) => s.entityId === storeId);
     if (storeStocks.length === 0) {
-      return [
-        {
-          productId: 'prod_forya_1',
-          productName: 'Forya Roll-On Peach (50ml)',
-          currentStock: 8,
-          depletionRate: 1.5,
-          daysUntilEmpty: 5,
-          suggestedReorder: 30,
-          urgent: false,
-        },
-        {
-          productId: 'prod_forya_3',
-          productName: 'Forya Hair Growth Serum (30ml)',
-          currentStock: 2,
-          depletionRate: 0.8,
-          daysUntilEmpty: 2,
-          suggestedReorder: 15,
-          urgent: true,
-        },
-      ];
+      return this.products.slice(0, 2).map((p, idx) => ({
+        productId: p.id,
+        productName: p.name,
+        currentStock: idx === 0 ? 8 : 2,
+        depletionRate: idx === 0 ? 1.5 : 0.8,
+        daysUntilEmpty: idx === 0 ? 5 : 2,
+        suggestedReorder: idx === 0 ? 30 : 15,
+        urgent: idx === 1,
+      }));
     }
 
     const latest = storeStocks[0];
@@ -3405,6 +3388,11 @@ export class DatabaseService {
       user: activeUser,
       yesterdaySummary: {
         totalOrders: filteredOrders.length,
+        brandBreakdown: this.getBrands('ACTIVE').map((b) => ({
+          name: b.name,
+          code: b.code,
+          count: filteredOrders.filter((o) => o.brandCode === b.code).length,
+        })),
         foryaOrders: filteredOrders.filter((o) => o.brandCode === 'FORYA').length,
         peeSafeOrders: filteredOrders.filter((o) => o.brandCode === 'PEE_SAFE').length,
         reneeOrders: filteredOrders.filter((o) => o.brandCode === 'RENEE').length,

@@ -155,11 +155,21 @@ function DeliveryFailuresReasonTab({ failures }: { failures: DeliveryFailure[] }
     reasonCounts[f.reason] = (reasonCounts[f.reason] || 0) + 1;
   });
 
-  const reasons = Object.entries(reasonCounts).map(([reason, count]) => ({
-    reason,
-    count,
-    pct: ((count / Math.max(1, failures.length)) * 100).toFixed(1),
-  }));
+  const reasons = Object.entries(reasonCounts).map(([reason, count]) => {
+    const brandCounts: Record<string, number> = {};
+    failures
+      .filter((f) => f.reason === reason)
+      .forEach((f) => {
+        brandCounts[f.brandCode] = (brandCounts[f.brandCode] || 0) + 1;
+      });
+    const topBrand = Object.entries(brandCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Portfolio';
+    return {
+      reason,
+      count,
+      pct: ((count / Math.max(1, failures.length)) * 100).toFixed(1),
+      topBrand,
+    };
+  });
 
   if (failures.length === 0) {
     return <EmptyState type="failures" />;
@@ -207,7 +217,7 @@ function DeliveryFailuresReasonTab({ failures }: { failures: DeliveryFailure[] }
                 <td className="p-2.5 font-bold text-slate-900">{r.reason}</td>
                 <td className="p-2.5 text-right font-bold text-rose-600">{r.count}</td>
                 <td className="p-2.5 text-right font-semibold">{r.pct}%</td>
-                <td className="p-2.5 font-medium text-slate-600">Forya / Renee</td>
+                <td className="p-2.5 font-medium text-slate-600">{r.topBrand}</td>
               </tr>
             ))}
           </tbody>

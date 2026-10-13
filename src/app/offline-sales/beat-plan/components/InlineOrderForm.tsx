@@ -63,11 +63,7 @@ export default function InlineOrderForm({
   // Brand-level margins config
   const [brandMargins, setBrandMargins] = useState<
     Record<string, { pct: number; type: StoreMarginType }>
-  >({
-    FORYA: { pct: 25, type: 'MARKDOWN' },
-    PEE_SAFE: { pct: 25, type: 'MARKDOWN' },
-    RENEE: { pct: 20, type: 'MARKDOWN' },
-  });
+  >({});
 
   const [paymentTerms, setPaymentTerms] = useState<string>('COD');
   const [orderNotes, setOrderNotes] = useState<string>('');
@@ -82,11 +78,14 @@ export default function InlineOrderForm({
 
       // Load margins from store if set
       const margins = s?.defaultMargins as any;
-      const initialMargins: Record<string, { pct: number; type: StoreMarginType }> = {
-        FORYA: { pct: margins?.FORYA?.pct ?? margins?.forya ?? 25, type: margins?.FORYA?.type ?? margins?.foryaType ?? 'MARKDOWN' },
-        PEE_SAFE: { pct: margins?.PEE_SAFE?.pct ?? margins?.peesafe ?? 25, type: margins?.PEE_SAFE?.type ?? margins?.peesafeType ?? 'MARKDOWN' },
-        RENEE: { pct: margins?.RENEE?.pct ?? margins?.renee ?? 20, type: margins?.RENEE?.type ?? margins?.reneeType ?? 'MARKDOWN' },
-      };
+      const initialMargins: Record<string, { pct: number; type: StoreMarginType }> = {};
+      const allBrands = db.getBrands('ALL');
+      allBrands.forEach((b) => {
+        initialMargins[b.code] = {
+          pct: margins?.[b.code]?.pct ?? 20,
+          type: margins?.[b.code]?.type ?? 'MARKDOWN',
+        };
+      });
       setBrandMargins(initialMargins);
 
       // Reset items if empty
@@ -153,7 +152,7 @@ export default function InlineOrderForm({
     return {
       productId: item.productId,
       productName: prod?.name || 'Product',
-      brandCode: prod?.brandCode || 'FORYA',
+      brandCode: prod?.brandCode || (activeBrands[0] || 'BRAND'),
       cases,
       unitsPerCase,
       totalUnits,
@@ -333,11 +332,15 @@ export default function InlineOrderForm({
                               }
                               className="w-full mt-1 p-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
-                              {products.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  [{p.brandCode === 'PEE_SAFE' ? 'Pee Safe & Furr' : p.brandCode}] {p.name} (MRP: Rs. {p.mrp})
-                                </option>
-                              ))}
+                              {products.map((p) => {
+                                const bObj = db.getBrands('ALL').find((b) => b.code === p.brandCode);
+                                const bLabel = bObj?.name || p.brandCode;
+                                return (
+                                  <option key={p.id} value={p.id}>
+                                    [{bLabel}] {p.name} (MRP: Rs. {p.mrp})
+                                  </option>
+                                );
+                              })}
                             </select>
                           </div>
 
@@ -439,8 +442,8 @@ export default function InlineOrderForm({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   {activeBrands.map((brand) => {
                     const margin = brandMargins[brand] || { pct: 25, type: 'MARKDOWN' };
-                    const brandLabel =
-                      brand === 'PEE_SAFE' ? 'Pee Safe & Furr' : brand === 'RENEE' ? 'Renee Cosmetics' : 'Forya Organic';
+                    const bObj = db.getBrands('ALL').find((b) => b.code === brand);
+                    const brandLabel = bObj?.name || brand;
 
                     return (
                       <div

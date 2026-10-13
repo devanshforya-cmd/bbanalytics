@@ -49,16 +49,24 @@ export function statusColor(status: string): string {
 
 export function brandColor(brandCode: string): string {
   const normalized = (brandCode || '').toUpperCase().trim();
-  const map: Record<string, string> = {
-    FORYA: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    PEESAFE: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    PEE_SAFE: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    FURR: 'bg-violet-50 text-violet-700 border-violet-200',
-    RENEE: 'bg-pink-50 text-pink-700 border-pink-200',
-    ALL: 'bg-blue-50 text-blue-700 border-blue-200',
-  };
+  if (normalized === 'ALL') return 'bg-blue-50 text-blue-700 border-blue-200';
+  if (!normalized) return 'bg-slate-100 text-slate-600 border-slate-200';
 
-  return map[normalized] || 'bg-slate-100 text-slate-600 border-slate-200';
+  const palette = [
+    'bg-emerald-50 text-emerald-700 border-emerald-200',
+    'bg-cyan-50 text-cyan-700 border-cyan-200',
+    'bg-violet-50 text-violet-700 border-violet-200',
+    'bg-pink-50 text-pink-700 border-pink-200',
+    'bg-amber-50 text-amber-700 border-amber-200',
+    'bg-indigo-50 text-indigo-700 border-indigo-200',
+    'bg-teal-50 text-teal-700 border-teal-200',
+    'bg-rose-50 text-rose-700 border-rose-200',
+  ];
+  let hash = 0;
+  for (let i = 0; i < normalized.length; i++) {
+    hash = (hash << 5) - hash + normalized.charCodeAt(i);
+  }
+  return palette[Math.abs(hash) % palette.length];
 }
 
 export function priorityColor(priority: string): string {

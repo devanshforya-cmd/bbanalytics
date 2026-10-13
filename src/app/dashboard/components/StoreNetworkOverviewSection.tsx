@@ -67,6 +67,30 @@ export default function StoreNetworkOverviewSection() {
     return Array.from(set);
   }, [stores]);
 
+  const activeBrands = useMemo(() => db.getBrands('ACTIVE'), []);
+
+  const areaBreakdown = useMemo(() => {
+    if (areas.length === 0 || activeBrands.length === 0) return [];
+    return areas.map((area) => {
+      const areaStores = stores.filter(
+        (s) =>
+          (s.entityType === 'RETAILER' && s.area === area) ||
+          (s.entityType === 'BRANCH' && s.address?.includes(area))
+      );
+      const brandCoverage = activeBrands.map((b) => {
+        const count = areaStores.filter(
+          (s: any) => s.brandsStocked?.includes(b.code) || s.brandsCarried?.includes(b.code)
+        ).length;
+        return { brand: b, count, covered: count > 0 };
+      });
+      return {
+        area,
+        storeCount: areaStores.length,
+        brandCoverage,
+      };
+    });
+  }, [areas, stores, activeBrands]);
+
   const filteredStores = useMemo(() => {
     let list = storeListWithScores;
     if (filterArea !== 'ALL') {
@@ -308,62 +332,56 @@ export default function StoreNetworkOverviewSection() {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500 font-semibold">
-                <th className="py-2.5 px-3">Area Zone</th>
-                <th className="py-2.5 px-3">Active Stores</th>
-                <th className="py-2.5 px-3">Forya</th>
-                <th className="py-2.5 px-3">Pee Safe</th>
-                <th className="py-2.5 px-3">Renee</th>
-                <th className="py-2.5 px-3">Expansion Opportunities</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              <tr className="hover:bg-slate-50">
-                <td className="py-3 px-3 font-bold text-slate-900">Maharajgunj</td>
-                <td className="py-3 px-3 text-slate-700">8 stores</td>
-                <td className="py-3 px-3 text-emerald-600 font-bold">✓ Covered (8)</td>
-                <td className="py-3 px-3 text-emerald-600 font-bold">✓ Covered (6)</td>
-                <td className="py-3 px-3 text-rose-500 font-medium">✗ No presence (0)</td>
-                <td className="py-3 px-3 text-blue-700 font-medium">Pitch Renee cosmetics to Norvic &amp; Bhatbhateni</td>
-              </tr>
-              <tr className="hover:bg-slate-50">
-                <td className="py-3 px-3 font-bold text-slate-900">Baneshwor</td>
-                <td className="py-3 px-3 text-slate-700">6 stores</td>
-                <td className="py-3 px-3 text-emerald-600 font-bold">✓ Covered (6)</td>
-                <td className="py-3 px-3 text-emerald-600 font-bold">✓ Covered (5)</td>
-                <td className="py-3 px-3 text-emerald-600 font-bold">✓ Covered (4)</td>
-                <td className="py-3 px-3 text-emerald-700 font-medium">Full portfolio presence — optimize facings</td>
-              </tr>
-              <tr className="hover:bg-slate-50">
-                <td className="py-3 px-3 font-bold text-slate-900">Thapathali</td>
-                <td className="py-3 px-3 text-slate-700">4 stores</td>
-                <td className="py-3 px-3 text-emerald-600 font-bold">✓ Covered (4)</td>
-                <td className="py-3 px-3 text-emerald-600 font-bold">✓ Covered (3)</td>
-                <td className="py-3 px-3 text-rose-500 font-medium">✗ No presence (0)</td>
-                <td className="py-3 px-3 text-blue-700 font-medium">Expand Renee lipstick tester kits to pharmacy outlets</td>
-              </tr>
-              <tr className="hover:bg-slate-50">
-                <td className="py-3 px-3 font-bold text-slate-900">Kalimati</td>
-                <td className="py-3 px-3 text-slate-700">5 stores</td>
-                <td className="py-3 px-3 text-emerald-600 font-bold">✓ Covered (5)</td>
-                <td className="py-3 px-3 text-rose-500 font-medium">✗ Low presence (1)</td>
-                <td className="py-3 px-3 text-rose-500 font-medium">✗ No presence (0)</td>
-                <td className="py-3 px-3 text-blue-700 font-medium">High Forya traction. Expand Pee Safe wipes and wash</td>
-              </tr>
-              <tr className="hover:bg-slate-50">
-                <td className="py-3 px-3 font-bold text-slate-900">Chabahil</td>
-                <td className="py-3 px-3 text-slate-700">3 stores</td>
-                <td className="py-3 px-3 text-emerald-600 font-bold">✓ Covered (3)</td>
-                <td className="py-3 px-3 text-emerald-600 font-bold">✓ Covered (3)</td>
-                <td className="py-3 px-3 text-emerald-600 font-bold">✓ Covered (2)</td>
-                <td className="py-3 px-3 text-emerald-700 font-medium">Steady reorder velocity</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {activeBrands.length === 0 ? (
+          <div className="py-8 text-center text-slate-500 text-xs">
+            No active brands configured. Add your first brand in Settings to view coverage.
+          </div>
+        ) : areaBreakdown.length === 0 ? (
+          <div className="py-8 text-center text-slate-500 text-xs">
+            No stores or areas registered yet. Add stores in the Store Directory to view coverage.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500 font-semibold">
+                  <th className="py-2.5 px-3">Area Zone</th>
+                  <th className="py-2.5 px-3">Active Stores</th>
+                  {activeBrands.map((b) => (
+                    <th key={b.code} className="py-2.5 px-3 font-semibold text-slate-800">
+                      {b.name}
+                    </th>
+                  ))}
+                  <th className="py-2.5 px-3">Coverage Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {areaBreakdown.map((row) => (
+                  <tr key={row.area} className="hover:bg-slate-50">
+                    <td className="py-3 px-3 font-bold text-slate-900">{row.area}</td>
+                    <td className="py-3 px-3 text-slate-700">{row.storeCount} stores</td>
+                    {row.brandCoverage.map((bc) => (
+                      <td key={bc.brand.code} className="py-3 px-3 font-medium">
+                        {bc.count > 0 ? (
+                          <span className="text-emerald-600 font-bold">✓ Covered ({bc.count})</span>
+                        ) : (
+                          <span className="text-rose-500">✗ No presence (0)</span>
+                        )}
+                      </td>
+                    ))}
+                    <td className="py-3 px-3 text-slate-600 font-medium">
+                      {row.brandCoverage.every((bc) => bc.covered) ? (
+                        <span className="text-emerald-700 font-semibold">Full portfolio presence</span>
+                      ) : (
+                        <span className="text-blue-700 font-medium">Expansion opportunity</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

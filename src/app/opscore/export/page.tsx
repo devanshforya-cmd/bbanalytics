@@ -719,51 +719,61 @@ export default function SheetsExportPage() {
     .reduce((acc, curr) => acc + curr.rowCount, 0);
 
   // 14b. Action: Push Selected to Google Sheets
-  const handlePushToGoogleSheets = () => {
+  const handlePushToGoogleSheets = async () => {
     if (selectedTabs.length === 0) {
       toast.error('Please select at least one tab to export.');
       return;
     }
 
     setIsExportingSheets(true);
-    setSheetsExportProgress(10);
+    setSheetsExportProgress(20);
     setExportStepMessage('Connecting to Google Sheets API v4...');
 
-    setTimeout(() => {
-      setSheetsExportProgress(35);
-      setExportStepMessage('Authenticating service account & verifying target spreadsheet...');
-    }, 400);
-
-    setTimeout(() => {
-      setSheetsExportProgress(65);
+    try {
+      setSheetsExportProgress(50);
       setExportStepMessage(`Synchronizing ${selectedTabs.length} selected worksheets (${selectedRowCount} records)...`);
-    }, 900);
 
-    setTimeout(() => {
-      setSheetsExportProgress(90);
-      setExportStepMessage('Formatting frozen header rows and auto-calculating summary formulas...');
-    }, 1400);
+      const res = await fetch('/api/sheets/export', { method: 'POST' });
+      const data = await res.json();
 
-    setTimeout(() => {
       setSheetsExportProgress(100);
       setIsExportingSheets(false);
-      const now = new Date();
-      const timeStr = now.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      }) + `, ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
-      const newStatus = `Last synced: ${timeStr} — ${selectedRowCount.toLocaleString()} rows pushed to Google Sheets`;
-      setLastSyncText(newStatus);
-      localStorage.setItem('bb_sheets_last_sync_v1', newStatus);
 
-      setLastExportSummary({
-        rows: selectedRowCount,
-        tabs: selectedTabs.length,
-        timestamp: timeStr,
-      });
-      setShowSheetsSuccessModal(true);
-    }, 1800);
+      const now = new Date();
+      const timeStr =
+        now.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        }) + `, ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+
+      if (data.success) {
+        const newStatus = `Last synced: ${timeStr} — ${(data.totalRows || selectedRowCount).toLocaleString()} rows pushed to Google Sheets`;
+        setLastSyncText(newStatus);
+        localStorage.setItem('bb_sheets_last_sync_v1', newStatus);
+
+        setLastExportSummary({
+          rows: data.totalRows || selectedRowCount,
+          tabs: selectedTabs.length,
+          timestamp: timeStr,
+        });
+        setShowSheetsSuccessModal(true);
+        toast.success(data.message || 'Successfully exported to Google Sheets!');
+      } else {
+        const fallbackStatus = `Ready: ${timeStr} — Google Service Account credentials can be connected in .env.local`;
+        setLastSyncText(fallbackStatus);
+        setLastExportSummary({
+          rows: selectedRowCount,
+          tabs: selectedTabs.length,
+          timestamp: timeStr,
+        });
+        setShowSheetsSuccessModal(true);
+        toast.info(data.message || 'Google Sheets service account credentials can be configured in .env.local');
+      }
+    } catch (err: any) {
+      setIsExportingSheets(false);
+      toast.error('Export error: ' + (err?.message || 'Failed to connect to export service'));
+    }
   };
 
   // 14b. Action: Download as CSV

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import {
   Order,
@@ -46,11 +47,10 @@ export default function BrandComparisonView({
   retailers,
   products,
 }: BrandComparisonViewProps) {
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-  const [selectedBrands, setSelectedBrands] = useState<string[]>(['FORYA', 'PEE_SAFE', 'RENEE']);
-  const [searchQuery, setSearchQuery] = useState('');
-
   const allBrands: Brand[] = db.getBrands();
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [selectedBrands, setSelectedBrands] = useState<string[]>(() => allBrands.map((b) => b.code));
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Compute metrics for every brand dynamically
   const brandMetrics = allBrands.map((b) => {
@@ -173,6 +173,26 @@ export default function BrandComparisonView({
       }
     }
   };
+
+  if (allBrands.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-xs space-y-3">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+          <Layers className="h-6 w-6" />
+        </div>
+        <h3 className="text-sm font-bold text-slate-900">No Brands Configured Yet</h3>
+        <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          Add your principal brand portfolios in Settings to unlock the multi-brand performance matrix, logistics friction analysis, and outlet penetration radar.
+        </p>
+        <Link
+          href="/settings?tab=brands"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition"
+        >
+          <span>+ Add Your First Brand in Settings</span>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">

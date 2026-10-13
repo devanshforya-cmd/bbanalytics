@@ -175,7 +175,7 @@ export default function StoreDetailPage() {
       items: top3.map((b) => ({
         productId: b.productId,
         productName: b.name,
-        brandCode: (b.name.includes('Pee') ? 'PEESAFE' : b.name.includes('FURR') ? 'FURR' : 'FORYA') as BrandCode,
+        brandCode: (db.getProducts().find((p) => p.id === b.productId)?.brandCode || db.getBrands('ACTIVE')[0]?.code || 'BRAND') as BrandCode,
         cases: 2,
         unitsPerCase: 24,
         totalUnits: 48,
@@ -705,42 +705,43 @@ export default function StoreDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  <tr className="hover:bg-slate-50">
-                    <td className="p-3 font-semibold text-slate-900">Forya Cica Soothing Cleanser 150ml</td>
-                    <td className="p-3 text-slate-600">FORYA</td>
-                    <td className="p-3 text-center font-bold text-rose-600">3 units</td>
-                    <td className="p-3 text-center text-slate-600">0.8 units/day</td>
-                    <td className="p-3 text-center font-black text-rose-600">3.7 Days</td>
-                    <td className="p-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                        Critical: Reorder Today
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-slate-50">
-                    <td className="p-3 font-semibold text-slate-900">Pee Safe Toilet Seat Sanitizer Spray 75ml</td>
-                    <td className="p-3 text-slate-600">PEE_SAFE</td>
-                    <td className="p-3 text-center font-bold text-amber-600">8 units</td>
-                    <td className="p-3 text-center text-slate-600">1.1 units/day</td>
-                    <td className="p-3 text-center font-black text-amber-600">7.2 Days</td>
-                    <td className="p-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                        Low: Reorder Next Beat
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-slate-50">
-                    <td className="p-3 font-semibold text-slate-900">Renée FAB 5-in-1 Lipstick</td>
-                    <td className="p-3 text-slate-600">RENEE</td>
-                    <td className="p-3 text-center font-bold text-emerald-600">22 units</td>
-                    <td className="p-3 text-center text-slate-600">1.4 units/day</td>
-                    <td className="p-3 text-center font-black text-emerald-600">15.7 Days</td>
-                    <td className="p-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        Healthy Inventory
-                      </span>
-                    </td>
-                  </tr>
+                  {db.getProducts().length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-6 text-center text-slate-500 italic">
+                        No products in catalog. Add products in Product Catalog to view replenishment forecasts.
+                      </td>
+                    </tr>
+                  ) : (
+                    db.getProducts().slice(0, 5).map((prod, idx) => {
+                      const shelfQty = idx === 0 ? 3 : idx === 1 ? 8 : 22;
+                      const runRate = idx === 0 ? 0.8 : idx === 1 ? 1.1 : 1.4;
+                      const days = (shelfQty / runRate).toFixed(1);
+                      const isCrit = idx === 0;
+                      const isLow = idx === 1;
+                      return (
+                        <tr key={prod.id} className="hover:bg-slate-50">
+                          <td className="p-3 font-semibold text-slate-900">{prod.name}</td>
+                          <td className="p-3 text-slate-600 font-medium">{prod.brandCode}</td>
+                          <td className="p-3 text-center font-bold text-slate-800">{shelfQty} units</td>
+                          <td className="p-3 text-center text-slate-600">{runRate} units/day</td>
+                          <td className={`p-3 text-center font-black ${isCrit ? 'text-rose-600' : isLow ? 'text-amber-600' : 'text-emerald-600'}`}>
+                            {days} Days
+                          </td>
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              isCrit
+                                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                : isLow
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            }`}>
+                              {isCrit ? 'Critical: Reorder Today' : isLow ? 'Low: Reorder Next Beat' : 'Healthy Inventory'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -881,17 +882,19 @@ export default function StoreDetailPage() {
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl border border-rose-200 bg-rose-50/40 space-y-1 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900">Pee Safe Intimate Wipes (10s Pack)</span>
-                    <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">
-                      Out of Stock
-                    </span>
+                {db.getProducts()[1] && (
+                  <div className="p-3 rounded-xl border border-rose-200 bg-rose-50/40 space-y-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900">{db.getProducts()[1].name}</span>
+                      <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">
+                        Out of Stock
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600">
+                      High impulse purchase at cash counter. High margin retailer cut.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-slate-600">
-                    High impulse purchase at cash counter. High margin (22% retailer cut).
-                  </p>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -1240,7 +1243,7 @@ export default function StoreDetailPage() {
             </div>
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
               <span className="font-bold text-slate-900 block mb-0.5">Merchandising Target:</span>
-              Maintain at least 12 front-facing units of Forya Peach and Vanilla Roll-Ons at eye-level shelf.
+              Maintain at least 12 front-facing units of key hero SKUs at eye-level shelf.
             </div>
           </div>
         </div>

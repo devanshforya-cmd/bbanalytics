@@ -30,7 +30,7 @@ async function seed() {
     is_super_admin: true,
     role: 'SUPER_ADMIN',
     permissions: {},  // super admin bypasses all permissions
-    assigned_brands: ['FORYA', 'PEESAFE', 'FURR', 'RENEE'],
+    assigned_brands: ['ALL'],
     assigned_territory: 'ALL',
     is_active: true,
     calendar_preference: 'AD',
@@ -41,25 +41,8 @@ async function seed() {
     return;
   }
   console.log('✅ Super Admin created: devansh@brandbucket.com');
-
-  // Seed default brands
-  const { error: brandError } = await supabase.from('brands').upsert([
-    { id: 'brand_forya', code: 'FORYA', name: 'Forya', color: '#10b981', is_active: true },
-    { id: 'brand_peesafe', code: 'PEESAFE', name: 'Pee Safe', color: '#8b5cf6', is_active: true },
-    { id: 'brand_furr', code: 'FURR', name: 'FURR', color: '#7c3aed', is_active: true },
-    { id: 'brand_renee', code: 'RENEE', name: 'Renee', color: '#ec4899', is_active: true },
-  ]);
-
-  if (brandError) {
-    console.error('Failed to seed brands:', brandError);
-    return;
-  }
-  console.log('✅ Brands seeded: Forya, Pee Safe, FURR, Renee');
-
-  console.log('\n🎉 Done! Login with:');
-  console.log('   Email: devansh@brandbucket.com');
-  console.log('   Password: BrandBucket@2083');
-  console.log('\n⚠️  CHANGE YOUR PASSWORD after first login!');
+  console.log('Password: BrandBucket@2083');
+  console.log('🌱 No preset brands seeded — add your brands in Settings.');
 }
 
 seed();

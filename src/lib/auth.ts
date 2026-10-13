@@ -183,7 +183,7 @@ export async function loginWithMobile(
           isSuperAdmin: true,
           active: true,
           dutyStatus: 'ONLINE',
-          assignedBrands: ['ALL', 'FORYA', 'PEESAFE', 'FURR', 'RENEE'],
+          assignedBrands: ['ALL'],
           territory: 'ALL',
           permissions: {
             canViewAnalytics: true,

@@ -85,7 +85,7 @@ export default function StoresPage() {
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [selectedDistId, setSelectedDistId] = useState<string>('');
 
-  // Field Add Store Form State (Section 2c)
+  const systemBrands = db.getBrands('ACTIVE');
   const [fieldStoreName, setFieldStoreName] = useState('');
   const [fieldCategory, setFieldCategory] = useState(storeCategories[0]?.name || 'Kirana');
   const [fieldCity, setFieldCity] = useState('Kathmandu');
@@ -93,7 +93,7 @@ export default function StoresPage() {
   const [fieldAddress, setFieldAddress] = useState('');
   const [fieldLat, setFieldLat] = useState<number | null>(null);
   const [fieldLng, setFieldLng] = useState<number | null>(null);
-  const [fieldBrands, setFieldBrands] = useState<BrandCode[]>(['FORYA', 'PEE_SAFE']);
+  const [fieldBrands, setFieldBrands] = useState<BrandCode[]>(() => systemBrands.map((b) => b.code));
   const [fieldParentDistributorId, setFieldParentDistributorId] = useState('');
   const [fieldContacts, setFieldContacts] = useState<{ name: string; role: string; phone: string }[]>([
     { name: '', role: 'Store Owner', phone: '' },
@@ -109,10 +109,12 @@ export default function StoresPage() {
   const [adminAddress, setAdminAddress] = useState('');
   const [adminHasBranches, setAdminHasBranches] = useState(false);
   const [adminPaymentTerms, setAdminPaymentTerms] = useState('15-day credit');
-  const [adminDefaultMargins, setAdminDefaultMargins] = useState<DefaultMargins>({
-    FORYA: { pct: 15, type: 'MARKDOWN' },
-    PEESAFE: { pct: 12, type: 'MARKUP' },
-    RENEE: { pct: 20, type: 'MARKDOWN' },
+  const [adminDefaultMargins, setAdminDefaultMargins] = useState<DefaultMargins>(() => {
+    const margins: DefaultMargins = {};
+    systemBrands.forEach((b) => {
+      margins[b.code] = { pct: 15, type: 'MARKDOWN' };
+    });
+    return margins;
   });
   const [adminContactName, setAdminContactName] = useState('');
   const [adminContactRole, setAdminContactRole] = useState('Store Owner');
@@ -170,10 +172,10 @@ export default function StoresPage() {
   };
 
   const handleSelectAllBrands = () => {
-    if (fieldBrands.length >= 3) {
+    if (fieldBrands.length >= systemBrands.length) {
       setFieldBrands([]);
     } else {
-      setFieldBrands(['FORYA', 'PEE_SAFE', 'RENEE']);
+      setFieldBrands(systemBrands.map((b) => b.code));
     }
   };
 
@@ -209,7 +211,7 @@ export default function StoresPage() {
         phone: c.phone || '+977-9800000000',
         isPrimary: i === 0,
       })),
-      brandsStocked: fieldBrands.length > 0 ? fieldBrands : ['FORYA'],
+      brandsStocked: fieldBrands.length > 0 ? fieldBrands : (systemBrands[0]?.code ? [systemBrands[0].code] : []),
       distributorId: fieldParentDistributorId || undefined,
       distributorName: fieldParentDistributorId
         ? distributors.find((d) => d.id === fieldParentDistributorId)?.name
@@ -249,7 +251,7 @@ export default function StoresPage() {
         contactRole: adminContactRole,
         contactPhone: adminContactPhone || '+977-9800000000',
         contactEmail: 'accounts@distributor.np',
-        brandsCarried: ['FORYA', 'PEE_SAFE', 'RENEE'],
+        brandsCarried: systemBrands.map((b) => b.code),
         creditTerms: adminPaymentTerms,
         defaultMargins: adminDefaultMargins,
         hasBranches: adminHasBranches,
@@ -275,7 +277,7 @@ export default function StoresPage() {
         contactRole: adminContactRole,
         contactPhone: adminContactPhone || '+977-9800000000',
         contactEmail: 'procurement@chain.np',
-        brandsCarried: ['FORYA', 'PEE_SAFE', 'RENEE'],
+        brandsCarried: systemBrands.map((b) => b.code),
         creditTerms: adminPaymentTerms,
         defaultMargins: adminDefaultMargins,
         hasBranches: true,
@@ -315,7 +317,7 @@ export default function StoresPage() {
             isPrimary: true,
           },
         ],
-        brandsStocked: ['FORYA', 'PEE_SAFE', 'RENEE'],
+        brandsStocked: systemBrands.map((b) => b.code),
         creditTerms: adminPaymentTerms,
         defaultMargins: adminDefaultMargins,
       });
@@ -572,10 +574,7 @@ export default function StoresPage() {
                               entityType: 'DISTRIBUTOR',
                               entityId: dist.id,
                               name: dist.name,
-                              margins: dist.defaultMargins || {
-                                FORYA: { pct: 15, type: 'MARKDOWN' },
-                                PEESAFE: { pct: 12, type: 'MARKUP' },
-                              },
+                              margins: dist.defaultMargins || {},
                               paymentTerms: dist.creditTerms || '30-day credit',
                             })
                           }
@@ -695,10 +694,7 @@ export default function StoresPage() {
                               entityType: 'RETAILER',
                               entityId: ret.id,
                               name: ret.name,
-                              margins: ret.defaultMargins || {
-                                FORYA: { pct: 15, type: 'MARKDOWN' },
-                                PEESAFE: { pct: 12, type: 'MARKUP' },
-                              },
+                              margins: ret.defaultMargins || {},
                               paymentTerms: ret.creditTerms || '15-day credit',
                             })
                           }
@@ -917,28 +913,32 @@ export default function StoresPage() {
                       onClick={handleSelectAllBrands}
                       className="text-xs text-blue-600 font-semibold hover:underline"
                     >
-                      {fieldBrands.length >= 3 ? 'Clear All' : 'Select All'}
+                      {fieldBrands.length >= systemBrands.length && systemBrands.length > 0 ? 'Clear All' : 'Select All'}
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {(['FORYA', 'PEE_SAFE', 'RENEE'] as BrandCode[]).map((b) => (
-                      <label
-                        key={b}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer font-bold ${
-                          fieldBrands.includes(b)
-                            ? 'bg-blue-50 border-blue-300 text-blue-800'
-                            : 'bg-white border-slate-200 text-slate-600'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={fieldBrands.includes(b)}
-                          onChange={() => handleToggleBrand(b)}
-                          className="rounded text-blue-600"
-                        />
-                        <span>{b === 'PEE_SAFE' ? 'Pee Safe / FURR' : b}</span>
-                      </label>
-                    ))}
+                    {systemBrands.length === 0 ? (
+                      <p className="text-xs text-slate-500 italic">No brands configured yet. Add brands in Settings.</p>
+                    ) : (
+                      systemBrands.map((b) => (
+                        <label
+                          key={b.code}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer font-bold ${
+                            fieldBrands.includes(b.code)
+                              ? 'bg-blue-50 border-blue-300 text-blue-800'
+                              : 'bg-white border-slate-200 text-slate-600'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={fieldBrands.includes(b.code)}
+                            onChange={() => handleToggleBrand(b.code)}
+                            className="rounded text-blue-600"
+                          />
+                          <span>{b.name}</span>
+                        </label>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -1174,11 +1174,15 @@ export default function StoresPage() {
                   </div>
 
                   <div className="space-y-2">
-                    {(['FORYA', 'PEESAFE', 'RENEE'] as const).map((brandKey) => {
-                      const cur = adminDefaultMargins[brandKey] || { pct: 15, type: 'MARKDOWN' };
-                      return (
-                        <div key={brandKey} className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-slate-200">
-                          <span className="font-bold text-slate-800">{brandKey === 'PEESAFE' ? 'Pee Safe / FURR' : brandKey}</span>
+                    {systemBrands.length === 0 ? (
+                      <p className="text-xs text-slate-500 italic p-2 bg-slate-50 rounded-xl">No brands configured yet. Add brands in Settings.</p>
+                    ) : (
+                      systemBrands.map((b) => {
+                        const brandKey = b.code;
+                        const cur = adminDefaultMargins[brandKey] || { pct: 15, type: 'MARKDOWN' };
+                        return (
+                          <div key={brandKey} className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-slate-200">
+                            <span className="font-bold text-slate-800">{b.name}</span>
                           <div className="flex items-center gap-2">
                             <div className="flex items-center gap-1">
                               <input
@@ -1228,8 +1232,9 @@ export default function StoresPage() {
                           </div>
                         </div>
                       );
-                    })}
-                  </div>
+                    })
+                  )}
+                </div>
                 </div>
 
                 {/* Primary Contact */}
@@ -1448,11 +1453,15 @@ export default function StoresPage() {
 
                 <div className="space-y-2">
                   <label className="block font-bold text-slate-700">Per-Brand Default Margin</label>
-                  {(['FORYA', 'PEESAFE', 'RENEE'] as const).map((b) => {
-                    const cur = commercialTermsStore.margins[b] || { pct: 15, type: 'MARKDOWN' };
-                    return (
-                      <div key={b} className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50">
-                        <span className="font-bold text-slate-800">{b === 'PEESAFE' ? 'Pee Safe' : b}</span>
+                  {systemBrands.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic p-2 bg-slate-50 rounded-xl">No brands configured yet. Add brands in Settings.</p>
+                  ) : (
+                    systemBrands.map((brandObj) => {
+                      const b = brandObj.code;
+                      const cur = commercialTermsStore.margins[b] || { pct: 15, type: 'MARKDOWN' };
+                      return (
+                        <div key={b} className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50">
+                          <span className="font-bold text-slate-800">{brandObj.name}</span>
                         <div className="flex items-center gap-2">
                           <input
                             type="number"
@@ -1509,7 +1518,8 @@ export default function StoresPage() {
                         </div>
                       </div>
                     );
-                  })}
+                  })
+                )}
                 </div>
 
                 <div className="pt-2 flex justify-end gap-2">

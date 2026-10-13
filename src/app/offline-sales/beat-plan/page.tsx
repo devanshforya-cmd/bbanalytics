@@ -201,7 +201,7 @@ export default function BeatPlanPage() {
       return {
         productId,
         productName: prod?.name || 'Product',
-        brandCode: prod?.brandCode || 'FORYA',
+        brandCode: prod?.brandCode || (db.getBrands('ACTIVE')[0]?.code || 'BRAND'),
         shelfQty,
         previousQty: shelfQty,
         flaggedDrop: false,

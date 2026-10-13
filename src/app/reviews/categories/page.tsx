@@ -111,7 +111,7 @@ export default function ReviewCategoriesPage() {
       });
 
       // Find top product
-      let topProduct = 'Forya Roll-On Peach 50ml';
+      let topProduct = db.getProducts()[0]?.name || 'N/A';
       let maxP = 0;
       for (const [prod, c] of Object.entries(productCounts)) {
         if (c > maxP) {
@@ -121,7 +121,7 @@ export default function ReviewCategoriesPage() {
       }
 
       // Find top brand
-      let topBrand = 'FORYA';
+      let topBrand = db.getBrands('ACTIVE')[0]?.name || 'N/A';
       let maxB = 0;
       for (const [b, c] of Object.entries(brandCounts)) {
         if (c > maxB) {
@@ -401,8 +401,8 @@ export default function ReviewCategoriesPage() {
                   const analytics = analyticsMap[cat.id] || {
                     allTimeTicks: cat.tickCount,
                     monthTicks: 1,
-                    mostAffectedProduct: 'Forya Roll-On Peach 50ml',
-                    mostAffectedBrand: 'FORYA',
+                    mostAffectedProduct: db.getProducts()[0]?.name || 'N/A',
+                    mostAffectedBrand: db.getBrands('ACTIVE')[0]?.name || 'N/A',
                     trend: 'stable' as const,
                   };
 

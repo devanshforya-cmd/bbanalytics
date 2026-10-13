@@ -128,10 +128,9 @@ export default function ReturnsPage() {
   }, []);
   const deliveryFailuresPct = ((deliveryFailuresCount / Math.max(1, totalOrdersCount)) * 100).toFixed(1);
 
-  // Form State (11b)
   const activeBrands = db.getBrands('ACTIVE');
   const products = db.getProducts();
-  const [brandCode, setBrandCode] = useState<BrandCode>(activeBrands[0]?.code || 'FORYA');
+  const [brandCode, setBrandCode] = useState<BrandCode>(activeBrands[0]?.code || 'ALL');
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => brandCode === 'ALL' || p.brandCode === brandCode);
@@ -489,10 +488,12 @@ export default function ReturnsPage() {
               onChange={(e) => setBrandFilter(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none"
             >
-              <option value="ALL">All Brands (Forya, Pee Safe, Renee)</option>
-              <option value="FORYA">Forya Catalog</option>
-              <option value="PEE_SAFE">Pee Safe & FURR</option>
-              <option value="RENEE">Renee Cosmetics</option>
+              <option value="ALL">All Brands</option>
+              {activeBrands.map((b) => (
+                <option key={b.code} value={b.code}>
+                  {b.name}
+                </option>
+              ))}
             </select>
           </div>
 

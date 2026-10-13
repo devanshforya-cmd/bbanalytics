@@ -1,4 +1,5 @@
 import { BrandCode, Product, Combo, Brand } from './types';
+import { db } from './db/db-service';
 import { adToBs, getTodayAd, getTodayBs } from './nepali-calendar';
 
 export type Confidence = 'HIGH' | 'AUTO' | 'REVIEW' | 'FAILED'; // 🟢, 🔵, 🟡, 🔴
@@ -413,7 +414,8 @@ export function extractSingleOrder(
 
   // Step 7: Brand Auto-Detection (Fix 67d Step 4)
   const detectedBrands = new Set(matchedItems.map((p) => p.brandCode));
-  let orderBrand: BrandCode = 'FORYA';
+  const activeBrands = db.getBrands('ACTIVE');
+  let orderBrand: BrandCode = activeBrands[0]?.code || 'ALL';
   let brandConfidence: Confidence = 'REVIEW';
 
   const brandArray = Array.from(detectedBrands);
@@ -425,17 +427,16 @@ export function extractSingleOrder(
     brandConfidence = 'AUTO';
     flags.push(`Multi-brand order: ${brandArray.join(' + ')}`);
   } else {
-    if (/\bforya\b/i.test(text)) {
-      orderBrand = 'FORYA';
-      brandConfidence = 'AUTO';
-    } else if (/\b(?:pee\s*safe|furr)\b/i.test(text)) {
-      orderBrand = 'PEE_SAFE';
-      brandConfidence = 'AUTO';
-    } else if (/\brenee\b/i.test(text)) {
-      orderBrand = 'RENEE';
+    const matchedBrand = activeBrands.find((b: Brand) => {
+      const reg = new RegExp(`\\b${b.name.replace(/[^a-zA-Z0-9]/g, '\\$&')}\\b`, 'i');
+      const regCode = new RegExp(`\\b${b.code}\\b`, 'i');
+      return reg.test(text) || regCode.test(text);
+    });
+    if (matchedBrand) {
+      orderBrand = matchedBrand.code;
       brandConfidence = 'AUTO';
     } else {
-      orderBrand = 'FORYA';
+      orderBrand = activeBrands[0]?.code || 'ALL';
       brandConfidence = 'REVIEW';
       flags.push('Could not determine brand');
     }
