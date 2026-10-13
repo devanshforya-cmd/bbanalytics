@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
     ];
 
     // 7. Tab: Staff Scorecard
-    const officers = users.filter((u) => u.role === 'SALES_OFFICER');
+    const officers = users.filter((u) => u.role === 'SALES_OFFICER' || (u.permissions?.beat_plans && u.permissions.beat_plans.access !== 'HIDDEN') || u.id.startsWith('user_'));
     const scorecardValues = [
       ['Officer Name', 'Role', 'Status', 'Territory', 'Stores Assigned', 'Cheques Collected', 'Performance Score'],
       ...officers.map((o) => {

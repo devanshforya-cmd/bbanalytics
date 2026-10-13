@@ -253,7 +253,7 @@ export default function ReviewCategoriesPage() {
   }, [categories, searchTerm, statusFilter]);
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+    <PageGuard feature="reviews">
       <div className="space-y-6 pb-20 max-w-7xl mx-auto">
       {/* 7f: Breadcrumbs */}
       <Breadcrumbs
@@ -813,7 +813,7 @@ export default function ReviewCategoriesPage() {
                 >
                   {db.getUsers().map((u) => (
                     <option key={u.id} value={u.fullName}>
-                      {u.fullName} ({u.role.replace('_', ' ')})
+                      {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
                     </option>
                   ))}
                 </select>

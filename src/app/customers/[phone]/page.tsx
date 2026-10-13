@@ -372,7 +372,7 @@ export default function CustomerDetailPage() {
   }, [allBrands, orders]);
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER']}>
+    <PageGuard feature="customers">
       <div className="space-y-6 max-w-5xl pb-16">
       {/* Breadcrumb navigation */}
       <Breadcrumbs

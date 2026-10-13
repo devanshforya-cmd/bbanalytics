@@ -135,7 +135,7 @@ export default function LiveStaffTrackingPage() {
   const selectedStaff = locations.find((l) => l.officerId === selectedStaffId) || filteredLocations[0];
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN']} feature="gps_tracking">
+    <PageGuard feature="gps_tracking">
       <div className="space-y-6 pb-12">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

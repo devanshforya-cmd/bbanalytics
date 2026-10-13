@@ -3,9 +3,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { db } from '@/lib/db/db-service';
-import { BrandCode, DutyStatus, User } from '@/lib/types';
-import BrandDropdown from './BrandDropdown';
 import {
   X,
   Search,
@@ -14,9 +11,9 @@ import {
   Store,
   Truck,
   Camera,
-  PhoneCall,
+  Phone,
   CreditCard,
-  FileCheck2,
+  FileText,
   Award,
   Sparkles,
   ClipboardPen,
@@ -27,22 +24,18 @@ import {
   Tags,
   Users,
   PieChart,
+  Megaphone,
+  Gift,
+  Calendar,
   CheckSquare,
   History,
   FileSpreadsheet,
-  Navigation,
-  Calendar,
   Settings,
   Package,
-  Megaphone,
-  Gift,
-  CheckCircle2,
-  Coffee,
-  PowerOff,
-  CalendarDays,
-  TrendingUp,
-  User as UserIcon,
+  Navigation,
 } from 'lucide-react';
+import { User, BrandCode } from '@/lib/types';
+import { hasAccess, isSuperAdmin } from '@/lib/permissions';
 
 interface MobileNavDrawerProps {
   isOpen: boolean;
@@ -52,6 +45,89 @@ interface MobileNavDrawerProps {
   onBrandChange: (brand: BrandCode) => void;
   onOpenProfile: () => void;
 }
+
+interface MenuItem {
+  name: string;
+  href: string;
+  permKey: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: string;
+}
+
+interface MenuSection {
+  title: string;
+  items: MenuItem[];
+}
+
+const menuSections: MenuSection[] = [
+  {
+    title: 'Overview',
+    items: [
+      { name: 'Dashboard', href: '/dashboard', permKey: 'dashboard', icon: LayoutDashboard },
+      { name: 'Products & Combos', href: '/products', permKey: 'products', icon: Package, badge: 'DTP/RPP' },
+    ],
+  },
+  {
+    title: 'Offline Sales (GT/MT)',
+    items: [
+      { name: 'Beat Plans & Routes', href: '/offline-sales/beat-plan', permKey: 'beat_plans', icon: Compass },
+      { name: 'Stores & Branches', href: '/offline-sales/stores', permKey: 'stores', icon: Store },
+      { name: 'Distributor Dispatches', href: '/offline-sales/dispatch', permKey: 'dispatches', icon: Truck },
+      { name: 'Live GPS Tracking', href: '/offline-sales/live-tracking', permKey: 'gps_tracking', icon: Navigation, badge: 'Live' },
+      { name: 'Shelf Photos', href: '/offline-sales/shelf-photos', permKey: 'shelf_photos', icon: Camera },
+      { name: 'Call Tracker', href: '/offline-sales/calls', permKey: 'call_tracker', icon: Phone },
+      { name: 'Cheque Tracker', href: '/offline-sales/cheques', permKey: 'cheque_tracker', icon: CreditCard },
+      { name: 'Document Handover', href: '/offline-sales/documents', permKey: 'document_handover', icon: FileText },
+      { name: 'Staff Scorecards', href: '/offline-sales/scorecard', permKey: 'staff_scorecards', icon: Award },
+    ],
+  },
+  {
+    title: 'OrderFlow',
+    items: [
+      { name: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles, badge: 'Rule-Engine' },
+      { name: 'Manual Order Entry', href: '/orderflow/manual-entry', permKey: 'orderflow', icon: ClipboardPen },
+      { name: 'Daily Orders', href: '/orderflow/daily-orders', permKey: 'orderflow', icon: ClipboardCheck, badge: 'Live' },
+      { name: 'Delivery Failures', href: '/orderflow/delivery-failures', permKey: 'orderflow', icon: TruckIcon, badge: 'Separated' },
+    ],
+  },
+  {
+    title: 'Reviews & Returns',
+    items: [
+      { name: 'Feedback & Complaints', href: '/reviews/feedback', permKey: 'reviews', icon: MessageSquareHeart },
+      { name: 'Separated Returns', href: '/reviews/returns', permKey: 'reviews', icon: RotateCcw },
+      { name: 'Dynamic Categories', href: '/reviews/categories', permKey: 'reviews', icon: Tags },
+    ],
+  },
+  {
+    title: 'Customer Intelligence',
+    items: [
+      { name: 'Customer 360 Directory', href: '/customers', permKey: 'customers', icon: Users },
+      { name: 'Cohort Insights', href: '/customers/insights', permKey: 'customers', icon: PieChart },
+    ],
+  },
+  {
+    title: 'Marketing',
+    items: [
+      { name: 'Influencer Directory', href: '/marketing/influencers', permKey: 'marketing', icon: Megaphone },
+      { name: 'Marketing Sends', href: '/marketing/sends', permKey: 'marketing', icon: Gift },
+    ],
+  },
+  {
+    title: 'OpsCore',
+    items: [
+      { name: 'Calendar To-Do', href: '/opscore/calendar-tasks', permKey: 'tasks', icon: Calendar, badge: 'BS/AD' },
+      { name: 'Task Management', href: '/opscore/tasks', permKey: 'tasks', icon: CheckSquare },
+      { name: 'Activity Trail', href: '/opscore/activity', permKey: 'activity', icon: History },
+      { name: 'Google Sheets Export', href: '/opscore/export', permKey: 'export', icon: FileSpreadsheet },
+    ],
+  },
+  {
+    title: 'Administration',
+    items: [
+      { name: 'System Settings', href: '/settings', permKey: 'settings', icon: Settings, badge: 'Staff/Rules' },
+    ],
+  },
+];
 
 export default function MobileNavDrawer({
   isOpen,
@@ -63,318 +139,107 @@ export default function MobileNavDrawer({
 }: MobileNavDrawerProps) {
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState('');
-  const role = currentUser.role;
 
   if (!isOpen) return null;
 
-  const isOfficer = role === 'SALES_OFFICER';
-  const isDataEntry = role === 'DATA_ENTRY';
-  const isAdminOrSuper = role === 'ADMIN' || role === 'SUPER_ADMIN';
-  const isBrandManager = role === 'BRAND_MANAGER';
-
-  interface NavItem {
-    name: string;
-    href: string;
-    icon: React.ComponentType<{ className?: string }>;
-    badge?: string;
-  }
-
-  interface NavSection {
-    title: string;
-    items: NavItem[];
-  }
-
-  const sections: NavSection[] = [];
-
-  // Overview
-  if (!isOfficer && !isDataEntry) {
-    sections.push({
-      title: 'Overview',
-      items: [
-        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'Products & Combos', href: '/products', icon: Package, badge: 'DTP/RPP' },
-      ],
-    });
-  } else {
-    sections.push({
-      title: 'Catalog',
-      items: [{ name: 'Products & Combos', href: '/products', icon: Package }],
-    });
-  }
-
-  // Offline Sales
-  if (isOfficer || isAdminOrSuper) {
-    const fieldItems: NavItem[] = [
-      {
-        name: isOfficer ? 'My Day (Beat Plan)' : 'Beat Plans & Routes',
-        href: '/offline-sales/beat-plan',
-        icon: Compass,
-        badge: isOfficer ? 'Active' : undefined,
-      },
-      { name: isOfficer ? 'My Stores' : 'Stores & Branches', href: '/offline-sales/stores', icon: Store },
-    ];
-
-    if (isAdminOrSuper) {
-      fieldItems.push({ name: 'Distributor Dispatches', href: '/offline-sales/dispatch', icon: Truck });
-    }
-
-    if (!isOfficer) {
-      fieldItems.push({ name: 'Live GPS Tracking', href: '/offline-sales/live-tracking', icon: Navigation, badge: 'Live' });
-    }
-
-    fieldItems.push(
-      { name: 'Shelf Photos', href: '/offline-sales/shelf-photos', icon: Camera },
-      { name: 'Call Tracker', href: '/offline-sales/calls', icon: PhoneCall },
-      { name: isOfficer ? 'My Cheques' : 'Cheque Tracker', href: '/offline-sales/cheques', icon: CreditCard },
-      { name: 'Document Handover', href: '/offline-sales/documents', icon: FileCheck2 }
-    );
-
-    if (!isOfficer) {
-      fieldItems.push({ name: 'Staff Scorecards', href: '/offline-sales/scorecard', icon: Award });
-    }
-
-    sections.push({
-      title: isOfficer ? 'Field Operations' : 'Offline Sales (GT/MT)',
-      items: fieldItems,
-    });
-  }
-
-  // OrderFlow
-  if (isDataEntry || isAdminOrSuper || isBrandManager) {
-    sections.push({
-      title: 'OrderFlow',
-      items: [
-        { name: 'WhatsApp Extractor', href: '/orderflow/extractor', icon: Sparkles, badge: 'AI/Rules' },
-        { name: 'Manual Order Entry', href: '/orderflow/manual-entry', icon: ClipboardPen },
-        { name: 'Daily Orders', href: '/orderflow/daily-orders', icon: ClipboardCheck, badge: 'Live' },
-        { name: 'Delivery Failures', href: '/orderflow/delivery-failures', icon: TruckIcon, badge: 'Separated' },
-      ],
-    });
-  }
-
-  // Reviews & Returns
-  if (isDataEntry || isAdminOrSuper || isBrandManager) {
-    const reviewItems: NavItem[] = [
-      { name: 'Feedback & Complaints', href: '/reviews/feedback', icon: MessageSquareHeart },
-      { name: 'Separated Returns', href: '/reviews/returns', icon: RotateCcw },
-    ];
-    if (isAdminOrSuper) {
-      reviewItems.push({ name: 'Dynamic Categories', href: '/reviews/categories', icon: Tags });
-    }
-    sections.push({
-      title: 'Reviews & Returns',
-      items: reviewItems,
-    });
-  }
-
-  // Customer Intelligence
-  if (isAdminOrSuper || isBrandManager) {
-    sections.push({
-      title: 'Customer Intelligence',
-      items: [
-        { name: 'Customer 360 Directory', href: '/customers', icon: Users },
-        { name: 'Cohort Insights', href: '/customers/insights', icon: PieChart },
-      ],
-    });
-  }
-
-  // Marketing & Influencers (Fix 66)
-  if (isAdminOrSuper || isBrandManager) {
-    sections.push({
-      title: 'Marketing',
-      items: [
-        { name: 'Influencer Directory', href: '/marketing/influencers', icon: Megaphone },
-        { name: 'Marketing Sends', href: '/marketing/sends', icon: Gift, badge: 'Fix 66' },
-      ],
-    });
-  }
-
-  // OpsCore
-  if (isOfficer || isAdminOrSuper) {
-    const opsItems: NavItem[] = [
-      { name: 'Calendar To-Do', href: '/opscore/calendar-tasks', icon: Calendar, badge: 'BS/AD' },
-      { name: isOfficer ? 'My Tasks' : 'Task Management', href: '/opscore/tasks', icon: CheckSquare },
-    ];
-    if (isAdminOrSuper) {
-      opsItems.push(
-        { name: 'Activity Trail', href: '/opscore/activity', icon: History },
-        { name: 'Google Sheets Export', href: '/opscore/export', icon: FileSpreadsheet }
-      );
-    }
-    sections.push({
-      title: 'OpsCore',
-      items: opsItems,
-    });
-  }
-
-  // Administration
-  if (isAdminOrSuper) {
-    sections.push({
-      title: 'Administration',
-      items: [{ name: 'System Settings', href: '/settings', icon: Settings, badge: 'Brands/Staff' }],
-    });
-  }
+  // Filter sections by user permissions
+  const permittedSections = menuSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => hasAccess(currentUser, item.permKey)),
+    }))
+    .filter((section) => section.items.length > 0);
 
   // Filter sections by search query
   const q = searchQuery.toLowerCase().trim();
-  const filteredSections = sections
+  const filteredSections = permittedSections
     .map((section) => ({
       ...section,
       items: section.items.filter((item) => item.name.toLowerCase().includes(q)),
     }))
     .filter((section) => section.items.length > 0);
 
-  const currentDuty = currentUser.dutyStatus || 'ONLINE';
-
   return (
     <div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity duration-300"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in"
         onClick={onClose}
       />
 
-      {/* Drawer */}
-      <div className="fixed inset-y-0 left-0 max-w-full flex pr-10">
-        <div className="w-full sm:w-[480px] max-w-[480px] bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out border-r border-slate-200">
+      <div className="fixed inset-y-0 left-0 max-w-full flex">
+        <div className="w-80 max-w-[85vw] bg-white flex flex-col shadow-2xl animate-in slide-in-from-left duration-200">
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-900 text-white">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 font-bold text-white shadow">
-                BB
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Brand Bucket
-                </div>
-                <div className="text-sm font-bold text-white">Command Center</div>
-              </div>
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
+              <span className="font-bold text-slate-900 text-sm tracking-tight">Navigation</span>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              aria-label="Close menu drawer"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 transition"
+              aria-label="Close navigation drawer"
             >
-              <X className="h-5 w-5" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Brand Switcher & Duty Strip */}
-          <div className="p-3 bg-slate-50 border-b border-slate-200 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                Principal Brand
-              </span>
-              <BrandDropdown
-                currentBrand={currentBrand}
-                onBrandChange={(b) => {
-                  onBrandChange(b);
-                  onClose();
-                }}
-                isCompact
-              />
-            </div>
-
-            {/* Officer Duty Quick Bar */}
-            <div
-              onClick={() => {
-                onClose();
-                onOpenProfile();
-              }}
-              className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/80 shadow-2xs cursor-pointer hover:border-slate-300 transition"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={`h-2.5 w-2.5 rounded-full ring-2 ring-white ${
-                    currentDuty === 'ONLINE' || currentDuty === 'IN_FIELD'
-                      ? 'bg-emerald-500'
-                      : currentDuty === 'ON_BREAK'
-                      ? 'bg-amber-500'
-                      : currentDuty === 'OFFLINE'
-                      ? 'bg-slate-400'
-                      : 'bg-rose-500'
-                  }`}
-                />
-                <span className="text-xs font-bold text-slate-800">
-                  Duty: {currentDuty.replace('_', ' ')}
-                </span>
-              </div>
-              <span className="text-[10px] font-semibold text-blue-600">Change &rarr;</span>
-            </div>
-          </div>
-
-          {/* Route Search Box */}
+          {/* Quick Search */}
           <div className="p-3 border-b border-slate-100">
-            <div className="relative flex items-center">
-              <Search className="absolute left-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Find screen (e.g. cheques, beat, whatsapp)..."
+                placeholder="Search menu..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg bg-slate-100 pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 border border-slate-200/80 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 text-[10px] text-slate-400 hover:text-slate-600"
-                >
-                  ✕
-                </button>
-              )}
             </div>
           </div>
 
-          {/* Nav List */}
-          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-5">
+          {/* Navigation Items List */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-5">
             {filteredSections.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-400">
-                No matching navigation screens
+                No matching navigation items found.
               </div>
             ) : (
               filteredSections.map((section) => (
                 <div key={section.title} className="space-y-1">
-                  <div className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     {section.title}
                   </div>
                   <div className="space-y-0.5">
                     {section.items.map((item) => {
-                      const isActive =
-                        pathname === item.href || pathname.startsWith(`${item.href}/`);
+                      const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                       const Icon = item.icon;
-
                       return (
                         <Link
                           key={item.href}
                           href={item.href}
                           onClick={onClose}
-                          className={`flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition ${
+                          className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition ${
                             isActive
-                              ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200/60'
-                              : 'text-slate-700 hover:bg-slate-100'
+                              ? 'bg-blue-50 text-blue-700 font-bold'
+                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                           }`}
                         >
                           <div className="flex items-center gap-2.5">
-                            <div
-                              className={`flex h-6 w-6 items-center justify-center rounded ${
-                                isActive
-                                  ? 'bg-blue-600 text-white shadow-xs'
-                                  : 'bg-slate-100 text-slate-600'
+                            <Icon
+                              className={`w-4 h-4 shrink-0 ${
+                                isActive ? 'text-blue-600' : 'text-slate-400'
                               }`}
-                            >
-                              <Icon className="h-3.5 w-3.5" />
-                            </div>
-                            <span className="truncate">{item.name}</span>
+                            />
+                            <span>{item.name}</span>
                           </div>
-
                           {item.badge && (
                             <span
-                              className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${
+                              className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
                                 isActive
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-slate-100 text-slate-600'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-slate-100 text-slate-500'
                               }`}
                             >
                               {item.badge}
@@ -400,14 +265,14 @@ export default function MobileNavDrawer({
               className="flex items-center gap-2.5 text-left w-full hover:opacity-80 transition"
             >
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 font-bold text-white text-xs shadow-xs">
-                {currentUser.fullName.charAt(0)}
+                {currentUser.fullName ? currentUser.fullName.charAt(0) : 'U'}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="truncate text-xs font-bold text-slate-900">
                   {currentUser.fullName}
                 </div>
                 <div className="truncate text-[10px] text-slate-500">
-                  {currentUser.role.replace('_', ' ')} • {currentUser.phone}
+                  {isSuperAdmin(currentUser) ? 'Super Admin' : 'Authorized User'} • {currentUser.phone}
                 </div>
               </div>
               <span className="text-xs text-blue-600 font-bold">Profile &rarr;</span>

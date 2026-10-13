@@ -11,8 +11,8 @@ export async function GET(request: Request) {
   const { user } = auth;
   let cheques = db.getCheques();
 
-  // Sales Officers only see their own collected cheques
-  if (user.role === 'SALES_OFFICER') {
+  // Sales Officers / Own scope only see their own collected cheques
+  if (user.role === 'SALES_OFFICER' || user.permissions?.cheque_tracker?.scope === 'OWN') {
     cheques = cheques.filter((c) => c.officerId === user.id || c.officerName === user.fullName);
   }
 

@@ -913,7 +913,7 @@ export default function SheetsExportPage() {
   };
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+    <PageGuard feature="export">
       <div className="space-y-6">
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-2 text-xs text-slate-500">

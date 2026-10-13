@@ -5,6 +5,7 @@ import { User, UserRole } from './types';
 import { db } from './db/db-service';
 import { supabase } from './db/supabase-client';
 import { supabaseAdmin } from './db/supabase-server';
+import { hasAccess, isSuperAdmin } from './permissions';
 
 const SESSION_KEY = 'bb_auth_user_session_v3';
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -284,16 +285,27 @@ export function logout(): void {
   }
 }
 
-export function getRedirectPathForRole(role: UserRole): string {
-  switch (role) {
-    case 'SALES_OFFICER':
-      return '/offline-sales/beat-plan';
-    case 'DATA_ENTRY':
-      return '/orderflow/manual-entry';
-    case 'BRAND_MANAGER':
-    case 'ADMIN':
-    case 'SUPER_ADMIN':
-    default:
-      return '/dashboard';
-  }
+export function getRedirectPathForUser(user: any): string {
+  if (!user) return '/login';
+  if (isSuperAdmin(user)) return '/dashboard';
+  if (hasAccess(user, 'dashboard')) return '/dashboard';
+  if (hasAccess(user, 'beat_plans')) return '/offline-sales/beat-plan';
+  if (hasAccess(user, 'orderflow')) return '/orderflow/manual-entry';
+  if (hasAccess(user, 'stores')) return '/offline-sales/stores';
+  if (hasAccess(user, 'products')) return '/products';
+  if (hasAccess(user, 'tasks')) return '/opscore/tasks';
+  if (hasAccess(user, 'cheque_tracker')) return '/offline-sales/cheques';
+
+  // Fallback if permissions aren't set
+  if (user?.role === 'SALES_OFFICER') return '/offline-sales/beat-plan';
+  if (user?.role === 'DATA_ENTRY') return '/orderflow/manual-entry';
+  return '/dashboard';
+}
+
+export function getRedirectPathForRole(role?: any, user?: any): string {
+  if (user) return getRedirectPathForUser(user);
+  if (typeof role === 'object' && role !== null) return getRedirectPathForUser(role);
+  if (role === 'SALES_OFFICER') return '/offline-sales/beat-plan';
+  if (role === 'DATA_ENTRY') return '/orderflow/manual-entry';
+  return '/dashboard';
 }

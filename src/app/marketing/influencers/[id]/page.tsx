@@ -200,7 +200,7 @@ export default function InfluencerDetailPage() {
   const ratioPct = sendsCount > 0 ? ((contentCount / sendsCount) * 100).toFixed(0) : '0';
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER']}>
+    <PageGuard feature="marketing">
       <div className="space-y-6 pb-24 max-w-6xl mx-auto">
         <Breadcrumbs
           items={[

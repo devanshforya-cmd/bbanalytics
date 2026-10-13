@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { User, UserRole } from '@/lib/types';
 import { db } from '@/lib/db/db-service';
+import { isSuperAdmin } from '@/lib/permissions';
 
 export interface AuthContext {
   user: User;
@@ -104,10 +105,9 @@ export async function requireAuth(
 
   // 4. Role-based enforcement
   if (allowedRoles && allowedRoles.length > 0) {
-    const isSuperAdmin = user.role === 'SUPER_ADMIN';
-    const hasRole = allowedRoles.includes(user.role);
+    const superAdmin = isSuperAdmin(user) || user.role === 'SUPER_ADMIN';
 
-    if (!isSuperAdmin && !hasRole) {
+    if (!superAdmin && user.role && !allowedRoles.includes(user.role as UserRole)) {
       return {
         error: `Forbidden: Role ${user.role} does not have access to this resource.`,
         response: NextResponse.json(

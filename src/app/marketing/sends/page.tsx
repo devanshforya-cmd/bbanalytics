@@ -130,7 +130,7 @@ export default function MarketingSendsPage() {
   };
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER']}>
+    <PageGuard feature="marketing">
       <div className="space-y-6 pb-20">
         <Breadcrumbs
           items={[

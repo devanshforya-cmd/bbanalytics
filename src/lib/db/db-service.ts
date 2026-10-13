@@ -511,8 +511,8 @@ export class DatabaseService {
   public getProducts(brandCode?: BrandCode): Product[] {
     const user = this.getCurrentUser();
     let list = this.products;
-    if (user.role === 'BRAND_MANAGER' && user.assignedBrands?.length > 0 && !user.assignedBrands.includes('ALL')) {
-      list = list.filter((p) => user.assignedBrands.includes(p.brandCode));
+    if (!user.is_super_admin && !user.isSuperAdmin && user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
+      list = list.filter((p) => user.assignedBrands!.includes(p.brandCode));
     }
     const brand = brandCode || this.activeBrandFilter;
     if (brand && brand !== 'ALL') {
@@ -570,8 +570,8 @@ export class DatabaseService {
   public getCombos(brandCode?: BrandCode): Combo[] {
     const user = this.getCurrentUser();
     let list = this.combos;
-    if (user.role === 'BRAND_MANAGER' && user.assignedBrands?.length > 0 && !user.assignedBrands.includes('ALL')) {
-      list = list.filter((c) => user.assignedBrands.includes(c.brandCode));
+    if (!user.is_super_admin && !user.isSuperAdmin && user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
+      list = list.filter((c) => user.assignedBrands!.includes(c.brandCode));
     }
     const brand = brandCode || this.activeBrandFilter;
     if (brand && brand !== 'ALL') {
@@ -619,11 +619,11 @@ export class DatabaseService {
   public getSecondaryOrders(filter?: { officerId?: string; storeId?: string }): SecondaryOrder[] {
     const user = this.getCurrentUser();
     let result = this.secondaryOrders;
-    if (user.role === 'BRAND_MANAGER' && user.assignedBrands?.length > 0 && !user.assignedBrands.includes('ALL')) {
+    if (!user.is_super_admin && !user.isSuperAdmin && user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
       result = result.filter((o) => {
         return o.items.some((item) => {
           const prod = this.products.find((p) => p.id === item.productId || p.name === item.productName);
-          return prod ? user.assignedBrands.includes(prod.brandCode) : true;
+          return prod ? user.assignedBrands!.includes(prod.brandCode) : true;
         });
       });
     }
@@ -1425,7 +1425,7 @@ export class DatabaseService {
 
   public getTodayBeat(officerId?: string): BeatItem[] {
     const targetOfficer = officerId || this.currentUser.id;
-    if (this.currentUser.role === 'ADMIN' || this.currentUser.role === 'SUPER_ADMIN' || this.currentUser.isSuperAdmin) {
+    if (this.currentUser.is_super_admin || this.currentUser.isSuperAdmin || this.currentUser.permissions?.beat_plans?.scope === 'ALL' || this.currentUser.role === 'ADMIN' || this.currentUser.role === 'SUPER_ADMIN') {
       return this.beatItems.filter((b) => !officerId || b.officerId === officerId);
     }
     return this.beatItems.filter((b) => b.officerId === targetOfficer);
@@ -2026,8 +2026,8 @@ export class DatabaseService {
   public getOrders(brandCode?: BrandCode): Order[] {
     const user = this.getCurrentUser();
     let list = this.orders;
-    if (user.role === 'BRAND_MANAGER' && user.assignedBrands?.length > 0 && !user.assignedBrands.includes('ALL')) {
-      list = list.filter((o) => user.assignedBrands.includes(o.brandCode));
+    if (!user.is_super_admin && !user.isSuperAdmin && user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
+      list = list.filter((o) => user.assignedBrands!.includes(o.brandCode));
     }
     const brand = brandCode || this.activeBrandFilter;
     if (brand && brand !== 'ALL') {
@@ -2205,8 +2205,8 @@ export class DatabaseService {
   public getDeliveryFailures(brandCode?: BrandCode): DeliveryFailure[] {
     const user = this.getCurrentUser();
     let list = this.deliveryFailures;
-    if (user.role === 'BRAND_MANAGER' && user.assignedBrands?.length > 0 && !user.assignedBrands.includes('ALL')) {
-      list = list.filter((df) => user.assignedBrands.includes(df.brandCode));
+    if (!user.is_super_admin && !user.isSuperAdmin && user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
+      list = list.filter((df) => user.assignedBrands!.includes(df.brandCode));
     }
     const brand = brandCode || this.activeBrandFilter;
     if (brand && brand !== 'ALL') {
@@ -2290,8 +2290,8 @@ export class DatabaseService {
   public getReturns(brandCode?: BrandCode): ReturnEntry[] {
     const user = this.getCurrentUser();
     let list = this.returns;
-    if (user.role === 'BRAND_MANAGER' && user.assignedBrands?.length > 0 && !user.assignedBrands.includes('ALL')) {
-      list = list.filter((r) => user.assignedBrands.includes(r.brandCode));
+    if (!user.is_super_admin && !user.isSuperAdmin && user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
+      list = list.filter((r) => user.assignedBrands!.includes(r.brandCode));
     }
     const brand = brandCode || this.activeBrandFilter;
     if (brand && brand !== 'ALL') {
@@ -2479,8 +2479,8 @@ export class DatabaseService {
   public getFeedback(brandCode?: BrandCode): FeedbackEntry[] {
     const user = this.getCurrentUser();
     let list = this.feedbackEntries;
-    if (user.role === 'BRAND_MANAGER' && user.assignedBrands?.length > 0 && !user.assignedBrands.includes('ALL')) {
-      list = list.filter((f) => user.assignedBrands.includes(f.brandCode));
+    if (!user.is_super_admin && !user.isSuperAdmin && user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
+      list = list.filter((f) => user.assignedBrands!.includes(f.brandCode));
     }
     const brand = brandCode || this.activeBrandFilter;
     if (brand && brand !== 'ALL') {
@@ -2665,7 +2665,7 @@ export class DatabaseService {
     if (assignedTo) {
       return this.tasks.filter((t) => t.assignedTo === assignedTo);
     }
-    if (this.currentUser.role === 'SALES_OFFICER') {
+    if (this.currentUser.permissions?.tasks?.scope === 'OWN' || (!this.currentUser.is_super_admin && !this.currentUser.isSuperAdmin && this.currentUser.role === 'SALES_OFFICER')) {
       return this.tasks.filter((t) => t.assignedTo === this.currentUser.id);
     }
     return this.tasks;
@@ -3011,7 +3011,7 @@ export class DatabaseService {
     this.persistState();
 
     // Notify Admins
-    const admins = this.users.filter((u) => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN');
+    const admins = this.users.filter((u) => u.is_super_admin || u.isSuperAdmin || u.role === 'ADMIN' || u.role === 'SUPER_ADMIN' || u.permissions?.staff_scorecards?.access === 'FULL');
     admins.forEach((admin) => {
       this.addNotification({
         userId: admin.id,
@@ -3410,8 +3410,8 @@ export class DatabaseService {
   // Morning Brief Data (Fix 31)
   public getMorningBriefData(user?: User) {
     const activeUser = user || this.currentUser;
-    const isOfficer = activeUser.role === 'SALES_OFFICER';
-    const isBrandMgr = activeUser.role === 'BRAND_MANAGER';
+    const isOfficer = activeUser.permissions?.beat_plans?.scope === 'OWN' || (!activeUser.is_super_admin && !activeUser.isSuperAdmin && activeUser.role === 'SALES_OFFICER');
+    const isBrandMgr = Boolean(!activeUser.is_super_admin && !activeUser.isSuperAdmin && activeUser.assignedBrands?.length && !activeUser.assignedBrands.includes('ALL'));
 
     // Filtered collections
     let filteredOrders = this.orders;
@@ -3419,11 +3419,11 @@ export class DatabaseService {
     let filteredReturns = this.returns;
     let filteredFeedback = this.feedbackEntries;
 
-    if (isBrandMgr) {
-      filteredOrders = filteredOrders.filter((o) => activeUser.assignedBrands.includes(o.brandCode));
-      filteredFailures = filteredFailures.filter((f) => activeUser.assignedBrands.includes(f.brandCode));
-      filteredReturns = filteredReturns.filter((r) => activeUser.assignedBrands.includes(r.brandCode));
-      filteredFeedback = filteredFeedback.filter((fb) => activeUser.assignedBrands.includes(fb.brandCode));
+    if (isBrandMgr && activeUser.assignedBrands) {
+      filteredOrders = filteredOrders.filter((o) => activeUser.assignedBrands!.includes(o.brandCode));
+      filteredFailures = filteredFailures.filter((f) => activeUser.assignedBrands!.includes(f.brandCode));
+      filteredReturns = filteredReturns.filter((r) => activeUser.assignedBrands!.includes(r.brandCode));
+      filteredFeedback = filteredFeedback.filter((fb) => activeUser.assignedBrands!.includes(fb.brandCode));
     }
 
     const overdueCheques = this.cheques.filter(
@@ -3549,8 +3549,8 @@ export class DatabaseService {
   public getFilteredOrders(user?: User): Order[] {
     const activeUser = user || this.currentUser;
     let list = this.orders;
-    if (activeUser.role === 'BRAND_MANAGER') {
-      list = list.filter((o) => activeUser.assignedBrands.includes(o.brandCode));
+    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && activeUser.assignedBrands && activeUser.assignedBrands.length > 0 && !activeUser.assignedBrands.includes('ALL')) {
+      list = list.filter((o) => activeUser.assignedBrands!.includes(o.brandCode));
     }
     if (this.activeBrandFilter && this.activeBrandFilter !== 'ALL') {
       list = list.filter((o) => o.brandCode === this.activeBrandFilter);
@@ -3560,7 +3560,7 @@ export class DatabaseService {
 
   public getFilteredBeatItems(user?: User): BeatItem[] {
     const activeUser = user || this.currentUser;
-    if (activeUser.role === 'SALES_OFFICER') {
+    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && (activeUser.permissions?.beat_plans?.scope === 'OWN' || activeUser.role === 'SALES_OFFICER')) {
       return this.beatItems.filter((b) => b.officerId === activeUser.id);
     }
     return this.beatItems;
@@ -3568,7 +3568,7 @@ export class DatabaseService {
 
   public getFilteredCheques(user?: User): Cheque[] {
     const activeUser = user || this.currentUser;
-    if (activeUser.role === 'SALES_OFFICER') {
+    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && (activeUser.permissions?.cheque_tracker?.scope === 'OWN' || activeUser.role === 'SALES_OFFICER')) {
       return this.cheques.filter((c) => c.officerId === activeUser.id);
     }
     return this.cheques;
@@ -3580,7 +3580,7 @@ export class DatabaseService {
     const retailers: StoreEntity[] = this.retailers.map((r) => ({ entityType: 'RETAILER', ...r }));
     let combined = [...branches, ...retailers];
 
-    if (activeUser.role === 'SALES_OFFICER') {
+    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && (activeUser.permissions?.stores?.scope === 'OWN' || activeUser.role === 'SALES_OFFICER')) {
       combined = combined.filter((s) => s.assignedOfficerId === activeUser.id);
     }
     return combined;
@@ -3592,7 +3592,7 @@ export class DatabaseService {
 
   public getFilteredTasks(user?: User): Task[] {
     const activeUser = user || this.currentUser;
-    if (activeUser.role === 'SALES_OFFICER') {
+    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && (activeUser.permissions?.tasks?.scope === 'OWN' || activeUser.role === 'SALES_OFFICER')) {
       return this.tasks.filter((t) => t.assignedTo === activeUser.id);
     }
     return this.tasks;
@@ -3600,7 +3600,7 @@ export class DatabaseService {
 
   public getFilteredShelfPhotos(user?: User): ShelfPhoto[] {
     const activeUser = user || this.currentUser;
-    if (activeUser.role === 'SALES_OFFICER') {
+    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && (activeUser.permissions?.shelf_photos?.scope === 'OWN' || activeUser.role === 'SALES_OFFICER')) {
       return this.shelfPhotos.filter((p) => p.officerId === activeUser.id);
     }
     return this.shelfPhotos;
@@ -3608,7 +3608,7 @@ export class DatabaseService {
 
   public getFilteredCallLogs(user?: User): CallLog[] {
     const activeUser = user || this.currentUser;
-    if (activeUser.role === 'SALES_OFFICER') {
+    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && (activeUser.permissions?.call_tracker?.scope === 'OWN' || activeUser.role === 'SALES_OFFICER')) {
       return this.callLogs.filter((c) => c.officerId === activeUser.id);
     }
     return this.callLogs;
@@ -3616,7 +3616,7 @@ export class DatabaseService {
 
   public getFilteredDocuments(user?: User): HandoverDocument[] {
     const activeUser = user || this.currentUser;
-    if (activeUser.role === 'SALES_OFFICER') {
+    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && (activeUser.permissions?.document_handover?.scope === 'OWN' || activeUser.role === 'SALES_OFFICER')) {
       return this.documents.filter((d) => d.officerId === activeUser.id);
     }
     return this.documents;
@@ -3624,7 +3624,7 @@ export class DatabaseService {
 
   public getFilteredScorecards(user?: User): OfficerScorecard[] {
     const activeUser = user || this.currentUser;
-    if (activeUser.role === 'SALES_OFFICER') {
+    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && (activeUser.permissions?.staff_scorecards?.scope === 'OWN' || activeUser.role === 'SALES_OFFICER')) {
       return this.scorecards.filter((s) => s.officerId === activeUser.id);
     }
     return this.scorecards;
@@ -3633,8 +3633,8 @@ export class DatabaseService {
   public getFilteredDeliveryFailures(user?: User): DeliveryFailure[] {
     const activeUser = user || this.currentUser;
     let list = this.deliveryFailures;
-    if (activeUser.role === 'BRAND_MANAGER') {
-      list = list.filter((f) => activeUser.assignedBrands.includes(f.brandCode));
+    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && activeUser.assignedBrands && activeUser.assignedBrands.length > 0 && !activeUser.assignedBrands.includes('ALL')) {
+      list = list.filter((f) => activeUser.assignedBrands!.includes(f.brandCode));
     }
     return list;
   }
@@ -3642,8 +3642,8 @@ export class DatabaseService {
   public getFilteredReturns(user?: User): ReturnEntry[] {
     const activeUser = user || this.currentUser;
     let list = this.returns;
-    if (activeUser.role === 'BRAND_MANAGER') {
-      list = list.filter((r) => activeUser.assignedBrands.includes(r.brandCode));
+    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && activeUser.assignedBrands && activeUser.assignedBrands.length > 0 && !activeUser.assignedBrands.includes('ALL')) {
+      list = list.filter((r) => activeUser.assignedBrands!.includes(r.brandCode));
     }
     return list;
   }
@@ -3651,8 +3651,8 @@ export class DatabaseService {
   public getFilteredFeedback(user?: User): FeedbackEntry[] {
     const activeUser = user || this.currentUser;
     let list = this.feedbackEntries;
-    if (activeUser.role === 'BRAND_MANAGER') {
-      list = list.filter((f) => activeUser.assignedBrands.includes(f.brandCode));
+    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && activeUser.assignedBrands && activeUser.assignedBrands.length > 0 && !activeUser.assignedBrands.includes('ALL')) {
+      list = list.filter((f) => activeUser.assignedBrands!.includes(f.brandCode));
     }
     return list;
   }
@@ -3871,7 +3871,7 @@ export class DatabaseService {
     const log: ActivityLog = {
       id: `act_${Date.now()}`,
       userName: this.currentUser.fullName,
-      userRole: this.currentUser.role,
+      userRole: (this.currentUser.role as any) || 'STAFF',
       action,
       entityType,
       entityId,

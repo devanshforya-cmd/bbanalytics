@@ -9,6 +9,7 @@ import { toast } from '@/components/common/Toast';
 import { validateRequired } from '@/lib/validation';
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
+import { getScope } from '@/lib/permissions';
 import {
   CheckSquare,
   Plus,
@@ -161,7 +162,7 @@ export default function TasksPage() {
   };
 
   const visibleTasks = tasks.filter((t) => {
-    if (currentUser.role === 'SALES_OFFICER') {
+    if (getScope(currentUser, 'tasks') === 'OWN') {
       return t.assignedTo === currentUser.id;
     }
     return true;
@@ -174,7 +175,7 @@ export default function TasksPage() {
   );
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'SALES_OFFICER']}>
+    <PageGuard feature="tasks">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -368,7 +369,7 @@ export default function TasksPage() {
                   >
                     {db.getUsers().map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.fullName} ({u.role.replace('_', ' ')})
+                        {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
                       </option>
                     ))}
                   </select>
@@ -497,7 +498,7 @@ export default function TasksPage() {
                   >
                     {db.getUsers().map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.fullName} ({u.role.replace('_', ' ')})
+                        {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
                       </option>
                     ))}
                   </select>
@@ -597,7 +598,7 @@ export default function TasksPage() {
             <option value="" disabled>Select Officer...</option>
             {db.getUsers().map((u) => (
               <option key={u.id} value={u.id}>
-                {u.fullName} ({u.role.replace('_', ' ')})
+                {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
               </option>
             ))}
           </select>

@@ -212,7 +212,7 @@ export default function DashboardPage() {
   const latestReviews = feedback.filter((f) => f.type === 'REVIEW' || f.type === 'FEEDBACK').slice(0, 3);
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'VIEWER']}>
+    <PageGuard feature="dashboard">
       <div className="space-y-6">
         {/* Fix 31: Daily Morning Brief Card */}
         <MorningBriefCard />

@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
+import { getScope } from '@/lib/permissions';
 
 const SAMPLE_DOC_IMAGES = [
   {
@@ -63,7 +64,7 @@ const SAMPLE_DOC_IMAGES = [
 
 export default function DocumentsPage() {
   const [currentUser] = useState(() => db.getCurrentUser());
-  const isSalesOfficer = currentUser.role === 'SALES_OFFICER';
+  const isSalesOfficer = getScope(currentUser, 'document_handover') === 'OWN';
   const [documents, setDocuments] = useState<HandoverDocument[]>(() => db.getDocuments());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStore, setFilterStore] = useState('ALL');
@@ -106,7 +107,11 @@ export default function DocumentsPage() {
   const [showStoreDropdown, setShowStoreDropdown] = useState(false);
   const [formDocType, setFormDocType] = useState('Purchase Order');
   const [formRefNumber, setFormRefNumber] = useState('');
-  const [formOfficerName, setFormOfficerName] = useState(allStaff.find((u) => u.role === 'SALES_OFFICER')?.fullName || allStaff[0]?.fullName || 'Field Officer');
+  const [formOfficerName, setFormOfficerName] = useState(
+    allStaff.find((u) => u.role === 'SALES_OFFICER' || u.permissions?.beat_plans?.access === 'FULL' || u.id.startsWith('user_'))?.fullName ||
+      allStaff[0]?.fullName ||
+      'Field Officer'
+  );
   const [formInitialHolder, setFormInitialHolder] = useState('FIELD');
   const [formHandedTo, setFormHandedTo] = useState(allStaff[0]?.fullName || 'Operations Desk');
   const [formNotes, setFormNotes] = useState('');
@@ -368,7 +373,7 @@ export default function DocumentsPage() {
   };
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'SALES_OFFICER']}>
+    <PageGuard feature="document_handover">
       <div className="space-y-6 pb-20">
       <Breadcrumbs
         items={[
@@ -1156,7 +1161,7 @@ export default function DocumentsPage() {
                 {allStaff.length > 0 ? (
                   allStaff.map((u) => (
                     <option key={u.id} value={u.fullName}>
-                      {u.fullName} ({u.role.replace('_', ' ')})
+                      {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
                     </option>
                   ))
                 ) : (
@@ -1469,7 +1474,7 @@ export default function DocumentsPage() {
                   {allStaff.length > 0 ? (
                     allStaff.map((u) => (
                       <option key={u.id} value={u.fullName}>
-                        {u.fullName} ({u.role.replace('_', ' ')})
+                        {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
                       </option>
                     ))
                   ) : (
@@ -1503,7 +1508,7 @@ export default function DocumentsPage() {
                   {allStaff.length > 0 ? (
                     allStaff.map((u) => (
                       <option key={u.id} value={u.fullName}>
-                        {u.fullName} ({u.role.replace('_', ' ')})
+                        {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
                       </option>
                     ))
                   ) : (

@@ -25,6 +25,7 @@ import {
 import { db } from '@/lib/db/db-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
+import { canPerform, isSuperAdmin } from '@/lib/permissions';
 import { toast } from '@/components/common/Toast';
 
 // 58a. Modular Beat Plan Sub-components
@@ -93,10 +94,7 @@ export default function BeatPlanPage() {
   const [isOptimizing, setIsOptimizing] = useState(false);
 
   // Admin One-Time Beat Override State (Section 7)
-  const isAdmin =
-    currentUser.role === 'ADMIN' ||
-    currentUser.role === 'SUPER_ADMIN' ||
-    Boolean(currentUser.isSuperAdmin);
+  const isAdmin = isSuperAdmin(currentUser) || canPerform(currentUser, 'beat_plans', 'EDIT');
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overrideOfficerId, setOverrideOfficerId] = useState(currentUser.id);
   const [overrideStoreId, setOverrideStoreId] = useState('');
@@ -433,7 +431,7 @@ export default function BeatPlanPage() {
   const pendingBeatCount = beatItems.filter((b) => b.status === 'PENDING').length;
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'SALES_OFFICER']}>
+    <PageGuard feature="beat_plans">
       <div className="space-y-6 pb-36 sm:pb-12">
         <Breadcrumbs
           items={[
@@ -960,7 +958,7 @@ export default function BeatPlanPage() {
                   >
                     {db.getUsers().map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.fullName} ({u.territory || u.role})
+                        {u.fullName} ({u.territory || 'Field Team'})
                       </option>
                     ))}
                   </select>

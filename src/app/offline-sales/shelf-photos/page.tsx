@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
+import { getScope } from '@/lib/permissions';
 
 export default function ShelfPhotosPage() {
   const [photos, setPhotos] = useState<ShelfPhoto[]>([]);
@@ -78,7 +79,7 @@ export default function ShelfPhotosPage() {
   };
 
   const currentUser = db.getCurrentUser();
-  const isSalesOfficer = currentUser.role === 'SALES_OFFICER';
+  const isSalesOfficer = getScope(currentUser, 'shelf_photos') === 'OWN';
 
   // Filter application
   const filtered = photos.filter((p) => {
@@ -141,7 +142,7 @@ export default function ShelfPhotosPage() {
   };
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'SALES_OFFICER']}>
+    <PageGuard feature="shelf_photos">
       <div className="space-y-6 pb-12">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

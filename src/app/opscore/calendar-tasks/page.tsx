@@ -34,6 +34,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
+import { getScope } from '@/lib/permissions';
 
 interface CalendarEvent {
   id: string;
@@ -143,7 +144,8 @@ export default function CalendarTasksPage() {
   const refreshData = () => {
     const user = db.getCurrentUser();
     setUsers(db.getUsers());
-    if (user.role === 'SALES_OFFICER') {
+    const isOfficer = getScope(user, 'tasks') === 'OWN';
+    if (isOfficer) {
       setAllTasks(db.getTasks().filter((t) => t.assignedTo === user.id || t.assignedTo === 'user_ravi'));
       setAllBeats(db.getTodayBeat(user.id));
       setAllCheques(db.getCheques().filter((c) => c.officerId === user.id));
@@ -433,7 +435,7 @@ export default function CalendarTasksPage() {
   const completedCount = allTasks.filter((t) => t.status === 'COMPLETED').length;
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'SALES_OFFICER']}>
+    <PageGuard feature="tasks">
       <div className="space-y-6 pb-12">
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-2 text-xs text-slate-500">
@@ -600,7 +602,7 @@ export default function CalendarTasksPage() {
                 <option value="ALL">All Assignees (Field & Office)</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.fullName} ({u.role.replace('_', ' ')})
+                    {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
                   </option>
                 ))}
               </select>
@@ -1237,7 +1239,7 @@ export default function CalendarTasksPage() {
                   >
                     {users.map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.fullName} ({u.role.replace('_', ' ')})
+                        {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
                       </option>
                     ))}
                   </select>

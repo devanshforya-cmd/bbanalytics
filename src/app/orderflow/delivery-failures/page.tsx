@@ -353,7 +353,7 @@ export default function DeliveryFailuresPage() {
   const slaY = chartHeight - paddingY - (3.0 / maxRate) * (chartHeight - paddingY * 2);
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY']}>
+    <PageGuard feature="orderflow">
       <div className="space-y-6 pb-20">
       <Breadcrumbs
         items={[

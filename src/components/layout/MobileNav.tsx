@@ -9,12 +9,8 @@ import {
   CreditCard,
   Award,
   Sparkles,
-  Plus,
-  Calendar,
   Navigation,
-  Settings,
-  PhoneCall,
-  CheckCircle,
+  Phone,
   X,
   Package,
   LayoutDashboard,
@@ -30,6 +26,27 @@ import {
 import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
 import { User } from '@/lib/types';
+import { hasAccess, isSuperAdmin } from '@/lib/permissions';
+
+interface MobileBottomTab {
+  label: string;
+  href: string;
+  permKey: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const CANDIDATE_BOTTOM_TABS: MobileBottomTab[] = [
+  { label: 'Dashboard', href: '/dashboard', permKey: 'dashboard', icon: LayoutDashboard },
+  { label: 'My Day', href: '/offline-sales/beat-plan', permKey: 'beat_plans', icon: Compass },
+  { label: 'Stores', href: '/offline-sales/stores', permKey: 'stores', icon: Store },
+  { label: 'Orders', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles },
+  { label: 'Cheques', href: '/offline-sales/cheques', permKey: 'cheque_tracker', icon: CreditCard },
+  { label: 'Tasks', href: '/opscore/tasks', permKey: 'tasks', icon: CheckSquare },
+  { label: 'Feedback', href: '/reviews/feedback', permKey: 'reviews', icon: MessageSquareHeart },
+  { label: 'Scorecard', href: '/offline-sales/scorecard', permKey: 'staff_scorecards', icon: Award },
+  { label: 'Products', href: '/products', permKey: 'products', icon: Package },
+  { label: 'Customers', href: '/customers', permKey: 'customers', icon: Users },
+];
 
 export default function MobileNav() {
   const pathname = usePathname();
@@ -41,9 +58,7 @@ export default function MobileNav() {
     if (session) setCurrentUser(session);
   }, [pathname]);
 
-  const role = currentUser.role;
-  const isOfficer = role === 'SALES_OFFICER';
-  const isDataEntry = role === 'DATA_ENTRY';
+  const visibleBottomTabs = CANDIDATE_BOTTOM_TABS.filter((t) => hasAccess(currentUser, t.permKey)).slice(0, 5);
 
   return (
     <>
@@ -63,10 +78,10 @@ export default function MobileNav() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <span className="font-bold text-slate-900 text-sm">
-                  {isOfficer ? 'Field Sales Quick Actions' : 'Command Center Speed Dial'}
+                  Quick Actions
                 </span>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  {currentUser.fullName} ({role.replace('_', ' ')})
+                  {currentUser.fullName} ({isSuperAdmin(currentUser) ? 'Super Admin' : 'Authorized User'})
                 </p>
               </div>
               <button
@@ -79,121 +94,31 @@ export default function MobileNav() {
               </button>
             </div>
 
-            {/* Role-Specific Speed Actions */}
-            {isOfficer ? (
-              <div className="grid grid-cols-2 gap-2.5">
+            {/* Permission-Filtered Speed Actions */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {hasAccess(currentUser, 'beat_plans') && (
                 <Link
                   href="/offline-sales/beat-plan"
                   onClick={() => setShowFabDrawer(false)}
                   className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                 >
                   <Compass className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>GPS Check-in</span>
+                  <span>Beat Check-in</span>
                 </Link>
+              )}
 
-                <Link
-                  href="/offline-sales/beat-plan"
-                  onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
-                >
-                  <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Secondary Order</span>
-                </Link>
-
-                <Link
-                  href="/offline-sales/cheques"
-                  onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-purple-50 text-purple-800 border border-purple-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
-                >
-                  <CreditCard className="w-4 h-4 text-purple-600 shrink-0" />
-                  <span>Collect Cheque</span>
-                </Link>
-
-                <Link
-                  href="/offline-sales/calls"
-                  onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
-                >
-                  <PhoneCall className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>Log Store Call</span>
-                </Link>
-
-                <Link
-                  href="/offline-sales/shelf-photos"
-                  onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-pink-50 text-pink-800 border border-pink-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
-                >
-                  <Camera className="w-4 h-4 text-pink-600 shrink-0" />
-                  <span>Shelf Photos</span>
-                </Link>
-
+              {hasAccess(currentUser, 'stores') && (
                 <Link
                   href="/offline-sales/stores"
                   onClick={() => setShowFabDrawer(false)}
                   className="flex items-center gap-2.5 p-3 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                 >
                   <Store className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span>Quick Add Store</span>
+                  <span>Stores &amp; Outlets</span>
                 </Link>
+              )}
 
-                <Link
-                  href="/products"
-                  onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 text-slate-800 border border-slate-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform col-span-2"
-                >
-                  <Package className="w-4 h-4 text-slate-700 shrink-0" />
-                  <span>SKUs, Combos &amp; Wholesale Pricing</span>
-                </Link>
-              </div>
-            ) : isDataEntry ? (
-              <div className="grid grid-cols-2 gap-2.5">
-                <Link
-                  href="/orderflow/extractor"
-                  onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
-                >
-                  <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>WhatsApp Extractor</span>
-                </Link>
-
-                <Link
-                  href="/orderflow/manual-entry"
-                  onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
-                >
-                  <ClipboardPen className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Manual Entry</span>
-                </Link>
-
-                <Link
-                  href="/orderflow/delivery-failures"
-                  onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
-                >
-                  <TruckIcon className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>Log Failure</span>
-                </Link>
-
-                <Link
-                  href="/reviews/feedback"
-                  onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-purple-50 text-purple-800 border border-purple-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
-                >
-                  <MessageSquareHeart className="w-4 h-4 text-purple-600 shrink-0" />
-                  <span>Log Review</span>
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2.5">
-                <Link
-                  href="/offline-sales/live-tracking"
-                  onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
-                >
-                  <Navigation className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Live GPS Tracking</span>
-                </Link>
-
+              {hasAccess(currentUser, 'cheque_tracker') && (
                 <Link
                   href="/offline-sales/cheques"
                   onClick={() => setShowFabDrawer(false)}
@@ -202,222 +127,110 @@ export default function MobileNav() {
                   <CreditCard className="w-4 h-4 text-purple-600 shrink-0" />
                   <span>Cheque Custody</span>
                 </Link>
+              )}
 
+              {hasAccess(currentUser, 'shelf_photos') && (
                 <Link
-                  href="/opscore/tasks"
+                  href="/offline-sales/shelf-photos"
                   onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
+                  className="flex items-center gap-2.5 p-3 rounded-xl bg-pink-50 text-pink-800 border border-pink-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                 >
-                  <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Dispatch Task</span>
+                  <Camera className="w-4 h-4 text-pink-600 shrink-0" />
+                  <span>Shelf Photos</span>
                 </Link>
+              )}
 
+              {hasAccess(currentUser, 'call_tracker') && (
                 <Link
-                  href="/customers"
-                  onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
-                >
-                  <Users className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span>Customer 360</span>
-                </Link>
-
-                <Link
-                  href="/products"
+                  href="/offline-sales/calls"
                   onClick={() => setShowFabDrawer(false)}
                   className="flex items-center gap-2.5 p-3 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                 >
-                  <Package className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>Products &amp; Combos</span>
+                  <Phone className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Log Store Call</span>
                 </Link>
+              )}
 
+              {hasAccess(currentUser, 'orderflow') && (
+                <>
+                  <Link
+                    href="/orderflow/extractor"
+                    onClick={() => setShowFabDrawer(false)}
+                    className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
+                  >
+                    <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>WhatsApp Extractor</span>
+                  </Link>
+
+                  <Link
+                    href="/orderflow/manual-entry"
+                    onClick={() => setShowFabDrawer(false)}
+                    className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
+                  >
+                    <ClipboardPen className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Manual Order</span>
+                  </Link>
+                </>
+              )}
+
+              {hasAccess(currentUser, 'reviews') && (
                 <Link
-                  href="/opscore/export"
+                  href="/reviews/feedback"
                   onClick={() => setShowFabDrawer(false)}
-                  className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 text-slate-800 border border-slate-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
+                  className="flex items-center gap-2.5 p-3 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                 >
-                  <FileSpreadsheet className="w-4 h-4 text-slate-600 shrink-0" />
-                  <span>Sheets Sync</span>
+                  <MessageSquareHeart className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>Log Feedback</span>
                 </Link>
-              </div>
-            )}
+              )}
+
+              {hasAccess(currentUser, 'tasks') && (
+                <Link
+                  href="/opscore/tasks"
+                  onClick={() => setShowFabDrawer(false)}
+                  className="flex items-center gap-2.5 p-3 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
+                >
+                  <CheckSquare className="w-4 h-4 text-teal-600 shrink-0" />
+                  <span>My Tasks</span>
+                </Link>
+              )}
+
+              {hasAccess(currentUser, 'products') && (
+                <Link
+                  href="/products"
+                  onClick={() => setShowFabDrawer(false)}
+                  className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 text-slate-800 border border-slate-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform col-span-2"
+                >
+                  <Package className="w-4 h-4 text-slate-700 shrink-0" />
+                  <span>Products &amp; Pricing</span>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Primary Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 z-40 grid grid-cols-5 h-16 w-full items-center border-t border-slate-200 bg-white/95 backdrop-blur-md px-1 shadow-lg lg:hidden">
-        {isOfficer ? (
-          <>
-            {/* 1. My Day */}
+      {/* Primary Mobile Bottom Navigation Bar (Dynamic from user permissions) */}
+      <nav
+        className="fixed bottom-0 left-0 z-40 h-16 w-full items-center border-t border-slate-200 bg-white/95 backdrop-blur-md px-1 shadow-lg lg:hidden grid"
+        style={{ gridTemplateColumns: `repeat(${Math.max(1, visibleBottomTabs.length)}, minmax(0, 1fr))` }}
+      >
+        {visibleBottomTabs.map((tab) => {
+          const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+          const Icon = tab.icon;
+          return (
             <Link
-              href="/offline-sales/beat-plan"
+              key={tab.href}
+              href={tab.href}
               className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname === '/offline-sales/beat-plan' ? 'text-blue-600 font-bold' : 'text-slate-500'
+                isActive ? 'text-blue-600 font-bold' : 'text-slate-500'
               }`}
             >
-              <Compass className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">My Day</span>
+              <Icon className="h-5 w-5" />
+              <span className="leading-tight mt-1 truncate">{tab.label}</span>
             </Link>
-
-            {/* 2. My Stores */}
-            <Link
-              href="/offline-sales/stores"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/stores') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <Store className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">My Stores</span>
-            </Link>
-
-            {/* 3. My Cheques */}
-            <Link
-              href="/offline-sales/cheques"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/cheques') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <CreditCard className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">My Cheques</span>
-            </Link>
-
-            {/* 4. Scorecard */}
-            <Link
-              href="/offline-sales/scorecard"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/scorecard') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <Award className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">Scorecard</span>
-            </Link>
-
-            {/* 5. Tasks */}
-            <Link
-              href="/opscore/tasks"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/tasks') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <CheckSquare className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">Tasks</span>
-            </Link>
-          </>
-        ) : isDataEntry ? (
-          <>
-            {/* 1. Extractor */}
-            <Link
-              href="/orderflow/extractor"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/extractor') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <Sparkles className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">Extractor</span>
-            </Link>
-
-            {/* 2. Manual Entry */}
-            <Link
-              href="/orderflow/manual-entry"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/manual-entry') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <ClipboardPen className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">Manual Entry</span>
-            </Link>
-
-            {/* 3. Feedback */}
-            <Link
-              href="/reviews/feedback"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/feedback') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <MessageSquareHeart className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">Feedback</span>
-            </Link>
-
-            {/* 4. Returns */}
-            <Link
-              href="/reviews/returns"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/returns') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <RotateCcw className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">Returns</span>
-            </Link>
-
-            {/* 5. Failures */}
-            <Link
-              href="/orderflow/delivery-failures"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/delivery-failures') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <TruckIcon className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">Failures</span>
-            </Link>
-          </>
-        ) : (
-          <>
-            {/* 1. Dashboard */}
-            <Link
-              href="/dashboard"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname === '/dashboard' || pathname === '/' ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <LayoutDashboard className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">Dashboard</span>
-            </Link>
-
-            {/* 2. Stores */}
-            <Link
-              href="/offline-sales/stores"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/stores') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <Store className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">Stores</span>
-            </Link>
-
-            {/* 3. Cheques */}
-            <Link
-              href="/offline-sales/cheques"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/cheques') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <CreditCard className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">Cheques</span>
-            </Link>
-
-            {/* 4. Feedback */}
-            <Link
-              href="/reviews/feedback"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/feedback') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <MessageSquareHeart className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">Feedback</span>
-            </Link>
-
-            {/* 5. Tasks */}
-            <Link
-              href="/opscore/tasks"
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
-                pathname.includes('/tasks') ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <CheckSquare className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">Tasks</span>
-            </Link>
-          </>
-        )}
+          );
+        })}
       </nav>
     </>
   );

@@ -33,6 +33,7 @@ import {
   Clock,
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
+import { canPerform } from '@/lib/permissions';
 import EmptyState from '@/components/common/EmptyState';
 
 function autoSuggestKeywords(name: string, brandCode?: string): string[] {
@@ -164,11 +165,11 @@ export default function ProductsPage() {
   };
 
   // Filtered lists with consolidated PEE_SAFE support (including FURR)
-  const isBrandManager = currentUser.role === 'BRAND_MANAGER';
   const assignedBrands = currentUser.assignedBrands || [];
+  const hasBrandRestrictions = Boolean(assignedBrands.length > 0 && !assignedBrands.includes('ALL'));
 
   const filteredProducts = products.filter((p) => {
-    if (isBrandManager) {
+    if (hasBrandRestrictions) {
       const allowed =
         assignedBrands.includes(p.brandCode) ||
         (assignedBrands.includes('PEE_SAFE') && p.brandCode === 'FURR');
@@ -187,7 +188,7 @@ export default function ProductsPage() {
   });
 
   const filteredCombos = combos.filter((c) => {
-    if (isBrandManager) {
+    if (hasBrandRestrictions) {
       const allowed =
         assignedBrands.includes(c.brandCode) ||
         (assignedBrands.includes('PEE_SAFE') && c.brandCode === 'FURR');
@@ -453,7 +454,7 @@ export default function ProductsPage() {
   };
 
   return (
-    <PageGuard feature="products" allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'SALES_OFFICER']}>
+    <PageGuard feature="products">
       <div className="space-y-6 pb-36 sm:pb-20">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -473,7 +474,7 @@ export default function ProductsPage() {
         </div>
 
         {/* Action Buttons */}
-        {currentUser.role !== 'SALES_OFFICER' && (
+        {canPerform(currentUser, 'products', 'CREATE') && (
           <div className="flex items-center gap-2 flex-wrap">
             {toastMessage && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold shadow-xs animate-fade-in">

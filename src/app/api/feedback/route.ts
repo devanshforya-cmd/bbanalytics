@@ -11,8 +11,8 @@ export async function GET(request: Request) {
   const { user } = auth;
   let feedback = db.getFeedback();
 
-  if (user.role === 'BRAND_MANAGER' && user.assignedBrands?.length) {
-    feedback = feedback.filter((f) => user.assignedBrands.includes(f.brandCode as any));
+  if (user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
+    feedback = feedback.filter((f) => user.assignedBrands!.includes(f.brandCode as any));
   }
 
   return NextResponse.json({ success: true, count: feedback.length, data: feedback });

@@ -294,7 +294,7 @@ export default function DailyOrdersPage() {
   };
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY']}>
+    <PageGuard feature="orderflow">
       <div className="space-y-6 pb-24 max-w-7xl mx-auto">
         <Breadcrumbs
           items={[

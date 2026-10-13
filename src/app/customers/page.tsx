@@ -150,7 +150,7 @@ export default function CustomersPage() {
   };
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER']}>
+    <PageGuard feature="customers">
       <div className="space-y-6 pb-24">
       {/* Toast */}
       {toastMsg && (

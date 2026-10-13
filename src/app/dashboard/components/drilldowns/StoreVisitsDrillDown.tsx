@@ -89,7 +89,12 @@ function StoresVisitedTodayTab({
   beatItems: BeatItem[];
   scorecards: OfficerScorecard[];
 }) {
-  const allStaff = db.getUsers().filter((u) => u.role === 'SALES_OFFICER');
+  const allStaff = db.getUsers().filter(
+    (u) =>
+      u.role === 'SALES_OFFICER' ||
+      (u.permissions?.beat_plans && u.permissions.beat_plans.access !== 'HIDDEN') ||
+      u.id.startsWith('user_')
+  );
   const allBeats = db.getBeatItems();
 
   const officers = allStaff.map((off) => {

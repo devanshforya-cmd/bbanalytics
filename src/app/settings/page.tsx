@@ -59,7 +59,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+    <PageGuard feature="settings">
       <div className="space-y-6 pb-20">
         <Breadcrumbs items={[{ label: 'System Configuration & Settings' }]} />
 

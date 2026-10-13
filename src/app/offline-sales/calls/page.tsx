@@ -21,10 +21,11 @@ import {
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
+import { getScope } from '@/lib/permissions';
 
 export default function CallsPage() {
   const [currentUser] = useState(() => db.getCurrentUser());
-  const isSalesOfficer = currentUser.role === 'SALES_OFFICER';
+  const isSalesOfficer = getScope(currentUser, 'call_tracker') === 'OWN';
   const [calls, setCalls] = useState<CallLog[]>(db.getCalls());
   const [searchTerm, setSearchTerm] = useState('');
   const [showLogModal, setShowLogModal] = useState(false);
@@ -153,7 +154,7 @@ export default function CallsPage() {
   });
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'SALES_OFFICER']}>
+    <PageGuard feature="call_tracker">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

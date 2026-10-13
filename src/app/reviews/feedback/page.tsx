@@ -293,7 +293,7 @@ function FeedbackContent() {
   };
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY']}>
+    <PageGuard feature="reviews">
       <div className="space-y-6 pb-20 max-w-7xl mx-auto">
       <Breadcrumbs
         items={[
@@ -1209,7 +1209,7 @@ function FeedbackContent() {
             <option value="" disabled>Assign to...</option>
             {db.getUsers().map((u) => (
               <option key={u.id} value={u.id}>
-                {u.fullName} ({u.role.replace('_', ' ')})
+                {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
               </option>
             ))}
           </select>
@@ -1246,7 +1246,7 @@ function FeedbackContent() {
           >
             {db.getUsers().map((u) => (
               <option key={u.id} value={u.fullName}>
-                {u.fullName} ({u.role.replace('_', ' ')})
+                {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
               </option>
             ))}
           </select>

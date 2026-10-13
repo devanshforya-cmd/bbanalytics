@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useCalendarPreference } from '@/lib/hooks/useCalendarPreference';
+import { getScope, isSuperAdmin } from '@/lib/permissions';
 
 interface UserProfileDrawerProps {
   isOpen: boolean;
@@ -113,7 +114,7 @@ export default function UserProfileDrawer({
 
   if (!isOpen) return null;
 
-  const isOfficer = currentUser.role === 'SALES_OFFICER';
+  const isOfficer = getScope(currentUser, 'beat_plans') === 'OWN';
   const dutyConfig = DUTY_STATUS_CONFIG[dutyStatus] || DUTY_STATUS_CONFIG.ONLINE;
   const DutyIcon = dutyConfig.icon;
 
@@ -178,7 +179,7 @@ export default function UserProfileDrawer({
                   <div className="mt-1 flex items-center gap-2">
                     <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-100">
                       <Shield className="h-3 w-3" />
-                      {currentUser.role.replace('_', ' ')}
+                      {isSuperAdmin(currentUser) ? 'Super Admin' : (currentUser.role ? currentUser.role.replace('_', ' ') : 'Staff')}
                     </span>
                   </div>
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-600 font-mono">
@@ -400,7 +401,7 @@ export default function UserProfileDrawer({
                       <div>
                         <div className="font-semibold text-slate-900">{u.fullName}</div>
                         <div className="text-[10px] text-slate-500">
-                          {u.role.replace('_', ' ')} • {u.phone}
+                          {u.is_super_admin || u.isSuperAdmin ? 'Super Admin' : (u.role ? u.role.replace('_', ' ') : 'Staff')} • {u.phone}
                         </div>
                       </div>
                       {u.id === currentUser.id && (

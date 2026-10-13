@@ -307,7 +307,7 @@ export default function ActivityTrailPage() {
   };
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+    <PageGuard feature="activity">
       <div className="space-y-6 pb-16 max-w-7xl mx-auto">
       <Breadcrumbs
         items={[

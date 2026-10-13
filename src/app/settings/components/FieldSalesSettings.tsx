@@ -33,7 +33,12 @@ export default function FieldSalesSettings() {
   const [newCategoryName, setNewCategoryName] = useState('');
 
   const [schedules, setSchedules] = useState<RecurringScheduleEntry[]>(() => db.getRecurringSchedules());
-  const officers = db.getUsers().filter((u) => u.role === 'SALES_OFFICER' || u.id.startsWith('user_'));
+  const officers = db.getUsers().filter(
+    (u) =>
+      u.role === 'SALES_OFFICER' ||
+      (u.permissions?.beat_plans && u.permissions.beat_plans.access !== 'HIDDEN') ||
+      u.id.startsWith('user_')
+  );
   const unifiedStores = db.getStoresUnified();
 
   // Override Modal

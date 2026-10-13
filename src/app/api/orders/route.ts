@@ -11,9 +11,8 @@ export async function GET(request: Request) {
   const { user } = auth;
   let orders = db.getOrders();
 
-  // Brand Managers only see their assigned brands
-  if (user.role === 'BRAND_MANAGER' && user.assignedBrands?.length) {
-    orders = orders.filter((o) => user.assignedBrands.includes(o.brandCode as any));
+  if (user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
+    orders = orders.filter((o) => user.assignedBrands!.includes(o.brandCode as any));
   }
 
   return NextResponse.json({ success: true, count: orders.length, data: orders });

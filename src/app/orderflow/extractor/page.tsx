@@ -489,7 +489,7 @@ export default function ExtractorPage() {
   };
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY']}>
+    <PageGuard feature="orderflow">
       <div className="space-y-6 pb-20 max-w-7xl mx-auto">
         {/* Breadcrumbs */}
         <Breadcrumbs

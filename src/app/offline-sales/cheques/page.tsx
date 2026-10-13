@@ -33,6 +33,7 @@ import {
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
 import ConfirmModal from '@/components/common/ConfirmModal';
+import { getScope } from '@/lib/permissions';
 import StatusBadge from '@/components/common/StatusBadge';
 import { useSubmitGuard } from '@/hooks/useSubmitGuard';
 
@@ -179,7 +180,7 @@ function ChequesContent() {
     });
   };
 
-  const isSalesOfficer = currentUser.role === 'SALES_OFFICER';
+  const isSalesOfficer = getScope(currentUser, 'cheque_tracker') === 'OWN';
 
   const filteredCheques = cheques.filter((c) => {
     if (isSalesOfficer && c.officerId !== currentUser.id && c.officerName !== currentUser.fullName) {
@@ -614,7 +615,7 @@ function ChequesContent() {
                       <option value="">Select office staff member...</option>
                       {db.getUsers().map((u) => (
                         <option key={u.id} value={u.fullName}>
-                          {u.fullName} ({u.role.replace('_', ' ')})
+                          {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
                         </option>
                       ))}
                     </select>
@@ -921,7 +922,7 @@ function ChequesContent() {
 
 export default function ChequesPage() {
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'SALES_OFFICER']}>
+    <PageGuard feature="cheque_tracker">
       <Suspense
         fallback={
           <div className="p-8 text-center text-slate-500 font-medium">

@@ -198,7 +198,7 @@ export default function Product360Page() {
   const penetrationPct = totalOutletsCount > 0 ? ((storesStockingProduct.length / totalOutletsCount) * 100).toFixed(1) : '0.0';
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'SALES_OFFICER']}>
+    <PageGuard feature="products">
       <div className="space-y-6 pb-12 max-w-7xl mx-auto">
       {/* Breadcrumb navigation */}
       <Breadcrumbs

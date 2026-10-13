@@ -8,6 +8,7 @@ import { getSessionUser } from '@/lib/auth';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
+import { getScope, isSuperAdmin, canPerform } from '@/lib/permissions';
 import {
   User,
   OfficerScorecard,
@@ -113,8 +114,8 @@ function ScorecardContent() {
     }
   }, [officerParam, baseScorecards]);
 
-  const isOfficer = currentUser.role === 'SALES_OFFICER';
-  const isAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
+  const isOfficer = getScope(currentUser, 'staff_scorecards') === 'OWN';
+  const isAdmin = isSuperAdmin(currentUser) || canPerform(currentUser, 'staff_scorecards', 'EDIT');
 
   // Scale metrics based on selected period
   const displayScorecards = useMemo(() => {
@@ -1390,7 +1391,7 @@ function ScorecardContent() {
 
 export default function ScorecardPage() {
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER']}>
+    <PageGuard feature="staff_scorecards">
       <Suspense
         fallback={
           <div className="p-8 text-center text-slate-500 font-medium">

@@ -241,7 +241,7 @@ export default function InfluencerDirectoryPage() {
   const greatCount = influencers.filter((i) => i.qualityRating === 'GREAT').length;
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER']}>
+    <PageGuard feature="marketing">
       <div className="space-y-6 pb-24 max-w-7xl mx-auto">
         <Breadcrumbs items={[{ label: 'Marketing' }, { label: 'Influencer Directory' }]} />
 

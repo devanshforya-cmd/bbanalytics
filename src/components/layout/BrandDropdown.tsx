@@ -13,8 +13,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
-
 import { supabase } from '@/lib/db/supabase-client';
+import { hasAccess, isSuperAdmin } from '@/lib/permissions';
 
 interface BrandDropdownProps {
   currentBrand: BrandCode;
@@ -131,10 +131,8 @@ export default function BrandDropdown({
 
   const totalSkus = db.getProducts().length;
 
-  const isAdminOrManager =
-    currentUser?.role === 'ADMIN' ||
-    currentUser?.role === 'SUPER_ADMIN' ||
-    currentUser?.role === 'BRAND_MANAGER';
+  const canOnboardBrand =
+    isSuperAdmin(currentUser) || hasAccess(currentUser, 'settings');
 
   if (brands.length === 0) {
     return (
@@ -319,7 +317,7 @@ export default function BrandDropdown({
           </div>
 
           {/* Admin Onboard Brand Link */}
-          {isAdminOrManager && (
+          {canOnboardBrand && (
             <div className="border-t border-slate-100 p-2 bg-slate-50/50 rounded-b-xl">
               <Link
                 href="/settings?tab=brands"

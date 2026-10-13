@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, Phone, AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import { loginWithMobile, getSessionUser, getRedirectPathForRole } from '@/lib/auth';
+import { loginWithMobile, getSessionUser, getRedirectPathForUser } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function LoginPage() {
   useEffect(() => {
     const existing = getSessionUser();
     if (existing) {
-      window.location.href = getRedirectPathForRole(existing.role);
+      window.location.href = getRedirectPathForUser(existing);
     }
   }, []);
 
@@ -38,7 +38,7 @@ export default function LoginPage() {
         setError(res.error || 'Invalid credentials. Please verify your email/phone and password.');
         setLoading(false);
       } else {
-        const dest = getRedirectPathForRole(res.user.role);
+        const dest = getRedirectPathForUser(res.user);
         window.location.href = dest;
       }
     } catch (err: any) {

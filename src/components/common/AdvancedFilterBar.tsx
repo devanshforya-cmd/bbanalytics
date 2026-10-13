@@ -220,7 +220,12 @@ export default function AdvancedFilterBar({
     criteria.outletType,
   ].filter(Boolean).length;
 
-  const salesOfficers = users.filter((u) => u.role === 'SALES_OFFICER');
+  const salesOfficers = users.filter(
+    (u) =>
+      u.role === 'SALES_OFFICER' ||
+      (u.permissions?.beat_plans && u.permissions.beat_plans.access !== 'HIDDEN') ||
+      u.id.startsWith('user_')
+  );
 
   return (
     <div className="mb-6 space-y-2">

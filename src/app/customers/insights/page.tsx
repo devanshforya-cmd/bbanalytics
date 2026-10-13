@@ -591,7 +591,7 @@ export default function CustomerInsightsPage() {
   }, []);
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER']}>
+    <PageGuard feature="customers">
       <div className="space-y-8 pb-16 max-w-7xl mx-auto">
       <Breadcrumbs
         items={[

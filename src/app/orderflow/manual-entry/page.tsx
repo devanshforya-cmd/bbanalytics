@@ -83,13 +83,13 @@ interface OrderItemRow {
 export default function ManualOrderEntryPage() {
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const [currentUser] = useState(() => db.getCurrentUser());
-  const isBrandManager = currentUser.role === 'BRAND_MANAGER';
   const assignedBrands = currentUser.assignedBrands || [];
+  const hasBrandRestrictions = Boolean(assignedBrands.length > 0 && !assignedBrands.includes('ALL'));
 
   const products = db.getProducts();
   const allActiveBrands = db.getBrands('ACTIVE');
   const activeBrands = useMemo(() => {
-    if (isBrandManager && assignedBrands.length > 0) {
+    if (hasBrandRestrictions) {
       return allActiveBrands.filter(
         (b) =>
           assignedBrands.includes(b.code) ||
@@ -97,7 +97,7 @@ export default function ManualOrderEntryPage() {
       );
     }
     return allActiveBrands;
-  }, [allActiveBrands, isBrandManager, assignedBrands]);
+  }, [allActiveBrands, hasBrandRestrictions, assignedBrands]);
 
   // Form State
   const [brandCode, setBrandCode] = useState<BrandCode>(activeBrands[0]?.code || 'FORYA');
@@ -539,7 +539,7 @@ export default function ManualOrderEntryPage() {
   };
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY']}>
+    <PageGuard feature="orderflow">
       <div className="max-w-4xl space-y-6 pb-20 mx-auto">
       {/* 7f: Breadcrumbs */}
       <Breadcrumbs

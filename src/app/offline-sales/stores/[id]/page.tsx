@@ -44,6 +44,7 @@ import {
   Tag,
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
+import { canPerform, getScope } from '@/lib/permissions';
 import {
   BeatItem,
   Cheque,
@@ -61,7 +62,7 @@ export default function StoreDetailPage() {
   const router = useRouter();
   const storeIdParam = params?.id as string;
   const currentUser = db.getCurrentUser();
-  const isOfficer = currentUser.role === 'SALES_OFFICER';
+  const isOfficer = !canPerform(currentUser, 'stores', 'DELETE') && getScope(currentUser, 'stores') === 'OWN';
 
   const [activeTab, setActiveTab] = useState<
     'VISITS' | 'STOCK' | 'PHOTOS' | 'CHEQUES' | 'DOCS' | 'ORDERS' | 'ANALYTICS' | 'SALES_INTELLIGENCE' | 'NOTES'
@@ -227,7 +228,7 @@ export default function StoreDetailPage() {
   }
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'SALES_OFFICER']}>
+    <PageGuard feature="stores">
       <div className="space-y-6 pb-20">
       {/* 7f. Breadcrumbs */}
       <Breadcrumbs

@@ -20,6 +20,7 @@ import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
 import { getTodayBs } from '@/lib/nepali-calendar';
 import { User } from '@/lib/types';
+import { getScope, hasAccess, isSuperAdmin } from '@/lib/permissions';
 
 export default function MorningBriefCard() {
   const [user, setUser] = useState<User | null>(null);
@@ -30,8 +31,8 @@ export default function MorningBriefCard() {
     const sessionUser = getSessionUser() || db.getCurrentUser();
     setUser(sessionUser);
 
-    // Data Entry and Viewer roles do NOT see the morning brief (Fix 31d)
-    if (sessionUser.role === 'DATA_ENTRY' || sessionUser.role === 'VIEWER') {
+    // Only users with access to dashboard or beat plans see the morning brief
+    if (!isSuperAdmin(sessionUser) && !hasAccess(sessionUser, 'dashboard') && !hasAccess(sessionUser, 'beat_plans')) {
       return;
     }
 
@@ -59,7 +60,7 @@ export default function MorningBriefCard() {
 
   const todayBs = getTodayBs();
   const todayAd = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const isOfficer = user.role === 'SALES_OFFICER';
+  const isOfficer = getScope(user, 'beat_plans') === 'OWN';
 
   return (
     <div className="mb-6 rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-5 sm:p-6 shadow-md shadow-amber-500/5 relative animate-fade-in">

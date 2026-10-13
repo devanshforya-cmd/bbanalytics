@@ -28,23 +28,29 @@ export interface User {
   id: string;
   email: string;
   fullName: string;
-  role: UserRole;
+  name?: string;
+  role?: string;
   password?: string;
   passwordHash?: string;
-  assignedBrands: BrandCode[];
+  assignedBrands?: BrandCode[];
+  assigned_brands?: string[];
   assignedArea?: string;
   territory?: string;
   phone: string;
   avatar?: string;
   active?: boolean;
+  is_active?: boolean;
   deactivatedAt?: string;
   dutyStatus?: DutyStatus;
   dutyStartedAt?: string;
-  permissions?: UserPermissions;
-  calendarPreference?: 'BS' | 'AD' | 'BOTH';
-  reportsToId?: string;
   isSuperAdmin?: boolean;
-  customPermissions?: UserCustomPermissions;
+  is_super_admin?: boolean;
+  permissions?: any;
+  customPermissions?: any;
+  calendarPreference?: 'BS' | 'AD' | 'BOTH';
+  calendar_preference?: 'BS' | 'AD' | 'BOTH';
+  reportsToId?: string;
+  reports_to_id?: string | null;
 }
 
 export type BrandCategory =

@@ -16,7 +16,7 @@ import {
   StoreType,
   DefaultMargins,
 } from '@/lib/types';
-import { canPerformAction, isSuperAdmin } from '@/lib/permissions';
+import { canPerform, canPerformAction, getScope, hasAccess, isSuperAdmin } from '@/lib/permissions';
 import {
   Store,
   Building2,
@@ -46,15 +46,15 @@ export default function StoresPage() {
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const [currentUser] = useState(() => db.getCurrentUser());
   const isSuper = isSuperAdmin(currentUser);
-  const isSalesOfficer = currentUser.role === 'SALES_OFFICER';
-  const canCreateStores = canPerformAction(currentUser, 'stores', 'CREATE');
+  const isSalesOfficer = !canPerform(currentUser, 'stores', 'DELETE') && getScope(currentUser, 'stores') === 'OWN';
+  const canCreateStores = canPerform(currentUser, 'stores', 'CREATE');
 
   const [distributors, setDistributors] = useState(() => db.getDistributors());
   const [branches, setBranches] = useState(() => db.getBranches());
   const [retailers, setRetailers] = useState(() => db.getRetailers());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'DISTRIBUTORS' | 'RETAILERS'>(isSalesOfficer ? 'RETAILERS' : 'ALL');
-  const officers = db.getUsers().filter((u) => u.role === 'SALES_OFFICER');
+  const officers = db.getUsers().filter((u) => hasAccess(u, 'beat_plans') || u.id.startsWith('user_'));
   const storeCategories = db.getStoreCategories().filter((c) => c.isActive);
 
   // Contact Flagging Modal State
@@ -418,7 +418,7 @@ export default function StoresPage() {
   );
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'SALES_OFFICER']}>
+    <PageGuard feature="stores">
       <div className="space-y-6 pb-20">
         <Breadcrumbs
           items={[
