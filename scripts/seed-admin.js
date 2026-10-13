@@ -33,7 +33,6 @@ async function seed() {
     assigned_brands: ['FORYA', 'PEESAFE', 'FURR', 'RENEE'],
     assigned_territory: 'ALL',
     is_active: true,
-    active: true,
     calendar_preference: 'AD',
   });
 
