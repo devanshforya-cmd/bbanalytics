@@ -67,11 +67,15 @@ export default function Sidebar() {
   if (hasFeatureAccess(currentUser, 'dashboard')) {
     overviewItems.push({ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard });
   }
-  overviewItems.push({ name: 'Products & Combos', href: '/products', icon: Package, badge: 'DTP/RPP' });
-  sections.push({
-    title: 'Overview',
-    items: overviewItems,
-  });
+  if (hasFeatureAccess(currentUser, 'products')) {
+    overviewItems.push({ name: 'Products & Combos', href: '/products', icon: Package, badge: 'DTP/RPP' });
+  }
+  if (overviewItems.length > 0) {
+    sections.push({
+      title: 'Overview',
+      items: overviewItems,
+    });
+  }
 
   // 2. Offline Sales (Field Ops)
   const fieldItems: NavItem[] = [];

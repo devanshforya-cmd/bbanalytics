@@ -52,6 +52,7 @@ export default function BeatPlanPage() {
   const [activeCheckInTime, setActiveCheckInTime] = useState<string>('');
   const [targetBeat, setTargetBeat] = useState<BeatItem | null>(null);
   const [calculatedDistance, setCalculatedDistance] = useState<number>(0);
+  const [currentGpsCoords, setCurrentGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [overrideReason, setOverrideReason] = useState('');
 
   // Slide-up Form States
@@ -144,6 +145,40 @@ export default function BeatPlanPage() {
     refreshTasks();
   }, []);
 
+  // Rule 5: 60-second real GPS ping in background when on-duty
+  useEffect(() => {
+    if (officerDuty === 'OFFLINE' || officerDuty === 'ON_LEAVE') return;
+
+    const sendGpsPing = () => {
+      if (typeof window === 'undefined' || !navigator.geolocation) return;
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCurrentGpsCoords({ lat: latitude, lng: longitude });
+          const status = activeBeatId ? 'AT_STORE' : 'IN_TRANSIT';
+          const activeStore = activeBeatId ? beatItems.find((b) => b.id === activeBeatId)?.storeName : undefined;
+
+          db.updateStaffPing(
+            currentUser.id,
+            latitude,
+            longitude,
+            status,
+            activeStore
+          );
+        },
+        (error) => {
+          console.warn('Geolocation ping info:', error.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      );
+    };
+
+    sendGpsPing();
+    const interval = setInterval(sendGpsPing, 60000);
+    return () => clearInterval(interval);
+  }, [officerDuty, currentUser.id, activeBeatId, beatItems]);
+
   const handleToggleDuty = () => {
     const nextStatus: DutyStatus =
       officerDuty === 'ONLINE' ? 'OFFLINE' : officerDuty === 'OFFLINE' ? 'ONLINE' : 'ONLINE';
@@ -159,12 +194,29 @@ export default function BeatPlanPage() {
     toast.success(newStatus === 'COMPLETED' ? 'Task marked complete.' : 'Task reopened.');
   };
 
-  // GPS Check-in
+  // GPS Check-in with real Geolocation
   const handleOpenCheckIn = (beat: BeatItem) => {
     setTargetBeat(beat);
-    const dist = Math.floor(Math.random() * 80) + 20; // 20m - 100m proximity
-    setCalculatedDistance(dist);
     setShowCheckInModal(true);
+
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setCurrentGpsCoords({ lat, lng });
+          const dist = Math.round(db.calculateDistance(lat, lng, beat.lat, beat.lng));
+          setCalculatedDistance(dist);
+        },
+        (error) => {
+          console.warn('Geolocation check-in info:', error.message);
+          setCalculatedDistance(0);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      setCalculatedDistance(0);
+    }
   };
 
   const handleConfirmArrival = (photoUrl?: string) => {
@@ -172,14 +224,25 @@ export default function BeatPlanPage() {
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setActiveCheckInTime(timeStr);
 
+    const lat = currentGpsCoords?.lat ?? targetBeat.lat;
+    const lng = currentGpsCoords?.lng ?? targetBeat.lng;
+
     db.checkInBeat(
       targetBeat.id,
-      27.7172,
-      85.324,
+      lat,
+      lng,
       calculatedDistance,
       calculatedDistance > 150,
       calculatedDistance > 150 ? overrideReason : undefined,
       photoUrl
+    );
+
+    db.updateStaffPing(
+      currentUser.id,
+      lat,
+      lng,
+      'AT_STORE',
+      targetBeat.storeName
     );
 
     setBeatItems(db.getTodayBeat());

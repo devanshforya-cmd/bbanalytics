@@ -17,7 +17,8 @@ export type FeatureKey =
   | 'orderflow'
   | 'reviews'
   | 'customers'
-  | 'marketing';
+  | 'marketing'
+  | 'products';
 
 export type FeatureAccess = 'HIDDEN' | 'VIEW_ONLY' | 'VIEW_EDIT' | 'FULL';
 export type DataScope = 'OWN' | 'TEAM' | 'ALL';
@@ -48,6 +49,7 @@ export const ALL_FEATURE_KEYS: FeatureKey[] = [
   'reviews',
   'customers',
   'marketing',
+  'products',
 ];
 
 export const FEATURE_METADATA: Record<FeatureKey, { label: string; group: 'OFFLINE_SALES' | 'PLATFORM'; description: string }> = {
@@ -67,6 +69,7 @@ export const FEATURE_METADATA: Record<FeatureKey, { label: string; group: 'OFFLI
   reviews: { label: 'Reviews & Feedback', group: 'PLATFORM', description: 'Customer complaints, separated returns, dynamic categories' },
   customers: { label: 'Customer Intelligence', group: 'PLATFORM', description: 'Customer 360 directory, Karma score, cohort insights' },
   marketing: { label: 'Marketing & Influencers', group: 'PLATFORM', description: 'Influencer directory, seeding sends, collaboration metrics' },
+  products: { label: 'Products & Combos', group: 'PLATFORM', description: 'Catalog SKUs, prices, margins, combo configurations' },
 };
 
 // 1f. Pre-defined Templates
@@ -87,6 +90,7 @@ export const FIELD_SALES_OFFICER_TEMPLATE: UserCustomPermissions = {
   reviews: { access: 'HIDDEN', scope: null, actions: [] },
   customers: { access: 'HIDDEN', scope: null, actions: [] },
   marketing: { access: 'HIDDEN', scope: null, actions: [] },
+  products: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
 };
 
 export const OFFICE_STAFF_TEMPLATE: UserCustomPermissions = {
@@ -106,6 +110,7 @@ export const OFFICE_STAFF_TEMPLATE: UserCustomPermissions = {
   reviews: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT'] },
   customers: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
   marketing: { access: 'HIDDEN', scope: null, actions: [] },
+  products: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
 };
 
 export const MANAGER_TEMPLATE: UserCustomPermissions = {
@@ -125,6 +130,7 @@ export const MANAGER_TEMPLATE: UserCustomPermissions = {
   reviews: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
   customers: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
   marketing: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
+  products: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
 };
 
 export const VIEWER_TEMPLATE: UserCustomPermissions = {
@@ -144,6 +150,7 @@ export const VIEWER_TEMPLATE: UserCustomPermissions = {
   reviews: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
   customers: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
   marketing: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
+  products: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
 };
 
 export const SUPER_ADMIN_TEMPLATE: UserCustomPermissions = {
@@ -163,6 +170,7 @@ export const SUPER_ADMIN_TEMPLATE: UserCustomPermissions = {
   reviews: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
   customers: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
   marketing: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
+  products: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
 };
 
 /**
@@ -180,8 +188,9 @@ export function hasFeatureAccess(user: User | null | undefined, feature: Feature
   if (!user) return false;
   if (isSuperAdmin(user)) return true;
 
-  if (user.customPermissions && user.customPermissions[feature]) {
-    return user.customPermissions[feature].access !== 'HIDDEN';
+  const perms = user.customPermissions || (user as any).permissions;
+  if (perms && perms[feature]) {
+    return perms[feature].access !== 'HIDDEN';
   }
 
   // Graceful fallback to legacy roles
@@ -200,6 +209,7 @@ export function hasFeatureAccess(user: User | null | undefined, feature: Feature
     case 'staff_scorecards':
       return role === 'SUPER_ADMIN' || role === 'ADMIN';
     case 'dashboard':
+    case 'products':
       return role !== 'DATA_ENTRY';
     case 'settings':
       return role === 'SUPER_ADMIN' || role === 'ADMIN';
@@ -225,8 +235,9 @@ export function canPerformAction(
   if (!user) return false;
   if (isSuperAdmin(user)) return true;
 
-  if (user.customPermissions && user.customPermissions[feature]) {
-    const perm = user.customPermissions[feature];
+  const perms = user.customPermissions || (user as any).permissions;
+  if (perms && perms[feature]) {
+    const perm = perms[feature];
     if (perm.access === 'HIDDEN') return false;
     if (perm.access === 'VIEW_ONLY' && action !== 'VIEW') return false;
     return perm.actions.includes(action);
@@ -237,7 +248,7 @@ export function canPerformAction(
   if (role === 'SUPER_ADMIN' || role === 'ADMIN') return true;
   if (role === 'SALES_OFFICER') {
     if (action === 'DELETE') return false;
-    return ['beat_plans', 'stores', 'shelf_photos', 'call_tracker', 'cheque_tracker', 'document_handover'].includes(feature);
+    return ['beat_plans', 'stores', 'shelf_photos', 'call_tracker', 'cheque_tracker', 'document_handover', 'products'].includes(feature);
   }
   if (role === 'DATA_ENTRY') {
     return action !== 'DELETE' && ['orderflow', 'reviews'].includes(feature);
@@ -252,13 +263,31 @@ export function getDataScope(user: User | null | undefined, feature: FeatureKey)
   if (!user) return 'OWN';
   if (isSuperAdmin(user)) return 'ALL';
 
-  if (user.customPermissions && user.customPermissions[feature]?.scope) {
-    return user.customPermissions[feature].scope as DataScope;
+  const perms = user.customPermissions || (user as any).permissions;
+  if (perms && perms[feature]?.scope) {
+    return perms[feature].scope as DataScope;
   }
 
   // Legacy role fallback
   if (user.role === 'SALES_OFFICER') return 'OWN';
   return 'ALL';
+}
+
+/**
+ * Centralized aliases & convenience guards (Rule 6)
+ */
+export const hasAccess = hasFeatureAccess;
+export const canPerform = canPerformAction;
+export const getScope = getDataScope;
+
+export function isViewOnly(user: User | null | undefined, feature: FeatureKey): boolean {
+  if (!user) return true;
+  if (isSuperAdmin(user)) return false;
+  const perms = user.customPermissions || (user as any).permissions;
+  if (perms && perms[feature]) {
+    return perms[feature].access === 'VIEW_ONLY';
+  }
+  return user.role === 'VIEWER';
 }
 
 /**

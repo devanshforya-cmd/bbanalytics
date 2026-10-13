@@ -15,79 +15,65 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
   const off1 = scorecards[0]?.officerName || 'Officer 1';
   const off2 = scorecards[1]?.officerName || 'Officer 2';
   const off3 = scorecards[2]?.officerName || 'Officer 3';
-  const rate1 = scorecards[0]?.beatCompliancePct || 87.5;
-  const rate2 = scorecards[1]?.beatCompliancePct || 93.9;
-  const rate3 = scorecards[2]?.beatCompliancePct || 75.8;
+  const rate1 = scorecards[0]?.beatCompliancePct || 0;
+  const rate2 = scorecards[1]?.beatCompliancePct || 0;
+  const rate3 = scorecards[2]?.beatCompliancePct || 0;
 
-  // 1. Orders per day (30 days data)
-  const ordersPerDay = [
-    { day: 1, count: 2, date: 'Aug 10' },
-    { day: 2, count: 1, date: 'Aug 11' },
-    { day: 3, count: 3, date: 'Aug 12' },
-    { day: 4, count: 2, date: 'Aug 13' },
-    { day: 5, count: 4, date: 'Aug 14' },
-    { day: 6, count: 1, date: 'Aug 15' },
-    { day: 7, count: 3, date: 'Aug 16' },
-    { day: 8, count: 5, date: 'Aug 17' },
-    { day: 9, count: 2, date: 'Aug 18' },
-    { day: 10, count: 4, date: 'Aug 19' },
-    { day: 11, count: 6, date: 'Aug 20' },
-    { day: 12, count: 3, date: 'Aug 21' },
-    { day: 13, count: 4, date: 'Aug 22' },
-    { day: 14, count: 5, date: 'Aug 23' },
-    { day: 15, count: 3, date: 'Aug 24' },
-    { day: 16, count: 4, date: 'Aug 25' },
-    { day: 17, count: 7, date: 'Aug 26' },
-    { day: 18, count: 5, date: 'Aug 27' },
-    { day: 19, count: 6, date: 'Aug 28' },
-    { day: 20, count: 4, date: 'Aug 29' },
-    { day: 21, count: 5, date: 'Aug 30' },
-    { day: 22, count: 6, date: 'Aug 31' },
-    { day: 23, count: 4, date: 'Sep 01' },
-    { day: 24, count: 5, date: 'Sep 02' },
-    { day: 25, count: 7, date: 'Sep 03' },
-    { day: 26, count: 6, date: 'Sep 04' },
-    { day: 27, count: 5, date: 'Sep 05' },
-    { day: 28, count: 6, date: 'Sep 06' },
-    { day: 29, count: 4, date: 'Sep 07' },
-    { day: 30, count: 3, date: 'Sep 08' },
-  ];
+  const rawOrders = db.getOrders();
+  const rawFailures = db.getDeliveryFailures();
+  const rawFeedback = db.getFeedback().filter((f) => f.type === 'COMPLAINT');
+  const now = new Date();
 
-  // 2. Delivery failure rate per week (last 8 weeks)
-  const failureRatePerWeek = [
-    { week: 'W1 (Jul)', rate: 18.5 },
-    { week: 'W2 (Jul)', rate: 15.2 },
-    { week: 'W3 (Jul)', rate: 16.0 },
-    { week: 'W4 (Jul)', rate: 14.1 },
-    { week: 'W5 (Aug)', rate: 12.8 },
-    { week: 'W6 (Aug)', rate: 11.5 },
-    { week: 'W7 (Aug)', rate: 9.2 },
-    { week: 'W8 (Sep)', rate: 7.4 },
-  ];
+  // 1. Orders per day (last 30 days dynamically)
+  const ordersPerDay = Array.from({ length: 30 }, (_, idx) => {
+    const d = new Date(now.getTime() - (29 - idx) * 24 * 60 * 60 * 1000);
+    const dateStr = d.toISOString().split('T')[0];
+    const monthShort = d.toLocaleString('en-US', { month: 'short' });
+    const dayNum = String(d.getDate()).padStart(2, '0');
+    const label = `${monthShort} ${dayNum}`;
+    const count = rawOrders.filter((o) => {
+      const orderDate = o.orderDateAd || (o.createdAt ? o.createdAt.split('T')[0] : '');
+      return orderDate === dateStr;
+    }).length;
+    return { day: idx + 1, count, date: label };
+  });
 
-  // 3. Complaint volume per week (last 8 weeks)
-  const complaintVolumePerWeek = [
-    { week: 'W1', count: 6 },
-    { week: 'W2', count: 5 },
-    { week: 'W3', count: 7 },
-    { week: 'W4', count: 4 },
-    { week: 'W5', count: 5 },
-    { week: 'W6', count: 3 },
-    { week: 'W7', count: 2 },
-    { week: 'W8', count: 1 },
-  ];
+  // 2. Delivery failure rate per week (last 8 weeks dynamically)
+  const failureRatePerWeek = Array.from({ length: 8 }, (_, idx) => {
+    const weekStartMs = now.getTime() - (7 - idx) * 7 * 24 * 60 * 60 * 1000;
+    const weekEndMs = weekStartMs + 7 * 24 * 60 * 60 * 1000;
+    const weekOrders = rawOrders.filter((o) => {
+      const t = new Date(o.orderDateAd || o.createdAt).getTime();
+      return t >= weekStartMs && t < weekEndMs;
+    }).length;
+    const weekFails = rawFailures.filter((f) => {
+      const t = new Date(f.dateAd || f.createdAt).getTime();
+      return t >= weekStartMs && t < weekEndMs;
+    }).length;
+    const rate = weekOrders > 0 ? Math.round((weekFails / weekOrders) * 1000) / 10 : 0;
+    return { week: `W${idx + 1}`, rate, failures: weekFails, orders: weekOrders };
+  });
 
-  // 4. Beat compliance per week per officer
-  const officersCompliance = [
-    { week: 'W1', ravi: 80, pooja: 85, suman: 70 },
-    { week: 'W2', ravi: 82, pooja: 88, suman: 72 },
-    { week: 'W3', ravi: 85, pooja: 90, suman: 74 },
-    { week: 'W4', ravi: 84, pooja: 89, suman: 71 },
-    { week: 'W5', ravi: 86, pooja: 92, suman: 75 },
-    { week: 'W6', ravi: 87, pooja: 93, suman: 76 },
-    { week: 'W7', ravi: 88, pooja: 94, suman: 75 },
-    { week: 'W8', ravi: 87.5, pooja: 93.9, suman: 75.8 },
-  ];
+  // 3. Complaint volume per week (last 8 weeks dynamically)
+  const complaintVolumePerWeek = Array.from({ length: 8 }, (_, idx) => {
+    const weekStartMs = now.getTime() - (7 - idx) * 7 * 24 * 60 * 60 * 1000;
+    const weekEndMs = weekStartMs + 7 * 24 * 60 * 60 * 1000;
+    const count = rawFeedback.filter((f) => {
+      const t = new Date(f.dateReceivedAd || f.createdAt).getTime();
+      return t >= weekStartMs && t < weekEndMs;
+    }).length;
+    return { week: `W${idx + 1}`, count };
+  });
+
+  // 4. Beat compliance per week per officer (from actual scorecards)
+  const officersCompliance = Array.from({ length: 8 }, (_, idx) => {
+    return {
+      week: `W${idx + 1}`,
+      off1: rate1,
+      off2: rate2,
+      off3: rate3,
+    };
+  });
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
@@ -192,9 +178,9 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
             </div>
           )}
           <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-            <span>Aug 10 (Day 1)</span>
-            <span>Aug 24 (Day 15)</span>
-            <span>Sep 08 (Today)</span>
+            <span>{ordersPerDay[0]?.date || 'Day 1'}</span>
+            <span>{ordersPerDay[14]?.date || 'Day 15'}</span>
+            <span>{ordersPerDay[29]?.date || 'Today'}</span>
           </div>
         </div>
 
@@ -203,10 +189,10 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-xs font-bold text-slate-900">2. Delivery Failure Rate / Week</h4>
-              <p className="text-[11px] text-slate-500">Weekly rate declining from 18.5% down to 7.4%</p>
+              <p className="text-[11px] text-slate-500">Weekly rate calculated from real dispatch logs</p>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-              -60% Failure Reduction
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800">
+              Current: {failureRatePerWeek[7]?.rate || 0}%
             </span>
           </div>
 
@@ -292,69 +278,82 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-xs font-bold text-slate-900">4. Beat Compliance / Week (Per Officer)</h4>
-              <p className="text-[11px] text-slate-500">Longitudinal GPS beat adherence across 3 field reps</p>
+              <p className="text-[11px] text-slate-500">Longitudinal GPS beat adherence from field reports</p>
             </div>
           </div>
 
-          <div className="h-44 relative flex items-end pt-6 pb-2">
-            <svg viewBox="0 0 280 120" className="w-full h-full overflow-visible">
-              <line x1="0" y1="30" x2="280" y2="30" stroke="#e2e8f0" strokeDasharray="3 3" />
-              <line x1="0" y1="60" x2="280" y2="60" stroke="#e2e8f0" strokeDasharray="3 3" />
-              <line x1="0" y1="90" x2="280" y2="90" stroke="#e2e8f0" strokeDasharray="3 3" />
-
-              {/* Pooja (Purple) */}
-              {(() => {
-                const points = officersCompliance.map((w, idx) => {
-                  const x = (idx / 7) * 280;
-                  const y = 120 - ((w.pooja - 60) / 40) * 100;
-                  return `${x.toFixed(1)},${y.toFixed(1)}`;
-                });
-                return (
-                  <path d={`M ${points.join(' L ')}`} fill="none" stroke="#9333ea" strokeWidth="2.2" strokeLinecap="round" />
-                );
-              })()}
-
-              {/* Ravi (Blue) */}
-              {(() => {
-                const points = officersCompliance.map((w, idx) => {
-                  const x = (idx / 7) * 280;
-                  const y = 120 - ((w.ravi - 60) / 40) * 100;
-                  return `${x.toFixed(1)},${y.toFixed(1)}`;
-                });
-                return (
-                  <path d={`M ${points.join(' L ')}`} fill="none" stroke="#2563eb" strokeWidth="2.2" strokeLinecap="round" />
-                );
-              })()}
-
-              {/* Suman (Emerald) */}
-              {(() => {
-                const points = officersCompliance.map((w, idx) => {
-                  const x = (idx / 7) * 280;
-                  const y = 120 - ((w.suman - 60) / 40) * 100;
-                  return `${x.toFixed(1)},${y.toFixed(1)}`;
-                });
-                return (
-                  <path d={`M ${points.join(' L ')}`} fill="none" stroke="#059669" strokeWidth="2.2" strokeLinecap="round" strokeDasharray="3 3" />
-                );
-              })()}
-            </svg>
-          </div>
-
-          {/* Legend */}
-          <div className="flex items-center justify-center gap-4 text-xs font-semibold pt-1">
-            <div className="flex items-center gap-1.5 text-purple-700">
-              <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
-              <span>{off2} ({rate2}%)</span>
+          {scorecards.length === 0 ? (
+            <div className="h-44 flex flex-col items-center justify-center text-xs text-slate-400 bg-white/60 rounded-xl border border-dashed border-slate-200">
+              <Users className="w-6 h-6 mb-1 text-slate-300" />
+              <span>No officer scorecards logged yet</span>
             </div>
-            <div className="flex items-center gap-1.5 text-blue-700">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-              <span>{off1} ({rate1}%)</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-emerald-700">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-              <span>{off3} ({rate3}%)</span>
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="h-44 relative flex items-end pt-6 pb-2">
+                <svg viewBox="0 0 280 120" className="w-full h-full overflow-visible">
+                  <line x1="0" y1="30" x2="280" y2="30" stroke="#e2e8f0" strokeDasharray="3 3" />
+                  <line x1="0" y1="60" x2="280" y2="60" stroke="#e2e8f0" strokeDasharray="3 3" />
+                  <line x1="0" y1="90" x2="280" y2="90" stroke="#e2e8f0" strokeDasharray="3 3" />
+
+                  {/* Officer 1 (Blue) */}
+                  {(() => {
+                    const points = officersCompliance.map((w, idx) => {
+                      const x = (idx / 7) * 280;
+                      const y = 110 - (w.off1 / 100) * 90;
+                      return `${x.toFixed(1)},${y.toFixed(1)}`;
+                    });
+                    return (
+                      <path d={`M ${points.join(' L ')}`} fill="none" stroke="#2563eb" strokeWidth="2.2" strokeLinecap="round" />
+                    );
+                  })()}
+
+                  {/* Officer 2 (Purple) */}
+                  {scorecards.length > 1 && (() => {
+                    const points = officersCompliance.map((w, idx) => {
+                      const x = (idx / 7) * 280;
+                      const y = 110 - (w.off2 / 100) * 90;
+                      return `${x.toFixed(1)},${y.toFixed(1)}`;
+                    });
+                    return (
+                      <path d={`M ${points.join(' L ')}`} fill="none" stroke="#9333ea" strokeWidth="2.2" strokeLinecap="round" />
+                    );
+                  })()}
+
+                  {/* Officer 3 (Emerald) */}
+                  {scorecards.length > 2 && (() => {
+                    const points = officersCompliance.map((w, idx) => {
+                      const x = (idx / 7) * 280;
+                      const y = 110 - (w.off3 / 100) * 90;
+                      return `${x.toFixed(1)},${y.toFixed(1)}`;
+                    });
+                    return (
+                      <path d={`M ${points.join(' L ')}`} fill="none" stroke="#059669" strokeWidth="2.2" strokeLinecap="round" strokeDasharray="3 3" />
+                    );
+                  })()}
+                </svg>
+              </div>
+
+              {/* Legend */}
+              <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold pt-1">
+                <div className="flex items-center gap-1.5 text-blue-700">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                  <span>{off1} ({rate1}%)</span>
+                </div>
+                {scorecards.length > 1 && (
+                  <div className="flex items-center gap-1.5 text-purple-700">
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
+                    <span>{off2} ({rate2}%)</span>
+                  </div>
+                )}
+                {scorecards.length > 2 && (
+                  <div className="flex items-center gap-1.5 text-emerald-700">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                    <span>{off3} ({rate3}%)</span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import { getBrands } from '@/lib/db/brands-service';
-import { Product, Combo, BrandCode, SecondaryOrder, Order, ReturnEntry, Retailer } from '@/lib/types';
+import { Product, Combo, BrandCode, SecondaryOrder, Order, ReturnEntry, Retailer, Branch } from '@/lib/types';
 import MobileBottomSheet from '@/components/common/MobileBottomSheet';
 import { toast } from '@/components/common/Toast';
 import {
@@ -100,6 +100,7 @@ export default function ProductsPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [returns, setReturns] = useState<ReturnEntry[]>([]);
   const [retailers, setRetailers] = useState<Retailer[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   const [activeBrand, setActiveBrand] = useState<BrandCode>('ALL');
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'COMBOS'>('PRODUCTS');
@@ -150,6 +151,7 @@ export default function ProductsPage() {
     setOrders(db.getOrders());
     setReturns(db.getReturns());
     setRetailers(db.getRetailers());
+    setBranches(db.getBranches());
   };
 
   useEffect(() => {
@@ -202,11 +204,13 @@ export default function ProductsPage() {
     return matchesBrand && matchesSearch;
   });
 
-  // Calculate Product Performance Metrics (Operational units and store counts only)
+  // Calculate Product Performance Metrics (Operational units and store counts only - Zero Tolerance)
   const getProductMetrics = (prod: Product) => {
     // Secondary bookings for this SKU
     let secondaryCases = 0;
     let secondaryUnits = 0;
+    let gtUnits = 0;
+    let mtUnits = 0;
     const storeIds = new Set<string>();
 
     secondaryOrders.forEach((o) => {
@@ -219,6 +223,14 @@ export default function ProductsPage() {
         secondaryCases += item.cases;
         secondaryUnits += item.totalUnits;
         storeIds.add(o.entityId || o.storeName);
+        const isMT = o.storeName?.toLowerCase().includes('bhatbhateni') ||
+          o.storeName?.toLowerCase().includes('bigmart') ||
+          o.storeName?.toLowerCase().includes('saleways');
+        if (isMT) {
+          mtUnits += item.totalUnits;
+        } else {
+          gtUnits += item.totalUnits;
+        }
       }
     });
 
@@ -235,12 +247,12 @@ export default function ProductsPage() {
       }
     });
 
-    const totalUnitsSold = (secondaryUnits || 120) + (onlineUnits || 25);
+    const totalUnitsSold = secondaryUnits + onlineUnits;
 
     // Outlet coverage
-    const storeCount = storeIds.size || Math.min(retailers.length, 18);
-    const totalStoreCount = retailers.length || 24;
-    const storePenetrationPct = Math.min(100, Math.round((storeCount / totalStoreCount) * 100));
+    const storeCount = storeIds.size;
+    const totalStoreCount = retailers.length + branches.length;
+    const storePenetrationPct = totalStoreCount > 0 ? Math.min(100, Math.round((storeCount / totalStoreCount) * 100)) : 0;
 
     // Quality defect / return rate
     const prodReturns = returns.filter(
@@ -248,19 +260,28 @@ export default function ProductsPage() {
         r.productId === prod.id ||
         r.productName.toLowerCase().includes(prod.name.toLowerCase().slice(0, 8))
     );
-    const returnUnits = prodReturns.reduce((acc, r) => acc + r.quantity, 0);
+    const returnUnits = prodReturns.reduce((acc, r) => acc + (r.quantity || 1), 0);
     const returnRate =
-      totalUnitsSold > 0 ? Math.round((returnUnits / totalUnitsSold) * 1000) / 10 : 0.8;
+      totalUnitsSold > 0 ? Math.round((returnUnits / totalUnitsSold) * 1000) / 10 : 0;
 
     // Warehouse Stock Level
-    const stock = prod.stockQty !== undefined ? prod.stockQty : (prod.caseSize || 24) * 12;
+    const stock = prod.stockQty !== undefined ? prod.stockQty : 0;
     const isLowStock = stock <= (prod.thresholdQty || 10);
+
+    const gtPct = totalUnitsSold > 0 ? Math.round((gtUnits / totalUnitsSold) * 100) : 0;
+    const mtPct = totalUnitsSold > 0 ? Math.round((mtUnits / totalUnitsSold) * 100) : 0;
+    const onlinePct = totalUnitsSold > 0 ? Math.round((onlineUnits / totalUnitsSold) * 100) : 0;
 
     return {
       totalUnitsSold,
       secondaryCases,
       secondaryUnits,
       onlineUnits,
+      gtUnits,
+      mtUnits,
+      gtPct,
+      mtPct,
+      onlinePct,
       storeCount,
       totalStoreCount,
       storePenetrationPct,
@@ -432,7 +453,7 @@ export default function ProductsPage() {
   };
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'SALES_OFFICER']}>
+    <PageGuard feature="products" allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'SALES_OFFICER']}>
       <div className="space-y-6 pb-36 sm:pb-20">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1074,37 +1095,43 @@ export default function ProductsPage() {
                         <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                           Sales Channel Velocity
                         </span>
-                        <div className="space-y-2 text-xs">
-                          <div>
-                            <div className="flex justify-between font-semibold text-slate-700 mb-1">
-                              <span>General Trade (Kiranas / Pharmacies)</span>
-                              <span className="font-mono">56% (795 units)</span>
-                            </div>
-                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                              <div className="h-full bg-brand-600 rounded-full" style={{ width: '56%' }} />
-                            </div>
+                        {m.totalUnitsSold === 0 ? (
+                          <div className="py-4 text-center text-xs text-slate-500">
+                            No secondary or online orders recorded for this product yet.
                           </div>
+                        ) : (
+                          <div className="space-y-2 text-xs">
+                            <div>
+                              <div className="flex justify-between font-semibold text-slate-700 mb-1">
+                                <span>General Trade (Kiranas / Pharmacies)</span>
+                                <span className="font-mono">{m.gtPct}% ({m.gtUnits} units)</span>
+                              </div>
+                              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                                <div className="h-full bg-brand-600 rounded-full" style={{ width: `${m.gtPct}%` }} />
+                              </div>
+                            </div>
 
-                          <div>
-                            <div className="flex justify-between font-semibold text-slate-700 mb-1">
-                              <span>Modern Trade (Bhatbhateni / Saleways)</span>
-                              <span className="font-mono">34% (482 units)</span>
+                            <div>
+                              <div className="flex justify-between font-semibold text-slate-700 mb-1">
+                                <span>Modern Trade (Supermarkets &amp; Chains)</span>
+                                <span className="font-mono">{m.mtPct}% ({m.mtUnits} units)</span>
+                              </div>
+                              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                                <div className="h-full bg-blue-600 rounded-full" style={{ width: `${m.mtPct}%` }} />
+                              </div>
                             </div>
-                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                              <div className="h-full bg-blue-600 rounded-full" style={{ width: '34%' }} />
-                            </div>
-                          </div>
 
-                          <div>
-                            <div className="flex justify-between font-semibold text-slate-700 mb-1">
-                              <span>D2C Online &amp; Social Orders</span>
-                              <span className="font-mono">10% (143 units)</span>
-                            </div>
-                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                              <div className="h-full bg-purple-600 rounded-full" style={{ width: '10%' }} />
+                            <div>
+                              <div className="flex justify-between font-semibold text-slate-700 mb-1">
+                                <span>D2C Online &amp; Social Orders</span>
+                                <span className="font-mono">{m.onlinePct}% ({m.onlineUnits} units)</span>
+                              </div>
+                              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                                <div className="h-full bg-purple-600 rounded-full" style={{ width: `${m.onlinePct}%` }} />
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )}
                       </div>
 
                       {/* Recent Secondary Store Bookings */}

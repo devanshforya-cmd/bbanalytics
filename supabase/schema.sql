@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS users (
     assigned_area VARCHAR(100), -- Area name or ID
     phone VARCHAR(50),
     active BOOLEAN DEFAULT TRUE,
+    custom_permissions JSONB DEFAULT '{}'::jsonb,
+    permissions JSONB DEFAULT '{}'::jsonb,
     deactivated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -558,3 +560,16 @@ CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
 CREATE INDEX IF NOT EXISTS idx_customers_karma ON customers(karma_score);
 CREATE INDEX IF NOT EXISTS idx_activity_trail_entity ON activity_logs(entity_type, entity_id);
 
+-- 28. GPS Pings (Field Staff Live Tracking)
+CREATE TABLE IF NOT EXISTS gps_pings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    officer_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    officer_name VARCHAR(255),
+    lat NUMERIC(10, 6) NOT NULL,
+    lng NUMERIC(10, 6) NOT NULL,
+    status VARCHAR(50) DEFAULT 'ONLINE',
+    current_store_name VARCHAR(255),
+    battery_level INT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_gps_pings_officer_created ON gps_pings(officer_id, created_at DESC);

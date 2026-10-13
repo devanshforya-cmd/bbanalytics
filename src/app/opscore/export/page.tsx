@@ -113,6 +113,9 @@ export default function SheetsExportPage() {
   const stockCounts = db.getStockCounts();
   const scorecards = db.getScorecards();
   const totalStores = distributors.length + branches.length + retailers.length;
+  const activeBrands = db.getBrands('ACTIVE');
+  const totalD2cSales = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const totalChequesAmount = cheques.reduce((sum, c) => sum + (c.amount || 0), 0);
 
   // Build Tab Configurations matching PRD Part 10
   const permanentTabs: TabConfig[] = [
@@ -124,23 +127,23 @@ export default function SheetsExportPage() {
       rowCount: 18,
       columns: ['Metric Category', 'Key Performance Indicator', 'Value', 'Unit', 'Trend / Status', 'Last Updated'],
       sampleData: [
-        ['Revenue', 'Total D2C Sales Value', 'NPR 1,420,500', 'Currency', '+14.2% MoM', 'Real-time'],
+        ['Revenue', 'Total D2C Sales Value', `NPR ${totalD2cSales.toLocaleString()}`, 'Currency', 'Real-time', 'Real-time'],
         ['Orders', 'Total Dispatched Orders', String(orders.length), 'Orders', 'On Track', 'Real-time'],
         ['Returns', 'Product Returns Rate', `${((returns.length / Math.max(1, orders.length)) * 100).toFixed(1)}%`, 'Percentage', 'Healthy (<2%)', 'Real-time'],
         ['Logistics', 'Delivery Failure Rate', `${((failures.length / Math.max(1, orders.length)) * 100).toFixed(1)}%`, 'Percentage', 'Separated Courier', 'Real-time'],
-        ['Field Ops', 'Total Cheques Collected', `${cheques.length} cheques`, 'Count', 'NPR 485,000', 'Real-time'],
+        ['Field Ops', 'Total Cheques Collected', `${cheques.length} cheques`, 'Count', `NPR ${totalChequesAmount.toLocaleString()}`, 'Real-time'],
       ],
       generateCsv: () => {
         const rows = [
           ['Metric Category', 'Key Performance Indicator', 'Value', 'Unit', 'Trend / Status', 'Last Updated'],
-          ['Revenue', 'Total D2C Sales Value', 'NPR 1,420,500', 'Currency', '+14.2% MoM', new Date().toISOString()],
+          ['Revenue', 'Total D2C Sales Value', `NPR ${totalD2cSales.toLocaleString()}`, 'Currency', 'Real-time', new Date().toISOString()],
           ['Orders', 'Total Dispatched Orders', String(orders.length), 'Orders', 'On Track', new Date().toISOString()],
           ['Returns', 'Genuine Product Returns', String(returns.length), 'Items', 'Quality Inspected', new Date().toISOString()],
           ['Logistics', 'Delivery Failures', String(failures.length), 'Parcels', 'Separated Courier Log', new Date().toISOString()],
           ['Field Collections', 'Active Cheques In Custody', String(cheques.length), 'Cheques', 'Two-step Custody', new Date().toISOString()],
           ['Field Operations', 'Completed Beat Visits', String(visits.length), 'Visits', 'GPS Logged', new Date().toISOString()],
           ['Directory', 'Active Outlets Registered', String(totalStores), 'Outlets', 'GT & MT', new Date().toISOString()],
-          ['Catalog', 'Active Product SKUs', String(products.length), 'SKUs', '3 Brands', new Date().toISOString()],
+          ['Catalog', 'Active Product SKUs', String(products.length), 'SKUs', `${activeBrands.length} Brands`, new Date().toISOString()],
         ];
         return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
       },

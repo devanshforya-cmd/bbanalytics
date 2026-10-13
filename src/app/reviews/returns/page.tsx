@@ -116,17 +116,16 @@ export default function ReturnsPage() {
 
   // 11a: Separation Header Stats
   const totalOrdersCount = useMemo(() => {
-    const orders = db.getOrders();
-    return orders.length > 0 ? orders.length : 1420;
+    return db.getOrders().length;
   }, []);
 
   const actualReturnsCount = returnsList.length;
-  const actualReturnsPct = ((actualReturnsCount / Math.max(1, totalOrdersCount)) * 100).toFixed(1);
+  const actualReturnsPct = totalOrdersCount > 0 ? ((actualReturnsCount / totalOrdersCount) * 100).toFixed(1) : '0.0';
 
   const deliveryFailuresCount = useMemo(() => {
     return db.getDeliveryFailures().length;
   }, []);
-  const deliveryFailuresPct = ((deliveryFailuresCount / Math.max(1, totalOrdersCount)) * 100).toFixed(1);
+  const deliveryFailuresPct = totalOrdersCount > 0 ? ((deliveryFailuresCount / totalOrdersCount) * 100).toFixed(1) : '0.0';
 
   const activeBrands = db.getBrands('ACTIVE');
   const products = db.getProducts();

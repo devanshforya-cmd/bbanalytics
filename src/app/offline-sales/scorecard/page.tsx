@@ -163,7 +163,7 @@ function ScorecardContent() {
     raviVal: string | number;
     poojaVal: string | number;
     sumanVal: string | number;
-    bestOfficer: 'Ravi ✓' | 'Pooja ✓' | 'Suman ✓';
+    bestOfficer: string;
     bestKey: 'ravi' | 'pooja' | 'suman';
     worstKey: 'ravi' | 'pooja' | 'suman';
   }
@@ -822,9 +822,9 @@ function ScorecardContent() {
             <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4 font-bold text-slate-900">Operational Metric</th>
-                <th className="py-3 px-4 text-center">Ravi Sharma</th>
-                <th className="py-3 px-4 text-center">Pooja Karki</th>
-                <th className="py-3 px-4 text-center">Suman Adhikari</th>
+                <th className="py-3 px-4 text-center">{ravi?.officerName || 'Officer 1'}</th>
+                <th className="py-3 px-4 text-center">{pooja?.officerName || 'Officer 2'}</th>
+                <th className="py-3 px-4 text-center">{suman?.officerName || 'Officer 3'}</th>
                 <th className="py-3 px-4 text-center font-black text-slate-900">Best Leader</th>
               </tr>
             </thead>

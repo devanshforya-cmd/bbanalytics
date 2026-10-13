@@ -194,7 +194,9 @@ export default function DistributorDetailModal({
                     </div>
                     <div className="text-right">
                       <span className="font-bold text-slate-700">{v.dateBs || 'Recent'}</span>
-                      <div className="text-[10px] text-emerald-600 font-semibold">{v.durationMinutes || 25} min on-site</div>
+                      <div className="text-[10px] text-emerald-600 font-semibold">
+                        {v.durationMinutes ? `${v.durationMinutes} min on-site` : 'Check-in recorded'}
+                      </div>
                     </div>
                   </div>
                 ))}

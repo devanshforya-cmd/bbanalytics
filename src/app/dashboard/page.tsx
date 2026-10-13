@@ -176,19 +176,37 @@ export default function DashboardPage() {
   const secondaryOrdersUnits = secondaryOrders.reduce((sum, so) => sum + (so.totalUnits || 0), 0);
   const totalSecondaryOrdersCount = secondaryOrders.length;
   const activeStoresStockedCount = retailers.length + branches.length;
-  const totalBeatScheduled = Math.max(beatItems.length, 1);
-  const beatCompliancePct = Math.round((visitedStoresToday / totalBeatScheduled) * 100);
+  const totalBeatScheduled = beatItems.length;
+  const beatCompliancePct = totalBeatScheduled > 0 ? Math.round((visitedStoresToday / totalBeatScheduled) * 100) : 0;
 
   const pendingChequesAmount = pendingCheques.reduce((sum, c) => sum + c.amount, 0);
   const overdueChequesAmount = overdueCheques.reduce((sum, c) => sum + c.amount, 0);
 
-  // 30-Day Sparkline Arrays
-  const ordersSparkline = [2, 1, 3, 2, 4, 1, 3, 5, 2, 4, 6, 3, 4, 5, 3, 4, 7, 5, 6, 4, 5, 6, 4, 5, 7, 6, 5, 6, 4, 3];
-  const failuresSparkline = [18, 17, 16, 15, 14, 15, 13, 14, 12, 11, 10, 12, 9, 8, 10, 9, 8, 7, 9, 8, 7, 6, 8, 7, 6, 5, 7, 6, 5, 4];
-  const returnsSparkline = [10, 9, 8, 9, 8, 7, 8, 7, 6, 7, 6, 5, 6, 5, 6, 5, 4, 5, 4, 3, 4, 3, 4, 3, 2, 3, 2, 2, 3, 2];
-  const complaintsSparkline = [5, 4, 6, 4, 3, 5, 4, 3, 2, 4, 3, 2, 3, 2, 1, 2, 3, 2, 1, 2, 1, 2, 1, 2, 1, 1, 2, 1, 1, 1];
-  const visitsSparkline = [8, 10, 12, 14, 11, 15, 16, 18, 17, 20, 22, 21, 24, 25, 22, 26, 28, 27, 30, 29, 31, 30, 32, 31, 34, 33, 35, 32, 34, 31];
-  const chequesSparkline = [6, 5, 7, 5, 4, 6, 5, 4, 3, 5, 4, 3, 4, 3, 2, 4, 3, 2, 3, 2, 1, 3, 2, 1, 2, 3, 2, 1, 2, 2];
+  // 30-Day Dynamic Sparkline Arrays (Zero tolerance for fake arrays)
+  const now = new Date();
+  const last30Dates = Array.from({ length: 30 }, (_, idx) => {
+    const d = new Date(now.getTime() - (29 - idx) * 24 * 60 * 60 * 1000);
+    return d.toISOString().split('T')[0];
+  });
+
+  const ordersSparkline = last30Dates.map((dateStr) =>
+    orders.filter((o) => (o.orderDateAd || (o.createdAt ? o.createdAt.split('T')[0] : '')) === dateStr).length
+  );
+  const failuresSparkline = last30Dates.map((dateStr) =>
+    deliveryFailures.filter((f) => (f.dateAd || (f.createdAt ? f.createdAt.split('T')[0] : '')) === dateStr).length
+  );
+  const returnsSparkline = last30Dates.map((dateStr) =>
+    returns.filter((r) => (r.dateAd || (r.createdAt ? r.createdAt.split('T')[0] : '')) === dateStr).length
+  );
+  const complaintsSparkline = last30Dates.map((dateStr) =>
+    feedback.filter((f) => f.type === 'COMPLAINT' && (f.dateReceivedAd || (f.createdAt ? f.createdAt.split('T')[0] : '')) === dateStr).length
+  );
+  const visitsSparkline = last30Dates.map((dateStr) =>
+    beatItems.filter((b) => b.status === 'VISITED' && b.dateAd === dateStr).length
+  );
+  const chequesSparkline = last30Dates.map((dateStr) =>
+    cheques.filter((c) => (c.receivedDateAd || (c.createdAt ? c.createdAt.split('T')[0] : '')) === dateStr).length
+  );
 
   // Latest 3 reviews for Section 5
   const latestReviews = feedback.filter((f) => f.type === 'REVIEW' || f.type === 'FEEDBACK').slice(0, 3);

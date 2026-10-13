@@ -27,23 +27,15 @@ export default function StoreNetworkOverviewSection() {
   const totalStores = stores.length;
   const storeListWithScores = useMemo(() => {
     return stores.map((s) => {
-      const score = healthScores[s.id] || {
-        overall: 65,
-        tier: 'TIER_2',
-        orderRegularity: 20,
-        paymentDiscipline: 20,
-        stockMaintenance: 15,
-        visitCooperation: 10,
-        issueRate: 5,
-        trend: 'STABLE',
-        previousScore: 60,
-        lastCalculatedAt: '',
-      };
+      const score = healthScores[s.id] || db.getStoreHealthScore(s.id);
+      const storeOrders = db.getSecondaryOrders().filter((o) => o.entityId === s.id);
+      const realUnits = storeOrders.reduce((sum, o) => sum + (o.totalUnits || 0), 0);
+      const reorderDays = storeOrders.length > 1 ? Math.round(30 / storeOrders.length) : (s as any).reorderFrequencyDays || 0;
       return {
         ...s,
         score,
-        unitsMoved: (s as any).monthlyUnitsMoved || Math.floor(Math.random() * 40) + 15,
-        reorderFreqDays: (s as any).reorderFrequencyDays || 12,
+        unitsMoved: (s as any).monthlyUnitsMoved !== undefined ? (s as any).monthlyUnitsMoved : realUnits,
+        reorderFreqDays: reorderDays,
       };
     });
   }, [stores, healthScores]);

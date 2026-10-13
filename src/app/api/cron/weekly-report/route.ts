@@ -73,18 +73,16 @@ export async function GET(request: Request) {
     <div class="stat-row"><span>Avg Resolution Time:</span><span class="stat-val">1.8 days</span></div>
 
     <div class="section-title">🏪 Field Sales Performance</div>
-    <div class="stat-row"><span>Beat Compliance:</span><span class="stat-val">Ravi 87.5%, Pooja 93.9%, Suman 75.8%</span></div>
-    <div class="stat-row"><span>Store Visits Completed:</span><span class="stat-val">72 visits across 3 officers</span></div>
-    <div class="stat-row"><span>Cheques Handled:</span><span class="stat-val">8 Collected | 6 Cashed | 2 Overdue</span></div>
+    <div class="stat-row"><span>Beat Compliance:</span><span class="stat-val">${scorecards.length > 0 ? scorecards.map(s => `${s.officerName} ${s.beatCompliancePct}%`).join(', ') : 'No scorecards active'}</span></div>
+    <div class="stat-row"><span>Store Visits Completed:</span><span class="stat-val">${db.getBeatItems().filter(b => b.status === 'VISITED').length} visits across ${scorecards.length} officers</span></div>
+    <div class="stat-row"><span>Cheques Handled:</span><span class="stat-val">${cheques.filter(c => c.status === 'COLLECTED_IN_FIELD').length} Collected | ${cheques.filter(c => c.status === 'CASHED').length} Cashed | ${cheques.filter(c => c.status === 'DELAYED' || c.status === 'BOUNCED').length} Overdue/Delayed</span></div>
 
     <div class="section-title">👥 Customer Intelligence</div>
-    <div class="stat-row"><span>New Customers:</span><span class="stat-val">18 (Total: ${customers.length})</span></div>
-    <div class="stat-row"><span>Repeat Customer Rate:</span><span class="stat-val">79% of total volume</span></div>
-    <div class="stat-row"><span>Customers at Risk (Karma &lt; 40):</span><span class="stat-val" style="color: #dc2626;">3 accounts</span></div>
+    <div class="stat-row"><span>Total Customers:</span><span class="stat-val">${customers.length} profiles</span></div>
+    <div class="stat-row"><span>Customers at Risk (Karma &lt; 40):</span><span class="stat-val" style="color: #dc2626;">${customers.filter(c => c.karmaScore < 40).length} accounts</span></div>
 
-    <div class="section-title">📅 Next Week Outlook</div>
-    <div class="stat-row"><span>Upcoming Holidays:</span><span class="stat-val">Constitution Day (Bhadra 29)</span></div>
-    <div class="stat-row"><span>Pending Action Items:</span><span class="stat-val">2 overdue cheques, 3 open complaints, 1 warehouse dispatch</span></div>
+    <div class="section-title">📅 Current Operations Outlook</div>
+    <div class="stat-row"><span>Pending Action Items:</span><span class="stat-val">${cheques.filter(c => c.status === 'DELAYED' || c.status === 'BOUNCED').length} overdue cheques, ${openComplaints.length} open complaints</span></div>
 
     <div class="footer">
       Generated automatically by Brand Bucket Command Center &bull; Kathmandu HQ &bull; Private &amp; Confidential

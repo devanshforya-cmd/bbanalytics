@@ -155,6 +155,21 @@ export default function StoreDetailPage() {
     return db.getPromotions(store?.type || 'GT');
   }, [store]);
 
+  const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const last30DaysOrders = secondaryOrders.filter((o) => {
+    const t = new Date(o.orderDateAd || o.createdAt).getTime();
+    return t >= thirtyDaysAgoMs;
+  });
+  const volume30Days = last30DaysOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const aov = secondaryOrders.length > 0 ? Math.round(secondaryOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0) / secondaryOrders.length) : 0;
+  const cadenceText = secondaryOrders.length > 1 ? `Every ${Math.max(1, Math.round(30 / secondaryOrders.length))} Days` : secondaryOrders.length === 1 ? '1 Order Recorded' : 'No Orders Yet';
+  const cashedCheques = cheques.filter((c) => c.status === 'CASHED' && c.receivedDateAd && c.cashDateAd);
+  const avgClearanceDelay = cashedCheques.length > 0 ? (cashedCheques.reduce((sum, c) => {
+    const d1 = new Date(c.receivedDateAd).getTime();
+    const d2 = new Date(c.cashDateAd).getTime();
+    return sum + Math.max(0, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)));
+  }, 0) / cashedCheques.length).toFixed(1) + ' Days' : 'N/A';
+
   const [compositeSuccess, setCompositeSuccess] = useState(false);
 
   const handleQuickCompositeOrder = () => {
@@ -659,22 +674,24 @@ export default function StoreDetailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
               <span className="text-slate-500 text-[11px] font-bold uppercase block">30-Day Order Volume</span>
-              <p className="text-xl font-black text-slate-900 mt-1">NPR 142,800</p>
-              <span className="text-xs text-emerald-600 font-semibold mt-0.5 inline-block">
-                ↑ 14.2% vs prior month
+              <p className="text-xl font-black text-slate-900 mt-1">NPR {volume30Days.toLocaleString()}</p>
+              <span className="text-xs text-slate-500 font-semibold mt-0.5 inline-block">
+                {last30DaysOrders.length} orders booked in last 30 days
               </span>
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
               <span className="text-slate-500 text-[11px] font-bold uppercase block">Average Order Value (AOV)</span>
-              <p className="text-xl font-black text-purple-700 mt-1">NPR 47,600</p>
-              <span className="text-xs text-slate-500 mt-0.5 inline-block">3 orders booked this quarter</span>
+              <p className="text-xl font-black text-purple-700 mt-1">NPR {aov.toLocaleString()}</p>
+              <span className="text-xs text-slate-500 mt-0.5 inline-block">{secondaryOrders.length} total secondary orders</span>
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
               <span className="text-slate-500 text-[11px] font-bold uppercase block">Replenishment Cadence</span>
-              <p className="text-xl font-black text-blue-700 mt-1">Every 11 Days</p>
-              <span className="text-xs text-blue-600 font-semibold mt-0.5 inline-block">Optimal stock velocity</span>
+              <p className="text-xl font-black text-blue-700 mt-1">{cadenceText}</p>
+              <span className="text-xs text-blue-600 font-semibold mt-0.5 inline-block">
+                {secondaryOrders.length > 0 ? 'Secondary retailer cadence' : 'Awaiting first secondary order'}
+              </span>
             </div>
           </div>
 
@@ -764,21 +781,21 @@ export default function StoreDetailPage() {
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Credit Line</span>
-                <p className="text-base font-bold text-slate-900 mt-0.5">NPR {(store.creditLimit || 150000).toLocaleString()}</p>
+                <p className="text-base font-bold text-slate-900 mt-0.5">NPR {(store.creditLimit || 0).toLocaleString()}</p>
               </div>
               <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
                 <span className="text-[10px] uppercase font-bold text-blue-600 block">Current Outstanding</span>
-                <p className="text-base font-bold text-blue-900 mt-0.5">NPR {(store.outstandingBalance || 64500).toLocaleString()}</p>
+                <p className="text-base font-bold text-blue-900 mt-0.5">NPR {(store.outstandingBalance || 0).toLocaleString()}</p>
               </div>
               <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
                 <span className="text-[10px] uppercase font-bold text-emerald-600 block">Available Balance</span>
                 <p className="text-base font-bold text-emerald-900 mt-0.5">
-                  NPR {((store.creditLimit || 150000) - (store.outstandingBalance || 64500)).toLocaleString()}
+                  NPR {Math.max(0, (store.creditLimit || 0) - (store.outstandingBalance || 0)).toLocaleString()}
                 </p>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <span className="text-[10px] uppercase font-bold text-slate-500 block">Avg Clearance Delay</span>
-                <p className="text-base font-bold text-slate-900 mt-0.5">3.8 Days</p>
+                <p className="text-base font-bold text-slate-900 mt-0.5">{avgClearanceDelay}</p>
               </div>
             </div>
           </div>

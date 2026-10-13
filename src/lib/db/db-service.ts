@@ -986,7 +986,7 @@ export class DatabaseService {
         hasBranches: branches.length > 0,
         branchesCount: branches.length,
         paymentTerms: d.creditTerms || '30 Days Net Cheque',
-        healthScore: d.healthScore ?? 80,
+        healthScore: d.healthScore ?? this.getStoreHealthScore(d.id).overall,
         isActive: true,
       });
     });
@@ -1013,7 +1013,7 @@ export class DatabaseService {
         hasBranches: false,
         branchesCount: 0,
         paymentTerms: r.creditTerms || '15 Days Cheque on Delivery',
-        healthScore: r.healthScore ?? 75,
+        healthScore: r.healthScore ?? this.getStoreHealthScore(r.id).overall,
         isActive: true,
       });
     });
@@ -1609,25 +1609,62 @@ export class DatabaseService {
     lat: number,
     lng: number,
     status: StaffLiveLocation['status'],
-    storeName?: string
+    storeName?: string,
+    batteryLevel?: number
   ) {
-    const staff = this.staffLiveLocations.find((s) => s.officerId === officerId);
-    if (staff) {
+    let staff = this.staffLiveLocations.find((s) => s.officerId === officerId);
+    if (!staff) {
+      const user = this.users.find((u) => u.id === officerId) || (this.currentUser.id === officerId ? this.currentUser : undefined);
+      staff = {
+        officerId,
+        officerName: user?.fullName || 'Sales Officer',
+        currentLat: lat,
+        currentLng: lng,
+        lastPingTimestamp: new Date().toISOString(),
+        status,
+        batteryLevel: batteryLevel ?? 100,
+        isOnline: true,
+        dutyStatus: user?.dutyStatus || 'ONLINE',
+        todayDistanceKm: 0,
+        todayRoute: [],
+      };
+      this.staffLiveLocations.push(staff);
+    } else {
+      if (staff.currentLat && staff.currentLng) {
+        const deltaM = this.calculateDistance(staff.currentLat, staff.currentLng, lat, lng);
+        staff.todayDistanceKm = Math.round((staff.todayDistanceKm + deltaM / 1000) * 10) / 10;
+      }
       staff.currentLat = lat;
       staff.currentLng = lng;
       staff.lastPingTimestamp = new Date().toISOString();
       staff.status = status;
-      if (storeName) {
-        staff.currentStoreName = storeName;
-        staff.timeAtCurrentStoreMinutes = 1;
-        staff.todayRoute.push({
-          storeName,
-          arrivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          status: 'IN_PROGRESS',
-        });
+      if (batteryLevel !== undefined) {
+        staff.batteryLevel = batteryLevel;
       }
-      this.persistState();
     }
+
+    if (storeName) {
+      staff.currentStoreName = storeName;
+      staff.timeAtCurrentStoreMinutes = 1;
+      staff.todayRoute.push({
+        storeName,
+        arrivedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'IN_PROGRESS',
+      });
+    }
+
+    syncManager.enqueue('GPS_PING', {
+      officer_id: officerId,
+      officer_name: staff.officerName,
+      lat,
+      lng,
+      status,
+      current_store_name: storeName || null,
+      battery_level: staff.batteryLevel,
+      created_at: new Date().toISOString(),
+    });
+
+    this.persistState();
   }
 
   // Multi-Photo Shelf Evidence (PRD v2.2)
@@ -3005,39 +3042,65 @@ export class DatabaseService {
 
   // Store Health Score (Fix 34 & Fix 45b)
   public getStoreHealthScore(storeId: string): StoreHealthScore {
-    // 1. Order Regularity (30 pts)
     const storeOrders = this.secondaryOrders.filter((o) => o.entityId === storeId);
-    let regularity = 15;
+    const storeCheques = this.cheques.filter((c) => c.entityId === storeId);
+    const storeStocks = this.stockCounts.filter((s) => s.entityId === storeId);
+    const storeBeats = this.beatItems.filter((b) => b.entityId === storeId);
+
+    // If completely empty store with no recorded field data, return pure 0
+    if (storeOrders.length === 0 && storeCheques.length === 0 && storeStocks.length === 0 && storeBeats.length === 0) {
+      return {
+        overall: 0,
+        score: 0,
+        tier: 'TIER_3',
+        orderRegularity: 0,
+        paymentDiscipline: 0,
+        stockMaintenance: 0,
+        visitCooperation: 0,
+        issueRate: 0,
+        trend: 'STABLE',
+        previousScore: 0,
+        lastCalculatedAt: new Date().toISOString(),
+        breakdown: {
+          orderVelocityScore: 0,
+          paymentScore: 0,
+          visitFrequencyScore: 0,
+          stockFreshnessScore: 0,
+        },
+      };
+    }
+
+    // 1. Order Regularity (30 pts)
+    let regularity = 0;
     if (storeOrders.length >= 3) regularity = 30;
     else if (storeOrders.length === 2) regularity = 22;
     else if (storeOrders.length === 1) regularity = 15;
-    else regularity = 8;
 
     // 2. Payment Discipline (25 pts)
-    const storeCheques = this.cheques.filter((c) => c.entityId === storeId);
-    const bounced = storeCheques.filter((c) => c.status === 'BOUNCED');
-    let paymentDiscipline = 25;
-    if (bounced.length > 0) {
-      paymentDiscipline = 0;
-    } else {
-      const overdue = storeCheques.filter((c) => c.status === 'DELAYED');
-      if (overdue.length > 0) paymentDiscipline = 12;
-      else paymentDiscipline = 25;
+    let paymentDiscipline = 0;
+    if (storeCheques.length > 0) {
+      const bounced = storeCheques.filter((c) => c.status === 'BOUNCED');
+      if (bounced.length > 0) {
+        paymentDiscipline = 0;
+      } else {
+        const overdue = storeCheques.filter((c) => c.status === 'DELAYED');
+        paymentDiscipline = overdue.length > 0 ? 12 : 25;
+      }
     }
 
     // 3. Stock Maintenance (25 pts)
-    const storeStocks = this.stockCounts.filter((s) => s.entityId === storeId);
-    const lowStocks = storeStocks.flatMap((s) => s.items).filter((i) => i.shelfQty < 5);
-    let stockMaintenance = 22;
-    if (lowStocks.length === 0) stockMaintenance = 25;
-    else if (lowStocks.length <= 2) stockMaintenance = 16;
-    else stockMaintenance = 8;
+    let stockMaintenance = 0;
+    if (storeStocks.length > 0) {
+      const lowStocks = storeStocks.flatMap((s) => s.items).filter((i) => i.shelfQty < 5);
+      if (lowStocks.length === 0) stockMaintenance = 25;
+      else if (lowStocks.length <= 2) stockMaintenance = 16;
+      else stockMaintenance = 8;
+    }
 
     // 4. Visit Cooperation (20 pts)
-    const storeBeats = this.beatItems.filter((b) => b.entityId === storeId);
-    const visited = storeBeats.filter((b) => b.status === 'VISITED');
-    let visitCooperation = 18;
+    let visitCooperation = 0;
     if (storeBeats.length > 0) {
+      const visited = storeBeats.filter((b) => b.status === 'VISITED');
       const pct = visited.length / storeBeats.length;
       if (pct >= 0.9) visitCooperation = 20;
       else if (pct >= 0.7) visitCooperation = 15;
@@ -3057,9 +3120,9 @@ export class DatabaseService {
       paymentDiscipline,
       stockMaintenance,
       visitCooperation,
-      issueRate: 5,
-      trend: overall >= 65 ? 'UP' : overall < 45 ? 'DOWN' : 'STABLE',
-      previousScore: Math.max(20, overall - 4),
+      issueRate: 0,
+      trend: overall >= 65 ? 'UP' : overall < 40 ? 'DOWN' : 'STABLE',
+      previousScore: overall === 0 ? 0 : Math.max(0, overall - 4),
       lastCalculatedAt: new Date().toISOString(),
       breakdown: {
         orderVelocityScore: regularity,
@@ -3236,14 +3299,9 @@ export class DatabaseService {
       });
     });
 
-    // Provide default fallback bestsellers if local order history is sparse
+    // If local order history is empty, return empty array (zero tolerance for fake data)
     if (Object.keys(countsByProduct).length === 0) {
-      return this.products.slice(0, 5).map((p, idx) => ({
-        productId: p.id,
-        name: p.name,
-        unitsMoved: (5 - idx) * 20,
-        storeCount: Math.max(1, 5 - idx),
-      }));
+      return [];
     }
 
     return Object.entries(countsByProduct)
@@ -3276,15 +3334,7 @@ export class DatabaseService {
   public getRestockRecommendations(storeId: string) {
     const storeStocks = this.stockCounts.filter((s) => s.entityId === storeId);
     if (storeStocks.length === 0) {
-      return this.products.slice(0, 2).map((p, idx) => ({
-        productId: p.id,
-        productName: p.name,
-        currentStock: idx === 0 ? 8 : 2,
-        depletionRate: idx === 0 ? 1.5 : 0.8,
-        daysUntilEmpty: idx === 0 ? 5 : 2,
-        suggestedReorder: idx === 0 ? 30 : 15,
-        urgent: idx === 1,
-      }));
+      return [];
     }
 
     const latest = storeStocks[0];
@@ -3408,9 +3458,9 @@ export class DatabaseService {
         returnsCount: filteredReturns.length,
         complaintsCount: filteredFeedback.filter((f) => f.type === 'COMPLAINT').length,
         resolvedComplaints: filteredFeedback.filter((f) => f.type === 'COMPLAINT' && f.complaintStatus === 'RESOLVED').length,
-        storeVisits: `${visitedBeats.length}/${beatItems.length || 6}`,
-        compliancePct: beatItems.length > 0 ? Math.round((visitedBeats.length / beatItems.length) * 100) : 80,
-        callsMade: this.callLogs.length || 22,
+        storeVisits: `${visitedBeats.length}/${beatItems.length}`,
+        compliancePct: beatItems.length > 0 ? Math.round((visitedBeats.length / beatItems.length) * 100) : 0,
+        callsMade: this.callLogs.length,
         chequesCollected: this.cheques.filter((c) => c.status === 'COLLECTED_IN_FIELD' || c.status === 'CASHED').length,
       },
       todayAttention: {

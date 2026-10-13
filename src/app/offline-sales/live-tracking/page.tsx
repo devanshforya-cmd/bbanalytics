@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db/db-service';
+import { fetchLatestPingsFromSupabase } from '@/lib/db/gps-service';
 import { StaffLiveLocation, StaffLiveStatus, BeatItem, DutyStatus } from '@/lib/types';
 import InteractiveMap from '@/components/common/InteractiveMap';
 import PageGuard from '@/components/common/PageGuard';
+import EmptyState from '@/components/common/EmptyState';
 import {
   Navigation,
   BatteryCharging,
@@ -73,10 +75,12 @@ export default function LiveStaffTrackingPage() {
   const [beatItems, setBeatItems] = useState<BeatItem[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [isSimulating, setIsSimulating] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [filterDuty, setFilterDuty] = useState<'ALL' | 'ACTIVE' | 'OFFLINE'>('ALL');
 
-  const reloadLocations = () => {
+  const reloadLocations = async () => {
+    setIsRefreshing(true);
+    await fetchLatestPingsFromSupabase();
     const locs = db.getStaffLiveLocations();
     // enrich with latest duty status from db
     const enriched = locs.map((l) => ({
@@ -88,13 +92,14 @@ export default function LiveStaffTrackingPage() {
     if (!selectedStaffId && enriched.length > 0) {
       setSelectedStaffId(enriched[0].officerId);
     }
+    setIsRefreshing(false);
   };
 
   useEffect(() => {
     reloadLocations();
     const interval = setInterval(() => {
       reloadLocations();
-    }, 10000);
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -112,30 +117,12 @@ export default function LiveStaffTrackingPage() {
     );
   };
 
-  // Admin ping simulation
-  const handleSimulatePing = (officerId: string) => {
-    setIsSimulating(true);
+  // Real refresh telemetry for officer
+  const handleRefreshPing = async (officerId: string) => {
     const rep = locations.find((l) => l.officerId === officerId);
     if (!rep) return;
-
-    const newLat = rep.currentLat + (Math.random() - 0.5) * 0.005;
-    const newLng = rep.currentLng + (Math.random() - 0.5) * 0.005;
-    const statuses: StaffLiveStatus[] = ['AT_STORE', 'IN_TRANSIT', 'IDLE'];
-    const nextStatus = statuses[Math.floor(Math.random() * statuses.length)];
-
-    db.updateStaffPing(
-      officerId,
-      newLat,
-      newLng,
-      nextStatus,
-      nextStatus === 'AT_STORE' ? 'Bhatbhateni Koteshwor' : undefined
-    );
-    reloadLocations();
-
-    setTimeout(() => {
-      setIsSimulating(false);
-      triggerToast(`Simulated live GPS ping received from ${rep.officerName} (${nextStatus}).`);
-    }, 400);
+    await reloadLocations();
+    triggerToast(`Real-time location updated for ${rep.officerName}.`);
   };
 
   const filteredLocations = locations.filter((loc) => {
@@ -145,10 +132,10 @@ export default function LiveStaffTrackingPage() {
     return true;
   });
 
-  const selectedStaff = locations.find((l) => l.officerId === selectedStaffId) || locations[0];
+  const selectedStaff = locations.find((l) => l.officerId === selectedStaffId) || filteredLocations[0];
 
   return (
-    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN']}>
+    <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN']} feature="gps_tracking">
       <div className="space-y-6 pb-12">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -213,9 +200,19 @@ export default function LiveStaffTrackingPage() {
         </div>
       </div>
 
-      {/* Rep Status Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {filteredLocations.map((loc) => {
+      {filteredLocations.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-xs">
+          <EmptyState
+            type="visits"
+            title="No Field Officers Online"
+            description="No field sales officers are currently transmitting live GPS pings or active on beat routes. Officers will appear on the radar once they mark their duty status as Online."
+          />
+        </div>
+      ) : (
+        <>
+          {/* Rep Status Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {filteredLocations.map((loc) => {
           const isSelected = selectedStaff?.officerId === loc.officerId;
           const currentDuty = loc.dutyStatus || 'ONLINE';
           const dutyBadge = DUTY_BADGES[currentDuty] || DUTY_BADGES.ONLINE;
@@ -359,15 +356,15 @@ export default function LiveStaffTrackingPage() {
 
                 <button
                   type="button"
-                  disabled={isSimulating || isOffline}
+                  disabled={isRefreshing || isOffline}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleSimulatePing(loc.officerId);
+                    handleRefreshPing(loc.officerId);
                   }}
                   className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-lg text-xs transition-colors disabled:opacity-50"
                 >
-                  <Play className="w-3 h-3" />
-                  <span>Ping</span>
+                  <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span>Sync</span>
                 </button>
               </div>
             </div>
@@ -488,6 +485,8 @@ export default function LiveStaffTrackingPage() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
       </div>
     </PageGuard>

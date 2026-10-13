@@ -99,8 +99,45 @@ export default function Product360Page() {
     }
   }
 
-  // Channel estimates (Operational unit metrics)
-  const totalUnitsSold = 1420;
+  // Channel estimates (Real operational unit metrics from orders)
+  const d2cOrders = db.getOrders();
+  const d2cUnits = d2cOrders.reduce((sum, o) => {
+    const matched = (o.items || []).filter(
+      (item) => item.productId === product.id || item.productName?.toLowerCase().includes(product.name.toLowerCase().slice(0, 8))
+    );
+    return sum + matched.reduce((s, it) => s + (it.quantity || 1), 0);
+  }, 0);
+
+  const gtUnits = relatedOrders
+    .filter((o) => !o.storeName?.toLowerCase().includes('bhatbhateni') && !o.storeName?.toLowerCase().includes('bigmart') && !o.storeName?.toLowerCase().includes('saleways'))
+    .reduce((sum, o) => {
+      const matched = o.items.filter(
+        (item) => item.productId === product.id || item.productName.toLowerCase().includes(product.name.toLowerCase().slice(0, 8))
+      );
+      return sum + matched.reduce((s, it) => s + (it.totalUnits || 0), 0);
+    }, 0);
+
+  const mtUnits = relatedOrders
+    .filter((o) => o.storeName?.toLowerCase().includes('bhatbhateni') || o.storeName?.toLowerCase().includes('bigmart') || o.storeName?.toLowerCase().includes('saleways'))
+    .reduce((sum, o) => {
+      const matched = o.items.filter(
+        (item) => item.productId === product.id || item.productName.toLowerCase().includes(product.name.toLowerCase().slice(0, 8))
+      );
+      return sum + matched.reduce((s, it) => s + (it.totalUnits || 0), 0);
+    }, 0);
+
+  const totalUnitsSold = gtUnits + mtUnits + d2cUnits;
+  const gtPct = totalUnitsSold > 0 ? Math.round((gtUnits / totalUnitsSold) * 100) : 0;
+  const mtPct = totalUnitsSold > 0 ? Math.round((mtUnits / totalUnitsSold) * 100) : 0;
+  const d2cPct = totalUnitsSold > 0 ? Math.round((d2cUnits / totalUnitsSold) * 100) : 0;
+
+  // Real returns for this product
+  const returnsList = db.getReturns();
+  const productReturns = returnsList.filter(
+    (r) => (r.productName && r.productName.toLowerCase().includes(product.name.toLowerCase().slice(0, 8))) || r.brandCode === product.brandCode
+  );
+  const totalReturnUnits = productReturns.reduce((sum, r) => sum + (r.quantity || 1), 0);
+  const returnRatePct = totalUnitsSold > 0 ? ((totalReturnUnits / totalUnitsSold) * 100).toFixed(1) : '0.0';
 
   // Stores Carrying This Product with stock counts
   const productStores: {
@@ -126,30 +163,21 @@ export default function Product360Page() {
 
     const latest = counts[0];
     let shelfUnits = 0;
-    let daysAgo = 999;
-    let countDate = 'Never';
+    let daysAgo = 0;
+    let countDate = 'Never counted';
 
     if (latest) {
       countDate = latest.dateBs || latest.dateAd;
       const parsedDate = new Date(latest.dateAd || latest.createdAt);
       if (!isNaN(parsedDate.getTime())) {
         daysAgo = Math.max(0, Math.floor((Date.now() - parsedDate.getTime()) / (1000 * 60 * 60 * 24)));
-      } else {
-        daysAgo = 5;
       }
       const item = latest.items.find(
         (i) => i.productId === product.id || i.productName.toLowerCase().includes(product.name.toLowerCase().slice(0, 8))
       );
       if (item) {
         shelfUnits = item.shelfQty;
-      } else {
-        shelfUnits = 0;
       }
-    } else {
-      // Mock realistic shelf stock for uncounted retailer if carrying
-      shelfUnits = ret.id.endsWith('1') ? 12 : ret.id.endsWith('2') ? 0 : 6;
-      daysAgo = ret.id.endsWith('2') ? 14 : 3;
-      countDate = '2083-05-18';
     }
 
     const branchLoc = ret.area ? `${ret.area}, ${ret.city}` : ret.city || 'Kathmandu';
@@ -164,6 +192,10 @@ export default function Product360Page() {
       daysSinceCount: daysAgo,
     });
   });
+
+  const storesStockingProduct = productStores.filter((ps) => ps.unitsOnShelf > 0);
+  const totalOutletsCount = retailers.length + branches.length;
+  const penetrationPct = totalOutletsCount > 0 ? ((storesStockingProduct.length / totalOutletsCount) * 100).toFixed(1) : '0.0';
 
   return (
     <PageGuard allowedRoles={['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'SALES_OFFICER']}>
@@ -251,10 +283,10 @@ export default function Product360Page() {
             <Store className="w-4 h-4 text-blue-600" />
           </div>
           <div className="text-2xl font-black text-blue-700 mt-2 font-mono">
-            74.2%
+            {penetrationPct}%
           </div>
           <div className="text-xs text-slate-500 mt-1">
-            37 of 50 active beat outlets stock
+            {storesStockingProduct.length} of {totalOutletsCount} active beat outlets stock
           </div>
         </div>
 
@@ -264,10 +296,10 @@ export default function Product360Page() {
             <RotateCcw className="w-4 h-4 text-amber-600" />
           </div>
           <div className="text-2xl font-black text-amber-600 mt-2 font-mono">
-            1.2%
+            {returnRatePct}%
           </div>
           <div className="text-xs text-slate-500 mt-1">
-            Below 2.5% quality threshold
+            {totalReturnUnits} returned units ({totalUnitsSold} sold)
           </div>
         </div>
 
@@ -363,46 +395,58 @@ export default function Product360Page() {
             </p>
           </div>
 
-          <div className="space-y-3 pt-2">
-            {/* GT */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="text-slate-700">General Trade (Kiranas &amp; Pharmacies)</span>
-                <span className="text-slate-900 font-bold font-mono">56% (795 units)</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div className="h-full bg-brand-600 rounded-full" style={{ width: '56%' }} />
-              </div>
+          {totalUnitsSold === 0 ? (
+            <div className="py-6 text-center text-xs text-slate-500 bg-slate-50/50 rounded-2xl border border-slate-100">
+              No orders or distribution velocity recorded for this product yet.
             </div>
+          ) : (
+            <div className="space-y-3 pt-2">
+              {/* GT */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span className="text-slate-700">General Trade (Kiranas &amp; Pharmacies)</span>
+                  <span className="text-slate-900 font-bold font-mono">{gtPct}% ({gtUnits} units)</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-full bg-brand-600 rounded-full" style={{ width: `${gtPct}%` }} />
+                </div>
+              </div>
 
-            {/* MT */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="text-slate-700">Modern Trade (Bhatbhateni / Saleways)</span>
-                <span className="text-slate-900 font-bold font-mono">34% (482 units)</span>
+              {/* MT */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span className="text-slate-700">Modern Trade (Supermarkets &amp; Chains)</span>
+                  <span className="text-slate-900 font-bold font-mono">{mtPct}% ({mtUnits} units)</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-full bg-blue-600 rounded-full" style={{ width: `${mtPct}%` }} />
+                </div>
               </div>
-              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div className="h-full bg-blue-600 rounded-full" style={{ width: '34%' }} />
-              </div>
-            </div>
 
-            {/* Online D2C */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="text-slate-700">D2C Online (WhatsApp / Social Orders)</span>
-                <span className="text-slate-900 font-bold font-mono">10% (143 units)</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div className="h-full bg-purple-600 rounded-full" style={{ width: '10%' }} />
+              {/* Online D2C */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span className="text-slate-700">D2C Online (WhatsApp / Social Orders)</span>
+                  <span className="text-slate-900 font-bold font-mono">{d2cPct}% ({d2cUnits} units)</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-full bg-purple-600 rounded-full" style={{ width: `${d2cPct}%` }} />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 mt-4">
-            <div className="text-xs font-bold text-slate-800">Reorder Cadence:</div>
+            <div className="text-xs font-bold text-slate-800">Secondary Cadence:</div>
             <div className="flex items-center gap-2 text-xs text-slate-600">
               <Clock className="w-4 h-4 text-slate-400" />
-              <span>Avg 11 days cycle between secondary retailer orders.</span>
+              <span>
+                {relatedOrders.length > 1
+                  ? `${relatedOrders.length} secondary orders booked across retail accounts.`
+                  : relatedOrders.length === 1
+                  ? '1 secondary order booked.'
+                  : 'No secondary retailer orders logged yet.'}
+              </span>
             </div>
           </div>
         </div>

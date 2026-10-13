@@ -40,24 +40,41 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 
-// 12-Week historical failure rate data over last 3 months (Jun - Sep 2026) for 6d
-const HISTORICAL_WEEKLY_TREND = [
-  { week: 'W1 (Jun 22)', label: 'Jun W4', attempts: 142, failures: 8, rate: 5.6 },
-  { week: 'W2 (Jun 29)', label: 'Jul W1', attempts: 156, failures: 9, rate: 5.8 },
-  { week: 'W3 (Jul 06)', label: 'Jul W2', attempts: 168, failures: 6, rate: 3.6 },
-  { week: 'W4 (Jul 13)', label: 'Jul W3', attempts: 185, failures: 11, rate: 5.9 }, // 3-month peak
-  { week: 'W5 (Jul 20)', label: 'Jul W4', attempts: 194, failures: 7, rate: 3.6 },
-  { week: 'W6 (Jul 27)', label: 'Aug W1', attempts: 210, failures: 5, rate: 2.4 },
-  { week: 'W7 (Aug 03)', label: 'Aug W2', attempts: 218, failures: 8, rate: 3.7 },
-  { week: 'W8 (Aug 10)', label: 'Aug W3', attempts: 226, failures: 7, rate: 3.1 },
-  { week: 'W9 (Aug 17)', label: 'Aug W4', attempts: 235, failures: 7, rate: 3.0 },
-  { week: 'W10 (Aug 24)', label: 'Sep W1', attempts: 248, failures: 5, rate: 2.0 },
-  { week: 'W11 (Aug 31)', label: 'Sep W2', attempts: 254, failures: 4, rate: 1.6 },
-  { week: 'W12 (Sep 07)', label: 'Sep W3', attempts: 265, failures: 4, rate: 1.5 },
-];
+function getHistoricalWeeklyTrend(failures: DeliveryFailure[]) {
+  const now = new Date();
+  const allOrders = db.getOrders();
+  return Array.from({ length: 12 }, (_, idx) => {
+    const weekStartMs = now.getTime() - (11 - idx) * 7 * 24 * 60 * 60 * 1000;
+    const weekEndMs = weekStartMs + 7 * 24 * 60 * 60 * 1000;
+    const startDate = new Date(weekStartMs);
+    const monthShort = startDate.toLocaleString('en-US', { month: 'short' });
+    const dayNum = String(startDate.getDate()).padStart(2, '0');
+    const label = `${monthShort} ${dayNum}`;
+
+    const attempts = allOrders.filter((o) => {
+      const t = new Date(o.orderDateAd || o.createdAt).getTime();
+      return t >= weekStartMs && t < weekEndMs;
+    }).length;
+
+    const failCount = failures.filter((f) => {
+      const t = new Date(f.dateAd || f.createdAt).getTime();
+      return t >= weekStartMs && t < weekEndMs;
+    }).length;
+
+    const rate = attempts > 0 ? Math.round((failCount / attempts) * 1000) / 10 : 0;
+    return {
+      week: `W${idx + 1} (${label})`,
+      label: `W${idx + 1}`,
+      attempts,
+      failures: failCount,
+      rate,
+    };
+  });
+}
 
 export default function DeliveryFailuresPage() {
   const [failures, setFailures] = useState<DeliveryFailure[]>(() => db.getDeliveryFailures());
+  const HISTORICAL_WEEKLY_TREND = useMemo(() => getHistoricalWeeklyTrend(failures), [failures]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBrand, setSelectedBrand] = useState<string>('ALL');
   const [selectedValley, setSelectedValley] = useState<string>('ALL');
