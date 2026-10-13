@@ -1244,10 +1244,11 @@ function FeedbackContent() {
             onChange={(e) => setEscalateAssignee(e.target.value)}
             className="w-full rounded-xl border border-slate-300 p-2.5 bg-white text-xs font-medium outline-none"
           >
-            <option value="Sita Gurung">Sita Gurung (Operations Lead)</option>
-            <option value="Devansh Agarwal">Devansh Agarwal (Super Admin)</option>
-            <option value="Aayush Shrestha">Aayush Shrestha (Brand Manager)</option>
-            <option value="Ravi Sharma">Ravi Sharma (Area Field Rep)</option>
+            {db.getUsers().map((u) => (
+              <option key={u.id} value={u.fullName}>
+                {u.fullName} ({u.role.replace('_', ' ')})
+              </option>
+            ))}
           </select>
 
           <label className="block font-bold text-slate-700 pt-1">Escalation Rationale / Action Directives:</label>

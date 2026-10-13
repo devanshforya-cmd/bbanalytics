@@ -81,34 +81,36 @@ export default function DocumentsPage() {
   const [lightboxZoom, setLightboxZoom] = useState(1);
   const [lightboxRotation, setLightboxRotation] = useState(0);
 
+  // Master lists
+  const allStaff = useMemo(() => db.getUsers(), []);
+  const configuredDocTypes = useMemo(() => db.getDocumentTypes().filter((t) => t.isActive), []);
+  const branches: Branch[] = useMemo(() => db.getBranches(), []);
+  const retailers: Retailer[] = useMemo(() => db.getRetailers(), []);
+
   // Status Action Modals
   const [handoverModalDoc, setHandoverModalDoc] = useState<HandoverDocument | null>(null);
-  const [handoverRecipient, setHandoverRecipient] = useState('Sita Gurung (Ops Desk)');
+  const [handoverRecipient, setHandoverRecipient] = useState(allStaff[0]?.fullName || 'Operations Desk');
   const [handoverNotes, setHandoverNotes] = useState('');
 
   const [filingModalDoc, setFilingModalDoc] = useState<HandoverDocument | null>(null);
-  const [filingFolder, setFilingFolder] = useState('Accounts Cabinet B-12 / Sep 2026');
+  const [filingFolder, setFilingFolder] = useState('Accounts Archive / Current Period');
   const [filingNotes, setFilingNotes] = useState('');
 
   const [missingModalDoc, setMissingModalDoc] = useState<HandoverDocument | null>(null);
   const [missingReason, setMissingReason] = useState('');
 
-  // Upload Form State (Clean by default - 5e)
+  // Upload Form State (Clean by default)
   const [formStoreId, setFormStoreId] = useState('');
   const [formStoreName, setFormStoreName] = useState('');
   const [formStoreSearch, setFormStoreSearch] = useState('');
   const [showStoreDropdown, setShowStoreDropdown] = useState(false);
   const [formDocType, setFormDocType] = useState('Purchase Order');
   const [formRefNumber, setFormRefNumber] = useState('');
-  const [formOfficerName, setFormOfficerName] = useState('Ravi Sharma');
+  const [formOfficerName, setFormOfficerName] = useState(allStaff.find((u) => u.role === 'SALES_OFFICER')?.fullName || allStaff[0]?.fullName || 'Field Officer');
   const [formInitialHolder, setFormInitialHolder] = useState('FIELD');
-  const [formHandedTo, setFormHandedTo] = useState('Sita Gurung (Ops Desk)');
+  const [formHandedTo, setFormHandedTo] = useState(allStaff[0]?.fullName || 'Operations Desk');
   const [formNotes, setFormNotes] = useState('');
-  const [formPhotoUrls, setFormPhotoUrls] = useState<string[]>([SAMPLE_DOC_IMAGES[0].url]);
-
-  // Master lists
-  const branches: Branch[] = useMemo(() => db.getBranches(), []);
-  const retailers: Retailer[] = useMemo(() => db.getRetailers(), []);
+  const [formPhotoUrls, setFormPhotoUrls] = useState<string[]>([]);
 
   const allStores = useMemo(() => {
     const list: { id: string; name: string; type: 'BRANCH' | 'RETAILER'; area?: string }[] = [];
@@ -574,10 +576,11 @@ export default function DocumentsPage() {
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
               <option value="ALL">All Officers</option>
-              <option value="Ravi Sharma">Ravi Sharma</option>
-              <option value="Pooja Karki">Pooja Karki</option>
-              <option value="Suman Adhikari">Suman Adhikari</option>
-              <option value="Devansh Agarwal">Devansh Agarwal</option>
+              {allStaff.map((u) => (
+                <option key={u.id} value={u.fullName}>
+                  {u.fullName}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -1150,11 +1153,15 @@ export default function DocumentsPage() {
                 onChange={(e) => setHandoverRecipient(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500 font-medium"
               >
-                <option value="Sita Gurung (Ops Desk)">Sita Gurung (Ops Desk)</option>
-                <option value="Devansh Agarwal (Admin / MD)">Devansh Agarwal (Admin / MD)</option>
-                <option value="Kripa Shrestha (Accounts Officer)">Kripa Shrestha (Accounts Officer)</option>
-                <option value="Warehouse Receiving Desk">Warehouse Receiving Desk</option>
-                <option value="Dispatch Coordinator">Dispatch Coordinator</option>
+                {allStaff.length > 0 ? (
+                  allStaff.map((u) => (
+                    <option key={u.id} value={u.fullName}>
+                      {u.fullName} ({u.role.replace('_', ' ')})
+                    </option>
+                  ))
+                ) : (
+                  <option value="Operations Desk">Operations Desk</option>
+                )}
               </select>
             </div>
 
@@ -1417,14 +1424,24 @@ export default function DocumentsPage() {
                   onChange={(e) => setFormDocType(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500"
                 >
-                  <option value="Purchase Order">Purchase Order</option>
-                  <option value="Signed Delivery Challan">Signed Delivery Challan</option>
-                  <option value="Tax Invoice Copy">Tax Invoice Copy</option>
-                  <option value="Stock Acknowledgment">Stock Acknowledgment</option>
-                  <option value="Return Authorization (RMA)">Return Authorization (RMA)</option>
-                  <option value="Credit Note">Credit Note</option>
-                  <option value="Store Agreement">Store Agreement</option>
-                  <option value="Other">Other Document</option>
+                  {configuredDocTypes.length > 0 ? (
+                    configuredDocTypes.map((dt) => (
+                      <option key={dt.id} value={dt.name}>
+                        {dt.name}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="Purchase Order">Purchase Order</option>
+                      <option value="Signed Delivery Challan">Signed Delivery Challan</option>
+                      <option value="Tax Invoice Copy">Tax Invoice Copy</option>
+                      <option value="Stock Acknowledgment">Stock Acknowledgment</option>
+                      <option value="Return Authorization (RMA)">Return Authorization (RMA)</option>
+                      <option value="Credit Note">Credit Note</option>
+                      <option value="Store Agreement">Store Agreement</option>
+                      <option value="Other">Other Document</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -1449,10 +1466,15 @@ export default function DocumentsPage() {
                   onChange={(e) => setFormOfficerName(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500"
                 >
-                  <option value="Ravi Sharma">Ravi Sharma (Sales Officer)</option>
-                  <option value="Pooja Karki">Pooja Karki (Sales Officer)</option>
-                  <option value="Suman Adhikari">Suman Adhikari (Sales Officer)</option>
-                  <option value="Devansh Agarwal">Devansh Agarwal (Admin)</option>
+                  {allStaff.length > 0 ? (
+                    allStaff.map((u) => (
+                      <option key={u.id} value={u.fullName}>
+                        {u.fullName} ({u.role.replace('_', ' ')})
+                      </option>
+                    ))
+                  ) : (
+                    <option value="Field Representative">Field Representative</option>
+                  )}
                 </select>
               </div>
 
@@ -1478,10 +1500,15 @@ export default function DocumentsPage() {
                   onChange={(e) => setFormHandedTo(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500 font-medium"
                 >
-                  <option value="Sita Gurung (Ops Desk)">Sita Gurung (Ops Desk)</option>
-                  <option value="Devansh Agarwal (Admin)">Devansh Agarwal (Admin)</option>
-                  <option value="Kripa Shrestha (Accounts)">Kripa Shrestha (Accounts)</option>
-                  <option value="Warehouse Head">Warehouse Head</option>
+                  {allStaff.length > 0 ? (
+                    allStaff.map((u) => (
+                      <option key={u.id} value={u.fullName}>
+                        {u.fullName} ({u.role.replace('_', ' ')})
+                      </option>
+                    ))
+                  ) : (
+                    <option value="Operations Desk">Operations Desk</option>
+                  )}
                 </select>
               </div>
             )}

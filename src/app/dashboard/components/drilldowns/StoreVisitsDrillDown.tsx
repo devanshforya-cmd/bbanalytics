@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Compass, CheckCircle, AlertTriangle, Search } from 'lucide-react';
 import { BeatItem, OfficerScorecard } from '@/lib/types';
 import DrillDownShell from './DrillDownShell';
+import { db } from '@/lib/db';
 
 interface StoreVisitsDrillDownProps {
   beatItems: BeatItem[];
@@ -88,36 +89,34 @@ function StoresVisitedTodayTab({
   beatItems: BeatItem[];
   scorecards: OfficerScorecard[];
 }) {
-  const officers = [
-    {
-      id: 'user_officer_ravi',
-      name: 'Ravi Sharma',
-      area: 'Kathmandu Valley North & East',
-      compliance: '4/6 stores (66.7%)',
-      stores: [
-        { name: 'Bhatbhateni Maharajgunj', status: 'VISITED', time: '9:42 AM – 10:15 AM', duration: '33 min' },
-        { name: 'Bhatbhateni Koteshwor', status: 'VISITED', time: '10:45 AM – 11:20 AM', duration: '35 min' },
-        { name: 'Nepal Mart Baneshwor', status: 'VISITED', time: '11:50 AM – 12:10 PM', duration: '20 min' },
-        { name: 'Krishna Store Chabahil', status: 'VISITED', time: '1:30 PM – 1:55 PM', duration: '25 min' },
-        { name: 'Norvic Pharmacy Thapathali', status: 'SKIPPED', skipReason: 'Other task assigned' },
-        { name: 'Saleways Kalimati', status: 'SKIPPED', skipReason: 'No time' },
-      ],
-    },
-    {
-      id: 'user_officer_pooja',
-      name: 'Pooja Karki',
-      area: 'Lalitpur & Bhaktapur',
-      compliance: '5/6 stores (83.3%)',
-      stores: [
-        { name: 'Bhatbhateni Pulchowk', status: 'VISITED', time: '9:30 AM – 10:05 AM', duration: '35 min' },
-        { name: 'BigMart Jhamsikhel', status: 'VISITED', time: '10:20 AM – 10:50 AM', duration: '30 min' },
-        { name: 'Saleways Jawalakhel', status: 'VISITED', time: '11:15 AM – 11:45 AM', duration: '30 min' },
-        { name: 'Bhaktapur Mini Mart', status: 'VISITED', time: '1:10 PM – 1:40 PM', duration: '30 min' },
-        { name: 'Radhe Radhe Department Store', status: 'VISITED', time: '2:15 PM – 2:40 PM', duration: '25 min' },
-        { name: 'Suryabinayak Cosmetics', status: 'SKIPPED', skipReason: 'Store closed' },
-      ],
-    },
-  ];
+  const allStaff = db.getUsers().filter((u) => u.role === 'SALES_OFFICER');
+  const allBeats = db.getBeatItems();
+
+  const officers = allStaff.map((off) => {
+    const offBeats = allBeats.filter((b) => b.officerId === off.id);
+    const visited = offBeats.filter((b) => b.status === 'VISITED');
+    return {
+      id: off.id,
+      name: off.fullName,
+      area: off.territory || 'Assigned Territory',
+      compliance: offBeats.length > 0 ? `${visited.length}/${offBeats.length} stores (${Math.round((visited.length / offBeats.length) * 100)}%)` : '0 stores assigned',
+      stores: offBeats.map((b) => ({
+        name: b.storeName,
+        status: b.status,
+        skipReason: b.skipReason,
+        time: (b as any).checkedInAt || (b as any).time || '',
+        duration: '',
+      })),
+    };
+  });
+
+  if (officers.length === 0) {
+    return (
+      <div className="p-8 text-center text-xs text-slate-500 bg-white rounded-xl border border-slate-200">
+        No field officers or daily beat visits recorded yet.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -238,13 +237,16 @@ function StoresBeatComplianceTrendTab({
 function StoresVisitHistoryTab({ beatItems }: { beatItems: BeatItem[] }) {
   const [search, setSearch] = useState('');
 
-  const stores = [
-    { name: 'Bhatbhateni Maharajgunj', branch: 'Maharajgunj', type: 'Supermarket', officer: 'Ravi Sharma', lastVisited: '2 days ago', daysAgo: 2, freq: '3x/week' },
-    { name: 'Krishna General Store', branch: 'Maharajgunj', type: 'GT Store', officer: 'Ravi Sharma', lastVisited: '11 days ago', daysAgo: 11, freq: '1x/week' },
-    { name: 'Bhatbhateni Pulchowk', branch: 'Pulchowk', type: 'Supermarket', officer: 'Pooja Karki', lastVisited: 'Today', daysAgo: 0, freq: '4x/week' },
-    { name: 'Norvic Pharmacy', branch: 'Thapathali', type: 'Pharmacy', officer: 'Ravi Sharma', lastVisited: '15 days ago', daysAgo: 15, freq: '1x/fortnight' },
-    { name: 'Saleways Kalimati', branch: 'Kalimati', type: 'Supermarket', officer: 'Suman Adhikari', lastVisited: '8 days ago', daysAgo: 8, freq: '2x/week' },
-  ];
+  const allStoreEntities = db.getStoresUnified();
+  const stores = allStoreEntities.map((s) => ({
+    name: s.name,
+    branch: s.area || s.city || 'Kathmandu',
+    type: s.storeType || 'Store',
+    officer: (s as any).assignedOfficerName || s.assignedOfficerId || 'Field Officer',
+    lastVisited: (s as any).lastVisited || (s as any).lastVisitDate || 'Pending Visit',
+    daysAgo: (s as any).daysSinceLastVisit || (s as any).lastVisitDaysAgo || 0,
+    freq: (s as any).visitFrequency || 'Weekly',
+  }));
 
   const filtered = stores.filter(
     (s) =>

@@ -811,10 +811,11 @@ export default function ReviewCategoriesPage() {
                   onChange={(e) => setNewCatCreator(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-semibold text-slate-800"
                 >
-                  <option>Devansh Agarwal (Super Admin)</option>
-                  <option>Sita Gurung (Operations Lead)</option>
-                  <option>Ravi Sharma (Sales Officer)</option>
-                  <option>Accounts Desk</option>
+                  {db.getUsers().map((u) => (
+                    <option key={u.id} value={u.fullName}>
+                      {u.fullName} ({u.role.replace('_', ' ')})
+                    </option>
+                  ))}
                 </select>
               </div>
 

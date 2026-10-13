@@ -36,7 +36,7 @@ export default function PageGuard({
     );
   }
 
-  if (!user || !allowedRoles.includes(user.role)) {
+  if (!user || (!user.isSuperAdmin && user.role !== 'SUPER_ADMIN' && !allowedRoles.includes(user.role))) {
     const defaultRoute = user ? getRedirectPathForRole(user.role) : '/login';
 
     return (

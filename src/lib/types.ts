@@ -13,6 +13,8 @@ export type BrandCode = KnownBrandCode | (string & {});
 
 export type DutyStatus = 'ONLINE' | 'IN_FIELD' | 'ON_BREAK' | 'OFFLINE' | 'ON_LEAVE';
 
+import type { UserCustomPermissions } from './permissions';
+
 export interface UserPermissions {
   canViewAnalytics: boolean;
   canExportSheets: boolean;
@@ -41,6 +43,9 @@ export interface User {
   dutyStartedAt?: string;
   permissions?: UserPermissions;
   calendarPreference?: 'BS' | 'AD' | 'BOTH';
+  reportsToId?: string;
+  isSuperAdmin?: boolean;
+  customPermissions?: UserCustomPermissions;
 }
 
 export type BrandCategory =
@@ -143,22 +148,65 @@ export interface VendorContact {
   alternatePhone?: string;
   email?: string;
   isPrimary: boolean;
+  isFlaggedForRemoval?: boolean;
+  flaggedById?: string;
+  flaggedByName?: string;
+  flaggedReason?: string;
+  flaggedAt?: string;
+  addedById?: string;
+  storeId?: string;
+  branchId?: string;
+}
+
+export type StoreType = 'DISTRIBUTOR' | 'CHAIN_STORE' | 'STANDALONE_RETAILER';
+export type StoreMarginType = 'MARKUP' | 'MARKDOWN';
+
+export interface StoreMargin {
+  pct: number;
+  type: StoreMarginType;
+}
+
+export type DefaultMargins = Record<string, StoreMargin>;
+
+export interface StoreContact {
+  id: string;
+  storeId?: string;
+  branchId?: string;
+  name: string;
+  role: string;
+  phone: string;
+  email?: string;
+  isPrimary: boolean;
+  isFlaggedForRemoval?: boolean;
+  flaggedById?: string;
+  flaggedByName?: string;
+  flaggedReason?: string;
+  flaggedAt?: string;
+  addedById?: string;
+  createdAt?: string;
 }
 
 export interface Distributor {
   id: string;
   name: string;
   type: 'Distributor' | 'Retail Chain' | 'Pharmacy Chain' | 'Wholesale';
+  storeType?: StoreType;
   city: string;
   address?: string;
   province?: string;
   valley?: 'Inside' | 'Outside';
+  lat?: number;
+  lng?: number;
   contactName: string;
   contactRole: string;
   contactPhone: string;
   contactEmail: string;
   contacts: VendorContact[];
   brandsCarried: BrandCode[];
+  defaultMargins?: DefaultMargins;
+  vatRegistered?: boolean;
+  healthScore?: number;
+  hasBranches?: boolean;
   notes?: string;
   creditTerms?: string;
 }
@@ -178,6 +226,7 @@ export interface Branch {
   contactPhone: string;
   contacts: VendorContact[];
   brandsAvailable: BrandCode[];
+  defaultMargins?: DefaultMargins;
   creditLimit?: number;
   outstandingBalance?: number;
   overdueBalance?: number;
@@ -192,6 +241,8 @@ export interface Retailer {
   id: string;
   name: string;
   type: 'GT' | 'Kirana' | 'Pharmacy' | 'Cosmetics' | 'Other';
+  storeType?: StoreType;
+  category?: string;
   city: string;
   area: string;
   province?: string;
@@ -208,6 +259,9 @@ export interface Retailer {
   contactPhone: string;
   contacts: VendorContact[];
   brandsStocked: BrandCode[];
+  defaultMargins?: DefaultMargins;
+  vatRegistered?: boolean;
+  healthScore?: number;
   notes?: string;
   creditTerms?: string;
   creditLimit?: number;
@@ -218,6 +272,17 @@ export interface Retailer {
   isCreditLocked?: boolean;
   lastVisitDate?: string;
   lastVisitDaysAgo?: number;
+}
+
+export interface RecurringScheduleEntry {
+  id: string;
+  officerId: string;
+  storeId: string;
+  storeName: string;
+  entityType: 'BRANCH' | 'RETAILER';
+  daysOfWeek: ('MON' | 'TUE' | 'WED' | 'THU' | 'FRI')[];
+  priority: 'HIGH' | 'MEDIUM' | 'ROUTINE';
+  managerNote?: string;
 }
 
 export interface SecondaryOrderItem {
@@ -252,6 +317,8 @@ export interface SecondaryOrder {
   status: 'PENDING_DISPATCH' | 'DISPATCHED' | 'DELIVERED' | 'CANCELLED';
   distributorId?: string;
   distributorName?: string;
+  brandMargins?: Record<string, { pct: number; type: StoreMarginType; perUnitPrices?: Record<string, number> }>;
+  paymentTerms?: string;
   notes?: string;
   proFormaUrl?: string;
   orderPhotoUrl?: string;
@@ -313,6 +380,14 @@ export interface BeatItem {
   skipNotes?: string;
   checkedInAt?: string;
   checkedOutAt?: string;
+  checkOutLat?: number;
+  checkOutLng?: number;
+  checkInDistanceM?: number;
+  checkOutDistanceM?: number;
+  idleTimeMinutes?: number;
+  suspiciousFlags?: string[];
+  checkInPhotoUrl?: string;
+  oneTimeOverride?: boolean;
   priority?: 'HIGH' | 'MEDIUM' | 'ROUTINE';
   managerNotes?: string;
   urgencySignals?: {
@@ -534,10 +609,12 @@ export interface HandoverDocument {
   officerId: string;
   officerName: string;
   documentType: string;
+  documentTypeId?: string;
   docDateAd: string;
   docDateBs: string;
   referenceNumber?: string;
   photoUrls: string[];
+  pages?: string[];
   handedToUserName?: string;
   handoverDate?: string;
   filedLocation?: string;
@@ -546,6 +623,20 @@ export interface HandoverDocument {
   status: 'COLLECTED' | 'HANDED_OVER' | 'FILED' | 'MISSING';
   notes?: string;
   createdAt: string;
+}
+
+export interface DocumentTypeConfig {
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+export interface StoreCategoryConfig {
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt?: string;
 }
 
 
@@ -815,6 +906,19 @@ export interface Notification {
   entityType?: string;
   entityId?: string;
   createdAt: string;
+}
+
+export type NotificationItem = Notification;
+export type CustomerProfile = Customer;
+export interface CustomerTimelineEvent {
+  id: string;
+  customerPhone?: string;
+  eventType?: string;
+  description?: string;
+  dateAd?: string;
+  dateBs?: string;
+  createdAt?: string;
+  [key: string]: any;
 }
 
 export interface ActivityLog {

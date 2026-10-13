@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { TrendingUp, Calendar, AlertTriangle, Users, BarChart3 } from 'lucide-react';
+import { db } from '@/lib/db';
 
 interface ThirtyDayTrendChartsProps {
   comparisonMode?: 'OFF' | 'LAST_MONTH' | 'SAME_MONTH_LAST_YEAR' | 'CUSTOM';
@@ -9,6 +10,14 @@ interface ThirtyDayTrendChartsProps {
 
 export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyDayTrendChartsProps) {
   const [hoveredOrderDay, setHoveredOrderDay] = useState<{ day: number; count: number; date: string } | null>(null);
+
+  const scorecards = db.getScorecards();
+  const off1 = scorecards[0]?.officerName || 'Officer 1';
+  const off2 = scorecards[1]?.officerName || 'Officer 2';
+  const off3 = scorecards[2]?.officerName || 'Officer 3';
+  const rate1 = scorecards[0]?.beatCompliancePct || 87.5;
+  const rate2 = scorecards[1]?.beatCompliancePct || 93.9;
+  const rate3 = scorecards[2]?.beatCompliancePct || 75.8;
 
   // 1. Orders per day (30 days data)
   const ordersPerDay = [
@@ -335,15 +344,15 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
           <div className="flex items-center justify-center gap-4 text-xs font-semibold pt-1">
             <div className="flex items-center gap-1.5 text-purple-700">
               <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
-              <span>Pooja Karki (93.9%)</span>
+              <span>{off2} ({rate2}%)</span>
             </div>
             <div className="flex items-center gap-1.5 text-blue-700">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-              <span>Ravi Sharma (87.5%)</span>
+              <span>{off1} ({rate1}%)</span>
             </div>
             <div className="flex items-center gap-1.5 text-emerald-700">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-              <span>Suman Adhikari (75.8%)</span>
+              <span>{off3} ({rate3}%)</span>
             </div>
           </div>
         </div>

@@ -48,14 +48,10 @@ export default function ShelfPhotosPage() {
 
   // Upload Multi-Photo Modal
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadStoreName, setUploadStoreName] = useState('Bhatbhateni Naxal');
-  const [uploadSection, setUploadSection] = useState('Eye-Level Premium Rack');
-  const [uploadBeforeUrls, setUploadBeforeUrls] = useState<string[]>([
-    'https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=800&auto=format&fit=crop&q=60',
-  ]);
-  const [uploadAfterUrls, setUploadAfterUrls] = useState<string[]>([
-    'https://images.unsplash.com/photo-1576426863848-c21f53c60b19?w=800&auto=format&fit=crop&q=60',
-  ]);
+  const [uploadStoreName, setUploadStoreName] = useState('');
+  const [uploadSection, setUploadSection] = useState('Front Rack / Eye-Level');
+  const [uploadBeforeUrls, setUploadBeforeUrls] = useState<string[]>([]);
+  const [uploadAfterUrls, setUploadAfterUrls] = useState<string[]>([]);
   const [newBeforeUrlInput, setNewBeforeUrlInput] = useState('');
   const [newAfterUrlInput, setNewAfterUrlInput] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);

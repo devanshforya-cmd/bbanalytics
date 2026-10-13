@@ -25,13 +25,13 @@ import ConfirmModal from '@/components/common/ConfirmModal';
 
 export default function DispatchPage() {
   const [dispatches, setDispatches] = useState<Dispatch[]>(db.getDispatches());
-  const distributors = db.getDistributors();
+  const unifiedStores = db.getStoresUnified();
   const products = db.getProducts();
 
   // Form State
   const [showLogModal, setShowLogModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [selectedDistId, setSelectedDistId] = useState(distributors[0]?.id || '');
+  const [selectedStoreId, setSelectedStoreId] = useState(unifiedStores[0]?.id || '');
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [dispatchDateAd, setDispatchDateAd] = useState(getTodayAd());
   const [dispatchNotes, setDispatchNotes] = useState('');
@@ -47,8 +47,8 @@ export default function DispatchPage() {
   const [editItem, setEditItem] = useState<{ productId: string; productName: string; quantity: number } | null>(null);
   const [editReason, setEditReason] = useState('');
 
-  const selectedDist = distributors.find((d) => d.id === selectedDistId);
-  const branches = db.getBranches(selectedDistId);
+  const selectedStore = unifiedStores.find((s) => s.id === selectedStoreId);
+  const branches = selectedStore?.storeType === 'DISTRIBUTOR' ? db.getBranches(selectedStore.id) : [];
 
   const handleAddItemRow = () => {
     setSelectedItems([...selectedItems, { productId: products[0]?.id || '', quantity: 12 }]);
@@ -85,8 +85,8 @@ export default function DispatchPage() {
     });
 
     db.addDispatch({
-      distributorId: selectedDistId,
-      distributorName: selectedDist?.name || 'Distributor',
+      distributorId: selectedStoreId,
+      distributorName: selectedStore?.name || 'Store',
       branchId: selectedBranchId || undefined,
       branchName: selectedBranchId ? branches.find((b) => b.id === selectedBranchId)?.name : undefined,
       dispatchDateAd,
@@ -99,7 +99,7 @@ export default function DispatchPage() {
     setDispatches([...db.getDispatches()]);
     setShowConfirmModal(false);
     setDispatchPhotoUrl('');
-    toast.success('Dispatch recorded successfully. Distributor inventory ledger updated.');
+    toast.success('Dispatch recorded successfully. Inventory ledger updated.');
   };
 
   const handleSaveEdit = () => {
@@ -256,36 +256,70 @@ export default function DispatchPage() {
             </div>
 
             <div className="py-4 space-y-3 text-xs max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Distributor *</label>
+                  <label className="block font-bold text-slate-700 mb-1">Recipient Store / Partner *</label>
                   <select
-                    value={selectedDistId}
-                    onChange={(e) => setSelectedDistId(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none bg-white"
+                    value={selectedStoreId}
+                    onChange={(e) => {
+                      setSelectedStoreId(e.target.value);
+                      setSelectedBranchId('');
+                    }}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none bg-white text-xs font-medium"
                   >
-                    {distributors.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
+                    <optgroup label="🏢 Distributor Chains & Central Warehouses">
+                      {unifiedStores
+                        .filter((s) => s.storeType === 'DISTRIBUTOR')
+                        .map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name} ({d.category || 'Distributor'})
+                          </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="🏪 Modern Trade / Chain Stores">
+                      {unifiedStores
+                        .filter((s) => s.storeType === 'CHAIN_STORE')
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} ({c.category || 'Chain Store'})
+                          </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="🏬 Standalone Retail Stores">
+                      {unifiedStores
+                        .filter((s) => s.storeType === 'STANDALONE_RETAILER')
+                        .map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name} ({r.category || 'Retailer'})
+                          </option>
+                        ))}
+                    </optgroup>
                   </select>
                 </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Branch (or Central)</label>
-                  <select
-                    value={selectedBranchId}
-                    onChange={(e) => setSelectedBranchId(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none bg-white"
-                  >
-                    <option value="">HQ / Central Warehouse</option>
-                    {branches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {selectedStore?.storeType === 'DISTRIBUTOR' && branches.length > 0 ? (
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Branch (or Central)</label>
+                    <select
+                      value={selectedBranchId}
+                      onChange={(e) => setSelectedBranchId(e.target.value)}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none bg-white text-xs font-medium"
+                    >
+                      <option value="">HQ / Central Warehouse</option>
+                      {branches.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Store Location</label>
+                    <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 truncate text-xs">
+                      {selectedStore?.address || 'Kathmandu Route'}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -390,7 +424,7 @@ export default function DispatchPage() {
       {/* FIX 50b: Context-Rich Dispatch Confirmation Review Modal */}
       <ConfirmModal
         isOpen={showConfirmModal}
-        title={`Confirm Dispatch to ${selectedDist?.name || 'Distributor'}?`}
+        title={`Confirm Dispatch to ${selectedStore?.name || 'Store'}?`}
         variant="info"
         confirmLabel="✓ Confirm Dispatch"
         cancelLabel="← Back to Edit"
@@ -408,7 +442,7 @@ export default function DispatchPage() {
           { label: 'Payment Due Date', value: 'Ashwin 12, 2083' },
         ]}
         consequences={[
-          `Add ${totalUnits} units to ${selectedDist?.name || 'Distributor'} inventory ledger`,
+          `Add ${totalUnits} units to ${selectedStore?.name || 'Distributor'} inventory ledger`,
           'Create automated payment follow-up reminder for Ashwin 12, 2083',
           'Notify assigned field territory officer of scheduled handover',
         ]}

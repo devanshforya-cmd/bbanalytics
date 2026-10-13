@@ -263,14 +263,14 @@ export default function StoreDetailPage() {
               Assigned Field Officer:{' '}
               {!isOfficer ? (
                 <Link
-                  href={`/offline-sales/scorecard?officer=${encodeURIComponent(store.assignedOfficerName || 'Ravi Sharma')}`}
+                  href={`/offline-sales/scorecard?officer=${encodeURIComponent(store.assignedOfficerName || 'Field Officer')}`}
                   className="font-bold text-blue-600 hover:underline hover:text-blue-800"
                 >
-                  {store.assignedOfficerName || 'Ravi Sharma'} ↗
+                  {store.assignedOfficerName || 'Unassigned'} ↗
                 </Link>
               ) : (
                 <span className="font-bold text-slate-800">
-                  {store.assignedOfficerName || 'Ravi Sharma'}
+                  {store.assignedOfficerName || 'Unassigned'}
                 </span>
               )}
             </div>
@@ -630,10 +630,10 @@ export default function StoreDetailPage() {
                     <div className="text-slate-500 text-[11px]">
                       Check-in: {v.checkedInAt || '10:15 AM'} • Check-out: {v.checkedOutAt || '10:45 AM'} • Officer:{' '}
                       <Link
-                        href={`/offline-sales/scorecard?officer=${encodeURIComponent(v.officerId || 'Ravi Sharma')}`}
+                        href={`/offline-sales/scorecard?officer=${encodeURIComponent(v.officerId || 'Field Officer')}`}
                         className="font-bold text-blue-600 hover:underline"
                       >
-                        {v.officerId || 'Ravi Sharma'}
+                        {(v as any).officerName || v.officerId || 'Field Officer'}
                       </Link>
                     </div>
                   </div>
@@ -1025,7 +1025,7 @@ export default function StoreDetailPage() {
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 truncate">
-                        Officer: {p.officerName || 'Ravi Sharma'}
+                        Officer: {p.officerName || 'Field Officer'}
                       </p>
                     </div>
                   </div>

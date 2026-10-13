@@ -1,40 +1,34 @@
-import {
-  INITIAL_USERS,
-  INITIAL_BRANDS,
-  INITIAL_PRODUCTS,
-  INITIAL_DISTRIBUTORS,
-  INITIAL_BRANCHES,
-  INITIAL_RETAILERS,
-  INITIAL_TODAY_BEAT,
-  INITIAL_CHEQUES,
-  INITIAL_ORDERS,
-  INITIAL_DELIVERY_FAILURES,
-  INITIAL_RETURNS,
-  INITIAL_REVIEW_CATEGORIES,
-  INITIAL_FEEDBACK,
-  INITIAL_CUSTOMERS,
-  INITIAL_TASKS,
-  INITIAL_NOTIFICATIONS,
-  INITIAL_SCORECARDS,
-  INITIAL_ACTIVITY_LOGS,
-  INITIAL_SHELF_PHOTOS,
-  INITIAL_STAFF_LIVE_LOCATIONS,
-  INITIAL_COMBOS,
-  INITIAL_SECONDARY_ORDERS,
-  INITIAL_FACING_AUDITS,
-  INITIAL_DOCUMENTS,
-  INITIAL_INFLUENCERS,
-  INITIAL_INFLUENCER_CONTENT,
-  INITIAL_SHARED_ACCESS_LINKS,
-} from './mock-data';
+import { SUPER_ADMIN_TEMPLATE } from '../permissions';
 
-import {
-  INITIAL_HOLIDAYS_2083,
-  INITIAL_TASK_TEMPLATES,
-  INITIAL_SEASONAL_PATTERNS,
-  INITIAL_PROMOTIONS,
-  INITIAL_DAILY_SUMMARIES,
-} from './extended-data';
+const DEFAULT_SUPER_ADMIN: User = {
+  id: 'user_devansh',
+  fullName: 'Devansh Agarwal',
+  email: 'devansh@brandbucket.com',
+  phone: '+977-9801234567',
+  role: 'SUPER_ADMIN',
+  isSuperAdmin: true,
+  dutyStatus: 'ONLINE',
+  active: true,
+  assignedBrands: ['ALL', 'FORYA', 'PEESAFE', 'FURR', 'RENEE'],
+  territory: 'ALL',
+  permissions: {
+    canViewAnalytics: true,
+    canExportSheets: true,
+    canManageDispatches: true,
+    canManageCheques: true,
+    canApproveSkips: true,
+    canManageStaff: true,
+    canConfigureSettings: true,
+  },
+  customPermissions: SUPER_ADMIN_TEMPLATE,
+};
+
+const DEFAULT_BRANDS: Brand[] = [
+  { id: 'brand_forya', code: 'FORYA', name: 'Forya', color: '#10b981', description: 'Personal care & beauty products', isActive: true, status: 'ACTIVE' },
+  { id: 'brand_peesafe', code: 'PEESAFE', name: 'Pee Safe', color: '#8b5cf6', description: 'Hygiene & personal wellness', isActive: true, status: 'ACTIVE' },
+  { id: 'brand_furr', code: 'FURR', name: 'FURR', color: '#7c3aed', description: 'Grooming & skincare essentials', isActive: true, status: 'ACTIVE' },
+  { id: 'brand_renee', code: 'RENEE', name: 'Renee', color: '#ec4899', description: 'High-performance color cosmetics', isActive: true, status: 'ACTIVE' },
+];
 
 import {
   User,
@@ -86,7 +80,23 @@ import {
   InfluencerContent,
   SharedAccessLink,
   DashboardSalesMode,
+  DocumentTypeConfig,
+  StoreCategoryConfig,
+  StoreType,
+  DefaultMargins,
+  StoreMargin,
 } from '../types';
+
+export interface RecurringScheduleEntry {
+  id: string;
+  officerId: string;
+  storeId: string;
+  storeName: string;
+  entityType: 'BRANCH' | 'RETAILER';
+  daysOfWeek: ('MON' | 'TUE' | 'WED' | 'THU' | 'FRI')[];
+  priority: 'HIGH' | 'MEDIUM' | 'ROUTINE';
+  managerNote?: string;
+}
 
 import { syncManager } from '../offline-sync';
 import { applyKarmaEvent, KARMA_RULES } from '../karma-calculator';
@@ -99,47 +109,69 @@ export interface OrderRealtimeEvent {
 }
 
 export class DatabaseService {
-  private users: User[] = INITIAL_USERS;
-  private currentUser: User = INITIAL_USERS[0]; // Devansh by default
-  private brands: Brand[] = INITIAL_BRANDS;
-  private products: Product[] = INITIAL_PRODUCTS;
-  private combos: Combo[] = INITIAL_COMBOS;
-  private secondaryOrders: SecondaryOrder[] = INITIAL_SECONDARY_ORDERS;
-  private facingAudits: FacingAudit[] = INITIAL_FACING_AUDITS;
-  private distributors: Distributor[] = INITIAL_DISTRIBUTORS;
-  private branches: Branch[] = INITIAL_BRANCHES;
-  private retailers: Retailer[] = INITIAL_RETAILERS;
-  private beatItems: BeatItem[] = INITIAL_TODAY_BEAT;
+  private users: User[] = [DEFAULT_SUPER_ADMIN];
+  private currentUser: User = DEFAULT_SUPER_ADMIN;
+  private brands: Brand[] = DEFAULT_BRANDS;
+  private products: Product[] = [];
+  private combos: Combo[] = [];
+  private secondaryOrders: SecondaryOrder[] = [];
+  private facingAudits: FacingAudit[] = [];
+  private distributors: Distributor[] = [];
+  private branches: Branch[] = [];
+  private retailers: Retailer[] = [];
+  private beatItems: BeatItem[] = [];
   private visits: Visit[] = [];
   private dispatches: Dispatch[] = [];
   private stockCounts: StockCount[] = [];
-  private shelfPhotos: ShelfPhoto[] = INITIAL_SHELF_PHOTOS;
+  private shelfPhotos: ShelfPhoto[] = [];
   private callLogs: CallLog[] = [];
-  private cheques: Cheque[] = INITIAL_CHEQUES;
-  private documents: HandoverDocument[] = [...INITIAL_DOCUMENTS];
-  private orders: Order[] = INITIAL_ORDERS;
-  private deliveryFailures: DeliveryFailure[] = INITIAL_DELIVERY_FAILURES;
-  private returns: ReturnEntry[] = INITIAL_RETURNS;
-  private reviewCategories: ReviewCategory[] = INITIAL_REVIEW_CATEGORIES;
-  private feedbackEntries: FeedbackEntry[] = INITIAL_FEEDBACK;
-  private customers: Customer[] = INITIAL_CUSTOMERS;
-  private tasks: Task[] = INITIAL_TASKS;
-  private notifications: Notification[] = INITIAL_NOTIFICATIONS;
-  private scorecards: OfficerScorecard[] = INITIAL_SCORECARDS;
-  private activityLogs: ActivityLog[] = INITIAL_ACTIVITY_LOGS;
-  private staffLiveLocations: StaffLiveLocation[] = INITIAL_STAFF_LIVE_LOCATIONS;
-  private holidays: Holiday[] = INITIAL_HOLIDAYS_2083;
-  private seasonalPatterns: SeasonalPattern[] = INITIAL_SEASONAL_PATTERNS;
-  private taskTemplates: TaskTemplate[] = INITIAL_TASK_TEMPLATES;
-  private promotions: Promotion[] = INITIAL_PROMOTIONS;
-  private dailySummaries: FieldOfficerDailySummary[] = INITIAL_DAILY_SUMMARIES;
+  private cheques: Cheque[] = [];
+  private documents: HandoverDocument[] = [];
+  private orders: Order[] = [];
+  private deliveryFailures: DeliveryFailure[] = [];
+  private returns: ReturnEntry[] = [];
+  private reviewCategories: ReviewCategory[] = [];
+  private feedbackEntries: FeedbackEntry[] = [];
+  private customers: Customer[] = [];
+  private tasks: Task[] = [];
+  private notifications: Notification[] = [];
+  private scorecards: OfficerScorecard[] = [];
+  private activityLogs: ActivityLog[] = [];
+  private staffLiveLocations: StaffLiveLocation[] = [];
+  private holidays: Holiday[] = [];
+  private seasonalPatterns: SeasonalPattern[] = [];
+  private taskTemplates: TaskTemplate[] = [];
+  private promotions: Promotion[] = [];
+  private dailySummaries: FieldOfficerDailySummary[] = [];
   private importHistory: DataImportRecord[] = [];
   private comparisonMode: ComparisonMode = 'OFF';
-  private influencers: Influencer[] = INITIAL_INFLUENCERS;
-  private influencerContent: InfluencerContent[] = INITIAL_INFLUENCER_CONTENT;
-  private sharedAccessLinks: SharedAccessLink[] = INITIAL_SHARED_ACCESS_LINKS;
+  private influencers: Influencer[] = [];
+  private influencerContent: InfluencerContent[] = [];
+  private sharedAccessLinks: SharedAccessLink[] = [];
   private salesMode: DashboardSalesMode = 'ALL';
   private orderSubscribers: Set<(event: OrderRealtimeEvent) => void> = new Set();
+
+  private documentTypes: DocumentTypeConfig[] = [
+    { id: 'doc_po', name: 'Purchase Order', isActive: true },
+    { id: 'doc_inv', name: 'Signed Invoice', isActive: true },
+    { id: 'doc_receipt', name: 'Delivery Receipt', isActive: true },
+    { id: 'doc_stock', name: 'Stock Acknowledgment', isActive: true },
+    { id: 'doc_credit', name: 'Credit Note', isActive: true },
+    { id: 'doc_ret', name: 'Return Authorization', isActive: true },
+  ];
+
+  private storeCategories: StoreCategoryConfig[] = [
+    { id: 'cat_supermarket', name: 'Supermarket', isActive: true },
+    { id: 'cat_pharmacy', name: 'Pharmacy', isActive: true },
+    { id: 'cat_kirana', name: 'Kirana', isActive: true },
+    { id: 'cat_cosmetics', name: 'Cosmetics Store', isActive: true },
+    { id: 'cat_wholesale', name: 'Wholesale', isActive: true },
+    { id: 'cat_general', name: 'General Store', isActive: true },
+    { id: 'cat_dept', name: 'Department Store', isActive: true },
+  ];
+
+  private requireStorePhotoAtCheckIn: boolean = false;
+  private recurringSchedules: RecurringScheduleEntry[] = [];
 
   private activeBrandFilter: BrandCode = 'ALL';
   private calendarMode: 'BS' | 'AD' = 'BS';
@@ -152,6 +184,7 @@ export class DatabaseService {
     if (typeof window === 'undefined') return;
     try {
       // Clear legacy storage keys if present
+      localStorage.removeItem('bb_command_center_db_state_v8');
       localStorage.removeItem('bb_command_center_db_state_v7');
       localStorage.removeItem('bb_command_center_db_state_v6');
       localStorage.removeItem('bb_command_center_db_state_v5');
@@ -159,8 +192,9 @@ export class DatabaseService {
       localStorage.removeItem('bb_command_center_db_state_v3');
       localStorage.removeItem('bb_command_center_db_state_v2');
       localStorage.removeItem('bb_command_center_db_state');
+      localStorage.removeItem('bb_auth_user_session_v2');
 
-      const stored = localStorage.getItem('bb_command_center_db_state_v8');
+      const stored = localStorage.getItem('bb_command_center_db_state_v9');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.users) this.users = parsed.users;
@@ -204,6 +238,10 @@ export class DatabaseService {
         if (parsed.influencerContent) this.influencerContent = parsed.influencerContent;
         if (parsed.sharedAccessLinks) this.sharedAccessLinks = parsed.sharedAccessLinks;
         if (parsed.salesMode) this.salesMode = parsed.salesMode;
+        if (parsed.documentTypes) this.documentTypes = parsed.documentTypes;
+        if (parsed.storeCategories) this.storeCategories = parsed.storeCategories;
+        if (parsed.requireStorePhotoAtCheckIn !== undefined) this.requireStorePhotoAtCheckIn = parsed.requireStorePhotoAtCheckIn;
+        if (parsed.recurringSchedules) this.recurringSchedules = parsed.recurringSchedules;
       }
     } catch (e) {
       console.warn('Failed to load state from localStorage', e);
@@ -260,8 +298,12 @@ export class DatabaseService {
         influencerContent: this.influencerContent,
         sharedAccessLinks: this.sharedAccessLinks,
         salesMode: this.salesMode,
+        documentTypes: this.documentTypes,
+        storeCategories: this.storeCategories,
+        requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn,
+        recurringSchedules: this.recurringSchedules,
       };
-      localStorage.setItem('bb_command_center_db_state_v8', JSON.stringify(state));
+      localStorage.setItem('bb_command_center_db_state_v9', JSON.stringify(state));
     } catch (e) {
       console.warn('Failed to persist state', e);
     }
@@ -269,6 +311,7 @@ export class DatabaseService {
 
   public resetDatabase() {
     if (typeof window === 'undefined') return;
+    localStorage.removeItem('bb_command_center_db_state_v9');
     localStorage.removeItem('bb_command_center_db_state_v8');
     localStorage.removeItem('bb_command_center_db_state_v7');
     localStorage.removeItem('bb_command_center_db_state_v6');
@@ -397,7 +440,15 @@ export class DatabaseService {
     if (this.currentUser.id === userId) {
       Object.assign(this.currentUser, updates);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('bb_auth_user_session_v2', JSON.stringify(this.currentUser));
+        const now = Date.now();
+        const { password: _p, ...safeUser } = this.currentUser;
+        const sessionData = {
+          user: safeUser,
+          createdAt: now,
+          expiresAt: now + 24 * 60 * 60 * 1000,
+          sessionId: `sess_${now}_${Math.random().toString(36).slice(2, 9)}`,
+        };
+        localStorage.setItem('bb_auth_user_session_v3', JSON.stringify(sessionData));
       }
     }
     this.persistState();
@@ -407,12 +458,24 @@ export class DatabaseService {
   public getCurrentUser(): User {
     if (typeof window !== 'undefined') {
       try {
-        const stored = localStorage.getItem('bb_auth_user_session_v2');
+        const stored = localStorage.getItem('bb_auth_user_session_v3');
         if (stored) {
-          const parsed = JSON.parse(stored) as User;
-          if (parsed && parsed.id) {
-            this.currentUser = parsed;
-            return parsed;
+          const parsed = JSON.parse(stored);
+          const userId = parsed?.user?.id || parsed?.id;
+          if (userId) {
+            const found = this.users.find((u) => u.id === userId);
+            if (found) {
+              this.currentUser = found;
+              return found;
+            }
+            if (parsed.user && parsed.user.id) {
+              this.currentUser = parsed.user as User;
+              return parsed.user as User;
+            }
+            if (parsed.id) {
+              this.currentUser = parsed as User;
+              return parsed as User;
+            }
           }
         }
       } catch {
@@ -426,6 +489,17 @@ export class DatabaseService {
     const found = this.users.find((u) => u.id === userId);
     if (found) {
       this.currentUser = found;
+      if (typeof window !== 'undefined') {
+        const now = Date.now();
+        const { password: _p, ...safeUser } = found;
+        const sessionData = {
+          user: safeUser,
+          createdAt: now,
+          expiresAt: now + 24 * 60 * 60 * 1000,
+          sessionId: `sess_${now}_${Math.random().toString(36).slice(2, 9)}`,
+        };
+        localStorage.setItem('bb_auth_user_session_v3', JSON.stringify(sessionData));
+      }
       this.persistState();
     }
   }
@@ -784,8 +858,9 @@ export class DatabaseService {
         paymentTerms: dist?.creditTerms || '30 Days Net Cheque',
         outstandingBalance: branch.outstandingBalance || 85000,
         coordinates: branch.lat && branch.lng ? { lat: branch.lat, lng: branch.lng } : undefined,
-        assignedOfficerId: branch.assignedOfficerId || 'user_officer_ravi',
-        assignedOfficerName: branch.assignedOfficerName || 'Ravi Sharma',
+        assignedOfficerId: branch.assignedOfficerId || '',
+        assignedOfficerName: branch.assignedOfficerName || 'Field Officer',
+        defaultMargins: branch.defaultMargins || dist?.defaultMargins,
       };
     }
 
@@ -803,14 +878,15 @@ export class DatabaseService {
         area: retailer.area,
         contacts: retailer.contacts || [],
         primaryContactName: retailer.contactName || retailer.contacts?.[0]?.name || 'Proprietor',
-        primaryContactPhone: retailer.contactPhone || retailer.contacts?.[0]?.phone || '+977-9841000000',
-        creditLimit: retailer.creditLimit || 150000,
-        creditPeriodDays: 15,
-        paymentTerms: retailer.creditTerms || '15 Days Cheque on Delivery',
-        outstandingBalance: retailer.outstandingBalance || 32000,
+        primaryContactPhone: retailer.contactPhone || retailer.contacts?.[0]?.phone || '+977-9800000000',
+        creditLimit: retailer.creditLimit || 0,
+        creditPeriodDays: (retailer as any).creditDays || (retailer as any).creditPeriodDays || 0,
+        paymentTerms: retailer.creditTerms || 'COD',
+        outstandingBalance: retailer.outstandingBalance || 0,
         coordinates: retailer.lat && retailer.lng ? { lat: retailer.lat, lng: retailer.lng } : undefined,
-        assignedOfficerId: retailer.assignedOfficerId || 'user_officer_pooja',
-        assignedOfficerName: retailer.assignedOfficerName || 'Pooja Karki',
+        assignedOfficerId: retailer.assignedOfficerId || '',
+        assignedOfficerName: retailer.assignedOfficerName || 'Field Officer',
+        defaultMargins: retailer.defaultMargins,
       };
     }
 
@@ -827,15 +903,16 @@ export class DatabaseService {
         address: distributor.address || distributor.city,
         area: distributor.city,
         contacts: distributor.contacts || [],
-        primaryContactName: distributor.contactName || distributor.contacts?.[0]?.name || 'Director',
-        primaryContactPhone: distributor.contactPhone || distributor.contacts?.[0]?.phone || '+977-9801000000',
-        creditLimit: 500000,
+        primaryContactName: distributor.contactName || distributor.contacts?.[0]?.name || 'Manager',
+        primaryContactPhone: distributor.contactPhone || distributor.contacts?.[0]?.phone || '+977-9800000000',
+        creditLimit: (distributor as any).creditLimit || 0,
         creditPeriodDays: 30,
-        paymentTerms: distributor.creditTerms || '30 Days Net Cheque',
-        outstandingBalance: 210000,
+        paymentTerms: distributor.creditTerms || '15 Days Credit',
+        outstandingBalance: 0,
         coordinates: undefined,
-        assignedOfficerId: 'user_officer_ravi',
-        assignedOfficerName: 'Ravi Sharma',
+        assignedOfficerId: '',
+        assignedOfficerName: 'Operations Lead',
+        defaultMargins: distributor.defaultMargins,
       };
     }
 
@@ -845,18 +922,114 @@ export class DatabaseService {
       name: decodeURIComponent(idOrName),
       type: 'RETAILER' as const,
       subType: 'Retail Partner',
-      address: 'Kathmandu Valley Hub, Nepal',
+      address: 'Kathmandu, Nepal',
       area: 'Kathmandu',
       contacts: [],
       primaryContactName: 'Store In-Charge',
       primaryContactPhone: '+977-9800000000',
-      creditLimit: 100000,
-      creditPeriodDays: 15,
-      paymentTerms: 'Cheque / Cash on Delivery',
+      creditLimit: 0,
+      creditPeriodDays: 0,
+      paymentTerms: 'COD',
       outstandingBalance: 0,
-      assignedOfficerId: 'user_officer_ravi',
-      assignedOfficerName: 'Ravi Sharma',
+      assignedOfficerId: '',
+      assignedOfficerName: 'Field Officer',
+      defaultMargins: undefined,
     };
+  }
+
+  // Section 2: Unified Stores Access
+  public getStoresUnified() {
+    const list: {
+      id: string;
+      name: string;
+      storeType: StoreType;
+      category?: string;
+      city: string;
+      area?: string;
+      address: string;
+      lat?: number;
+      lng?: number;
+      brandsStocked: BrandCode[];
+      defaultMargins?: DefaultMargins;
+      vatRegistered?: boolean;
+      assignedOfficerId?: string;
+      parentDistributorId?: string;
+      parentDistributorName?: string;
+      healthScore?: number;
+      isActive?: boolean;
+      contacts: VendorContact[];
+      hasBranches?: boolean;
+      branchesCount?: number;
+      paymentTerms?: string;
+    }[] = [];
+
+    // Distributors & Chains
+    this.distributors.forEach((d) => {
+      const branches = this.branches.filter((b) => b.distributorId === d.id);
+      const isChain = d.type === 'Retail Chain' || d.type === 'Pharmacy Chain';
+      list.push({
+        id: d.id,
+        name: d.name,
+        storeType: (d.storeType || (isChain ? 'CHAIN_STORE' : 'DISTRIBUTOR')) as StoreType,
+        category: d.type,
+        city: d.city,
+        area: d.city,
+        address: d.address || `${d.city}, Nepal`,
+        lat: d.lat,
+        lng: d.lng,
+        brandsStocked: d.brandsCarried,
+        defaultMargins: d.defaultMargins,
+        vatRegistered: d.vatRegistered ?? true,
+        contacts: d.contacts || [],
+        hasBranches: branches.length > 0,
+        branchesCount: branches.length,
+        paymentTerms: d.creditTerms || '30 Days Net Cheque',
+        healthScore: d.healthScore ?? 80,
+        isActive: true,
+      });
+    });
+
+    // Standalone Retailers
+    this.retailers.forEach((r) => {
+      list.push({
+        id: r.id,
+        name: r.name,
+        storeType: (r.storeType || 'STANDALONE_RETAILER') as StoreType,
+        category: r.category || r.type,
+        city: r.city,
+        area: r.area,
+        address: r.address,
+        lat: r.lat,
+        lng: r.lng,
+        brandsStocked: r.brandsStocked,
+        defaultMargins: r.defaultMargins,
+        vatRegistered: r.vatRegistered ?? false,
+        assignedOfficerId: r.assignedOfficerId,
+        parentDistributorId: r.distributorId,
+        parentDistributorName: r.distributorName,
+        contacts: r.contacts || [],
+        hasBranches: false,
+        branchesCount: 0,
+        paymentTerms: r.creditTerms || '15 Days Cheque on Delivery',
+        healthScore: r.healthScore ?? 75,
+        isActive: true,
+      });
+    });
+
+    return list;
+  }
+
+  public calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371e3; // metres
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 
   public addVendorContact(
@@ -867,6 +1040,9 @@ export class DatabaseService {
     const newContact: VendorContact = {
       ...contact,
       id: `cnt_${Date.now()}`,
+      storeId: entityType !== 'BRANCH' ? entityId : undefined,
+      branchId: entityType === 'BRANCH' ? entityId : undefined,
+      addedById: this.currentUser.id,
     };
 
     if (entityType === 'DISTRIBUTOR') {
@@ -893,6 +1069,353 @@ export class DatabaseService {
     return newContact;
   }
 
+  // Section 3: Contact Management (Primary, Flagging, Approval)
+  public setPrimaryContact(
+    entityType: 'DISTRIBUTOR' | 'BRANCH' | 'RETAILER',
+    entityId: string,
+    contactId: string
+  ): boolean {
+    const getContactsList = (): VendorContact[] | undefined => {
+      if (entityType === 'DISTRIBUTOR') return this.distributors.find((d) => d.id === entityId)?.contacts;
+      if (entityType === 'BRANCH') return this.branches.find((b) => b.id === entityId)?.contacts;
+      return this.retailers.find((r) => r.id === entityId)?.contacts;
+    };
+
+    const contacts = getContactsList();
+    if (!contacts) return false;
+
+    contacts.forEach((c) => {
+      c.isPrimary = c.id === contactId;
+    });
+
+    this.persistState();
+    return true;
+  }
+
+  public flagContactForRemoval(
+    entityType: 'DISTRIBUTOR' | 'BRANCH' | 'RETAILER',
+    entityId: string,
+    contactId: string,
+    reason: string,
+    flaggedBy?: User
+  ): boolean {
+    const getContactsList = (): VendorContact[] | undefined => {
+      if (entityType === 'DISTRIBUTOR') return this.distributors.find((d) => d.id === entityId)?.contacts;
+      if (entityType === 'BRANCH') return this.branches.find((b) => b.id === entityId)?.contacts;
+      return this.retailers.find((r) => r.id === entityId)?.contacts;
+    };
+
+    const contacts = getContactsList();
+    const contact = contacts?.find((c) => c.id === contactId);
+    if (!contact) return false;
+
+    contact.isFlaggedForRemoval = true;
+    contact.flaggedReason = reason;
+    contact.flaggedAt = new Date().toISOString();
+    contact.flaggedById = flaggedBy?.id || this.currentUser.id;
+    contact.flaggedByName = flaggedBy?.fullName || this.currentUser.fullName;
+
+    this.persistState();
+    return true;
+  }
+
+  public getPendingContactRemovals(): {
+    entityType: 'DISTRIBUTOR' | 'BRANCH' | 'RETAILER';
+    entityId: string;
+    entityName: string;
+    contact: VendorContact;
+  }[] {
+    const results: {
+      entityType: 'DISTRIBUTOR' | 'BRANCH' | 'RETAILER';
+      entityId: string;
+      entityName: string;
+      contact: VendorContact;
+    }[] = [];
+
+    this.distributors.forEach((d) => {
+      d.contacts?.filter((c) => c.isFlaggedForRemoval).forEach((c) => {
+        results.push({ entityType: 'DISTRIBUTOR', entityId: d.id, entityName: d.name, contact: c });
+      });
+    });
+
+    this.branches.forEach((b) => {
+      b.contacts?.filter((c) => c.isFlaggedForRemoval).forEach((c) => {
+        results.push({ entityType: 'BRANCH', entityId: b.id, entityName: b.name, contact: c });
+      });
+    });
+
+    this.retailers.forEach((r) => {
+      r.contacts?.filter((c) => c.isFlaggedForRemoval).forEach((c) => {
+        results.push({ entityType: 'RETAILER', entityId: r.id, entityName: r.name, contact: c });
+      });
+    });
+
+    return results;
+  }
+
+  public approveContactRemoval(
+    entityType: 'DISTRIBUTOR' | 'BRANCH' | 'RETAILER',
+    entityId: string,
+    contactId: string
+  ): boolean {
+    if (entityType === 'DISTRIBUTOR') {
+      const d = this.distributors.find((x) => x.id === entityId);
+      if (d && d.contacts) d.contacts = d.contacts.filter((c) => c.id !== contactId);
+    } else if (entityType === 'BRANCH') {
+      const b = this.branches.find((x) => x.id === entityId);
+      if (b && b.contacts) b.contacts = b.contacts.filter((c) => c.id !== contactId);
+    } else {
+      const r = this.retailers.find((x) => x.id === entityId);
+      if (r && r.contacts) r.contacts = r.contacts.filter((c) => c.id !== contactId);
+    }
+    this.persistState();
+    return true;
+  }
+
+  public rejectContactRemoval(
+    entityType: 'DISTRIBUTOR' | 'BRANCH' | 'RETAILER',
+    entityId: string,
+    contactId: string
+  ): boolean {
+    const getContactsList = (): VendorContact[] | undefined => {
+      if (entityType === 'DISTRIBUTOR') return this.distributors.find((d) => d.id === entityId)?.contacts;
+      if (entityType === 'BRANCH') return this.branches.find((b) => b.id === entityId)?.contacts;
+      return this.retailers.find((r) => r.id === entityId)?.contacts;
+    };
+
+    const contacts = getContactsList();
+    const contact = contacts?.find((c) => c.id === contactId);
+    if (!contact) return false;
+
+    contact.isFlaggedForRemoval = false;
+    contact.flaggedReason = undefined;
+    contact.flaggedAt = undefined;
+    contact.flaggedById = undefined;
+    contact.flaggedByName = undefined;
+
+    this.persistState();
+    return true;
+  }
+
+  public transferContactToBranch(
+    sourceEntityType: 'DISTRIBUTOR' | 'BRANCH' | 'RETAILER',
+    sourceEntityId: string,
+    targetBranchId: string,
+    contactId: string
+  ): boolean {
+    const targetBranch = this.branches.find((b) => b.id === targetBranchId);
+    if (!targetBranch) return false;
+
+    let movedContact: VendorContact | null = null;
+    if (sourceEntityType === 'DISTRIBUTOR') {
+      const d = this.distributors.find((x) => x.id === sourceEntityId);
+      if (d && d.contacts) {
+        const idx = d.contacts.findIndex((c) => c.id === contactId);
+        if (idx !== -1) [movedContact] = d.contacts.splice(idx, 1);
+      }
+    } else if (sourceEntityType === 'BRANCH') {
+      const b = this.branches.find((x) => x.id === sourceEntityId);
+      if (b && b.contacts) {
+        const idx = b.contacts.findIndex((c) => c.id === contactId);
+        if (idx !== -1) [movedContact] = b.contacts.splice(idx, 1);
+      }
+    } else {
+      const r = this.retailers.find((x) => x.id === sourceEntityId);
+      if (r && r.contacts) {
+        const idx = r.contacts.findIndex((c) => c.id === contactId);
+        if (idx !== -1) [movedContact] = r.contacts.splice(idx, 1);
+      }
+    }
+
+    if (movedContact) {
+      movedContact.branchId = targetBranchId;
+      movedContact.isFlaggedForRemoval = false;
+      movedContact.flaggedReason = undefined;
+      if (!targetBranch.contacts) targetBranch.contacts = [];
+      targetBranch.contacts.push(movedContact);
+      this.persistState();
+      return true;
+    }
+    return false;
+  }
+
+  // Section 4: Store Commercial Terms & Margins
+  public updateStoreCommercialTerms(
+    entityType: 'DISTRIBUTOR' | 'BRANCH' | 'RETAILER',
+    entityId: string,
+    defaultMargins: DefaultMargins,
+    paymentTerms?: string
+  ): boolean {
+    if (entityType === 'DISTRIBUTOR') {
+      const d = this.distributors.find((x) => x.id === entityId);
+      if (d) {
+        d.defaultMargins = defaultMargins;
+        if (paymentTerms) d.creditTerms = paymentTerms;
+      }
+    } else if (entityType === 'BRANCH') {
+      const b = this.branches.find((x) => x.id === entityId);
+      if (b) {
+        b.defaultMargins = defaultMargins;
+      }
+    } else {
+      const r = this.retailers.find((x) => x.id === entityId);
+      if (r) {
+        r.defaultMargins = defaultMargins;
+        if (paymentTerms) r.creditTerms = paymentTerms;
+      }
+    }
+    this.persistState();
+    return true;
+  }
+
+  // Section 8: Document Types Configuration
+  public getDocumentTypes(): DocumentTypeConfig[] {
+    return this.documentTypes;
+  }
+
+  public addDocumentType(name: string): DocumentTypeConfig {
+    const newDocType: DocumentTypeConfig = {
+      id: `doc_${Date.now()}`,
+      name: name.trim(),
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+    this.documentTypes.push(newDocType);
+    this.persistState();
+    return newDocType;
+  }
+
+  public toggleDocumentType(id: string): void {
+    const dt = this.documentTypes.find((x) => x.id === id);
+    if (dt) {
+      dt.isActive = !dt.isActive;
+      this.persistState();
+    }
+  }
+
+  // Section 11: Store Categories Configuration
+  public getStoreCategories(): StoreCategoryConfig[] {
+    return this.storeCategories;
+  }
+
+  public addStoreCategory(name: string): StoreCategoryConfig {
+    const newCat: StoreCategoryConfig = {
+      id: `cat_${Date.now()}`,
+      name: name.trim(),
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+    this.storeCategories.push(newCat);
+    this.persistState();
+    return newCat;
+  }
+
+  public toggleStoreCategory(id: string): void {
+    const cat = this.storeCategories.find((x) => x.id === id);
+    if (cat) {
+      cat.isActive = !cat.isActive;
+      this.persistState();
+    }
+  }
+
+  // Section 10: Store Visit Proof Photo Setting
+  public getRequireStorePhotoAtCheckIn(): boolean {
+    return this.requireStorePhotoAtCheckIn;
+  }
+
+  public setRequireStorePhotoAtCheckIn(enabled: boolean): void {
+    this.requireStorePhotoAtCheckIn = enabled;
+    this.persistState();
+  }
+
+  // Section 7: Recurring Beat Management & Leave Coverage
+  public getRecurringSchedules(officerId?: string): RecurringScheduleEntry[] {
+    if (officerId) {
+      return this.recurringSchedules.filter((s) => s.officerId === officerId);
+    }
+    return this.recurringSchedules;
+  }
+
+  public saveRecurringSchedule(entry: RecurringScheduleEntry): void {
+    const idx = this.recurringSchedules.findIndex((s) => s.id === entry.id);
+    if (idx !== -1) {
+      this.recurringSchedules[idx] = entry;
+    } else {
+      this.recurringSchedules.push(entry);
+    }
+    this.persistState();
+  }
+
+  public deleteRecurringSchedule(id: string): void {
+    this.recurringSchedules = this.recurringSchedules.filter((s) => s.id !== id);
+    this.persistState();
+  }
+
+  public addOneTimeBeatOverride(
+    officerId: string,
+    storeId: string,
+    dateAd: string,
+    priority: 'HIGH' | 'MEDIUM' | 'ROUTINE' = 'HIGH',
+    managerNote?: string
+  ): BeatItem {
+    const store = this.getUnifiedStoreById(storeId);
+    const storeName = store ? store.name : storeId;
+    const isDist = store && store.type === 'DISTRIBUTOR';
+    const newBeat: BeatItem = {
+      id: `beat_override_${Date.now()}`,
+      officerId,
+      dateAd,
+      dateBs: getTodayBs(),
+      sequence: this.beatItems.length + 1,
+      entityType: isDist ? 'BRANCH' : 'RETAILER',
+      entityId: store ? store.id : storeId,
+      storeName,
+      storeType: store?.subType || 'Store',
+      address: store?.address || 'Kathmandu',
+      lat: store?.coordinates?.lat || 27.7172,
+      lng: store?.coordinates?.lng || 85.324,
+      contactName: store?.primaryContactName || 'Manager',
+      contactPhone: store?.primaryContactPhone || '+977-9800000000',
+      contacts: store?.contacts || [],
+      lastVisitDaysAgo: 0,
+      pendingTasks: [],
+      status: 'PENDING',
+      priority,
+      managerNotes: managerNote,
+      oneTimeOverride: true,
+    };
+    this.beatItems.unshift(newBeat);
+    this.persistState();
+    return newBeat;
+  }
+
+  public setOfficerLeave(
+    officerId: string,
+    startDateAd: string,
+    endDateAd: string,
+    coveringOfficerId?: string,
+    storeIdsToReassign: string[] = []
+  ): void {
+    // 1. Mark officer on leave
+    const officer = this.users.find((u) => u.id === officerId);
+    if (officer) {
+      officer.dutyStatus = 'ON_LEAVE';
+    }
+
+    // 2. Reassign requested beats
+    if (coveringOfficerId && storeIdsToReassign.length > 0) {
+      const coveringOfficer = this.users.find((u) => u.id === coveringOfficerId);
+      this.beatItems.forEach((b) => {
+        if (b.officerId === officerId && storeIdsToReassign.includes(b.entityId)) {
+          b.officerId = coveringOfficerId;
+          b.managerNotes = `${b.managerNotes ? b.managerNotes + ' • ' : ''}Covering for ${officer?.fullName || 'Officer'}`;
+        }
+      });
+    }
+
+    this.persistState();
+  }
+
   // Beat Plan & GPS
   public getBeatItems(): BeatItem[] {
     return this.beatItems;
@@ -900,19 +1423,21 @@ export class DatabaseService {
 
   public getTodayBeat(officerId?: string): BeatItem[] {
     const targetOfficer = officerId || this.currentUser.id;
-    if (this.currentUser.role === 'ADMIN' || this.currentUser.role === 'SUPER_ADMIN') {
+    if (this.currentUser.role === 'ADMIN' || this.currentUser.role === 'SUPER_ADMIN' || this.currentUser.isSuperAdmin) {
       return this.beatItems.filter((b) => !officerId || b.officerId === officerId);
     }
     return this.beatItems.filter((b) => b.officerId === targetOfficer);
   }
 
+  // Section 5: Silent GPS Check-In
   public checkInBeat(
     beatId: string,
     lat: number,
     lng: number,
-    distanceMeters: number,
-    overrideFlag: boolean,
-    overrideReason?: string
+    distanceMeters?: number,
+    overrideFlag: boolean = false,
+    overrideReason?: string,
+    checkInPhotoUrl?: string
   ): Visit {
     const beat = this.beatItems.find((b) => b.id === beatId);
     if (!beat) throw new Error('Beat item not found');
@@ -920,6 +1445,14 @@ export class DatabaseService {
     const now = new Date().toISOString();
     beat.status = 'VISITED';
     beat.checkedInAt = now;
+    beat.checkInPhotoUrl = checkInPhotoUrl;
+
+    // Silent distance calculation from store coordinates
+    let dist = distanceMeters;
+    if (dist === undefined && beat.lat && beat.lng) {
+      dist = Math.round(this.calculateDistance(lat, lng, beat.lat, beat.lng));
+    }
+    beat.checkInDistanceM = dist || 0;
 
     const visit: Visit = {
       id: `vis_${Date.now()}`,
@@ -931,8 +1464,8 @@ export class DatabaseService {
       checkInTime: now,
       lat,
       lng,
-      distanceMeters,
-      overrideFlag,
+      distanceMeters: dist || 0,
+      overrideFlag: overrideFlag || (dist !== undefined && dist > 150),
       overrideReason,
       dateAd: beat.dateAd,
       dateBs: beat.dateBs,
@@ -946,7 +1479,7 @@ export class DatabaseService {
 
     this.logActivity('CHECKED_IN_STORE', 'STORE', beat.entityId, {
       store: beat.storeName,
-      distanceMeters,
+      distanceMeters: dist || 0,
       overrideFlag,
     });
 
@@ -954,23 +1487,71 @@ export class DatabaseService {
     return visit;
   }
 
-  public checkOutBeat(beatId: string, notes?: string) {
+  // Section 5: Silent GPS Check-Out with Footprint Analysis
+  public checkOutBeat(
+    beatId: string,
+    notes?: string,
+    checkOutLat?: number,
+    checkOutLng?: number
+  ) {
     const beat = this.beatItems.find((b) => b.id === beatId);
     if (beat) {
       beat.checkedOutAt = new Date().toISOString();
+      if (checkOutLat !== undefined && checkOutLng !== undefined) {
+        beat.checkOutLat = checkOutLat;
+        beat.checkOutLng = checkOutLng;
+        if (beat.lat && beat.lng) {
+          beat.checkOutDistanceM = Math.round(this.calculateDistance(checkOutLat, checkOutLng, beat.lat, beat.lng));
+        }
+      }
+
       const visit = this.visits.find(
         (v) => v.entityId === beat.entityId && v.officerId === beat.officerId
       );
+      let durationMinutes = 1;
       if (visit) {
         visit.checkOutTime = beat.checkedOutAt;
         if (visit.checkInTime) {
           const diffMs =
             new Date(visit.checkOutTime).getTime() -
             new Date(visit.checkInTime).getTime();
-          visit.durationMinutes = Math.max(1, Math.round(diffMs / 60000));
+          durationMinutes = Math.max(1, Math.round(diffMs / 60000));
+          visit.durationMinutes = durationMinutes;
         }
         if (notes) visit.notes = notes;
       }
+
+      // Footprint analysis: Active vs Idle Time
+      const hasStockCount = this.stockCounts.some((s) => s.entityId === beat.entityId && s.officerId === beat.officerId);
+      const hasPhotos = this.shelfPhotos.some((s) => s.entityId === beat.entityId && s.officerId === beat.officerId);
+      const hasSecondaryOrder = this.secondaryOrders.some((s) => s.entityId === beat.entityId && s.officerId === beat.officerId);
+
+      let activeMinutes = 0;
+      if (hasStockCount) activeMinutes += 8;
+      if (hasPhotos) activeMinutes += 5;
+      if (hasSecondaryOrder) activeMinutes += 7;
+
+      const idleTime = Math.max(0, durationMinutes - activeMinutes);
+      beat.idleTimeMinutes = idleTime;
+
+      // Auto-detect Suspicious Visit Flags (Admin only)
+      const flags: string[] = [];
+      if ((beat.checkInDistanceM || 0) > 500) {
+        flags.push('FAR_CHECKIN');
+      }
+      if (durationMinutes < 5 && activeMinutes === 0) {
+        flags.push('SHORT_VISIT');
+      }
+      if (durationMinutes > 15 && idleTime / durationMinutes > 0.5) {
+        flags.push('HIGH_IDLE');
+      }
+      if (beat.checkOutLat && beat.lat && beat.lng) {
+        const delta = this.calculateDistance(beat.lat, beat.lng, beat.checkOutLat, beat.checkOutLng || beat.lng);
+        if (delta > 1000) {
+          flags.push('REMOTE_CHECKIN');
+        }
+      }
+      beat.suspiciousFlags = flags;
 
       this.updateStaffPing(beat.officerId, beat.lat, beat.lng, 'IN_TRANSIT');
       this.persistState();

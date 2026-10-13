@@ -31,9 +31,9 @@ export default function CallsPage() {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   // Form State
-  const [storeName, setStoreName] = useState('Bhatbhateni Maharajgunj');
-  const [contactName, setContactName] = useState('Ramesh Koirala');
-  const [contactPhone, setContactPhone] = useState('+977-9841223344');
+  const [storeName, setStoreName] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(3);
   const [callLabel, setCallLabel] = useState<CallLabel>('Order Taking');
   const [callOutcome, setCallOutcome] = useState<CallOutcome>('Order Received');

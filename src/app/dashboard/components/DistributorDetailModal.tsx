@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { X, Building2, MapPin, Phone, CreditCard, FileText, Store, History } from 'lucide-react';
 import { Distributor, Branch, Retailer, Cheque } from '@/lib/types';
 import EmptyState from './EmptyState';
+import { db } from '@/lib/db';
 
 interface DistributorDetailModalProps {
   distributor: Distributor | null;
@@ -168,30 +169,38 @@ export default function DistributorDetailModal({
             </div>
           )}
 
-          {tab === 'visits' && (
-            <div className="space-y-3">
-              <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs flex items-center justify-between text-xs">
-                <div>
-                  <div className="font-bold text-slate-900">Maharajgunj Branch Visit</div>
-                  <div className="text-slate-500 text-[11px]">Officer: Ravi Sharma • GPS Verified Check-in</div>
-                </div>
-                <div className="text-right">
-                  <span className="font-bold text-slate-700">2 days ago</span>
-                  <div className="text-[10px] text-emerald-600 font-semibold">33 min on-site</div>
-                </div>
+          {tab === 'visits' && (() => {
+            const allVisits = db.getVisits().filter((v) =>
+              distBranches.some((b) => b.id === v.entityId || b.name === v.storeName) ||
+              distributor.id === v.entityId ||
+              distributor.name === v.storeName
+            );
+            if (allVisits.length === 0) {
+              return (
+                <EmptyState
+                  icon={History}
+                  title="No visits recorded yet"
+                  description="Field officer GPS visits and shelf audits will appear here once recorded on beat routes."
+                />
+              );
+            }
+            return (
+              <div className="space-y-3">
+                {allVisits.map((v) => (
+                  <div key={v.id} className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-bold text-slate-900">{v.storeName || 'Branch Visit'}</div>
+                      <div className="text-slate-500 text-[11px]">Officer: {v.officerName || 'Field Officer'} • GPS Verified Check-in</div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-slate-700">{v.dateBs || 'Recent'}</span>
+                      <div className="text-[10px] text-emerald-600 font-semibold">{v.durationMinutes || 25} min on-site</div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs flex items-center justify-between text-xs">
-                <div>
-                  <div className="font-bold text-slate-900">Naxal Branch Audit</div>
-                  <div className="text-slate-500 text-[11px]">Officer: Ravi Sharma • Facing count audit</div>
-                </div>
-                <div className="text-right">
-                  <span className="font-bold text-slate-700">5 days ago</span>
-                  <div className="text-[10px] text-emerald-600 font-semibold">42 min on-site</div>
-                </div>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {tab === 'cheques' && (
             <div className="space-y-4">

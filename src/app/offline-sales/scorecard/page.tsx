@@ -70,96 +70,7 @@ interface SkippedStoreRecord {
   notes: string;
 }
 
-const HISTORICAL_SKIPPED_STORES: SkippedStoreRecord[] = [
-  {
-    id: 'sk_1',
-    dateAd: '2026-09-07',
-    dateBs: 'Bhadra 22, 2083',
-    officerId: 'user_officer_ravi',
-    officerName: 'Ravi Sharma',
-    storeName: 'Om Supermarket (Chabahil)',
-    area: 'Chabahil Chowk',
-    skipReason: 'Other task assigned',
-    notes: 'Urgent cheque collection at Bhatbhateni requested by sales manager.',
-  },
-  {
-    id: 'sk_2',
-    dateAd: '2026-09-07',
-    dateBs: 'Bhadra 22, 2083',
-    officerId: 'user_officer_pooja',
-    officerName: 'Pooja Karki',
-    storeName: 'Lalitpur Cosmetic Gallery',
-    area: 'Kumaripati',
-    skipReason: 'Store closed',
-    notes: 'Shutters down due to local festival holiday (Indra Jatra preparation).',
-  },
-  {
-    id: 'sk_3',
-    dateAd: '2026-09-07',
-    dateBs: 'Bhadra 22, 2083',
-    officerId: 'user_officer_suman',
-    officerName: 'Suman Adhikari',
-    storeName: 'New Road Beauty Mart',
-    area: 'Pako, New Road',
-    skipReason: 'Travel issue',
-    notes: 'Motorbike tire puncture on Kantipath; rescheduled for tomorrow.',
-  },
-  {
-    id: 'sk_4',
-    dateAd: '2026-09-06',
-    dateBs: 'Bhadra 21, 2083',
-    officerId: 'user_officer_ravi',
-    officerName: 'Ravi Sharma',
-    storeName: 'Baneshwor Daily Mart',
-    area: 'Old Baneshwor',
-    skipReason: 'Store closed',
-    notes: 'Owner was out for wholesale inventory purchase.',
-  },
-  {
-    id: 'sk_5',
-    dateAd: '2026-09-06',
-    dateBs: 'Bhadra 21, 2083',
-    officerId: 'user_officer_suman',
-    officerName: 'Suman Adhikari',
-    storeName: 'Balkhu Provision Store',
-    area: 'Balkhu Ring Road',
-    skipReason: 'No time',
-    notes: 'Spent 50 mins extra at Kalimati resolving expired product dispute.',
-  },
-  {
-    id: 'sk_6',
-    dateAd: '2026-09-05',
-    dateBs: 'Bhadra 20, 2083',
-    officerId: 'user_officer_pooja',
-    officerName: 'Pooja Karki',
-    storeName: 'Mangalbazar Beauty Hub',
-    area: 'Mangalbazar, Patan',
-    skipReason: 'Store closed',
-    notes: 'Store under internal electrical maintenance and painting.',
-  },
-  {
-    id: 'sk_7',
-    dateAd: '2026-09-04',
-    dateBs: 'Bhadra 19, 2083',
-    officerId: 'user_officer_ravi',
-    officerName: 'Ravi Sharma',
-    storeName: 'Kapan Cosmetics Care',
-    area: 'Kapan Marg',
-    skipReason: 'No time',
-    notes: 'Beat route exceeded 6 hours due to rain; scheduled for next rotation.',
-  },
-  {
-    id: 'sk_8',
-    dateAd: '2026-09-03',
-    dateBs: 'Bhadra 18, 2083',
-    officerId: 'user_officer_suman',
-    officerName: 'Suman Adhikari',
-    storeName: 'Kalanki Departmental Store',
-    area: 'Kalanki Chowk',
-    skipReason: 'Travel issue',
-    notes: 'Heavy monsoon waterlogging under Kalanki underpass blocked passage.',
-  },
-];
+const HISTORICAL_SKIPPED_STORES: SkippedStoreRecord[] = [];
 
 function ScorecardContent() {
   const searchParams = useSearchParams();
@@ -412,45 +323,19 @@ function ScorecardContent() {
   // 3c. 8-WEEK COMPLIANCE TRENDS
   // -------------------------------------------------------------
   const trendLines = useMemo(() => {
-    return [
-      {
-        officerId: 'user_officer_pooja',
-        officerName: 'Pooja Karki',
-        current: 93.9,
-        start: 86.0,
-        change: '+7.9%',
-        status: 'IMPROVING',
-        statusColor: 'text-emerald-700 bg-emerald-100 border-emerald-300',
-        strokeColor: '#059669', // Emerald
-        fillColor: '#d1fae5',
-        weeks: [86.0, 87.5, 89.0, 91.0, 90.5, 92.5, 93.0, 93.9],
-      },
-      {
-        officerId: 'user_officer_ravi',
-        officerName: 'Ravi Sharma',
-        current: 87.5,
-        start: 84.0,
-        change: '+3.5%',
-        status: 'STABLE',
-        statusColor: 'text-blue-700 bg-blue-100 border-blue-300',
-        strokeColor: '#2563eb', // Blue
-        fillColor: '#dbeafe',
-        weeks: [84.0, 85.0, 83.5, 86.0, 87.0, 86.5, 88.0, 87.5],
-      },
-      {
-        officerId: 'user_officer_suman',
-        officerName: 'Suman Adhikari',
-        current: 75.8,
-        start: 81.0,
-        change: '-5.2%',
-        status: 'DECLINING',
-        statusColor: 'text-rose-700 bg-rose-100 border-rose-300',
-        strokeColor: '#e11d48', // Rose
-        fillColor: '#ffe4e6',
-        weeks: [81.0, 80.0, 79.0, 77.5, 78.0, 76.5, 74.0, 75.8],
-      },
-    ];
-  }, []);
+    return displayScorecards.map((sc) => ({
+      officerId: sc.officerId,
+      officerName: sc.officerName,
+      current: sc.beatCompliancePct || 0,
+      start: sc.beatCompliancePct || 0,
+      change: '0%',
+      status: 'STABLE',
+      statusColor: 'text-blue-700 bg-blue-100 border-blue-300',
+      strokeColor: '#2563eb',
+      fillColor: '#dbeafe',
+      weeks: [sc.beatCompliancePct || 0],
+    }));
+  }, [displayScorecards]);
 
   const visibleTrendLines = isOfficer
     ? trendLines.filter(
@@ -906,7 +791,7 @@ function ScorecardContent() {
       {/* ========================================================================= */}
       {/* 3b. FULL 16-METRIC COMPARISON TABLE (ADMIN ONLY)                          */}
       {/* ========================================================================= */}
-      {!isOfficer && (
+      {!isOfficer && comparisonRows.length > 0 && (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
           <div>
@@ -1424,9 +1309,7 @@ function ScorecardContent() {
               <div className="flex gap-1.5">
                 {[
                   { id: 'ALL', name: 'All Officers' },
-                  { id: 'user_officer_ravi', name: 'Ravi Sharma' },
-                  { id: 'user_officer_pooja', name: 'Pooja Karki' },
-                  { id: 'user_officer_suman', name: 'Suman Adhikari' },
+                  ...displayScorecards.map((sc) => ({ id: sc.officerId, name: sc.officerName })),
                 ].map((opt) => (
                   <button
                     key={opt.id}

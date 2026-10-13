@@ -1,21 +1,52 @@
 /**
  * Brand Bucket Command Center — Database Access Layer
- * Fix 59a & 59g: Modular Supabase client and service pattern with env-based data source switching.
+ * Modular Supabase client and service pattern.
  */
 
-import { db as mockDb, DatabaseService } from './db-service';
+import { db as coreDb, DatabaseService } from './db-service';
 import { supabase, getSupabaseClient } from './supabase-client';
-import { getSupabaseServerClient } from './supabase-server';
+import { supabaseAdmin, getSupabaseServerClient } from './supabase-server';
 
-export const DATA_SOURCE =
-  process.env.NEXT_PUBLIC_DATA_SOURCE ||
-  (process.env.NEXT_PUBLIC_SUPABASE_URL ? 'supabase' : 'mock');
+import * as ordersService from './orders-service';
+import * as storesService from './stores-service';
+import * as chequesService from './cheques-service';
+import * as customersService from './customers-service';
+import * as feedbackService from './feedback-service';
+import * as returnsService from './returns-service';
+import * as beatService from './beat-service';
+import * as dispatchService from './dispatch-service';
+import * as documentsService from './documents-service';
+import * as stockService from './stock-service';
+import * as usersService from './users-service';
+import * as activityService from './activity-service';
+import * as notificationsService from './notifications-service';
+import * as analyticsService from './analytics-service';
 
 /**
- * Unified `db` instance.
- * Automatically falls back to mockDb if Supabase credentials are not provided or if DATA_SOURCE is 'mock'.
+ * Unified `db` instance supporting all methods.
  */
-export const db: DatabaseService = mockDb;
+export const db: DatabaseService = coreDb;
 
-export { supabase, getSupabaseClient, getSupabaseServerClient, DatabaseService };
+export {
+  DatabaseService,
+  supabase,
+  supabaseAdmin,
+  getSupabaseClient,
+  getSupabaseServerClient,
+  ordersService,
+  storesService,
+  chequesService,
+  customersService,
+  feedbackService,
+  returnsService,
+  beatService,
+  dispatchService,
+  documentsService,
+  stockService,
+  usersService,
+  activityService,
+  notificationsService,
+  analyticsService,
+};
+
 export default db;

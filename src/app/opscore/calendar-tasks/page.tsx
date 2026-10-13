@@ -201,7 +201,7 @@ export default function CalendarTasksPage() {
         type: 'STORE_VISIT' as const,
         title: `Store Beat: ${b.storeName}`,
         description: `Scheduled GT/MT retail store beat stop in ${b.address}`,
-        assignedToName: 'Ravi Sharma',
+        assignedToName: (b as any).officerName || 'Field Officer',
         assignedToId: b.officerId,
         priority: 'MEDIUM' as Priority,
         status: (b.status === 'VISITED' ? 'COMPLETED' : 'OPEN') as TaskStatus,

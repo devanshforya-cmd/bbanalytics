@@ -24,9 +24,12 @@ import TaskTemplates from './components/TaskTemplates';
 import PromotionManager from './components/PromotionManager';
 import DataImport from './components/DataImport';
 import SharedAccessSettings from './components/SharedAccessSettings';
+import FieldSalesSettings from './components/FieldSalesSettings';
+import { Compass } from 'lucide-react';
 
 export type SettingsTab =
   | 'STAFF'
+  | 'FIELD_SALES'
   | 'BRANDS'
   | 'CHANNELS'
   | 'RULES'
@@ -41,6 +44,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'STAFF' as SettingsTab, label: 'Staff & Roles', icon: Users },
+    { id: 'FIELD_SALES' as SettingsTab, label: 'Field Sales & Beats', icon: Compass },
     { id: 'BRANDS' as SettingsTab, label: 'Brand Portfolio', icon: Tag },
     { id: 'CHANNELS' as SettingsTab, label: 'Channels & Logistics', icon: Share2 },
     { id: 'RULES' as SettingsTab, label: 'Alert Rules', icon: Bell },
@@ -96,6 +100,7 @@ export default function SettingsPage() {
         {/* Tab Content Panels */}
         <div>
           {activeTab === 'STAFF' && <StaffManagement />}
+          {activeTab === 'FIELD_SALES' && <FieldSalesSettings />}
           {activeTab === 'BRANDS' && <BrandSettings />}
           {activeTab === 'CHANNELS' && <ChannelSettings />}
           {activeTab === 'RULES' && <NotificationRules />}

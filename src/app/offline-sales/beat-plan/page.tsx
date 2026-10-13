@@ -32,7 +32,7 @@ import BeatRouteList from './components/BeatRouteList';
 import CheckInFlow from './components/CheckInFlow';
 import CheckOutSummary from './components/CheckOutSummary';
 import StockCountForm from './components/StockCountForm';
-import InlineOrderForm from './components/InlineOrderForm';
+import InlineOrderForm, { MultiProductOrderData } from './components/InlineOrderForm';
 import EndOfDayModal from './components/EndOfDayModal';
 
 export default function BeatPlanPage() {
@@ -91,6 +91,37 @@ export default function BeatPlanPage() {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
 
+  // Admin One-Time Beat Override State (Section 7)
+  const isAdmin =
+    currentUser.role === 'ADMIN' ||
+    currentUser.role === 'SUPER_ADMIN' ||
+    Boolean(currentUser.isSuperAdmin);
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [overrideOfficerId, setOverrideOfficerId] = useState(currentUser.id);
+  const [overrideStoreId, setOverrideStoreId] = useState('');
+  const [overridePriority, setOverridePriority] = useState<'HIGH' | 'MEDIUM' | 'ROUTINE'>('HIGH');
+  const [overrideNote, setOverrideNote] = useState('');
+
+  const handleSaveOverride = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!overrideStoreId) {
+      toast.error('Please select a target store.');
+      return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    db.addOneTimeBeatOverride(
+      overrideOfficerId,
+      overrideStoreId,
+      today,
+      overridePriority,
+      overrideNote || undefined
+    );
+    setShowOverrideModal(false);
+    setOverrideNote('');
+    setBeatItems([...db.getTodayBeat()]);
+    toast.success('Store added to today’s beat plan as an admin priority stop.');
+  };
+
   const refreshTasks = () => {
     const user = db.getCurrentUser();
     const all = db.getTasks();
@@ -136,7 +167,7 @@ export default function BeatPlanPage() {
     setShowCheckInModal(true);
   };
 
-  const handleConfirmArrival = () => {
+  const handleConfirmArrival = (photoUrl?: string) => {
     if (!targetBeat) return;
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setActiveCheckInTime(timeStr);
@@ -147,7 +178,8 @@ export default function BeatPlanPage() {
       85.324,
       calculatedDistance,
       calculatedDistance > 150,
-      calculatedDistance > 150 ? overrideReason : undefined
+      calculatedDistance > 150 ? overrideReason : undefined,
+      photoUrl
     );
 
     setBeatItems(db.getTodayBeat());
@@ -190,32 +222,9 @@ export default function BeatPlanPage() {
     toast.success(`Stock count recorded for ${items.length} SKUs.`);
   };
 
-  // Secondary order submit
-  const handleSaveSecondaryOrder = () => {
-    if (!targetBeat || !orderProductId) {
-      toast.error('Please select a product SKU to book.');
-      return;
-    }
-    const product = db.getProductById(orderProductId);
-    if (!product) return;
-
-    const unitsPerCase = product.caseSize || 24;
-    const effectiveUnitType =
-      product.orderUnitMode === 'CASES'
-        ? 'CASES'
-        : product.orderUnitMode === 'PIECES'
-        ? 'PIECES'
-        : orderUnitType;
-
-    const cases = effectiveUnitType === 'CASES' ? orderCases : Math.floor(orderPieces / unitsPerCase);
-    const totalUnits =
-      effectiveUnitType === 'CASES' ? orderCases * unitsPerCase : orderPieces;
-
-    let freeUnits = 0;
-    if (effectiveUnitType === 'CASES') {
-      if (orderScheme === 'BUY_2_GET_4_FREE' && orderCases >= 2) freeUnits = 4;
-      else if (orderScheme === 'BUY_5_GET_1_CASE_FREE' && orderCases >= 5) freeUnits = unitsPerCase;
-    }
+  // Secondary order submit (Multi-product with live margins)
+  const handleSaveSecondaryOrder = (orderData: MultiProductOrderData) => {
+    if (!targetBeat) return;
 
     db.createSecondaryOrder({
       officerId: currentUser.id,
@@ -227,34 +236,19 @@ export default function BeatPlanPage() {
       contactPhone: targetBeat.contactPhone,
       orderDateAd: targetBeat.dateAd,
       orderDateBs: targetBeat.dateBs,
-      items: [
-        {
-          productId: product.id,
-          productName: product.name,
-          brandCode: product.brandCode,
-          cases,
-          unitsPerCase,
-          totalUnits,
-          unitPrice: product.mrp || 0,
-          totalAmount: (product.mrp || 0) * totalUnits,
-          freeUnits,
-          appliedScheme: orderScheme !== 'NONE' ? orderScheme : undefined,
-        },
-      ],
-      totalAmount: (product.mrp || 0) * totalUnits,
-      totalUnits,
+      items: orderData.items,
+      totalAmount: orderData.totalAmount,
+      totalUnits: orderData.totalUnits,
       status: 'PENDING_DISPATCH',
-      notes: orderNotes,
-      orderPhotoUrl: orderPhotoUrl || undefined,
+      paymentTerms: orderData.paymentTerms,
+      brandMargins: orderData.brandMargins,
+      notes: orderData.notes,
+      orderPhotoUrl: orderData.orderPhotoUrl,
     });
 
     setActiveActionModal('NONE');
-    setOrderCases(1);
-    setOrderPieces(12);
-    setOrderNotes('');
-    setOrderPhotoUrl('');
     handleActionComplete('SECONDARY_ORDER');
-    toast.success(`Secondary order booked: ${totalUnits} units queued for distributor dispatch.`);
+    toast.success(`Secondary order booked: ${orderData.totalUnits} units (${orderData.items.length} SKUs) queued for distributor dispatch.`);
   };
 
   // Cheque Collection submit
@@ -411,6 +405,21 @@ export default function BeatPlanPage() {
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  const stores = db.getStoresUnified();
+                  if (stores[0]) setOverrideStoreId(stores[0].id);
+                  setShowOverrideModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 transition shadow-2xs"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                <span>+ One-Time Beat Stop</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleToggleDuty}
@@ -564,21 +573,7 @@ export default function BeatPlanPage() {
         <InlineOrderForm
           isOpen={activeActionModal === 'SECONDARY_ORDER'}
           targetBeat={targetBeat}
-          orderProductId={orderProductId}
-          setOrderProductId={setOrderProductId}
-          orderUnitType={orderUnitType}
-          setOrderUnitType={setOrderUnitType}
-          orderCases={orderCases}
-          setOrderCases={setOrderCases}
-          orderPieces={orderPieces}
-          setOrderPieces={setOrderPieces}
-          orderScheme={orderScheme}
-          setOrderScheme={setOrderScheme}
-          orderNotes={orderNotes}
-          setOrderNotes={setOrderNotes}
-          orderPhotoUrl={orderPhotoUrl}
-          setOrderPhotoUrl={setOrderPhotoUrl}
-          onSubmit={handleSaveSecondaryOrder}
+          onSaveOrder={handleSaveSecondaryOrder}
           onClose={() => setActiveActionModal('NONE')}
         />
 
@@ -871,6 +866,98 @@ export default function BeatPlanPage() {
                   Save Shelf Photos
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Admin One-Time Beat Override Modal (Section 7) */}
+        {showOverrideModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-bold text-slate-900 text-base">Add One-Time Beat Stop</h3>
+                </div>
+                <button
+                  onClick={() => setShowOverrideModal(false)}
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveOverride} className="space-y-3.5 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Assign to Officer</label>
+                  <select
+                    value={overrideOfficerId}
+                    onChange={(e) => setOverrideOfficerId(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  >
+                    {db.getUsers().map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.fullName} ({u.territory || u.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Target Store</label>
+                  <select
+                    value={overrideStoreId}
+                    onChange={(e) => setOverrideStoreId(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  >
+                    {db.getStoresUnified().map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.address})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Stop Priority</label>
+                  <select
+                    value={overridePriority}
+                    onChange={(e) => setOverridePriority(e.target.value as any)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  >
+                    <option value="HIGH">★★★ High Priority (Must Visit Today)</option>
+                    <option value="MEDIUM">★★ Medium Priority</option>
+                    <option value="ROUTINE">★ Routine Check</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Manager Note / Instructions</label>
+                  <input
+                    type="text"
+                    value={overrideNote}
+                    onChange={(e) => setOverrideNote(e.target.value)}
+                    placeholder="e.g. New Hair Serum launch pitch, collect overdue cheque..."
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowOverrideModal(false)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-2xs"
+                  >
+                    Add to Today&apos;s Beat
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

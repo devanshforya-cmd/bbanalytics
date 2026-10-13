@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
 import { User } from '@/lib/types';
+import { hasFeatureAccess, isSuperAdmin } from '@/lib/permissions';
 import {
   LayoutDashboard,
   Compass,
@@ -47,13 +48,6 @@ export default function Sidebar() {
 
   const role = currentUser.role;
 
-  // Define nav links by module
-  const isOfficer = role === 'SALES_OFFICER';
-  const isDataEntry = role === 'DATA_ENTRY';
-  const isViewer = role === 'VIEWER';
-  const isAdminOrSuper = role === 'ADMIN' || role === 'SUPER_ADMIN';
-  const isBrandManager = role === 'BRAND_MANAGER';
-
   interface NavItem {
     name: string;
     href: string;
@@ -69,57 +63,67 @@ export default function Sidebar() {
   const sections: NavSection[] = [];
 
   // 1. Overview Section
-  if (!isOfficer && !isDataEntry) {
-    sections.push({
-      title: 'Overview',
-      items: [
-        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'Products & Combos', href: '/products', icon: Package, badge: 'DTP/RPP' },
-      ],
-    });
-  } else {
-    sections.push({
-      title: 'Catalog',
-      items: [
-        { name: 'Products & Combos', href: '/products', icon: Package },
-      ],
-    });
+  const overviewItems: NavItem[] = [];
+  if (hasFeatureAccess(currentUser, 'dashboard')) {
+    overviewItems.push({ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard });
   }
+  overviewItems.push({ name: 'Products & Combos', href: '/products', icon: Package, badge: 'DTP/RPP' });
+  sections.push({
+    title: 'Overview',
+    items: overviewItems,
+  });
 
   // 2. Offline Sales (Field Ops)
-  if (isOfficer || isAdminOrSuper) {
-    const fieldItems: NavItem[] = [
-      { name: isOfficer ? 'My Day (Beat Plan)' : 'Beat Plans & Routes', href: '/offline-sales/beat-plan', icon: Compass, badge: isOfficer ? 'Active' : undefined },
-      { name: isOfficer ? 'My Stores' : 'Stores & Branches', href: '/offline-sales/stores', icon: Store },
-    ];
-
-    if (isAdminOrSuper) {
-      fieldItems.push({ name: 'Distributor Dispatches', href: '/offline-sales/dispatch', icon: Truck });
-    }
-
-    if (!isOfficer) {
-      fieldItems.push({ name: 'Live GPS Tracking', href: '/offline-sales/live-tracking', icon: Navigation, badge: 'Live' });
-    }
-
-    fieldItems.push(
-      { name: 'Shelf Photos', href: '/offline-sales/shelf-photos', icon: Camera },
-      { name: 'Call Tracker', href: '/offline-sales/calls', icon: PhoneCall },
-      { name: isOfficer ? 'My Cheques' : 'Cheque Tracker', href: '/offline-sales/cheques', icon: CreditCard },
-      { name: 'Document Handover', href: '/offline-sales/documents', icon: FileCheck2 }
-    );
-
-    if (!isOfficer) {
-      fieldItems.push({ name: 'Staff Scorecards', href: '/offline-sales/scorecard', icon: Award });
-    }
-
+  const fieldItems: NavItem[] = [];
+  if (hasFeatureAccess(currentUser, 'beat_plans')) {
+    fieldItems.push({
+      name: role === 'SALES_OFFICER' ? 'My Day (Beat Plan)' : 'Beat Plans & Routes',
+      href: '/offline-sales/beat-plan',
+      icon: Compass,
+      badge: role === 'SALES_OFFICER' ? 'Active' : undefined,
+    });
+  }
+  if (hasFeatureAccess(currentUser, 'stores')) {
+    fieldItems.push({
+      name: role === 'SALES_OFFICER' ? 'My Stores' : 'Stores & Branches',
+      href: '/offline-sales/stores',
+      icon: Store,
+    });
+  }
+  if (hasFeatureAccess(currentUser, 'dispatches')) {
+    fieldItems.push({ name: 'Distributor Dispatches', href: '/offline-sales/dispatch', icon: Truck });
+  }
+  if (hasFeatureAccess(currentUser, 'gps_tracking')) {
+    fieldItems.push({ name: 'Live GPS Tracking', href: '/offline-sales/live-tracking', icon: Navigation, badge: 'Live' });
+  }
+  if (hasFeatureAccess(currentUser, 'shelf_photos')) {
+    fieldItems.push({ name: 'Shelf Photos', href: '/offline-sales/shelf-photos', icon: Camera });
+  }
+  if (hasFeatureAccess(currentUser, 'call_tracker')) {
+    fieldItems.push({ name: 'Call Tracker', href: '/offline-sales/calls', icon: PhoneCall });
+  }
+  if (hasFeatureAccess(currentUser, 'cheque_tracker')) {
+    fieldItems.push({
+      name: role === 'SALES_OFFICER' ? 'My Cheques' : 'Cheque Tracker',
+      href: '/offline-sales/cheques',
+      icon: CreditCard,
+    });
+  }
+  if (hasFeatureAccess(currentUser, 'document_handover')) {
+    fieldItems.push({ name: 'Document Handover', href: '/offline-sales/documents', icon: FileCheck2 });
+  }
+  if (hasFeatureAccess(currentUser, 'staff_scorecards')) {
+    fieldItems.push({ name: 'Staff Scorecards', href: '/offline-sales/scorecard', icon: Award });
+  }
+  if (fieldItems.length > 0) {
     sections.push({
-      title: isOfficer ? 'Field Operations' : 'Offline Sales (GT/MT)',
+      title: role === 'SALES_OFFICER' ? 'Field Operations' : 'Offline Sales (GT/MT)',
       items: fieldItems,
     });
   }
 
   // 3. OrderFlow (Online Orders)
-  if (isDataEntry || isAdminOrSuper || isBrandManager) {
+  if (hasFeatureAccess(currentUser, 'orderflow')) {
     sections.push({
       title: 'OrderFlow',
       items: [
@@ -132,12 +136,12 @@ export default function Sidebar() {
   }
 
   // 4. Customer Reviews & Operational Health
-  if (isDataEntry || isAdminOrSuper || isBrandManager) {
+  if (hasFeatureAccess(currentUser, 'reviews')) {
     const reviewItems: NavItem[] = [
       { name: 'Feedback & Complaints', href: '/reviews/feedback', icon: MessageSquareHeart },
       { name: 'Separated Returns', href: '/reviews/returns', icon: RotateCcw },
     ];
-    if (isAdminOrSuper) {
+    if (isSuperAdmin(currentUser) || role === 'ADMIN') {
       reviewItems.push({ name: 'Dynamic Categories', href: '/reviews/categories', icon: Tags });
     }
     sections.push({
@@ -147,7 +151,7 @@ export default function Sidebar() {
   }
 
   // 5. Customer 360 & Intelligence
-  if (isAdminOrSuper || isBrandManager) {
+  if (hasFeatureAccess(currentUser, 'customers')) {
     sections.push({
       title: 'Customer Intelligence',
       items: [
@@ -157,24 +161,24 @@ export default function Sidebar() {
     });
   }
 
-  // 6. Marketing & Influencers (Fix 66)
-  if (isAdminOrSuper || isBrandManager) {
+  // 6. Marketing & Influencers
+  if (hasFeatureAccess(currentUser, 'marketing')) {
     sections.push({
       title: 'Marketing',
       items: [
         { name: 'Influencer Directory', href: '/marketing/influencers', icon: Megaphone },
-        { name: 'Marketing Sends', href: '/marketing/sends', icon: Gift, badge: 'Fix 66' },
+        { name: 'Marketing Sends', href: '/marketing/sends', icon: Gift },
       ],
     });
   }
 
   // 7. OpsCore (Shared Layer)
-  if (isOfficer || isAdminOrSuper) {
+  if (hasFeatureAccess(currentUser, 'beat_plans') || isSuperAdmin(currentUser) || role === 'ADMIN') {
     const opsItems: NavItem[] = [
       { name: 'Calendar To-Do', href: '/opscore/calendar-tasks', icon: Calendar, badge: 'BS/AD' },
-      { name: isOfficer ? 'My Tasks' : 'Task Management', href: '/opscore/tasks', icon: CheckSquare },
+      { name: role === 'SALES_OFFICER' ? 'My Tasks' : 'Task Management', href: '/opscore/tasks', icon: CheckSquare },
     ];
-    if (isAdminOrSuper) {
+    if (isSuperAdmin(currentUser) || role === 'ADMIN') {
       opsItems.push(
         { name: 'Activity Trail', href: '/opscore/activity', icon: History },
         { name: 'Google Sheets Export', href: '/opscore/export', icon: FileSpreadsheet }
@@ -186,8 +190,8 @@ export default function Sidebar() {
     });
   }
 
-  // 7. Administration & Settings
-  if (isAdminOrSuper) {
+  // 8. Administration & Settings
+  if (hasFeatureAccess(currentUser, 'settings')) {
     sections.push({
       title: 'Administration',
       items: [

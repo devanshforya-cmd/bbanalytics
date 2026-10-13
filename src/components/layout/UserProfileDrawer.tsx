@@ -99,13 +99,7 @@ export default function UserProfileDrawer({
   const handleStatusChange = (newStatus: DutyStatus) => {
     setDutyStatus(newStatus);
     db.setOfficerDutyStatus(currentUser.id, newStatus);
-    if (typeof window !== 'undefined') {
-      const session = getSessionUser();
-      if (session && session.id === currentUser.id) {
-        session.dutyStatus = newStatus;
-        localStorage.setItem('bb_auth_user_session_v2', JSON.stringify(session));
-      }
-    }
+    db.setCurrentUser(currentUser.id);
     setStatusFeedback(`Duty status updated to ${DUTY_STATUS_CONFIG[newStatus].label}`);
     setTimeout(() => setStatusFeedback(null), 3000);
     if (onUserUpdate) onUserUpdate();
@@ -114,10 +108,6 @@ export default function UserProfileDrawer({
   // Persona switch
   const handleUserSwitch = (userId: string) => {
     db.setCurrentUser(userId);
-    const targetUser = db.getUsers().find((u) => u.id === userId);
-    if (targetUser && typeof window !== 'undefined') {
-      localStorage.setItem('bb_auth_user_session_v2', JSON.stringify(targetUser));
-    }
     window.location.reload();
   };
 

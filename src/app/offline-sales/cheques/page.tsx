@@ -67,7 +67,7 @@ function ChequesContent() {
   const [actionType, setActionType] = useState<
     'NONE' | 'HANDOVER' | 'CASHED' | 'DELAY' | 'BOUNCE' | 'LOST'
   >('NONE');
-  const [handoverTo, setHandoverTo] = useState('Sita Gurung');
+  const [handoverTo, setHandoverTo] = useState('');
   const [delayReason, setDelayReason] = useState('Vendor requested delay');
   const [newDelayDate, setNewDelayDate] = useState(getTodayAd());
   const [actionNotes, setActionNotes] = useState('');
@@ -76,7 +76,7 @@ function ChequesContent() {
 
   // Add Cheque Modal
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newStoreName, setNewStoreName] = useState('Bhatbhateni Supermarket');
+  const [newStoreName, setNewStoreName] = useState('');
   const [newChequeNumber, setNewChequeNumber] = useState('');
   const [newAmount, setNewAmount] = useState('');
   const [newBank, setNewBank] = useState('Nabil Bank Ltd');
@@ -599,9 +599,12 @@ function ChequesContent() {
                       onChange={(e) => setHandoverTo(e.target.value)}
                       className="w-full rounded-lg border border-blue-300 px-3 py-2 bg-white outline-none"
                     >
-                      <option>Sita Gurung (Ops Desk)</option>
-                      <option>Devansh Agarwal (Admin)</option>
-                      <option>Finance Executive</option>
+                      <option value="">Select office staff member...</option>
+                      {db.getUsers().map((u) => (
+                        <option key={u.id} value={u.fullName}>
+                          {u.fullName} ({u.role.replace('_', ' ')})
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex justify-end gap-2">

@@ -111,6 +111,7 @@ export default function SheetsExportPage() {
   const products = db.getProducts();
   const dispatches = db.getDispatches();
   const stockCounts = db.getStockCounts();
+  const scorecards = db.getScorecards();
   const totalStores = distributors.length + branches.length + retailers.length;
 
   // Build Tab Configurations matching PRD Part 10
@@ -148,31 +149,26 @@ export default function SheetsExportPage() {
       id: 'scorecard',
       name: 'Staff Scorecard',
       isPermanent: true,
-      description: 'Weekly & monthly actuals for Ravi Sharma, Pooja Karki, and Suman Adhikari across 16 PRD metrics.',
-      rowCount: 48,
+      description: 'Weekly & monthly actuals for field sales officers across core operational metrics.',
+      rowCount: scorecards.length > 0 ? scorecards.length * 4 : 0,
       columns: ['Sales Officer', 'Metric', 'Actual Value', 'Benchmark', 'Compliance Rating', 'Territory'],
-      sampleData: [
-        ['Ravi Sharma', 'Beat Compliance %', '87.5%', '85.0%', 'GOOD', 'Kathmandu East'],
-        ['Pooja Karki', 'Beat Compliance %', '93.9%', '85.0%', 'EXCELLENT', 'Lalitpur Central'],
-        ['Suman Adhikari', 'Beat Compliance %', '75.8%', '85.0%', 'NEEDS_REVIEW', 'Bhaktapur'],
-        ['Pooja Karki', 'Productive Calls', '40', '35', 'TOP_PERFORMER', 'Lalitpur Central'],
-        ['Ravi Sharma', 'Cheque Handover Gap', '2.1 days', '< 2 days', 'NORMAL', 'Kathmandu East'],
-      ],
+      sampleData: scorecards.slice(0, 3).map((sc) => [
+        sc.officerName,
+        'Beat Compliance %',
+        `${sc.beatCompliancePct || 0}%`,
+        '85.0%',
+        (sc.beatCompliancePct || 0) >= 85 ? 'GOOD' : 'NEEDS_REVIEW',
+        (sc as any).territory || sc.area || 'Assigned Territory',
+      ]),
       generateCsv: () => {
         const rows = [
           ['Sales Officer', 'Metric', 'Actual Value', 'Benchmark', 'Compliance Rating', 'Territory'],
-          ['Ravi Sharma', 'Stores Visited', '48', '50', 'NORMAL', 'Kathmandu East'],
-          ['Ravi Sharma', 'Beat Compliance %', '87.5%', '85.0%', 'GOOD', 'Kathmandu East'],
-          ['Ravi Sharma', 'Productive Calls', '31', '30', 'GOOD', 'Kathmandu East'],
-          ['Ravi Sharma', 'Cheques Collected', '8', '8', 'NORMAL', 'Kathmandu East'],
-          ['Pooja Karki', 'Stores Visited', '52', '50', 'TOP_PERFORMER', 'Lalitpur Central'],
-          ['Pooja Karki', 'Beat Compliance %', '93.9%', '85.0%', 'EXCELLENT', 'Lalitpur Central'],
-          ['Pooja Karki', 'Productive Calls', '40', '35', 'TOP_PERFORMER', 'Lalitpur Central'],
-          ['Pooja Karki', 'Cheques Collected', '12', '10', 'EXCELLENT', 'Lalitpur Central'],
-          ['Suman Adhikari', 'Stores Visited', '41', '50', 'NEEDS_REVIEW', 'Bhaktapur'],
-          ['Suman Adhikari', 'Beat Compliance %', '75.8%', '85.0%', 'NEEDS_REVIEW', 'Bhaktapur'],
-          ['Suman Adhikari', 'Productive Calls', '18', '30', 'LOW', 'Bhaktapur'],
-          ['Suman Adhikari', 'Cheques Collected', '6', '8', 'NORMAL', 'Bhaktapur'],
+          ...scorecards.flatMap((sc) => [
+            [sc.officerName, 'Stores Visited', String(sc.storesVisited || (sc as any).visitedStores || 0), '50', 'NORMAL', (sc as any).territory || sc.area || 'Nepal'],
+            [sc.officerName, 'Beat Compliance %', `${sc.beatCompliancePct || 0}%`, '85.0%', (sc.beatCompliancePct || 0) >= 85 ? 'GOOD' : 'NEEDS_REVIEW', (sc as any).territory || sc.area || 'Nepal'],
+            [sc.officerName, 'Productive Calls', String((sc as any).productiveCalls || 0), '30', 'NORMAL', (sc as any).territory || sc.area || 'Nepal'],
+            [sc.officerName, 'Cheques Collected', String((sc as any).chequesCollected || 0), '8', 'NORMAL', (sc as any).territory || sc.area || 'Nepal'],
+          ]),
         ];
         return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
       },
@@ -186,7 +182,7 @@ export default function SheetsExportPage() {
       columns: ['Store ID', 'Store Name', 'Channel Type', 'Area / Hub', 'Address', 'Contact Person', 'Phone', 'Assigned Officer'],
       sampleData: [
         ...distributors.slice(0, 2).map((d) => [d.id, d.name, d.type || 'DISTRIBUTOR', d.city, d.address || d.city, d.contactName, d.contactPhone, 'Management']),
-        ...retailers.slice(0, 3).map((r) => [r.id, r.name, r.type, r.area || r.city, r.address, r.contactName, r.contactPhone, r.assignedOfficerName || 'Ravi Sharma']),
+        ...retailers.slice(0, 3).map((r) => [r.id, r.name, r.type, r.area || r.city, r.address, r.contactName, r.contactPhone, r.assignedOfficerName || 'Field Officer']),
       ],
       generateCsv: () => {
         const header = ['Store ID', 'Store Name', 'Channel Type', 'Area / Hub', 'Address', 'Contact Person', 'Phone', 'Assigned Officer'];
@@ -440,7 +436,7 @@ export default function SheetsExportPage() {
         cl.id,
         cl.dateBs || 'Bhadra 24, 2083',
         cl.storeName,
-        cl.officerName || 'Ravi Sharma',
+        cl.officerName || 'Field Officer',
         cl.label || 'Routine Visit',
         cl.outcome || 'Order Received',
         cl.createdOrderId ? 'YES' : 'NO',
@@ -453,7 +449,7 @@ export default function SheetsExportPage() {
             cl.id,
             cl.dateBs || 'Bhadra 24, 2083',
             cl.storeName,
-            cl.officerName || 'Ravi Sharma',
+            cl.officerName || 'Field Officer',
             cl.label || 'Routine Visit',
             Math.round((cl.durationSeconds || 180) / 60),
             cl.outcome || 'Routine Visit',
@@ -474,7 +470,7 @@ export default function SheetsExportPage() {
         v.id,
         v.dateBs || 'Bhadra 24, 2083',
         v.storeName || v.entityId,
-        v.officerName || 'Ravi Sharma',
+        v.officerName || 'Field Officer',
         v.checkInTime?.split('T')[1]?.substring(0, 5) || '10:15',
         `${v.durationMinutes || 25} mins`,
         v.distanceMeters <= 50 ? 'YES' : 'OVERRIDDEN',
