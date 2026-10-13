@@ -1,3 +1,7 @@
+try {
+  require('@next/env').loadEnvConfig(process.cwd());
+} catch (_) {}
+
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
 
