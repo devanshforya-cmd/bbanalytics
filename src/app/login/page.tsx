@@ -23,6 +23,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     if (!identifier.trim() || !password.trim()) {
       setError('Please provide your email/phone and password.');
       return;

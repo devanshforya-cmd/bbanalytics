@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
+import { getBrands } from '@/lib/db/brands-service';
 import { Order, Influencer, BrandCode, OrderPlatform, InfluencerContentType } from '@/lib/types';
 import PageGuard from '@/components/common/PageGuard';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -247,9 +248,11 @@ export default function MarketingSendsPage() {
               className="text-xs rounded-xl border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700"
             >
               <option value="ALL">All Brands</option>
-              <option value="FORYA">Forya</option>
-              <option value="PEESAFE">Pee Safe</option>
-              <option value="RENEE">Renee</option>
+              {getBrands('ACTIVE').map((b) => (
+                <option key={b.code} value={b.code}>
+                  {b.name}
+                </option>
+              ))}
             </select>
 
             {/* Platform Filter */}

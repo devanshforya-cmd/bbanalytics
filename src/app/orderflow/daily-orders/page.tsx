@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db, OrderRealtimeEvent } from '@/lib/db/db-service';
+import { getBrands } from '@/lib/db/brands-service';
 import { Order, BrandCode, OrderItem } from '@/lib/types';
 import {
   getTodayAd,
@@ -403,9 +404,11 @@ export default function DailyOrdersPage() {
                 <span className="font-bold text-slate-900">{commercialOrders.length}</span>
               </span>
               <span className="text-slate-300">|</span>
-              <span>Forya: <strong>{brandStats.FORYA || 0}</strong></span>
-              <span>Pee Safe: <strong>{brandStats.PEE_SAFE || 0}</strong></span>
-              <span>Renee: <strong>{brandStats.RENEE || 0}</strong></span>
+              {getBrands('ACTIVE').map((b) => (
+                <span key={b.code}>
+                  {b.name}: <strong>{brandStats[b.code] || 0}</strong>
+                </span>
+              ))}
               {marketingSends.length > 0 && (
                 <>
                   <span className="text-slate-300">|</span>

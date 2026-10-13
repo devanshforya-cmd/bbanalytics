@@ -40,8 +40,10 @@ import {
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
+import { useSubmitGuard } from '@/hooks/useSubmitGuard';
 
 export default function StoresPage() {
+  const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const [currentUser] = useState(() => db.getCurrentUser());
   const isSuper = isSuperAdmin(currentUser);
   const isSalesOfficer = currentUser.role === 'SALES_OFFICER';
@@ -187,49 +189,51 @@ export default function StoresPage() {
       return;
     }
 
-    const firstContact = fieldContacts[0] || { name: 'Owner', role: 'Store Owner', phone: '+977-9800000000' };
+    guardedSubmit(async () => {
+      const firstContact = fieldContacts[0] || { name: 'Owner', role: 'Store Owner', phone: '+977-9800000000' };
 
-    const newRet = db.addRetailer({
-      name: fieldStoreName.trim(),
-      type: 'GT',
-      storeType: 'STANDALONE_RETAILER',
-      category: fieldCategory,
-      city: fieldCity,
-      area: fieldArea || 'Kathmandu',
-      address: fieldAddress || `${fieldArea}, ${fieldCity}`,
-      lat: fieldLat || 27.7172 + (Math.random() - 0.5) * 0.04,
-      lng: fieldLng || 85.324 + (Math.random() - 0.5) * 0.04,
-      assignedOfficerId: currentUser.id,
-      assignedOfficerName: currentUser.fullName,
-      contactName: firstContact.name || 'Store Owner',
-      contactRole: firstContact.role,
-      contactPhone: firstContact.phone || '+977-9800000000',
-      contacts: fieldContacts.map((c, i) => ({
-        id: `cnt_${Date.now()}_${i}`,
-        name: c.name || 'Store Owner',
-        role: c.role as ContactRole,
-        phone: c.phone || '+977-9800000000',
-        isPrimary: i === 0,
-      })),
-      brandsStocked: fieldBrands.length > 0 ? fieldBrands : (systemBrands[0]?.code ? [systemBrands[0].code] : []),
-      distributorId: fieldParentDistributorId || undefined,
-      distributorName: fieldParentDistributorId
-        ? distributors.find((d) => d.id === fieldParentDistributorId)?.name
-        : undefined,
-      notes: fieldNotes,
+      const newRet = db.addRetailer({
+        name: fieldStoreName.trim(),
+        type: 'GT',
+        storeType: 'STANDALONE_RETAILER',
+        category: fieldCategory,
+        city: fieldCity,
+        area: fieldArea || 'Kathmandu',
+        address: fieldAddress || `${fieldArea}, ${fieldCity}`,
+        lat: fieldLat || 27.7172 + (Math.random() - 0.5) * 0.04,
+        lng: fieldLng || 85.324 + (Math.random() - 0.5) * 0.04,
+        assignedOfficerId: currentUser.id,
+        assignedOfficerName: currentUser.fullName,
+        contactName: firstContact.name || 'Store Owner',
+        contactRole: firstContact.role,
+        contactPhone: firstContact.phone || '+977-9800000000',
+        contacts: fieldContacts.map((c, i) => ({
+          id: `cnt_${Date.now()}_${i}`,
+          name: c.name || 'Store Owner',
+          role: c.role as ContactRole,
+          phone: c.phone || '+977-9800000000',
+          isPrimary: i === 0,
+        })),
+        brandsStocked: fieldBrands.length > 0 ? fieldBrands : (systemBrands[0]?.code ? [systemBrands[0].code] : []),
+        distributorId: fieldParentDistributorId || undefined,
+        distributorName: fieldParentDistributorId
+          ? distributors.find((d) => d.id === fieldParentDistributorId)?.name
+          : undefined,
+        notes: fieldNotes,
+      });
+
+      toast.success(`✓ "${newRet.name}" saved! Added to store directory and your beat route.`);
+      setShowFieldAddModal(false);
+      // Reset
+      setFieldStoreName('');
+      setFieldArea('');
+      setFieldAddress('');
+      setFieldLat(null);
+      setFieldLng(null);
+      setFieldContacts([{ name: '', role: 'Store Owner', phone: '' }]);
+      setFieldNotes('');
+      refreshData();
     });
-
-    toast.success(`✓ "${newRet.name}" saved! Added to store directory and your beat route.`);
-    setShowFieldAddModal(false);
-    // Reset
-    setFieldStoreName('');
-    setFieldArea('');
-    setFieldAddress('');
-    setFieldLat(null);
-    setFieldLng(null);
-    setFieldContacts([{ name: '', role: 'Store Owner', phone: '' }]);
-    setFieldNotes('');
-    refreshData();
   };
 
   // Section 2d: Save Super Admin Add Store
@@ -240,92 +244,94 @@ export default function StoresPage() {
       return;
     }
 
-    if (adminStoreType === 'DISTRIBUTOR') {
-      db.addDistributor({
-        name: adminStoreName.trim(),
-        type: adminCategory === 'Supermarket' ? 'Retail Chain' : 'Distributor',
-        storeType: 'DISTRIBUTOR',
-        city: adminCity,
-        address: adminAddress || `${adminArea}, ${adminCity}`,
-        contactName: adminContactName || 'Director',
-        contactRole: adminContactRole,
-        contactPhone: adminContactPhone || '+977-9800000000',
-        contactEmail: 'accounts@distributor.np',
-        brandsCarried: systemBrands.map((b) => b.code),
-        creditTerms: adminPaymentTerms,
-        defaultMargins: adminDefaultMargins,
-        hasBranches: adminHasBranches,
-        contacts: [
-          {
-            id: `cnt_${Date.now()}`,
-            name: adminContactName || 'Director',
-            role: adminContactRole as ContactRole,
-            phone: adminContactPhone || '+977-9800000000',
-            isPrimary: true,
-          },
-        ],
-      });
-      toast.success(`✓ Distributor "${adminStoreName}" created with custom commercial terms.`);
-    } else if (adminStoreType === 'CHAIN_STORE') {
-      db.addDistributor({
-        name: adminStoreName.trim(),
-        type: 'Retail Chain',
-        storeType: 'CHAIN_STORE',
-        city: adminCity,
-        address: adminAddress || `${adminArea}, ${adminCity}`,
-        contactName: adminContactName || 'Supermarket Manager',
-        contactRole: adminContactRole,
-        contactPhone: adminContactPhone || '+977-9800000000',
-        contactEmail: 'procurement@chain.np',
-        brandsCarried: systemBrands.map((b) => b.code),
-        creditTerms: adminPaymentTerms,
-        defaultMargins: adminDefaultMargins,
-        hasBranches: true,
-        contacts: [
-          {
-            id: `cnt_${Date.now()}`,
-            name: adminContactName || 'Supermarket Manager',
-            role: adminContactRole as ContactRole,
-            phone: adminContactPhone || '+977-9800000000',
-            isPrimary: true,
-          },
-        ],
-      });
-      toast.success(`✓ Chain Store "${adminStoreName}" created.`);
-    } else {
-      db.addRetailer({
-        name: adminStoreName.trim(),
-        type: 'GT',
-        storeType: 'STANDALONE_RETAILER',
-        category: adminCategory,
-        city: adminCity,
-        area: adminArea || 'Kathmandu',
-        address: adminAddress || `${adminArea}, ${adminCity}`,
-        lat: 27.7172,
-        lng: 85.324,
-        assignedOfficerId: currentUser.id,
-        assignedOfficerName: currentUser.fullName,
-        contactName: adminContactName || 'Store Owner',
-        contactRole: adminContactRole,
-        contactPhone: adminContactPhone || '+977-9800000000',
-        contacts: [
-          {
-            id: `cnt_${Date.now()}`,
-            name: adminContactName || 'Store Owner',
-            role: adminContactRole as ContactRole,
-            phone: adminContactPhone || '+977-9800000000',
-            isPrimary: true,
-          },
-        ],
-        brandsStocked: systemBrands.map((b) => b.code),
-        creditTerms: adminPaymentTerms,
-        defaultMargins: adminDefaultMargins,
-      });
-      toast.success(`✓ Standalone Retailer "${adminStoreName}" created.`);
-    }
+    guardedSubmit(async () => {
+      if (adminStoreType === 'DISTRIBUTOR') {
+        db.addDistributor({
+          name: adminStoreName.trim(),
+          type: adminCategory === 'Supermarket' ? 'Retail Chain' : 'Distributor',
+          storeType: 'DISTRIBUTOR',
+          city: adminCity,
+          address: adminAddress || `${adminArea}, ${adminCity}`,
+          contactName: adminContactName || 'Director',
+          contactRole: adminContactRole,
+          contactPhone: adminContactPhone || '+977-9800000000',
+          contactEmail: 'accounts@distributor.np',
+          brandsCarried: systemBrands.map((b) => b.code),
+          creditTerms: adminPaymentTerms,
+          defaultMargins: adminDefaultMargins,
+          hasBranches: adminHasBranches,
+          contacts: [
+            {
+              id: `cnt_${Date.now()}`,
+              name: adminContactName || 'Director',
+              role: adminContactRole as ContactRole,
+              phone: adminContactPhone || '+977-9800000000',
+              isPrimary: true,
+            },
+          ],
+        });
+        toast.success(`✓ Distributor "${adminStoreName}" created with custom commercial terms.`);
+      } else if (adminStoreType === 'CHAIN_STORE') {
+        db.addDistributor({
+          name: adminStoreName.trim(),
+          type: 'Retail Chain',
+          storeType: 'CHAIN_STORE',
+          city: adminCity,
+          address: adminAddress || `${adminArea}, ${adminCity}`,
+          contactName: adminContactName || 'Supermarket Manager',
+          contactRole: adminContactRole,
+          contactPhone: adminContactPhone || '+977-9800000000',
+          contactEmail: 'procurement@chain.np',
+          brandsCarried: systemBrands.map((b) => b.code),
+          creditTerms: adminPaymentTerms,
+          defaultMargins: adminDefaultMargins,
+          hasBranches: true,
+          contacts: [
+            {
+              id: `cnt_${Date.now()}`,
+              name: adminContactName || 'Supermarket Manager',
+              role: adminContactRole as ContactRole,
+              phone: adminContactPhone || '+977-9800000000',
+              isPrimary: true,
+            },
+          ],
+        });
+        toast.success(`✓ Chain Store "${adminStoreName}" created.`);
+      } else {
+        db.addRetailer({
+          name: adminStoreName.trim(),
+          type: 'GT',
+          storeType: 'STANDALONE_RETAILER',
+          category: adminCategory,
+          city: adminCity,
+          area: adminArea || 'Kathmandu',
+          address: adminAddress || `${adminArea}, ${adminCity}`,
+          lat: 27.7172,
+          lng: 85.324,
+          assignedOfficerId: currentUser.id,
+          assignedOfficerName: currentUser.fullName,
+          contactName: adminContactName || 'Store Owner',
+          contactRole: adminContactRole,
+          contactPhone: adminContactPhone || '+977-9800000000',
+          contacts: [
+            {
+              id: `cnt_${Date.now()}`,
+              name: adminContactName || 'Store Owner',
+              role: adminContactRole as ContactRole,
+              phone: adminContactPhone || '+977-9800000000',
+              isPrimary: true,
+            },
+          ],
+          brandsStocked: systemBrands.map((b) => b.code),
+          creditTerms: adminPaymentTerms,
+          defaultMargins: adminDefaultMargins,
+        });
+        toast.success(`✓ Standalone Retailer "${adminStoreName}" created.`);
+      }
 
-    setShowAdminAddModal(false);
-    refreshData();
+      setShowAdminAddModal(false);
+      refreshData();
+    });
   };
 
   // Section 3: Contact Actions
@@ -380,15 +386,17 @@ export default function StoresPage() {
   const handleSaveCommercialTerms = (e: React.FormEvent) => {
     e.preventDefault();
     if (!commercialTermsStore) return;
-    db.updateStoreCommercialTerms(
-      commercialTermsStore.entityType,
-      commercialTermsStore.entityId,
-      commercialTermsStore.margins,
-      commercialTermsStore.paymentTerms
-    );
-    toast.success(`✓ Commercial terms updated for ${commercialTermsStore.name}.`);
-    setCommercialTermsStore(null);
-    refreshData();
+    guardedSubmit(async () => {
+      db.updateStoreCommercialTerms(
+        commercialTermsStore.entityType,
+        commercialTermsStore.entityId,
+        commercialTermsStore.margins,
+        commercialTermsStore.paymentTerms
+      );
+      toast.success(`✓ Commercial terms updated for ${commercialTermsStore.name}.`);
+      setCommercialTermsStore(null);
+      refreshData();
+    });
   };
 
   // Filtered lists
@@ -1271,9 +1279,13 @@ export default function StoresPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs"
+                    disabled={isSubmitting}
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold shadow-xs flex items-center gap-2"
                   >
-                    Create Store Entity
+                    {isSubmitting && (
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                    )}
+                    {isSubmitting ? 'Creating...' : 'Create Store Entity'}
                   </button>
                 </div>
               </form>
@@ -1532,9 +1544,13 @@ export default function StoresPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-xs"
+                    disabled={isSubmitting}
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold rounded-xl shadow-xs flex items-center gap-2"
                   >
-                    Save Terms
+                    {isSubmitting && (
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                    )}
+                    {isSubmitting ? 'Saving...' : 'Save Terms'}
                   </button>
                 </div>
               </form>

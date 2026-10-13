@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { BeatItem, SecondaryOrderItem, StoreMarginType } from '@/lib/types';
 import { db } from '@/lib/db/db-service';
+import { useSubmitGuard } from '@/hooks/useSubmitGuard';
 
 export interface MultiProductOrderData {
   items: SecondaryOrderItem[];
@@ -47,6 +48,7 @@ export default function InlineOrderForm({
   onSaveOrder,
   onClose,
 }: InlineOrderFormProps) {
+  const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const products = useMemo(() => db.getProducts(), []);
 
   // Multi-item rows
@@ -228,26 +230,28 @@ export default function InlineOrderForm({
   };
 
   const handleFinalSubmit = () => {
-    const brandMarginsPayload: Record<
-      string,
-      { pct: number; type: StoreMarginType; perUnitPrices?: Record<string, number> }
-    > = {};
+    guardedSubmit(async () => {
+      const brandMarginsPayload: Record<
+        string,
+        { pct: number; type: StoreMarginType; perUnitPrices?: Record<string, number> }
+      > = {};
 
-    activeBrands.forEach((b) => {
-      brandMarginsPayload[b] = {
-        pct: brandMargins[b]?.pct ?? 25,
-        type: brandMargins[b]?.type ?? 'MARKDOWN',
-      };
-    });
+      activeBrands.forEach((b) => {
+        brandMarginsPayload[b] = {
+          pct: brandMargins[b]?.pct ?? 25,
+          type: brandMargins[b]?.type ?? 'MARKDOWN',
+        };
+      });
 
-    onSaveOrder({
-      items: calculatedItems,
-      totalAmount: grandStoreTotal,
-      totalUnits: grandTotalUnits,
-      paymentTerms,
-      brandMargins: brandMarginsPayload,
-      notes: orderNotes || undefined,
-      orderPhotoUrl: orderPhotoUrl || undefined,
+      onSaveOrder({
+        items: calculatedItems,
+        totalAmount: grandStoreTotal,
+        totalUnits: grandTotalUnits,
+        paymentTerms,
+        brandMargins: brandMarginsPayload,
+        notes: orderNotes || undefined,
+        orderPhotoUrl: orderPhotoUrl || undefined,
+      });
     });
   };
 
@@ -690,10 +694,20 @@ export default function InlineOrderForm({
               <button
                 type="button"
                 onClick={handleFinalSubmit}
-                className="flex-1 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-sm transition flex items-center justify-center gap-2"
+                disabled={isSubmitting}
+                className="flex-1 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-base shadow-sm transition flex items-center justify-center gap-2"
               >
-                <Check className="w-5 h-5" />
-                <span>Confirm &amp; Book Order</span>
+                {isSubmitting ? (
+                  <>
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                    <span>Booking Order...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-5 h-5" />
+                    <span>Confirm &amp; Book Order</span>
+                  </>
+                )}
               </button>
             </>
           )}

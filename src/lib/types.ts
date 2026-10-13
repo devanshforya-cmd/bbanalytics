@@ -1236,3 +1236,24 @@ export interface SharedAccessLink {
 // Dashboard Sales Mode (Fix 62)
 export type DashboardSalesMode = 'ALL' | 'D2C' | 'B2B';
 
+// Feature Flag & A/B Testing Types
+export interface FeatureFlag {
+  id: string;
+  name: string;
+  description: string;
+  isEnabled: boolean;
+  enabledForUsers: string[];
+  variant: 'A' | 'B';
+  createdAt: string;
+}
+
+export interface FlagEvent {
+  id: string;
+  flagName: string;
+  userId: string;
+  variant: 'A' | 'B';
+  action: 'PAGE_VIEW' | 'FORM_SUBMIT' | 'ERROR' | string;
+  metadata?: Record<string, any>;
+  createdAt: string;
+}
+

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
+import { getBrands } from '@/lib/db/brands-service';
 import { Product, Combo, BrandCode, SecondaryOrder, Order, ReturnEntry, Retailer } from '@/lib/types';
 import MobileBottomSheet from '@/components/common/MobileBottomSheet';
 import { toast } from '@/components/common/Toast';
@@ -586,35 +587,25 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {/* Brand Filter Pills (Consolidated Pee Safe & FURR, Mamaearth, Renee, Forya) */}
+        {/* Brand Filter Pills (Dynamic from Database) */}
         <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5 text-xs font-medium">
           <span className="text-slate-400 text-[11px] font-semibold uppercase tracking-wider mr-1 shrink-0">
             Brand:
           </span>
-          {((isBrandManager && assignedBrands.length > 0
-            ? ['ALL', ...assignedBrands]
-            : ['ALL', 'FORYA', 'PEE_SAFE', 'RENEE', 'MAMAEARTH']
-          ) as BrandCode[]).map((brand) => (
+          {[
+            { code: 'ALL', name: 'All Brands' },
+            ...getBrands('ACTIVE').map((b) => ({ code: b.code, name: b.name })),
+          ].map((brand) => (
             <button
-              key={brand}
-              onClick={() => setActiveBrand(brand)}
-              className={`px-3 py-1.5 rounded-lg shrink-0 transition ${
-                activeBrand === brand
+              key={brand.code}
+              onClick={() => setActiveBrand(brand.code as BrandCode)}
+              className={`px-3 py-1.5 rounded-lg shrink-0 transition cursor-pointer ${
+                activeBrand === brand.code
                   ? 'bg-slate-900 text-white font-bold shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              {brand === 'ALL'
-                ? 'All Brands'
-                : brand === 'PEE_SAFE'
-                ? 'Pee Safe & FURR'
-                : brand === 'FORYA'
-                ? 'Forya'
-                : brand === 'RENEE'
-                ? 'Renee'
-                : brand === 'MAMAEARTH'
-                ? 'Mamaearth'
-                : brand}
+              {brand.name}
             </button>
           ))}
         </div>
@@ -1218,10 +1209,15 @@ export default function ProductsPage() {
                 }
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-medium bg-white"
               >
-                <option value="FORYA">Forya</option>
-                <option value="PEE_SAFE">Pee Safe &amp; FURR</option>
-                <option value="RENEE">Renee Cosmetics</option>
-                <option value="MAMAEARTH">Mamaearth</option>
+                {getBrands('ACTIVE').length > 0 ? (
+                  getBrands('ACTIVE').map((b) => (
+                    <option key={b.code} value={b.code}>
+                      {b.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="ALL">No brands configured (Add in Settings)</option>
+                )}
               </select>
             </div>
           </div>
@@ -1480,10 +1476,15 @@ export default function ProductsPage() {
                 }
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-medium bg-white"
               >
-                <option value="FORYA">Forya</option>
-                <option value="PEE_SAFE">Pee Safe &amp; FURR</option>
-                <option value="RENEE">Renee Cosmetics</option>
-                <option value="MAMAEARTH">Mamaearth</option>
+                {getBrands('ACTIVE').length > 0 ? (
+                  getBrands('ACTIVE').map((b) => (
+                    <option key={b.code} value={b.code}>
+                      {b.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="ALL">No brands configured (Add in Settings)</option>
+                )}
               </select>
             </div>
           </div>

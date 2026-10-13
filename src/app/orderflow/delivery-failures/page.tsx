@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
+import { getBrands } from '@/lib/db/brands-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
 import { DeliveryFailure, BrandCode, DeliveryFailureStatus, Order } from '@/lib/types';
@@ -609,9 +610,11 @@ export default function DeliveryFailuresPage() {
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
               <option value="ALL">All Brands</option>
-              <option value="FORYA">Forya</option>
-              <option value="RENEE">Renee</option>
-              <option value="PEE_SAFE">Pee Safe & FURR</option>
+              {getBrands('ACTIVE').map((b) => (
+                <option key={b.code} value={b.code}>
+                  {b.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -1056,9 +1059,11 @@ export default function DeliveryFailuresPage() {
                   onChange={(e) => setBrandCode(e.target.value as BrandCode)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-rose-500"
                 >
-                  <option value="FORYA">Forya</option>
-                  <option value="RENEE">Renee</option>
-                  <option value="PEE_SAFE">Pee Safe & FURR</option>
+                  {getBrands('ACTIVE').map((b) => (
+                    <option key={b.code} value={b.code}>
+                      {b.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

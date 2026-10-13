@@ -16,6 +16,8 @@ import {
   Check,
   Edit2,
   ChevronRight,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { User, UserRole, BrandCode } from '@/lib/types';
 import {
@@ -33,12 +35,15 @@ import {
   isSuperAdmin,
 } from '@/lib/permissions';
 import { db } from '@/lib/db/db-service';
+import { createUser as apiCreateUser, updateUser as apiUpdateUser, fetchUsersFromSupabase } from '@/lib/db/users-service';
+import { getBrands } from '@/lib/db/brands-service';
 import { toast } from '@/components/common/Toast';
 
 export default function StaffManagement() {
   const [users, setUsers] = useState<User[]>(() => db.getUsers());
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Form State
   const [staffName, setStaffName] = useState('');
@@ -49,9 +54,18 @@ export default function StaffManagement() {
   const [assignedTerritory, setAssignedTerritory] = useState('Kathmandu Valley');
   const [permissionsState, setPermissionsState] = useState<UserCustomPermissions>(FIELD_SALES_OFFICER_TEMPLATE);
 
-  const refreshUsers = () => {
-    setUsers([...db.getUsers()]);
+  const refreshUsers = async () => {
+    const supaUsers = await fetchUsersFromSupabase();
+    if (supaUsers && supaUsers.length > 0) {
+      setUsers([...supaUsers]);
+    } else {
+      setUsers([...db.getUsers()]);
+    }
   };
+
+  React.useEffect(() => {
+    refreshUsers();
+  }, []);
 
   const applyTemplate = (template: UserCustomPermissions, templateName: string) => {
     setPermissionsState(JSON.parse(JSON.stringify(template)));
@@ -63,7 +77,8 @@ export default function StaffManagement() {
     setStaffName('');
     setStaffEmail('');
     setStaffPhone('');
-    setStaffPassword('admin123');
+    setStaffPassword('');
+    setShowPassword(false);
     setReportsToId('user_devansh');
     setAssignedTerritory('Kathmandu Valley');
     setPermissionsState(JSON.parse(JSON.stringify(FIELD_SALES_OFFICER_TEMPLATE)));
@@ -76,6 +91,7 @@ export default function StaffManagement() {
     setStaffEmail(u.email);
     setStaffPhone(u.phone);
     setStaffPassword('');
+    setShowPassword(false);
     setReportsToId(u.reportsToId || '');
     setAssignedTerritory(u.territory || 'Kathmandu Valley');
     setPermissionsState(u.customPermissions ? JSON.parse(JSON.stringify(u.customPermissions)) : FIELD_SALES_OFFICER_TEMPLATE);
@@ -122,65 +138,95 @@ export default function StaffManagement() {
     });
   };
 
-  const handleSaveStaff = (e: React.FormEvent) => {
+  const handleSaveStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!staffName || !staffPhone || !staffEmail) {
       toast.error('Please fill in Name, Phone, and Email.');
       return;
     }
 
-    if (editingUser) {
-      db.updateUser(editingUser.id, {
-        fullName: staffName.trim(),
-        email: staffEmail.trim(),
-        phone: staffPhone.trim(),
-        reportsToId: reportsToId || undefined,
-        territory: assignedTerritory.trim(),
-        customPermissions: permissionsState,
-        ...(staffPassword.trim() ? { password: staffPassword.trim() } : {}),
-      });
-      toast.success(`Updated account for ${staffName}.`);
-    } else {
-      // Determine inferred legacy role for backward compatibility
-      let inferredRole: UserRole = 'SALES_OFFICER';
-      if (permissionsState.settings?.access !== 'HIDDEN') inferredRole = 'ADMIN';
-      else if (permissionsState.orderflow?.access !== 'HIDDEN' && permissionsState.beat_plans?.access === 'HIDDEN') inferredRole = 'DATA_ENTRY';
-      else if (permissionsState.beat_plans?.scope === 'TEAM' || permissionsState.beat_plans?.scope === 'ALL') inferredRole = 'ADMIN';
-
-      db.addNewUser({
-        fullName: staffName.trim(),
-        email: staffEmail.trim(),
-        phone: staffPhone.trim(),
-        password: staffPassword.trim() || 'password123',
-        role: inferredRole,
-        territory: assignedTerritory.trim() || 'Kathmandu Beat',
-        assignedBrands: ['ALL', 'FORYA', 'PEE_SAFE', 'RENEE'],
-        reportsToId: reportsToId || undefined,
-        customPermissions: permissionsState,
-        active: true,
-        permissions: {
-          canViewAnalytics: true,
-          canExportSheets: permissionsState.settings?.access !== 'HIDDEN',
-          canManageDispatches: permissionsState.dispatches?.access !== 'HIDDEN',
-          canManageCheques: permissionsState.cheque_tracker?.access !== 'HIDDEN',
-          canApproveSkips: permissionsState.beat_plans?.actions.includes('EDIT'),
-          canManageStaff: false,
-          canConfigureSettings: permissionsState.settings?.access !== 'HIDDEN',
-        },
-      });
-      toast.success(`Staff account created for ${staffName}.`);
+    if (!editingUser) {
+      if (!staffPassword.trim() || staffPassword.trim().length < 8) {
+        toast.error('Password must be at least 8 characters long.');
+        return;
+      }
+    } else if (staffPassword.trim() && staffPassword.trim().length < 8) {
+      toast.error('Password must be at least 8 characters long.');
+      return;
     }
 
-    setShowAddStaffModal(false);
-    refreshUsers();
+    const cleanEmail = staffEmail.toLowerCase().trim();
+    const cleanPhone = staffPhone.trim();
+    const cleanName = staffName.trim();
+    const cleanTerritory = assignedTerritory.trim() || 'Kathmandu Valley';
+
+    try {
+      if (editingUser) {
+        const updates: Partial<User> = {
+          fullName: cleanName,
+          email: cleanEmail,
+          phone: cleanPhone,
+          reportsToId: reportsToId || undefined,
+          territory: cleanTerritory,
+          customPermissions: permissionsState,
+          ...(staffPassword.trim() ? { password: staffPassword.trim() } : {}),
+        };
+        db.updateUser(editingUser.id, updates);
+        await apiUpdateUser(editingUser.id, updates);
+        toast.success(`Updated account for ${cleanName}.`);
+      } else {
+        let inferredRole: UserRole = 'SALES_OFFICER';
+        if (permissionsState.settings?.access !== 'HIDDEN') inferredRole = 'ADMIN';
+        else if (permissionsState.orderflow?.access !== 'HIDDEN' && permissionsState.beat_plans?.access === 'HIDDEN') inferredRole = 'DATA_ENTRY';
+        else if (permissionsState.beat_plans?.scope === 'TEAM' || permissionsState.beat_plans?.scope === 'ALL') inferredRole = 'ADMIN';
+
+        const activeBrands = getBrands('ACTIVE').map((b) => b.code);
+        const assignedBrands = activeBrands.length > 0 ? (activeBrands as any) : ['ALL'];
+
+        const newId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        const newUserObj: User = {
+          id: newId,
+          fullName: cleanName,
+          email: cleanEmail,
+          phone: cleanPhone,
+          password: staffPassword.trim(),
+          role: inferredRole,
+          territory: cleanTerritory,
+          assignedBrands: assignedBrands,
+          reportsToId: reportsToId || undefined,
+          customPermissions: permissionsState,
+          active: true,
+          permissions: {
+            canViewAnalytics: true,
+            canExportSheets: permissionsState.settings?.access !== 'HIDDEN',
+            canManageDispatches: permissionsState.dispatches?.access !== 'HIDDEN',
+            canManageCheques: permissionsState.cheque_tracker?.access !== 'HIDDEN',
+            canApproveSkips: permissionsState.beat_plans?.actions.includes('EDIT'),
+            canManageStaff: false,
+            canConfigureSettings: permissionsState.settings?.access !== 'HIDDEN',
+          },
+        };
+
+        db.addNewUser(newUserObj);
+        await apiCreateUser(newUserObj);
+        toast.success(`Staff account created for ${cleanName}. Login enabled immediately.`);
+      }
+
+      setShowAddStaffModal(false);
+      refreshUsers();
+    } catch (err: any) {
+      toast.error('Failed to save staff user: ' + (err?.message || 'Unknown error'));
+    }
   };
 
-  const handleToggleActive = (user: User) => {
+  const handleToggleActive = async (user: User) => {
     const updatedStatus = !(user.active !== false);
     user.active = updatedStatus;
     if (!updatedStatus) {
       user.deactivatedAt = new Date().toISOString();
     }
+    db.updateUser(user.id, { active: updatedStatus, deactivatedAt: user.deactivatedAt });
+    await apiUpdateUser(user.id, { active: updatedStatus, deactivatedAt: user.deactivatedAt });
     toast.info(`${user.fullName} is now ${updatedStatus ? 'Active' : 'Deactivated'}.`);
     refreshUsers();
   };
@@ -396,15 +442,32 @@ export default function StaffManagement() {
                   </div>
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
-                      {editingUser ? 'Update Password (leave blank to keep current)' : 'Password *'}
+                      {editingUser ? 'Update Password (leave blank to keep current)' : 'Password * (min 8 characters)'}
                     </label>
-                    <input
-                      type="text"
-                      value={staffPassword}
-                      onChange={(e) => setStaffPassword(e.target.value)}
-                      placeholder={editingUser ? 'Unchanged' : 'Super Admin sets initial password'}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={staffPassword}
+                        onChange={(e) => setStaffPassword(e.target.value)}
+                        placeholder={editingUser ? 'Unchanged' : 'Minimum 8 characters'}
+                        minLength={editingUser ? undefined : 8}
+                        required={!editingUser}
+                        className="w-full px-3 py-2 pr-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                        aria-label="Toggle password visibility"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    {staffPassword && staffPassword.length < 8 && (
+                      <p className="text-red-500 text-xs mt-1 font-semibold">
+                        Password must be at least 8 characters
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Reports To (Manager)</label>

@@ -34,8 +34,10 @@ import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
 import ConfirmModal from '@/components/common/ConfirmModal';
 import StatusBadge from '@/components/common/StatusBadge';
+import { useSubmitGuard } from '@/hooks/useSubmitGuard';
 
 function ChequesContent() {
+  const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const searchParams = useSearchParams();
   const searchParam = searchParams?.get('search') || searchParams?.get('id') || searchParams?.get('chequeNumber');
 
@@ -94,33 +96,37 @@ function ChequesContent() {
 
   const handleUpdateStatus = (status: ChequeStatus) => {
     if (!selectedCheque) return;
-    db.updateChequeStatus(selectedCheque.id, status, {
-      handedOverTo: status === 'HANDED_OVER_AT_OFFICE' ? handoverTo : undefined,
-      delayedReason: status === 'DELAYED' ? delayReason : undefined,
-      newExpectedDate: status === 'DELAYED' ? newDelayDate : undefined,
-      notes: actionNotes,
+    guardedSubmit(async () => {
+      db.updateChequeStatus(selectedCheque.id, status, {
+        handedOverTo: status === 'HANDED_OVER_AT_OFFICE' ? handoverTo : undefined,
+        delayedReason: status === 'DELAYED' ? delayReason : undefined,
+        newExpectedDate: status === 'DELAYED' ? newDelayDate : undefined,
+        notes: actionNotes,
+      });
+      setActionType('NONE');
+      setActionNotes('');
+      refreshCheques();
+      toast.success(`✓ Cheque status updated to ${status}.`);
     });
-    setActionType('NONE');
-    setActionNotes('');
-    refreshCheques();
-    toast.success(`✓ Cheque status updated to ${status}.`);
   };
 
   const handleConfirmCashCheque = () => {
     if (!selectedCheque) return;
-    db.updateChequeStatus(selectedCheque.id, 'CASHED', {
-      notes: actionNotes || 'Marked as cashed by ' + currentUser.fullName,
+    guardedSubmit(async () => {
+      db.updateChequeStatus(selectedCheque.id, 'CASHED', {
+        notes: actionNotes || 'Marked as cashed by ' + currentUser.fullName,
+      });
+      setRecentCashedId(selectedCheque.id);
+      setTimeout(() => setRecentCashedId(null), 3000);
+      setShowCashedConfirm(false);
+      setActionType('NONE');
+      setActionNotes('');
+      refreshCheques();
+      toast.success(
+        `✓ Cheque ₹${selectedCheque.amount.toLocaleString()} cashed`,
+        `${selectedCheque.storeName} payment updated`
+      );
     });
-    setRecentCashedId(selectedCheque.id);
-    setTimeout(() => setRecentCashedId(null), 3000);
-    setShowCashedConfirm(false);
-    setActionType('NONE');
-    setActionNotes('');
-    refreshCheques();
-    toast.success(
-      `✓ Cheque ₹${selectedCheque.amount.toLocaleString()} cashed`,
-      `${selectedCheque.storeName} payment updated`
-    );
   };
 
   const handleCreateCheque = () => {
@@ -145,30 +151,32 @@ function ChequesContent() {
       return;
     }
 
-    db.addCheque({
-      entityType: 'BRANCH',
-      entityId: 'br_bb_maharaj',
-      storeName: newStoreName,
-      chequeNumber: newChequeNumber.trim(),
-      amount: parseFloat(newAmount),
-      bankName: newBank,
-      receivedDateAd: getTodayAd(),
-      receivedDateBs: getTodayBs(),
-      cashDateAd: newCashDate,
-      cashDateBs: newCashDate ? formatBsDateOnly(newCashDate) : getTodayBs(),
-      photoUrl:
-        newChequePhoto ||
-        'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=60',
-      status: 'COLLECTED_IN_FIELD',
-      notes: 'Collected directly during visit.',
+    guardedSubmit(async () => {
+      db.addCheque({
+        entityType: 'BRANCH',
+        entityId: 'br_bb_maharaj',
+        storeName: newStoreName,
+        chequeNumber: newChequeNumber.trim(),
+        amount: parseFloat(newAmount),
+        bankName: newBank,
+        receivedDateAd: getTodayAd(),
+        receivedDateBs: getTodayBs(),
+        cashDateAd: newCashDate,
+        cashDateBs: newCashDate ? formatBsDateOnly(newCashDate) : getTodayBs(),
+        photoUrl:
+          newChequePhoto ||
+          'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=60',
+        status: 'COLLECTED_IN_FIELD',
+        notes: 'Collected directly during visit.',
+      });
+      setShowAddModal(false);
+      setNewChequeNumber('');
+      setNewAmount('');
+      setNewChequePhoto('');
+      setFormErrors({});
+      refreshCheques();
+      toast.success('✓ Cheque logged successfully!');
     });
-    setShowAddModal(false);
-    setNewChequeNumber('');
-    setNewAmount('');
-    setNewChequePhoto('');
-    setFormErrors({});
-    refreshCheques();
-    toast.success('✓ Cheque logged successfully!');
   };
 
   const isSalesOfficer = currentUser.role === 'SALES_OFFICER';
@@ -208,26 +216,30 @@ function ChequesContent() {
 
   const handleBulkMarkCashed = () => {
     if (selectedIds.length === 0) return;
-    selectedIds.forEach((id) => {
-      db.updateChequeStatus(id, 'CASHED', {
-        notes: 'Bulk marked as cashed by ' + currentUser.fullName,
+    guardedSubmit(async () => {
+      selectedIds.forEach((id) => {
+        db.updateChequeStatus(id, 'CASHED', {
+          notes: 'Bulk marked as cashed by ' + currentUser.fullName,
+        });
       });
+      toast.success(`✓ Marked ${selectedIds.length} cheques as Cashed.`);
+      handleClearSelection();
+      refreshCheques();
     });
-    toast.success(`✓ Marked ${selectedIds.length} cheques as Cashed.`);
-    handleClearSelection();
-    refreshCheques();
   };
 
   const handleBulkEscalate = () => {
     if (selectedIds.length === 0) return;
-    selectedIds.forEach((id) => {
-      db.updateChequeStatus(id, 'BOUNCED', {
-        notes: 'Bulk escalation / flagged by ' + currentUser.fullName,
+    guardedSubmit(async () => {
+      selectedIds.forEach((id) => {
+        db.updateChequeStatus(id, 'BOUNCED', {
+          notes: 'Bulk escalation / flagged by ' + currentUser.fullName,
+        });
       });
+      toast.error(`🚨 Escalated ${selectedIds.length} cheques as Bounced / Incident.`);
+      handleClearSelection();
+      refreshCheques();
     });
-    toast.error(`🚨 Escalated ${selectedIds.length} cheques as Bounced / Incident.`);
-    handleClearSelection();
-    refreshCheques();
   };
 
   const handleBulkExportCSV = () => {
@@ -832,10 +844,13 @@ function ChequesContent() {
               </button>
               <button
                 onClick={handleCreateCheque}
-                disabled={!newChequeNumber || !newAmount}
-                className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow disabled:opacity-50"
+                disabled={isSubmitting || !newChequeNumber || !newAmount}
+                className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow disabled:opacity-50 flex items-center gap-2"
               >
-                Save Cheque
+                {isSubmitting && (
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                )}
+                {isSubmitting ? 'Saving...' : 'Save Cheque'}
               </button>
             </div>
           </div>

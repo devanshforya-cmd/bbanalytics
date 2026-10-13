@@ -51,8 +51,8 @@ export async function verifyPassword(inputPassword: string, storedHashOrPlain?: 
   if (trimmedInput === storedHashOrPlain) return true;
   if (trimmedInput.toLowerCase() === storedHashOrPlain.toLowerCase()) return true;
 
-  // Bcrypt verification ($2a$ or $2b$)
-  if (storedHashOrPlain.startsWith('$2a$') || storedHashOrPlain.startsWith('$2b$')) {
+  // Bcrypt verification ($2a$, $2b$, $2y$)
+  if (storedHashOrPlain.startsWith('$2')) {
     try {
       const match = await bcrypt.compare(trimmedInput, storedHashOrPlain);
       if (match) return true;

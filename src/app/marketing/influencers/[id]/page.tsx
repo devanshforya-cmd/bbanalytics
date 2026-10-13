@@ -12,6 +12,7 @@ import {
   Order,
   BrandCode,
 } from '@/lib/types';
+import { getBrands } from '@/lib/db/brands-service';
 import { getTodayAd, getTodayBs, adToBs } from '@/lib/nepali-calendar';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
@@ -514,10 +515,11 @@ export default function InfluencerDetailPage() {
                     onChange={(e) => setContentBrand(e.target.value as BrandCode)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs outline-none"
                   >
-                    <option value="FORYA">Forya</option>
-                    <option value="PEE_SAFE">Pee Safe</option>
-                    <option value="FURR">FURR</option>
-                    <option value="RENEE">Renee</option>
+                    {getBrands('ACTIVE').map((b) => (
+                      <option key={b.code} value={b.code}>
+                        {b.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

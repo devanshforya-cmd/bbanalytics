@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
+import { useSubmitGuard } from '@/hooks/useSubmitGuard';
 
 const SAMPLE_CHAT_1 = `[11:32 AM, 9/8/2026] Sita Gurung: Namaste! I want to order 2 bottles of Forya hair serum.
 [11:33 AM, 9/8/2026] Brand Bucket: Namaste Sita ji! Yes sure. Please send your delivery address and phone number.
@@ -117,6 +118,7 @@ const BRAND_COLORS: Record<string, { bg: string; text: string; border: string }>
 };
 
 export default function ExtractorPage() {
+  const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const [chatText, setChatText] = useState(SAMPLE_CHAT_1);
   const [extractedOrders, setExtractedOrders] = useState<ExtractedOrderResult[]>([]);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
@@ -354,109 +356,111 @@ export default function ExtractorPage() {
   const executePushOrders = (ordersToPush: ExtractedOrderResult[]) => {
     if (ordersToPush.length === 0) return;
 
-    const pushedOrderNumbers: string[] = [];
-    const newHistoryItems: ExtractionHistoryItem[] = [];
+    guardedSubmit(async () => {
+      const pushedOrderNumbers: string[] = [];
+      const newHistoryItems: ExtractionHistoryItem[] = [];
 
-    ordersToPush.forEach((ord, index) => {
-      const orderNumber = `BB-WA-${(Date.now() + index).toString().slice(-4)}`;
-      pushedOrderNumbers.push(orderNumber);
+      ordersToPush.forEach((ord, index) => {
+        const orderNumber = `BB-WA-${(Date.now() + index).toString().slice(-4)}`;
+        pushedOrderNumbers.push(orderNumber);
 
-      const custName = ord.customerName.value || (ord.isMarketing && ord.influencerName ? `${ord.influencerName} (PR)` : 'Customer');
-      const custPhone = ord.customerPhone.value || '9800000000';
-      const orderBrand = ord.brandCode.value;
-      const orderCity = ord.city.value || 'Kathmandu';
-      const orderAddress = ord.address.value || orderCity;
-      const amount = ord.isMarketing ? 0 : ord.totalAmount.value;
+        const custName = ord.customerName.value || (ord.isMarketing && ord.influencerName ? `${ord.influencerName} (PR)` : 'Customer');
+        const custPhone = ord.customerPhone.value || '9800000000';
+        const orderBrand = ord.brandCode.value;
+        const orderCity = ord.city.value || 'Kathmandu';
+        const orderAddress = ord.address.value || orderCity;
+        const amount = ord.isMarketing ? 0 : ord.totalAmount.value;
 
-      // 1. Add order to DB
-      db.addOrder({
-        orderNumber,
-        brandCode: orderBrand,
-        orderDateAd: ord.orderDateAd.value || getTodayAd(),
-        orderDateBs: ord.orderDateBs.value || getTodayBs(),
-        platform: 'WhatsApp',
-        customerName: custName,
-        customerPhone: custPhone,
-        province: orderCity.toLowerCase().includes('pokhara') ? 'Gandaki Province' : 'Bagmati Province',
-        district: orderCity,
-        address: orderAddress,
-        deliveryMethod: (ord.deliveryMethod.value as any) || 'Pathao',
-        paymentTerms: ord.isMarketing ? 'Advance' : ((ord.paymentTerms.value as any) || 'COD'),
-        orderType: 'NEW',
-        totalAmount: amount,
-        statedPrice: ord.statedPrice.value || undefined,
-        status: 'PENDING',
-        source: 'WHATSAPP_EXTRACTOR',
-        notes: `Extracted via WhatsApp Extractor. ${ord.combo.value !== 'None (Standard SKU)' ? `Combo: ${ord.combo.value}` : ''}`,
-        isMarketing: ord.isMarketing,
-        influencerId: ord.influencerId,
-        influencerHandle: ord.influencerName,
-        items: ord.products.map((p) => ({
-          productId: p.productId || 'prod_gen',
-          productName: p.name,
-          brandCode: p.brandCode,
-          quantity: p.quantity,
-          unitPrice: p.unitPrice,
-          totalPrice: ord.isMarketing ? 0 : p.unitPrice * p.quantity,
-        })),
-      });
+        // 1. Add order to DB
+        db.addOrder({
+          orderNumber,
+          brandCode: orderBrand,
+          orderDateAd: ord.orderDateAd.value || getTodayAd(),
+          orderDateBs: ord.orderDateBs.value || getTodayBs(),
+          platform: 'WhatsApp',
+          customerName: custName,
+          customerPhone: custPhone,
+          province: orderCity.toLowerCase().includes('pokhara') ? 'Gandaki Province' : 'Bagmati Province',
+          district: orderCity,
+          address: orderAddress,
+          deliveryMethod: (ord.deliveryMethod.value as any) || 'Pathao',
+          paymentTerms: ord.isMarketing ? 'Advance' : ((ord.paymentTerms.value as any) || 'COD'),
+          orderType: 'NEW',
+          totalAmount: amount,
+          statedPrice: ord.statedPrice.value || undefined,
+          status: 'PENDING',
+          source: 'WHATSAPP_EXTRACTOR',
+          notes: `Extracted via WhatsApp Extractor. ${ord.combo.value !== 'None (Standard SKU)' ? `Combo: ${ord.combo.value}` : ''}`,
+          isMarketing: ord.isMarketing,
+          influencerId: ord.influencerId,
+          influencerHandle: ord.influencerName,
+          items: ord.products.map((p) => ({
+            productId: p.productId || 'prod_gen',
+            productName: p.name,
+            brandCode: p.brandCode,
+            quantity: p.quantity,
+            unitPrice: p.unitPrice,
+            totalPrice: ord.isMarketing ? 0 : p.unitPrice * p.quantity,
+          })),
+        });
 
-      // 2. Customer 360 profile update (skip if marketing)
-      if (!ord.isMarketing) {
-        const existingCust = db.getCustomerByPhone(custPhone);
-        if (existingCust) {
-          db.updateCustomer(existingCust.id, {
-            name: custName,
-            city: orderCity || existingCust.city,
-            lastOrderDate: ord.orderDateAd.value || getTodayAd(),
-            totalOrders: (existingCust.totalOrders || 0) + 1,
-            karmaScore: Math.min(100, (existingCust.karmaScore || 85) + 1),
-            brandsPurchased: Array.from(new Set([...existingCust.brandsPurchased, orderBrand])),
-          });
-        } else {
-          db.addCustomer({
-            phone: custPhone,
-            name: custName,
-            city: orderCity,
-            province: 'Bagmati Province',
-            firstOrderDate: ord.orderDateAd.value || getTodayAd(),
-            lastOrderDate: ord.orderDateAd.value || getTodayAd(),
-            totalOrders: 1,
-            totalDelivered: 0,
-            totalReturns: 0,
-            totalDeliveryFailures: 0,
-            totalCancellations: 0,
-            totalComplaints: 0,
-            totalReviews: 0,
-            karmaScore: 85,
-            segment: 'NEW',
-            activeFlags: [],
-            brandsPurchased: [orderBrand],
-          });
+        // 2. Customer 360 profile update (skip if marketing)
+        if (!ord.isMarketing) {
+          const existingCust = db.getCustomerByPhone(custPhone);
+          if (existingCust) {
+            db.updateCustomer(existingCust.id, {
+              name: custName,
+              city: orderCity || existingCust.city,
+              lastOrderDate: ord.orderDateAd.value || getTodayAd(),
+              totalOrders: (existingCust.totalOrders || 0) + 1,
+              karmaScore: Math.min(100, (existingCust.karmaScore || 85) + 1),
+              brandsPurchased: Array.from(new Set([...existingCust.brandsPurchased, orderBrand])),
+            });
+          } else {
+            db.addCustomer({
+              phone: custPhone,
+              name: custName,
+              city: orderCity,
+              province: 'Bagmati Province',
+              firstOrderDate: ord.orderDateAd.value || getTodayAd(),
+              lastOrderDate: ord.orderDateAd.value || getTodayAd(),
+              totalOrders: 1,
+              totalDelivered: 0,
+              totalReturns: 0,
+              totalDeliveryFailures: 0,
+              totalCancellations: 0,
+              totalComplaints: 0,
+              totalReviews: 0,
+              karmaScore: 85,
+              segment: 'NEW',
+              activeFlags: [],
+              brandsPurchased: [orderBrand],
+            });
+          }
         }
-      }
 
-      // History item
-      newHistoryItems.push({
-        id: `eh_${Date.now()}_${index}`,
-        timestamp: 'Just now',
-        customerName: custName,
-        customerPhone: custPhone,
-        brandCode: orderBrand,
-        productSummary: ord.products.map((p) => `${p.name} (${p.quantity})`).join(', ') || 'Catalog SKU',
-        totalAmount: amount,
-        status: 'PUSHED',
-        orderNumber,
-        rawText: ord.rawText,
+        // History item
+        newHistoryItems.push({
+          id: `eh_${Date.now()}_${index}`,
+          timestamp: 'Just now',
+          customerName: custName,
+          customerPhone: custPhone,
+          brandCode: orderBrand,
+          productSummary: ord.products.map((p) => `${p.name} (${p.quantity})`).join(', ') || 'Catalog SKU',
+          totalAmount: amount,
+          status: 'PUSHED',
+          orderNumber,
+          rawText: ord.rawText,
+        });
       });
-    });
 
-    saveHistory([...newHistoryItems, ...history.slice(0, 20)]);
-    setPushedSummary({ count: ordersToPush.length, orderNumbers: pushedOrderNumbers });
-    setExtractedOrders((prev) => prev.filter((o) => !ordersToPush.some((p) => p.id === o.id)));
-    setSelectedOrderIds(new Set());
-    setShowConfirmModal(false);
-    toast.success(`Successfully pushed ${ordersToPush.length} order(s) into OrderFlow!`);
+      saveHistory([...newHistoryItems, ...history.slice(0, 20)]);
+      setPushedSummary({ count: ordersToPush.length, orderNumbers: pushedOrderNumbers });
+      setExtractedOrders((prev) => prev.filter((o) => !ordersToPush.some((p) => p.id === o.id)));
+      setSelectedOrderIds(new Set());
+      setShowConfirmModal(false);
+      toast.success(`Successfully pushed ${ordersToPush.length} order(s) into OrderFlow!`);
+    });
   };
 
   const renderConfidenceBadge = (confidence?: Confidence) => {
@@ -1039,10 +1043,15 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         ) : (
                           <button
                             onClick={() => executePushOrders([ord])}
-                            className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition flex items-center gap-1.5 shadow-xs"
+                            disabled={isSubmitting}
+                            className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:bg-blue-300 transition flex items-center gap-1.5 shadow-xs"
                           >
-                            <Check className="w-3.5 h-3.5" />
-                            Push This Order
+                            {isSubmitting ? (
+                              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                            ) : (
+                              <Check className="w-3.5 h-3.5" />
+                            )}
+                            {isSubmitting ? 'Pushing...' : 'Push This Order'}
                           </button>
                         )}
                       </div>
@@ -1167,9 +1176,13 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         : extractedOrders.filter((o) => selectedOrderIds.has(o.id));
                     executePushOrders(targets);
                   }}
-                  className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 shadow-xs"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 disabled:bg-emerald-300 shadow-xs flex items-center gap-1.5"
                 >
-                  Confirm &amp; Push Orders
+                  {isSubmitting && (
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                  )}
+                  {isSubmitting ? 'Pushing Orders...' : 'Confirm & Push Orders'}
                 </button>
               </div>
             </div>

@@ -19,6 +19,7 @@ import InlinePhoneInput from '@/components/common/InlinePhoneInput';
 import SmartDropdown from '@/components/common/SmartDropdown';
 import DraftResumeBanner from '@/components/common/DraftResumeBanner';
 import { useAutoSave } from '@/hooks/useAutoSave';
+import { useSubmitGuard } from '@/hooks/useSubmitGuard';
 import {
   ClipboardPen,
   CheckCircle,
@@ -80,6 +81,7 @@ interface OrderItemRow {
 }
 
 export default function ManualOrderEntryPage() {
+  const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const [currentUser] = useState(() => db.getCurrentUser());
   const isBrandManager = currentUser.role === 'BRAND_MANAGER';
   const assignedBrands = currentUser.assignedBrands || [];
@@ -388,131 +390,133 @@ export default function ManualOrderEntryPage() {
 
   // Step 2: Confirm & Save Order (10c)
   const handleConfirmAndSave = () => {
-    const items = orderItems.map((item) => {
-      const p = products.find((prod) => prod.id === item.productId);
-      const unitPrice = item.overridePrice ?? (p?.mrp || 0);
-      return {
-        productId: item.productId,
-        productName: p?.name || 'Product',
-        brandCode: p?.brandCode || brandCode,
-        quantity: item.quantity,
-        unitPrice,
-        totalPrice: unitPrice * item.quantity,
-      };
-    });
+    guardedSubmit(async () => {
+      const items = orderItems.map((item) => {
+        const p = products.find((prod) => prod.id === item.productId);
+        const unitPrice = item.overridePrice ?? (p?.mrp || 0);
+        return {
+          productId: item.productId,
+          productName: p?.name || 'Product',
+          brandCode: p?.brandCode || brandCode,
+          quantity: item.quantity,
+          unitPrice,
+          totalPrice: unitPrice * item.quantity,
+        };
+      });
 
-    const orderNumber = isMarketing ? `BB-MKT-${Date.now().toString().slice(-4)}` : `BB-MAN-${Date.now().toString().slice(-4)}`;
+      const orderNumber = isMarketing ? `BB-MKT-${Date.now().toString().slice(-4)}` : `BB-MAN-${Date.now().toString().slice(-4)}`;
 
-    // 1. Auto-create or resolve Influencer if marketing send
-    let finalInfluencerId = influencerId;
-    if (isMarketing) {
-      if (!finalInfluencerId && influencerName.trim()) {
-        const createdInf = db.createInfluencer({
-          name: influencerName.trim(),
-          phone: influencerPhone.trim() || undefined,
-          platforms: [
-            {
-              platform: influencerPlatform,
-              handle: influencerHandle.trim() || `@${influencerName.toLowerCase().replace(/\s+/g, '')}`,
-            },
-          ],
-          city: district || 'Kathmandu',
-          category: 'Beauty',
-          qualityRating: 'NOT_RATED',
-          notes: influencerNotes.trim() || 'Created from Manual Order Entry',
-          isActive: true,
-        });
-        finalInfluencerId = createdInf.id;
+      // 1. Auto-create or resolve Influencer if marketing send
+      let finalInfluencerId = influencerId;
+      if (isMarketing) {
+        if (!finalInfluencerId && influencerName.trim()) {
+          const createdInf = db.createInfluencer({
+            name: influencerName.trim(),
+            phone: influencerPhone.trim() || undefined,
+            platforms: [
+              {
+                platform: influencerPlatform,
+                handle: influencerHandle.trim() || `@${influencerName.toLowerCase().replace(/\s+/g, '')}`,
+              },
+            ],
+            city: district || 'Kathmandu',
+            category: 'Beauty',
+            qualityRating: 'NOT_RATED',
+            notes: influencerNotes.trim() || 'Created from Manual Order Entry',
+            isActive: true,
+          });
+          finalInfluencerId = createdInf.id;
+        }
+        // Increment total sends (Fix 71a)
+        if (finalInfluencerId) {
+          db.incrementInfluencerSends(finalInfluencerId);
+        }
       }
-      // Increment total sends (Fix 71a)
-      if (finalInfluencerId) {
-        db.incrementInfluencerSends(finalInfluencerId);
-      }
-    }
 
-    // 2. Add order to database
-    db.addOrder({
-      orderNumber,
-      brandCode,
-      orderDateAd,
-      orderDateBs,
-      platform: isMarketing ? influencerPlatform : platform,
-      customerName: customerName.trim() || (isMarketing ? `${influencerName.trim()} (PR)` : 'Customer'),
-      customerPhone: customerPhone.trim() || (isMarketing ? influencerPhone.trim() || '+977-9800000000' : '+977-9800000000'),
-      province,
-      district,
-      address: address.trim() || district,
-      deliveryMethod,
-      paymentTerms: isMarketing ? 'Advance' : paymentTerms,
-      orderType: existingCustomer ? 'REPEAT' : 'NEW',
-      totalAmount: isMarketing ? 0 : totalAmount,
-      status: 'PENDING',
-      source: 'MANUAL',
-      isMarketing,
-      influencerId: finalInfluencerId || undefined,
-      influencerHandle: influencerHandle.trim() || undefined,
-      notes: `${remarks ? remarks + '. ' : ''}${comboApplied ? `Combo: ${comboApplied.name}. ` : ''}${
-        isMarketing ? `[MARKETING SEND to ${influencerName} (${influencerHandle})] ${influencerNotes}` : ''
-      }`,
-      items,
-    });
-
-    // 2. Auto-update Customer 360 and Karma Score (+2 for order placed)
-    const karmaBoost = 2;
-    if (existingCustomer) {
-      const newKarma = Math.min(100, (existingCustomer.karmaScore || 85) + karmaBoost);
-      db.updateCustomer(existingCustomer.id, {
-        name: customerName.trim(),
-        city: district,
+      // 2. Add order to database
+      db.addOrder({
+        orderNumber,
+        brandCode,
+        orderDateAd,
+        orderDateBs,
+        platform: isMarketing ? influencerPlatform : platform,
+        customerName: customerName.trim() || (isMarketing ? `${influencerName.trim()} (PR)` : 'Customer'),
+        customerPhone: customerPhone.trim() || (isMarketing ? influencerPhone.trim() || '+977-9800000000' : '+977-9800000000'),
         province,
-        lastOrderDate: orderDateAd,
-        totalOrders: (existingCustomer.totalOrders || 0) + 1,
-        karmaScore: newKarma,
-        brandsPurchased: Array.from(new Set([...existingCustomer.brandsPurchased, brandCode])),
+        district,
+        address: address.trim() || district,
+        deliveryMethod,
+        paymentTerms: isMarketing ? 'Advance' : paymentTerms,
+        orderType: existingCustomer ? 'REPEAT' : 'NEW',
+        totalAmount: isMarketing ? 0 : totalAmount,
+        status: 'PENDING',
+        source: 'MANUAL',
+        isMarketing,
+        influencerId: finalInfluencerId || undefined,
+        influencerHandle: influencerHandle.trim() || undefined,
+        notes: `${remarks ? remarks + '. ' : ''}${comboApplied ? `Combo: ${comboApplied.name}. ` : ''}${
+          isMarketing ? `[MARKETING SEND to ${influencerName} (${influencerHandle})] ${influencerNotes}` : ''
+        }`,
+        items,
       });
-    } else {
-      db.addCustomer({
-        phone: customerPhone.trim(),
-        name: customerName.trim(),
-        city: district || 'Kathmandu',
-        province: province || 'Bagmati Province',
-        firstOrderDate: orderDateAd,
-        lastOrderDate: orderDateAd,
-        totalOrders: 1,
-        totalDelivered: 0,
-        totalReturns: 0,
-        totalDeliveryFailures: 0,
-        totalCancellations: 0,
-        totalComplaints: 0,
-        totalReviews: 0,
-        karmaScore: 85 + karmaBoost, // 87 karma points on first order!
-        segment: 'NEW',
-        activeFlags: [],
-        brandsPurchased: [brandCode],
-      });
-    }
 
-    // Save summary state for success UI
-    setSavedOrder({
-      orderNumber,
-      customerName: customerName.trim(),
-      customerPhone: customerPhone.trim(),
-      brandCode,
-      totalAmount,
-      items: items.map((i) => ({
-        name: i.productName,
-        quantity: i.quantity,
-        unitPrice: i.unitPrice,
-        totalPrice: i.totalPrice,
-      })),
-      deliveryMethod,
-      paymentTerms,
-      karmaAwarded: karmaBoost,
+      // 2. Auto-update Customer 360 and Karma Score (+2 for order placed)
+      const karmaBoost = 2;
+      if (existingCustomer) {
+        const newKarma = Math.min(100, (existingCustomer.karmaScore || 85) + karmaBoost);
+        db.updateCustomer(existingCustomer.id, {
+          name: customerName.trim(),
+          city: district,
+          province,
+          lastOrderDate: orderDateAd,
+          totalOrders: (existingCustomer.totalOrders || 0) + 1,
+          karmaScore: newKarma,
+          brandsPurchased: Array.from(new Set([...existingCustomer.brandsPurchased, brandCode])),
+        });
+      } else {
+        db.addCustomer({
+          phone: customerPhone.trim(),
+          name: customerName.trim(),
+          city: district || 'Kathmandu',
+          province: province || 'Bagmati Province',
+          firstOrderDate: orderDateAd,
+          lastOrderDate: orderDateAd,
+          totalOrders: 1,
+          totalDelivered: 0,
+          totalReturns: 0,
+          totalDeliveryFailures: 0,
+          totalCancellations: 0,
+          totalComplaints: 0,
+          totalReviews: 0,
+          karmaScore: 85 + karmaBoost, // 87 karma points on first order!
+          segment: 'NEW',
+          activeFlags: [],
+          brandsPurchased: [brandCode],
+        });
+      }
+
+      // Save summary state for success UI
+      setSavedOrder({
+        orderNumber,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        brandCode,
+        totalAmount,
+        items: items.map((i) => ({
+          name: i.productName,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          totalPrice: i.totalPrice,
+        })),
+        deliveryMethod,
+        paymentTerms,
+        karmaAwarded: karmaBoost,
+      });
+
+      toast.success(`Order ${orderNumber} created and confirmed successfully!`);
+      clearDraft();
+      setIsReviewing(false);
     });
-
-    toast.success(`Order ${orderNumber} created and confirmed successfully!`);
-    clearDraft();
-    setIsReviewing(false);
   };
 
   const handleResetForNewOrder = () => {
@@ -743,10 +747,15 @@ export default function ManualOrderEntryPage() {
             <button
               type="button"
               onClick={handleConfirmAndSave}
-              className="rounded-xl bg-emerald-600 px-7 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-emerald-700 active:scale-[0.99] flex items-center gap-2"
+              disabled={isSubmitting}
+              className="rounded-xl bg-emerald-600 px-7 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-emerald-700 disabled:bg-emerald-300 active:scale-[0.99] flex items-center gap-2"
             >
-              <Check className="h-4 w-4 stroke-[3]" />
-              Confirm & Save
+              {isSubmitting ? (
+                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+              ) : (
+                <Check className="h-4 w-4 stroke-[3]" />
+              )}
+              {isSubmitting ? 'Saving Order...' : 'Confirm & Save'}
             </button>
           </div>
         </div>

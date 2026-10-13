@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Tag, Plus, ExternalLink, Edit2, Ban, CheckCircle, X, Sparkles, AlertCircle } from 'lucide-react';
+import { Tag, Plus, Edit2, Ban, CheckCircle, X, Trash2, AlertTriangle, AlertCircle } from 'lucide-react';
 import { Brand, BrandCode, BrandCategory } from '@/lib/types';
 import { db } from '@/lib/db/db-service';
 import {
@@ -11,8 +11,12 @@ import {
   updateBrand as apiUpdateBrand,
   deactivateBrand as apiDeactivateBrand,
   reactivateBrand as apiReactivateBrand,
+  canDeleteBrand,
+  deleteBrand as apiDeleteBrand,
+  getBrandEntityCounts,
 } from '@/lib/db/brands-service';
 import { toast } from '@/components/common/Toast';
+import SubmitButton from '@/components/common/SubmitButton';
 
 export default function BrandSettings() {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -30,18 +34,25 @@ export default function BrandSettings() {
   const [brandCategory, setBrandCategory] = useState<BrandCategory>('Personal Care');
   const [principalCompany, setPrincipalCompany] = useState('');
 
+  // Delete State
+  const [brandToDelete, setBrandToDelete] = useState<Brand | null>(null);
+  const [deleteBlockedData, setDeleteBlockedData] = useState<{
+    reason: string;
+    counts: { orders: number; products: number; stockCounts: number; feedback: number; returns: number };
+  } | null>(null);
+  const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const loadBrands = async () => {
     setLoading(true);
     try {
       const fetched = await fetchBrandsFromSupabase();
-      if (fetched && fetched.length > 0) {
+      if (fetched) {
         setBrands(fetched);
-        // Also sync local db state
-        fetched.forEach((b) => {
-          if (!db.getBrands('ALL').some((existing) => existing.id === b.id || existing.code === b.code)) {
-            db.addBrand(b);
-          }
-        });
+        // Sync local memory and persistence
+        (db as any).brands = fetched;
+        (db as any).persistState();
       } else {
         setBrands(db.getBrands('ALL'));
       }
@@ -91,8 +102,7 @@ export default function BrandSettings() {
     setShowModal(true);
   };
 
-  const handleSaveBrand = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveBrand = async () => {
     if (!brandName.trim()) {
       toast.error('Brand name is required');
       return;
@@ -142,6 +152,14 @@ export default function BrandSettings() {
 
   const handleToggleActive = async (b: Brand) => {
     const isCurrentlyActive = b.isActive !== false && b.status !== 'ARCHIVED';
+
+    if (isCurrentlyActive) {
+      const confirmed = window.confirm(
+        `Deactivate "${b.name}"?\n\nIt will be hidden from all forms and filters. Historical data is preserved. You can reactivate anytime.`
+      );
+      if (!confirmed) return;
+    }
+
     try {
       if (isCurrentlyActive) {
         db.updateBrand(b.id, { isActive: false, status: 'ARCHIVED' });
@@ -155,6 +173,46 @@ export default function BrandSettings() {
       await loadBrands();
     } catch (err: any) {
       toast.error('Status update failed: ' + (err?.message || 'Unknown error'));
+    }
+  };
+
+  const handleDeleteClick = async (b: Brand) => {
+    setBrandToDelete(b);
+    try {
+      const check = await canDeleteBrand(b.code);
+      if (!check.canDelete) {
+        setDeleteBlockedData({
+          reason: check.reason || '',
+          counts: check.counts,
+        });
+        setShowConfirmDeleteModal(false);
+      } else {
+        setDeleteBlockedData(null);
+        setDeleteConfirmText('');
+        setShowConfirmDeleteModal(true);
+      }
+    } catch (err: any) {
+      toast.error('Could not verify brand data: ' + err?.message);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!brandToDelete || deleteConfirmText.trim().toUpperCase() !== 'DELETE') return;
+    setIsDeleting(true);
+    try {
+      const res = await apiDeleteBrand(brandToDelete.id, brandToDelete.code);
+      if (!res.success) {
+        toast.error(res.error || 'Failed to delete brand');
+      } else {
+        toast.success(`Brand "${brandToDelete.name}" permanently deleted.`);
+        setShowConfirmDeleteModal(false);
+        setBrandToDelete(null);
+        await loadBrands();
+      }
+    } catch (err: any) {
+      toast.error('Deletion error: ' + (err?.message || 'Unknown error'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -210,7 +268,7 @@ export default function BrandSettings() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {brands.map((b) => {
             const isActive = b.isActive !== false && b.status !== 'ARCHIVED';
-            const productCount = db.getProducts(b.code).length;
+            const entityCounts = getBrandEntityCounts(b.code);
 
             return (
               <div
@@ -218,7 +276,7 @@ export default function BrandSettings() {
                 className={`p-5 rounded-2xl border transition shadow-xs space-y-4 ${
                   isActive
                     ? 'bg-white border-slate-200 hover:border-slate-300'
-                    : 'bg-slate-50/70 border-slate-200/60 opacity-75'
+                    : 'bg-slate-50/80 border-slate-200 opacity-80'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -254,49 +312,59 @@ export default function BrandSettings() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Category</span>
-                    <div className="font-semibold text-slate-700 mt-0.5">{b.category || 'FMCG'}</div>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Products</span>
-                    <div className="font-semibold text-slate-700 mt-0.5">{productCount} SKUs</div>
-                  </div>
+                {/* Products, Orders, Stores Count metrics */}
+                <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 flex items-center justify-between text-[11px] text-slate-600 font-semibold">
+                  <span>Products: <strong className="text-slate-900">{entityCounts.products}</strong></span>
+                  <span>&bull;</span>
+                  <span>Orders: <strong className="text-slate-900">{entityCounts.orders}</strong></span>
+                  <span>&bull;</span>
+                  <span>Stores: <strong className="text-slate-900">{entityCounts.stores}</strong></span>
                 </div>
 
-                {/* Actions: Edit, Deactivate/Reactivate (cannot delete) */}
+                {/* Actions: Edit, Deactivate/Reactivate, Delete */}
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                   <button
                     type="button"
                     onClick={() => openEditModal(b)}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 transition"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 transition cursor-pointer"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span>Edit</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleToggleActive(b)}
-                    className={`inline-flex items-center gap-1 text-xs font-semibold transition px-2.5 py-1 rounded-lg border ${
-                      isActive
-                        ? 'text-amber-700 hover:bg-amber-50 border-amber-200 bg-amber-50/50'
-                        : 'text-emerald-700 hover:bg-emerald-50 border-emerald-200 bg-emerald-50/50'
-                    }`}
-                  >
-                    {isActive ? (
-                      <>
-                        <Ban className="w-3.5 h-3.5" />
-                        <span>Deactivate</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        <span>Reactivate</span>
-                      </>
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleActive(b)}
+                      className={`inline-flex items-center gap-1 text-xs font-semibold transition px-2.5 py-1 rounded-lg border cursor-pointer ${
+                        isActive
+                          ? 'text-amber-700 hover:bg-amber-50 border-amber-200 bg-amber-50/50'
+                          : 'text-emerald-700 hover:bg-emerald-50 border-emerald-200 bg-emerald-50/50'
+                      }`}
+                    >
+                      {isActive ? (
+                        <>
+                          <Ban className="w-3.5 h-3.5" />
+                          <span>Deactivate</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>Reactivate</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteClick(b)}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 hover:text-rose-800 hover:bg-rose-50 px-2 py-1 rounded-lg border border-transparent hover:border-rose-200 transition cursor-pointer"
+                      title="Permanently remove brand"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -315,13 +383,13 @@ export default function BrandSettings() {
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveBrand} className="space-y-4 pt-4 text-xs">
+            <div className="space-y-4 pt-4 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Brand Name *</label>
                 <input
@@ -396,18 +464,134 @@ export default function BrandSettings() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition cursor-pointer"
-                >
-                  {editingBrand ? 'Save Changes' : 'Save Brand'}
-                </button>
+                <SubmitButton
+                  onClick={handleSaveBrand}
+                  label={editingBrand ? 'Save Changes' : 'Save Brand'}
+                  loadingLabel="Saving..."
+                  variant="primary"
+                />
               </div>
-            </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Blocked Deletion Modal (Has associated data) */}
+      {deleteBlockedData && brandToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center gap-3 text-amber-600">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">
+                  Cannot Delete &ldquo;{brandToDelete.name}&rdquo;
+                </h3>
+                <p className="text-xs text-slate-500">Brand has active references in database</p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 text-xs text-slate-700 space-y-2">
+              <p className="font-semibold text-slate-800">
+                This brand is referenced by existing operations:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-slate-600 font-medium">
+                <li>{deleteBlockedData.counts.orders} orders</li>
+                <li>{deleteBlockedData.counts.products} products</li>
+                <li>{deleteBlockedData.counts.stockCounts} stock counts</li>
+                <li>{deleteBlockedData.counts.feedback} feedback entries</li>
+                <li>{deleteBlockedData.counts.returns} returns</li>
+              </ul>
+              <p className="text-[11px] text-slate-500 pt-1">
+                Deleting would destroy this operational history. Use <strong>Deactivate</strong> instead to hide the brand from all current forms while preserving history.
+              </p>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteBlockedData(null);
+                  setBrandToDelete(null);
+                }}
+                className="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const target = brandToDelete;
+                  setDeleteBlockedData(null);
+                  setBrandToDelete(null);
+                  handleToggleActive(target);
+                }}
+                className="px-4 py-2 font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs shadow-xs transition cursor-pointer"
+              >
+                Deactivate Instead
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal for Permanent Delete (0 data) */}
+      {showConfirmDeleteModal && brandToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">
+                  Delete &ldquo;{brandToDelete.name}&rdquo; permanently?
+                </h3>
+                <p className="text-xs text-slate-500">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              This brand has zero associated orders, products, or records. It will be permanently deleted from the database.
+            </p>
+
+            <div className="space-y-1.5 pt-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Type &ldquo;DELETE&rdquo; to confirm:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500 uppercase"
+              />
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmDeleteModal(false);
+                  setBrandToDelete(null);
+                }}
+                className="px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <SubmitButton
+                onClick={handlePermanentDelete}
+                label="🗑️ Delete Forever"
+                loadingLabel="Deleting..."
+                variant="danger"
+                disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
+              />
+            </div>
           </div>
         </div>
       )}

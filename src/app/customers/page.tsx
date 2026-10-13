@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import PageGuard from '@/components/common/PageGuard';
-import { Customer, CustomerSegment } from '@/lib/types';
+import { Customer, CustomerSegment, BrandCode } from '@/lib/types';
 import {
   Users,
   Search,
@@ -19,12 +19,13 @@ import {
   Check,
   Sparkles,
 } from 'lucide-react';
+import { getBrands } from '@/lib/db/brands-service';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>(db.getCustomers());
   const [searchTerm, setSearchTerm] = useState('');
   const [segmentFilter, setSegmentFilter] = useState<string>('ALL');
-  const [brandFilter, setBrandFilter] = useState<'ALL' | 'FORYA' | 'PEE_SAFE' | 'RENEE' | 'MULTI'>('ALL');
+  const [brandFilter, setBrandFilter] = useState<string>('ALL');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Add Customer Modal
@@ -125,15 +126,9 @@ export default function CustomersPage() {
     const matchesBrand =
       brandFilter === 'ALL'
         ? true
-        : brandFilter === 'FORYA'
-        ? (c.brandsPurchased || []).includes('FORYA')
-        : brandFilter === 'PEE_SAFE'
-        ? (c.brandsPurchased || []).includes('PEE_SAFE') || (c.brandsPurchased || []).includes('FURR')
-        : brandFilter === 'RENEE'
-        ? (c.brandsPurchased || []).includes('RENEE')
         : brandFilter === 'MULTI'
         ? (c.brandsPurchased || []).length >= 2
-        : true;
+        : (c.brandsPurchased || []).includes(brandFilter as BrandCode);
     return matchesSearch && matchesSegment && matchesBrand;
   });
 
@@ -225,20 +220,18 @@ export default function CustomersPage() {
           </select>
         </div>
 
-        {/* Brand Filter Pills (Fix 69a) */}
+        {/* Brand Filter Pills (Dynamic from Database) */}
         <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-100 text-xs font-semibold w-full">
           <span className="text-slate-400 mr-1 text-[11px] font-bold uppercase tracking-wider">Brand Scope:</span>
           {[
             { id: 'ALL', label: 'All Customers' },
-            { id: 'FORYA', label: 'Forya' },
-            { id: 'PEE_SAFE', label: 'Pee Safe / FURR' },
-            { id: 'RENEE', label: 'Renee' },
+            ...getBrands('ACTIVE').map((b) => ({ id: b.code, label: b.name })),
             { id: 'MULTI', label: 'Multi-Brand (2+)' },
           ].map((pill) => (
             <button
               key={pill.id}
-              onClick={() => setBrandFilter(pill.id as any)}
-              className={`px-3 py-1 rounded-lg transition text-xs ${
+              onClick={() => setBrandFilter(pill.id)}
+              className={`px-3 py-1 rounded-lg transition text-xs cursor-pointer ${
                 brandFilter === pill.id
                   ? 'bg-blue-600 text-white font-bold shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'

@@ -25,7 +25,8 @@ import PromotionManager from './components/PromotionManager';
 import DataImport from './components/DataImport';
 import SharedAccessSettings from './components/SharedAccessSettings';
 import FieldSalesSettings from './components/FieldSalesSettings';
-import { Compass } from 'lucide-react';
+import FeatureFlagsSettings from './components/FeatureFlagsSettings';
+import { Compass, Sliders } from 'lucide-react';
 
 export type SettingsTab =
   | 'STAFF'
@@ -37,7 +38,8 @@ export type SettingsTab =
   | 'TEMPLATES'
   | 'PROMOTIONS'
   | 'IMPORT'
-  | 'SHARED_ACCESS';
+  | 'SHARED_ACCESS'
+  | 'FEATURE_FLAGS';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('STAFF');
@@ -53,6 +55,7 @@ export default function SettingsPage() {
     { id: 'PROMOTIONS' as SettingsTab, label: 'Promotions', icon: Flame },
     { id: 'IMPORT' as SettingsTab, label: 'Data Import Tool', icon: FileSpreadsheet },
     { id: 'SHARED_ACCESS' as SettingsTab, label: 'Shared Access', icon: Share2 },
+    { id: 'FEATURE_FLAGS' as SettingsTab, label: 'Feature Flags (A/B)', icon: Sliders },
   ];
 
   return (
@@ -109,6 +112,7 @@ export default function SettingsPage() {
           {activeTab === 'PROMOTIONS' && <PromotionManager />}
           {activeTab === 'IMPORT' && <DataImport />}
           {activeTab === 'SHARED_ACCESS' && <SharedAccessSettings />}
+          {activeTab === 'FEATURE_FLAGS' && <FeatureFlagsSettings />}
         </div>
       </div>
     </PageGuard>

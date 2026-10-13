@@ -38,23 +38,24 @@ export default function BrandDropdown({
   useEffect(() => {
     async function load() {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('brands')
           .select('*')
           .eq('is_active', true)
           .order('name');
-        if (data && data.length > 0) {
-          setBrands(
-            data.map((b) => ({
+        if (!error && Array.isArray(data)) {
+          const activeOnly = data
+            .filter((b) => b.is_active !== false)
+            .map((b) => ({
               id: b.id,
               code: b.code,
               name: b.name,
               color: b.color || '#3b82f6',
               description: b.description || '',
-              isActive: b.is_active !== false,
-              status: b.is_active !== false ? 'ACTIVE' : 'ARCHIVED',
-            }))
-          );
+              isActive: true,
+              status: 'ACTIVE' as const,
+            }));
+          setBrands(activeOnly);
         } else {
           setBrands(db.getBrands('ACTIVE'));
         }
@@ -65,6 +66,16 @@ export default function BrandDropdown({
     load();
     setCurrentUser(db.getCurrentUser());
   }, []);
+
+  // Auto-reset if currently selected brand was deactivated or deleted
+  useEffect(() => {
+    if (brands.length > 0 && currentBrand !== 'ALL') {
+      const exists = brands.some((b) => b.code === currentBrand);
+      if (!exists) {
+        onBrandChange('ALL');
+      }
+    }
+  }, [brands, currentBrand, onBrandChange]);
 
   // Close when clicking outside
   useEffect(() => {

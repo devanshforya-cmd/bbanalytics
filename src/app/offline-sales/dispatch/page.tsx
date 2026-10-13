@@ -22,8 +22,10 @@ import {
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
 import ConfirmModal from '@/components/common/ConfirmModal';
+import { useSubmitGuard } from '@/hooks/useSubmitGuard';
 
 export default function DispatchPage() {
+  const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const [dispatches, setDispatches] = useState<Dispatch[]>(db.getDispatches());
   const unifiedStores = db.getStoresUnified();
   const products = db.getProducts();
@@ -74,41 +76,45 @@ export default function DispatchPage() {
   };
 
   const handleConfirmDispatch = () => {
-    const items: DispatchItem[] = selectedItems.map((si) => {
-      const p = products.find((prod) => prod.id === si.productId);
-      return {
-        productId: si.productId,
-        productName: p?.name || 'Product',
-        brandCode: p?.brandCode || 'FORYA',
-        quantity: si.quantity,
-      };
-    });
+    guardedSubmit(async () => {
+      const items: DispatchItem[] = selectedItems.map((si) => {
+        const p = products.find((prod) => prod.id === si.productId);
+        return {
+          productId: si.productId,
+          productName: p?.name || 'Product',
+          brandCode: p?.brandCode || 'FORYA',
+          quantity: si.quantity,
+        };
+      });
 
-    db.addDispatch({
-      distributorId: selectedStoreId,
-      distributorName: selectedStore?.name || 'Store',
-      branchId: selectedBranchId || undefined,
-      branchName: selectedBranchId ? branches.find((b) => b.id === selectedBranchId)?.name : undefined,
-      dispatchDateAd,
-      dispatchDateBs: formatDualDate(dispatchDateAd).split(' (')[0],
-      items,
-      notes: dispatchNotes,
-      documentUrl: dispatchPhotoUrl || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=60',
-    });
+      db.addDispatch({
+        distributorId: selectedStoreId,
+        distributorName: selectedStore?.name || 'Store',
+        branchId: selectedBranchId || undefined,
+        branchName: selectedBranchId ? branches.find((b) => b.id === selectedBranchId)?.name : undefined,
+        dispatchDateAd,
+        dispatchDateBs: formatDualDate(dispatchDateAd).split(' (')[0],
+        items,
+        notes: dispatchNotes,
+        documentUrl: dispatchPhotoUrl || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=60',
+      });
 
-    setDispatches([...db.getDispatches()]);
-    setShowConfirmModal(false);
-    setDispatchPhotoUrl('');
-    toast.success('Dispatch recorded successfully. Inventory ledger updated.');
+      setDispatches([...db.getDispatches()]);
+      setShowConfirmModal(false);
+      setDispatchPhotoUrl('');
+      toast.success('Dispatch recorded successfully. Inventory ledger updated.');
+    });
   };
 
   const handleSaveEdit = () => {
     if (!targetDispatch || !editItem || !editReason.trim()) return;
-    db.editDispatchItem(targetDispatch.id, editItem.productId, editItem.quantity, editReason);
-    setDispatches([...db.getDispatches()]);
-    setShowEditModal(false);
-    setEditReason('');
-    toast.success('Dispatch quantity updated. Reason logged in audit trail.');
+    guardedSubmit(async () => {
+      db.editDispatchItem(targetDispatch.id, editItem.productId, editItem.quantity, editReason);
+      setDispatches([...db.getDispatches()]);
+      setShowEditModal(false);
+      setEditReason('');
+      toast.success('Dispatch quantity updated. Reason logged in audit trail.');
+    });
   };
 
   return (
@@ -500,10 +506,13 @@ export default function DispatchPage() {
               </button>
               <button
                 onClick={handleSaveEdit}
-                disabled={!editReason.trim()}
-                className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow disabled:opacity-50"
+                disabled={isSubmitting || !editReason.trim()}
+                className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow disabled:opacity-50 flex items-center gap-2"
               >
-                Save & Update Inventory
+                {isSubmitting && (
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                )}
+                {isSubmitting ? 'Saving...' : 'Save & Update Inventory'}
               </button>
             </div>
           </div>

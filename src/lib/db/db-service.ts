@@ -321,7 +321,9 @@ export class DatabaseService {
   // Brands Portfolio Management (Multi-Brand Distributor Engine)
   public getBrands(status?: 'ACTIVE' | 'ALL'): Brand[] {
     if (status === 'ACTIVE') {
-      return this.brands.filter((b) => b.status === 'ACTIVE' || !b.status);
+      return this.brands.filter(
+        (b) => b.status === 'ACTIVE' && b.isActive !== false && (b as any).is_active !== false
+      );
     }
     return this.brands;
   }
@@ -339,6 +341,11 @@ export class DatabaseService {
       this.persistState();
     }
     return brand;
+  }
+
+  public deleteBrand(brandId: string) {
+    this.brands = this.brands.filter((b) => b.id !== brandId && b.code !== brandId);
+    this.persistState();
   }
 
   // Active Brand & Calendar Modes
@@ -404,11 +411,11 @@ export class DatabaseService {
     return this.addNewUser(user);
   }
 
-  public addNewUser(user: Omit<User, 'id'>): User {
+  public addNewUser(user: Omit<User, 'id'> & { id?: string }): User {
     const newUser: User = {
       ...user,
-      id: `user_${Date.now()}`,
-      active: true,
+      id: user.id || `user_${Date.now()}`,
+      active: user.active !== false,
     };
     this.users.push(newUser);
     this.logActivity('CREATED_STAFF_ACCOUNT', 'USER', newUser.id, {

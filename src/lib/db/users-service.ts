@@ -55,31 +55,53 @@ export function getUserByEmailOrPhone(input: string): User | undefined {
   });
 }
 
+import bcrypt from 'bcryptjs';
+
 export async function createUser(user: User): Promise<User> {
-  inMemoryUsers.push(user);
+  let passwordHash = user.password || '';
+  if (passwordHash && !passwordHash.startsWith('$2a$') && !passwordHash.startsWith('$2b$')) {
+    passwordHash = await bcrypt.hash(passwordHash, 12);
+  }
+
+  const normalizedUser: User = {
+    ...user,
+    email: user.email.toLowerCase().trim(),
+    password: passwordHash,
+    active: user.active !== false,
+  };
+
+  inMemoryUsers.push(normalizedUser);
+
   try {
     const client = typeof window === 'undefined' ? supabaseAdmin : supabase;
-    await client.from('users').upsert({
-      id: user.id,
-      email: user.email,
-      phone: user.phone,
-      full_name: user.fullName,
-      role: user.role,
-      password_hash: user.password,
-      is_super_admin: user.isSuperAdmin,
-      is_active: user.active !== false,
-      duty_status: user.dutyStatus || 'ONLINE',
-      assigned_brands: user.assignedBrands || ['ALL'],
-      territory: user.territory,
-      reports_to_id: user.reportsToId,
-      permissions: user.permissions || {},
-      custom_permissions: user.customPermissions || {},
-      calendar_preference: user.calendarPreference || 'BS',
+    const { error } = await client.from('users').upsert({
+      id: normalizedUser.id,
+      name: normalizedUser.fullName,
+      full_name: normalizedUser.fullName,
+      email: normalizedUser.email,
+      phone: normalizedUser.phone,
+      role: normalizedUser.role,
+      password_hash: passwordHash,
+      is_super_admin: !!normalizedUser.isSuperAdmin,
+      is_active: true,
+      duty_status: normalizedUser.dutyStatus || 'ONLINE',
+      assigned_brands: normalizedUser.assignedBrands || ['ALL'],
+      assigned_territory: normalizedUser.territory || 'Kathmandu Valley',
+      territory: normalizedUser.territory || 'Kathmandu Valley',
+      reports_to_id: normalizedUser.reportsToId || null,
+      permissions: normalizedUser.permissions || {},
+      custom_permissions: normalizedUser.customPermissions || {},
+      calendar_preference: normalizedUser.calendarPreference || 'AD',
+      created_at: new Date().toISOString(),
     });
+
+    if (error) {
+      console.error('Supabase createUser error:', error);
+    }
   } catch (e) {
     console.warn('Supabase createUser error:', e);
   }
-  return user;
+  return normalizedUser;
 }
 
 export async function updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
@@ -89,14 +111,25 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
     try {
       const client = typeof window === 'undefined' ? supabaseAdmin : supabase;
       const dbUpdates: any = {};
-      if (updates.fullName) dbUpdates.full_name = updates.fullName;
-      if (updates.email) dbUpdates.email = updates.email;
+      if (updates.fullName) {
+        dbUpdates.name = updates.fullName;
+        dbUpdates.full_name = updates.fullName;
+      }
+      if (updates.email) dbUpdates.email = updates.email.toLowerCase().trim();
       if (updates.phone) dbUpdates.phone = updates.phone;
       if (updates.role) dbUpdates.role = updates.role;
       if (updates.dutyStatus) dbUpdates.duty_status = updates.dutyStatus;
       if (updates.active !== undefined) dbUpdates.is_active = updates.active;
       if (updates.permissions) dbUpdates.permissions = updates.permissions;
       if (updates.customPermissions) dbUpdates.custom_permissions = updates.customPermissions;
+      if (updates.password) {
+        let pwdHash = updates.password;
+        if (!pwdHash.startsWith('$2a$') && !pwdHash.startsWith('$2b$')) {
+          pwdHash = await bcrypt.hash(pwdHash, 12);
+        }
+        user.password = pwdHash;
+        dbUpdates.password_hash = pwdHash;
+      }
       await client.from('users').update(dbUpdates).eq('id', id);
     } catch (e) {
       console.warn('Supabase updateUser error:', e);
