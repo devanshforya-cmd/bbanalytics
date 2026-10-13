@@ -969,6 +969,8 @@ export interface StaffRoutePoint {
   departedAt?: string;
   durationMinutes?: number;
   status: 'COMPLETED' | 'IN_PROGRESS';
+  lat?: number;
+  lng?: number;
 }
 
 export interface StaffLiveLocation {

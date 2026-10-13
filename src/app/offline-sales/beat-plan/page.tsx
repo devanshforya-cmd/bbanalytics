@@ -136,11 +136,19 @@ export default function BeatPlanPage() {
   };
 
   useEffect(() => {
-    const user = db.getCurrentUser();
-    setCurrentUser(user);
-    const todayBeats = db.getTodayBeat();
-    setBeatItems(todayBeats);
-    refreshTasks();
+    const refreshData = () => {
+      const user = db.getCurrentUser();
+      setCurrentUser(user);
+      const todayBeats = db.getTodayBeat();
+      setBeatItems(todayBeats);
+      refreshTasks();
+    };
+
+    refreshData();
+    window.addEventListener('bb-db-updated', refreshData);
+    return () => {
+      window.removeEventListener('bb-db-updated', refreshData);
+    };
   }, []);
 
   // Rule 5: 60-second real GPS ping in background when on-duty

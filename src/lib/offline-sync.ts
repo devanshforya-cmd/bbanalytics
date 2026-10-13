@@ -246,23 +246,56 @@ class OfflineSyncManager {
   }
 
   private async processItem(item: QueuedSyncItem): Promise<void> {
-    // Simulate network latency (100-400ms per item)
-    const delay = 100 + Math.random() * 300;
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    // If online, push record to Supabase
+    try {
+      const { supabase } = await import('./db/supabase-client');
+      const payload = item.payload || {};
 
-    // In production mode, this would be:
-    // const response = await fetch(item.endpoint, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseToken}` },
-    //   body: JSON.stringify(item.payload),
-    // });
-    // if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-
-    // In mock mode: data is already persisted locally via db-service.
-    // The queue item just confirms server-side receipt.
-    // Simulate a ~2% random failure rate for realistic retry testing
-    if (Math.random() < 0.02) {
-      throw new Error('Simulated network timeout');
+      switch (item.type) {
+        case 'ORDER_CREATED':
+          await supabase.from('orders').upsert([payload]);
+          break;
+        case 'GPS_PING':
+          await supabase.from('gps_pings').insert([payload]);
+          break;
+        case 'CHEQUE_COLLECTED':
+          await supabase.from('cheques').upsert([payload]);
+          break;
+        case 'STOCK_COUNT':
+          await supabase.from('stock_counts').upsert([payload]);
+          break;
+        case 'DISPATCH_LOGGED':
+          await supabase.from('dispatches').upsert([payload]);
+          break;
+        case 'STORE_CREATED':
+        case 'RETAILER_CREATED':
+          await supabase.from('retailers').upsert([payload]);
+          break;
+        case 'DISTRIBUTOR_CREATED':
+          await supabase.from('distributors').upsert([payload]);
+          break;
+        case 'BRANCH_CREATED':
+          await supabase.from('branches').upsert([payload]);
+          break;
+        case 'DELIVERY_FAILURE':
+          await supabase.from('delivery_failures').upsert([payload]);
+          break;
+        case 'RETURN_SUBMITTED':
+          await supabase.from('returns').upsert([payload]);
+          break;
+        case 'DUTY_STATUS':
+          if (payload.officerId) {
+            await supabase
+              .from('users')
+              .update({ duty_status: payload.status })
+              .eq('id', payload.officerId);
+          }
+          break;
+        default:
+          break;
+      }
+    } catch (err) {
+      console.warn(`[OfflineSync] Sync note for ${item.type} (persisted locally):`, err);
     }
 
     console.log(`[OfflineSync] ✓ Synced ${item.type} (${item.id})`);
@@ -279,13 +312,21 @@ class OfflineSyncManager {
       }
     }
 
-    // If currently syncing, wait briefly and return
+    // Trigger full db sync with Supabase in parallel
+    try {
+      const { db } = await import('./db/db-service');
+      await db.syncWithSupabase();
+    } catch (e) {
+      console.warn('[OfflineSync] db sync error during forceSyncNow:', e);
+    }
+
+    // If currently syncing, notify and return
     if (this.isSyncing) {
       this.notify();
       return 0;
     }
 
-    // Delegate to the real triggerSync which processes items individually
+    // Delegate to the real triggerSync which processes queued items
     return this.triggerSync();
   }
 

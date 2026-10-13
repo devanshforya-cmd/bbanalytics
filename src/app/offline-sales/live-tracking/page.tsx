@@ -80,7 +80,12 @@ export default function LiveStaffTrackingPage() {
 
   const reloadLocations = async () => {
     setIsRefreshing(true);
-    await fetchLatestPingsFromSupabase();
+    try {
+      await fetchLatestPingsFromSupabase();
+      db.ensureBaselineSeeds();
+    } catch {
+      // ignore
+    }
     const locs = db.getStaffLiveLocations();
     // enrich with latest duty status from db
     const enriched = locs.map((l) => ({
@@ -97,10 +102,18 @@ export default function LiveStaffTrackingPage() {
 
   useEffect(() => {
     reloadLocations();
+    const handleDbUpdate = () => {
+      reloadLocations();
+    };
+    window.addEventListener('bb-db-updated', handleDbUpdate);
+
     const interval = setInterval(() => {
       reloadLocations();
     }, 15000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('bb-db-updated', handleDbUpdate);
+      clearInterval(interval);
+    };
   }, []);
 
   const triggerToast = (msg: string) => {

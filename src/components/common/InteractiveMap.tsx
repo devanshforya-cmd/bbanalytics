@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Navigation,
   ZoomIn,
@@ -14,6 +14,10 @@ import {
   Radio,
   MapPin,
   ExternalLink,
+  Layers,
+  CheckCircle2,
+  AlertTriangle,
+  Maximize2,
 } from 'lucide-react';
 import { StaffLiveLocation, BeatItem } from '@/lib/types';
 
@@ -26,22 +30,6 @@ interface InteractiveMapProps {
 }
 
 // Slippy map coordinate math
-function lon2tile(lon: number, zoom: number): number {
-  return Math.floor(((lon + 180) / 360) * Math.pow(2, zoom));
-}
-
-function lat2tile(lat: number, zoom: number): number {
-  return Math.floor(
-    ((1 -
-      Math.log(
-        Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180)
-      ) /
-        Math.PI) /
-      2) *
-      Math.pow(2, zoom)
-  );
-}
-
 function lon2pixel(lon: number, zoom: number): number {
   return ((lon + 180) / 360) * Math.pow(2, zoom) * 256;
 }
@@ -55,6 +43,10 @@ function lat2pixel(lat: number, zoom: number): number {
   );
 }
 
+// Subdomains for load balancing tile requests
+const CARTO_SUBDOMAINS = ['a', 'b', 'c', 'd'];
+const OSM_SUBDOMAINS = ['a', 'b', 'c'];
+
 export default function InteractiveMap({
   reps,
   beatItems = [],
@@ -67,10 +59,22 @@ export default function InteractiveMap({
   const [centerLng, setCenterLng] = useState(85.31514);
   const [zoom, setZoom] = useState(13);
 
+  // Dynamic container dimensions
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
+
   // Drag pan state
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+
+  // Touch pinch-to-zoom distance tracker
+  const touchStartDistRef = useRef<number | null>(null);
+
+  // Failed tiles fallback tracker
+  const [failedTiles, setFailedTiles] = useState<Record<string, number>>({});
+
+  // Active popup
   const [activePopup, setActivePopup] = useState<{
     type: 'REP' | 'STORE';
     rep?: StaffLiveLocation;
@@ -79,13 +83,34 @@ export default function InteractiveMap({
     y: number;
   } | null>(null);
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Observe container dimensions with ResizeObserver
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const el = containerRef.current;
+
+    const updateSize = () => {
+      if (el) {
+        const w = el.clientWidth || 800;
+        const h = el.clientHeight || 500;
+        setDimensions({ width: w, height: h });
+      }
+    };
+
+    updateSize();
+
+    const ro = new ResizeObserver(() => {
+      updateSize();
+    });
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, []);
 
   // Center on selected rep if provided
   useEffect(() => {
     if (selectedRepId) {
       const rep = reps.find((r) => r.officerId === selectedRepId);
-      if (rep) {
+      if (rep && !isNaN(rep.currentLat) && !isNaN(rep.currentLng)) {
         setCenterLat(rep.currentLat);
         setCenterLng(rep.currentLng);
         setPanOffset({ x: 0, y: 0 });
@@ -95,6 +120,8 @@ export default function InteractiveMap({
 
   // Handle Drag Start
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Only drag with primary mouse button
+    if (e.button !== 0) return;
     setIsDragging(true);
     setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
   };
@@ -107,21 +134,34 @@ export default function InteractiveMap({
     });
   };
 
-  const handleMouseUp = () => {
+  const commitPan = useCallback(() => {
     if (!isDragging) return;
     setIsDragging(false);
 
-    // Commit pan to coordinates
-    if (containerRef.current) {
-      const scale = Math.pow(2, zoom) * 256;
-      const dLng = (-panOffset.x / scale) * 360;
-      const currentPixelY = lat2pixel(centerLat, zoom) - panOffset.y;
-      const n = Math.PI - (2 * Math.PI * currentPixelY) / scale;
-      const newLat = (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+    if (panOffset.x === 0 && panOffset.y === 0) return;
 
-      setCenterLng((prev) => prev + dLng);
-      setCenterLat(Math.max(-85, Math.min(85, newLat)));
-      setPanOffset({ x: 0, y: 0 });
+    const scale = Math.pow(2, zoom) * 256;
+    const dLng = (-panOffset.x / scale) * 360;
+    const currentPixelY = lat2pixel(centerLat, zoom) - panOffset.y;
+    const n = Math.PI - (2 * Math.PI * currentPixelY) / scale;
+    const newLat = (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+
+    setCenterLng((prev) => prev + dLng);
+    setCenterLat(Math.max(-85, Math.min(85, newLat)));
+    setPanOffset({ x: 0, y: 0 });
+  }, [isDragging, panOffset, zoom, centerLat]);
+
+  const handleMouseUp = () => {
+    commitPan();
+  };
+
+  // Wheel zoom with delta threshold
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (e.deltaY < -15) {
+      setZoom((z) => Math.min(18, z + 1));
+    } else if (e.deltaY > 15) {
+      setZoom((z) => Math.max(10, z - 1));
     }
   };
 
@@ -133,43 +173,115 @@ export default function InteractiveMap({
         x: e.touches[0].clientX - panOffset.x,
         y: e.touches[0].clientY - panOffset.y,
       });
+      touchStartDistRef.current = null;
+    } else if (e.touches.length === 2) {
+      setIsDragging(false);
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchStartDistRef.current = Math.sqrt(dx * dx + dy * dy);
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || e.touches.length !== 1) return;
-    setPanOffset({
-      x: e.touches[0].clientX - dragStart.x,
-      y: e.touches[0].clientY - dragStart.y,
-    });
+    if (e.touches.length === 1 && isDragging) {
+      setPanOffset({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y,
+      });
+    } else if (e.touches.length === 2 && touchStartDistRef.current !== null) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const diff = dist - touchStartDistRef.current;
+      if (diff > 40) {
+        setZoom((z) => Math.min(18, z + 1));
+        touchStartDistRef.current = dist;
+      } else if (diff < -40) {
+        setZoom((z) => Math.max(10, z - 1));
+        touchStartDistRef.current = dist;
+      }
+    }
   };
 
   const handleTouchEnd = () => {
-    handleMouseUp();
+    touchStartDistRef.current = null;
+    commitPan();
   };
 
   // Zoom controls
   const handleZoomIn = () => {
-    if (zoom < 17) setZoom((z) => z + 1);
+    if (zoom < 18) setZoom((z) => z + 1);
   };
 
   const handleZoomOut = () => {
     if (zoom > 10) setZoom((z) => z - 1);
   };
 
+  // Center on first active rep
   const handleResetToReps = () => {
     if (reps.length > 0) {
       setCenterLat(reps[0].currentLat);
       setCenterLng(reps[0].currentLng);
       setPanOffset({ x: 0, y: 0 });
+      setZoom(14);
+    } else {
+      setCenterLat(27.700769);
+      setCenterLng(85.31514);
+      setPanOffset({ x: 0, y: 0 });
       setZoom(13);
     }
   };
 
-  // Calculate visible tiles
-  const getVisibleTiles = () => {
-    const width = containerRef.current?.clientWidth || 800;
-    const height = containerRef.current?.clientHeight || 500;
+  // Fit bounds to all markers (reps and stores)
+  const handleFitAll = () => {
+    const points: { lat: number; lng: number }[] = [];
+    reps.forEach((r) => {
+      if (!isNaN(r.currentLat) && !isNaN(r.currentLng)) {
+        points.push({ lat: r.currentLat, lng: r.currentLng });
+      }
+    });
+    beatItems.forEach((b) => {
+      if (b.lat && b.lng && !isNaN(b.lat) && !isNaN(b.lng)) {
+        points.push({ lat: b.lat, lng: b.lng });
+      }
+    });
+
+    if (points.length === 0) {
+      handleResetToReps();
+      return;
+    }
+
+    let minLat = 90;
+    let maxLat = -90;
+    let minLng = 180;
+    let maxLng = -180;
+
+    points.forEach((p) => {
+      if (p.lat < minLat) minLat = p.lat;
+      if (p.lat > maxLat) maxLat = p.lat;
+      if (p.lng < minLng) minLng = p.lng;
+      if (p.lng > maxLng) maxLng = p.lng;
+    });
+
+    const midLat = (minLat + maxLat) / 2;
+    const midLng = (minLng + maxLng) / 2;
+    setCenterLat(midLat);
+    setCenterLng(midLng);
+    setPanOffset({ x: 0, y: 0 });
+
+    const latDiff = maxLat - minLat;
+    const lngDiff = maxLng - minLng;
+    const maxDiff = Math.max(latDiff, lngDiff);
+
+    if (maxDiff > 0.15) setZoom(11);
+    else if (maxDiff > 0.08) setZoom(12);
+    else if (maxDiff > 0.03) setZoom(13);
+    else setZoom(14);
+  };
+
+  // Calculate visible tiles based on container dimensions
+  const tiles = useMemo(() => {
+    const { width, height } = dimensions;
 
     const centerPxX = lon2pixel(centerLng, zoom) - panOffset.x;
     const centerPxY = lat2pixel(centerLat, zoom) - panOffset.y;
@@ -184,7 +296,16 @@ export default function InteractiveMap({
     const startTileY = Math.floor(startPxY / 256);
     const endTileY = Math.floor(endPxY / 256);
 
-    const tiles: { x: number; y: number; z: number; left: number; top: number; key: string }[] = [];
+    const result: {
+      x: number;
+      y: number;
+      z: number;
+      left: number;
+      top: number;
+      key: string;
+      subdomainCarto: string;
+      subdomainOsm: string;
+    }[] = [];
     const maxTiles = Math.pow(2, zoom);
 
     for (let tx = startTileX; tx <= endTileX; tx++) {
@@ -194,25 +315,29 @@ export default function InteractiveMap({
           const left = tx * 256 - (centerPxX - width / 2);
           const top = ty * 256 - (centerPxY - height / 2);
 
-          tiles.push({
+          const subCarto = CARTO_SUBDOMAINS[Math.abs(normTx + ty) % CARTO_SUBDOMAINS.length];
+          const subOsm = OSM_SUBDOMAINS[Math.abs(normTx + ty) % OSM_SUBDOMAINS.length];
+
+          result.push({
             x: normTx,
             y: ty,
             z: zoom,
             left,
             top,
             key: `${zoom}-${normTx}-${ty}`,
+            subdomainCarto: subCarto,
+            subdomainOsm: subOsm,
           });
         }
       }
     }
-    return tiles;
-  };
+    return result;
+  }, [centerLng, centerLat, zoom, panOffset, dimensions]);
 
   // Convert lat/lng to container pixel offset
   const getPixelPosition = useCallback(
     (lat: number, lng: number) => {
-      const width = containerRef.current?.clientWidth || 800;
-      const height = containerRef.current?.clientHeight || 500;
+      const { width, height } = dimensions;
 
       const centerPxX = lon2pixel(centerLng, zoom) - panOffset.x;
       const centerPxY = lat2pixel(centerLat, zoom) - panOffset.y;
@@ -225,10 +350,30 @@ export default function InteractiveMap({
         y: pxY - (centerPxY - height / 2),
       };
     },
-    [centerLat, centerLng, zoom, panOffset]
+    [centerLat, centerLng, zoom, panOffset, dimensions]
   );
 
-  const tiles = getVisibleTiles();
+  // Tile image URL with fallback chain
+  const getTileSrc = (tile: typeof tiles[0]) => {
+    const failures = failedTiles[tile.key] || 0;
+    if (failures === 0) {
+      // Primary: CartoDB Voyager tiles (clean, fast, highly reliable)
+      return `https://${tile.subdomainCarto}.basemaps.cartocdn.com/rastertiles/voyager/${tile.z}/${tile.x}/${tile.y}.png`;
+    } else if (failures === 1) {
+      // Secondary fallback: OpenStreetMap Humanitarian / HOT
+      return `https://${tile.subdomainOsm}.tile.openstreetmap.fr/hot/${tile.z}/${tile.x}/${tile.y}.png`;
+    } else {
+      // Tertiary fallback: Standard OSM
+      return `https://tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`;
+    }
+  };
+
+  const handleTileError = (key: string) => {
+    setFailedTiles((prev) => ({
+      ...prev,
+      [key]: (prev[key] || 0) + 1,
+    }));
+  };
 
   return (
     <div
@@ -238,44 +383,145 @@ export default function InteractiveMap({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onWheel={handleWheel}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
       {/* Slippy Map Tiles Layer */}
       <div className="absolute inset-0 pointer-events-none">
-        {tiles.map((tile) => (
-          <img
-            key={tile.key}
-            src={`https://tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`}
-            alt=""
-            loading="lazy"
-            className="absolute w-[256px] h-[256px] opacity-90 transition-opacity"
-            style={{
-              left: `${tile.left}px`,
-              top: `${tile.top}px`,
-              filter: 'saturate(1.05) contrast(1.02)',
-            }}
-          />
-        ))}
+        {tiles.map((tile) => {
+          const failures = failedTiles[tile.key] || 0;
+          if (failures >= 3) {
+            // Render styled vector tile grid fallback if all CDNs are unreachable
+            return (
+              <div
+                key={tile.key}
+                className="absolute w-[256px] h-[256px] bg-slate-100 border border-slate-200/60 flex items-center justify-center text-[10px] text-slate-400 font-mono"
+                style={{
+                  left: `${tile.left}px`,
+                  top: `${tile.top}px`,
+                }}
+              >
+                <div className="text-center opacity-40">
+                  <MapPin className="w-4 h-4 mx-auto mb-1 text-slate-300" />
+                  <span>{tile.z}/{tile.x}/{tile.y}</span>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <img
+              key={tile.key}
+              src={getTileSrc(tile)}
+              alt=""
+              loading="lazy"
+              onError={() => handleTileError(tile.key)}
+              className="absolute w-[256px] h-[256px] opacity-95 transition-opacity"
+              style={{
+                left: `${tile.left}px`,
+                top: `${tile.top}px`,
+                filter: 'saturate(1.05) contrast(1.02)',
+              }}
+            />
+          );
+        })}
       </div>
 
       {/* SVG Polylines for Rep Routes */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
+        <defs>
+          <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#10b981" stopOpacity="0.9" />
+          </linearGradient>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#1e3a8a" floodOpacity="0.3" />
+          </filter>
+        </defs>
+
         {reps.map((rep) => {
-          if (!rep.todayRoute || rep.todayRoute.length < 2) return null;
-          // Connect rep current location to stores
+          const isSelected = selectedRepId === rep.officerId;
+          const points: { x: number; y: number }[] = [];
+
+          // Collect stops with coordinates
+          if (rep.todayRoute && rep.todayRoute.length > 0) {
+            rep.todayRoute.forEach((step) => {
+              if (step.lat && step.lng) {
+                points.push(getPixelPosition(step.lat, step.lng));
+              } else {
+                // If route step has no explicit lat/lng, attempt to lookup by store name in beatItems
+                const matchedBeat = beatItems.find(
+                  (b) => b.storeName.toLowerCase() === step.storeName.toLowerCase()
+                );
+                if (matchedBeat?.lat && matchedBeat?.lng) {
+                  points.push(getPixelPosition(matchedBeat.lat, matchedBeat.lng));
+                }
+              }
+            });
+          }
+
+          // Finally connect to rep current location
           const repPos = getPixelPosition(rep.currentLat, rep.currentLng);
+          points.push(repPos);
+
+          const pointsString = points.map((p) => `${p.x},${p.y}`).join(' ');
+
           return (
             <g key={`path-${rep.officerId}`}>
+              {/* Outer stroke glow */}
+              {points.length >= 2 && (
+                <polyline
+                  points={pointsString}
+                  fill="none"
+                  stroke={isSelected ? '#2563eb' : '#64748b'}
+                  strokeWidth={isSelected ? '5' : '3'}
+                  strokeDasharray="6,4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeOpacity={isSelected ? 0.85 : 0.45}
+                  filter="url(#glow)"
+                />
+              )}
+
+              {/* Waypoint circles along the path */}
+              {points.map((pt, idx) => {
+                const isLast = idx === points.length - 1;
+                if (isLast) return null; // Last point is the rep itself
+                return (
+                  <g key={`wpt-${rep.officerId}-${idx}`}>
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r="7"
+                      fill="#ffffff"
+                      stroke="#3b82f6"
+                      strokeWidth="2.5"
+                    />
+                    <text
+                      x={pt.x}
+                      y={pt.y + 3}
+                      textAnchor="middle"
+                      fontSize="8"
+                      fontWeight="bold"
+                      fill="#1e3a8a"
+                    >
+                      {idx + 1}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Active Radar Ping Circle */}
               <circle
                 cx={repPos.x}
                 cy={repPos.y}
-                r="30"
+                r="28"
                 fill="none"
-                stroke="#10b981"
+                stroke={rep.status === 'AT_STORE' ? '#10b981' : '#3b82f6'}
                 strokeWidth="1.5"
-                strokeOpacity="0.4"
+                strokeOpacity="0.5"
                 className="animate-ping"
               />
             </g>
@@ -318,9 +564,15 @@ export default function InteractiveMap({
                   : 'bg-amber-500 border-white text-white'
               }`}
             >
-              <Store className="w-3.5 h-3.5" />
+              {isVisited ? (
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              ) : isSkipped ? (
+                <AlertTriangle className="w-3.5 h-3.5" />
+              ) : (
+                <Store className="w-3.5 h-3.5" />
+              )}
             </div>
-            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-slate-900/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-slate-900/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30">
               {store.storeName}
             </div>
           </div>
@@ -370,7 +622,7 @@ export default function InteractiveMap({
                     : rep.status === 'IN_TRANSIT'
                     ? 'bg-blue-600'
                     : 'bg-amber-600'
-                } ${isSelected ? 'ring-4 ring-emerald-400/60' : ''}`}
+                } ${isSelected ? 'ring-4 ring-emerald-400/60 ring-offset-1' : ''}`}
               >
                 <Radio className="w-4 h-4" />
               </div>
@@ -379,7 +631,9 @@ export default function InteractiveMap({
               <div className="absolute top-9 bg-slate-950/90 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded-full border border-slate-800 shadow-md whitespace-nowrap flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 <span>{rep.officerName.split(' ')[0]}</span>
-                {rep.status === 'AT_STORE' && <span className="text-emerald-400 font-normal">(@Store)</span>}
+                {rep.status === 'AT_STORE' && (
+                  <span className="text-emerald-400 font-normal">(@Store)</span>
+                )}
               </div>
             </div>
           </div>
@@ -390,7 +644,10 @@ export default function InteractiveMap({
       {activePopup && (
         <div
           style={{
-            left: `${Math.min(Math.max(activePopup.x, 140), (containerRef.current?.clientWidth || 600) - 140)}px`,
+            left: `${Math.min(
+              Math.max(activePopup.x, 140),
+              dimensions.width - 140
+            )}px`,
             top: `${Math.max(activePopup.y - 120, 20)}px`,
             transform: 'translate(-50%, -100%)',
           }}
@@ -402,7 +659,9 @@ export default function InteractiveMap({
               <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <h4 className="font-bold text-xs text-slate-900">{activePopup.rep.officerName}</h4>
+                  <h4 className="font-bold text-xs text-slate-900">
+                    {activePopup.rep.officerName}
+                  </h4>
                 </div>
                 <button
                   type="button"
@@ -417,7 +676,7 @@ export default function InteractiveMap({
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-slate-500">Telemetry Status:</span>
                   <span
-                    className={`font-semibold px-1.5 py-0.2 rounded text-[10px] ${
+                    className={`font-semibold px-1.5 py-0.5 rounded text-[10px] ${
                       activePopup.rep.status === 'AT_STORE'
                         ? 'bg-emerald-100 text-emerald-800'
                         : 'bg-blue-100 text-blue-800'
@@ -447,10 +706,17 @@ export default function InteractiveMap({
 
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                    <Battery className="w-3 h-3 text-emerald-500" /> Phone Battery:
+                    <Battery className="w-3 h-3 text-emerald-500" /> Battery:
                   </span>
                   <span className="font-semibold text-slate-700 font-mono">
                     {activePopup.rep.batteryLevel}%
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">Distance Today:</span>
+                  <span className="font-semibold text-slate-700 font-mono">
+                    {activePopup.rep.todayDistanceKm || 0} km
                   </span>
                 </div>
               </div>
@@ -478,19 +744,30 @@ export default function InteractiveMap({
                   ✕
                 </button>
               </div>
-              <p className="text-[11px] text-slate-500 line-clamp-2">{activePopup.store.address}</p>
+              <p className="text-[11px] text-slate-500 line-clamp-2">
+                {activePopup.store.address}
+              </p>
               <div className="mt-2 flex items-center justify-between text-xs">
-                <span className="text-[10px] uppercase font-bold text-slate-400">Beat Status</span>
+                <span className="text-[10px] uppercase font-bold text-slate-400">
+                  Beat Status
+                </span>
                 <span
                   className={`font-semibold px-2 py-0.5 rounded text-[10px] ${
                     activePopup.store.status === 'VISITED'
                       ? 'bg-emerald-100 text-emerald-800'
+                      : activePopup.store.status === 'SKIPPED'
+                      ? 'bg-rose-100 text-rose-800'
                       : 'bg-amber-100 text-amber-800'
                   }`}
                 >
                   {activePopup.store.status}
                 </span>
               </div>
+              {activePopup.store.checkedInAt && (
+                <div className="mt-1 text-[10px] text-slate-400">
+                  Checked in at: {new Date(activePopup.store.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -500,31 +777,51 @@ export default function InteractiveMap({
       <div className="absolute right-3 top-3 z-30 flex flex-col gap-1.5 shadow-md">
         <button
           type="button"
-          onClick={handleZoomIn}
-          className="w-8 h-8 rounded-lg bg-white/90 backdrop-blur-xs text-slate-700 hover:text-slate-950 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleZoomIn();
+          }}
+          className="w-8 h-8 rounded-lg bg-white/95 backdrop-blur-xs text-slate-700 hover:text-slate-950 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
           title="Zoom In"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
         <button
           type="button"
-          onClick={handleZoomOut}
-          className="w-8 h-8 rounded-lg bg-white/90 backdrop-blur-xs text-slate-700 hover:text-slate-950 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleZoomOut();
+          }}
+          className="w-8 h-8 rounded-lg bg-white/95 backdrop-blur-xs text-slate-700 hover:text-slate-950 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
           title="Zoom Out"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
         <button
           type="button"
-          onClick={handleResetToReps}
-          className="w-8 h-8 rounded-lg bg-white/90 backdrop-blur-xs text-emerald-600 hover:text-emerald-700 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleFitAll();
+          }}
+          className="w-8 h-8 rounded-lg bg-white/95 backdrop-blur-xs text-blue-600 hover:text-blue-700 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
+          title="Fit All Reps &amp; Stores"
+        >
+          <Maximize2 className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleResetToReps();
+          }}
+          className="w-8 h-8 rounded-lg bg-white/95 backdrop-blur-xs text-emerald-600 hover:text-emerald-700 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
           title="Center on Sales Reps"
         >
           <Crosshair className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Map Legend & OSM Attribution */}
+      {/* Map Legend & Attribution */}
       <div className="absolute bottom-2 left-2 right-2 z-20 flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-3 bg-slate-900/85 backdrop-blur-xs px-3 py-1.5 rounded-xl text-[10px] text-white shadow-lg pointer-events-auto">
           <div className="flex items-center gap-1.5">
@@ -542,7 +839,15 @@ export default function InteractiveMap({
         </div>
 
         <div className="text-[9px] text-slate-500 bg-white/80 px-2 py-0.5 rounded shadow pointer-events-auto">
-          &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline">OpenStreetMap</a>
+          CartoDB &bull; &copy;{' '}
+          <a
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            OpenStreetMap
+          </a>
         </div>
       </div>
     </div>

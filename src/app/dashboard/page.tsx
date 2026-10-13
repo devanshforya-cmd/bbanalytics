@@ -61,6 +61,13 @@ export default function DashboardPage() {
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [salesMode, setSalesMode] = useState<DashboardSalesMode>('D2C');
   const [includeMarketing, setIncludeMarketing] = useState(false);
+  const [dbVersion, setDbVersion] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => setDbVersion((v) => v + 1);
+    window.addEventListener('bb-db-updated', handleUpdate);
+    return () => window.removeEventListener('bb-db-updated', handleUpdate);
+  }, []);
 
   const activeBrand = filterCriteria.brand && filterCriteria.brand !== 'ALL' ? filterCriteria.brand : globalBrand;
   const rawOrders = db.getOrders(activeBrand);
@@ -85,7 +92,7 @@ export default function DashboardPage() {
         setShowSetupWizard(true);
       }
     }
-  }, [products.length, distributors.length]);
+  }, [products.length, distributors.length, dbVersion]);
 
   // Apply Territorial, Channel, D2C/B2B & Marketing Filters
   const orders = rawOrders.filter((o) => {

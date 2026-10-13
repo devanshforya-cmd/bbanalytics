@@ -94,6 +94,10 @@ export default function DailyOrdersPage() {
 
   useEffect(() => {
     loadOrders();
+    window.addEventListener('bb-db-updated', loadOrders);
+    return () => {
+      window.removeEventListener('bb-db-updated', loadOrders);
+    };
   }, [selectedDateAd]);
 
   // Real-time subscription (Fix 68b)

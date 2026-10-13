@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -147,6 +147,14 @@ export default function StoresPage() {
     setRetailers([...db.getRetailers()]);
     setPendingRemovals([...db.getPendingContactRemovals()]);
   };
+
+  useEffect(() => {
+    refreshData();
+    window.addEventListener('bb-db-updated', refreshData);
+    return () => {
+      window.removeEventListener('bb-db-updated', refreshData);
+    };
+  }, []);
 
   const handlePinLocation = () => {
     if (typeof window !== 'undefined' && 'geolocation' in navigator) {

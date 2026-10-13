@@ -83,11 +83,23 @@ export default function Header() {
     setCurrentUser(user);
     refreshNotifs();
 
+    const handleDbUpdate = () => {
+      const session = getSessionUser();
+      const user = session || db.getCurrentUser();
+      setCurrentUser(user);
+      setBrandFilter(db.getActiveBrandFilter());
+      refreshNotifs();
+    };
+    window.addEventListener('bb-db-updated', handleDbUpdate);
+
     const unsub = syncManager.subscribe((state, count) => {
       setSyncState(state);
       setPendingSyncCount(count);
     });
-    return () => unsub();
+    return () => {
+      window.removeEventListener('bb-db-updated', handleDbUpdate);
+      unsub();
+    };
   }, []);
 
   const handleBrandChange = (brand: BrandCode) => {
