@@ -124,12 +124,14 @@ export default function BeatPlanPage() {
   const refreshTasks = () => {
     const user = db.getCurrentUser();
     const all = db.getTasks();
+    const uName = (user.fullName || '').toLowerCase();
+    const uFirst = uName.split(' ')[0] || '';
     const myTasks = all.filter(
       (t) =>
         t.assignedTo === user.id ||
         (t.assignedToName &&
-          t.assignedToName.toLowerCase().includes(user.fullName.split(' ')[0].toLowerCase())) ||
-        t.assignedTo === 'user_ravi'
+          (t.assignedToName.toLowerCase() === uName ||
+            (uFirst.length > 2 && t.assignedToName.toLowerCase().includes(uFirst))))
     );
     setAssignedTasks(myTasks);
     setOfficerDuty(db.getOfficerDutyStatus(user.id) || 'ONLINE');
@@ -145,6 +147,9 @@ export default function BeatPlanPage() {
     };
 
     refreshData();
+    if (typeof window !== 'undefined') {
+      db.syncTasksFromSupabase().then(() => refreshTasks()).catch(() => {});
+    }
     window.addEventListener('bb-db-updated', refreshData);
     return () => {
       window.removeEventListener('bb-db-updated', refreshData);
@@ -554,38 +559,46 @@ export default function BeatPlanPage() {
           </div>
 
           <div className="space-y-2">
-            {assignedTasks.map((task) => {
-              const isDone = task.status === 'COMPLETED';
-              return (
-                <div
-                  key={task.id}
-                  onClick={() => handleToggleTask(task)}
-                  className={`flex items-start justify-between gap-3 p-3 rounded-xl border transition cursor-pointer ${
-                    isDone
-                      ? 'bg-slate-50/70 border-slate-200 text-slate-400'
-                      : 'bg-white border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-start gap-2.5 min-w-0">
-                    <input
-                      type="checkbox"
-                      checked={isDone}
-                      onChange={() => handleToggleTask(task)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mt-0.5"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <div className="min-w-0">
-                      <p className={`text-xs font-semibold ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}`}>
-                        {task.title}
-                      </p>
-                      {task.description && (
-                        <p className="text-[11px] text-slate-500 mt-0.5">{task.description}</p>
-                      )}
+            {assignedTasks.length === 0 ? (
+              <div className="py-6 text-center text-slate-400 text-xs bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                <CheckSquare className="w-5 h-5 mx-auto mb-1 text-slate-300" />
+                <p className="font-medium text-slate-600">No directives assigned for today.</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Tasks assigned to your account will appear here.</p>
+              </div>
+            ) : (
+              assignedTasks.map((task) => {
+                const isDone = task.status === 'COMPLETED';
+                return (
+                  <div
+                    key={task.id}
+                    onClick={() => handleToggleTask(task)}
+                    className={`flex items-start justify-between gap-3 p-3 rounded-xl border transition cursor-pointer ${
+                      isDone
+                        ? 'bg-slate-50/70 border-slate-200 text-slate-400'
+                        : 'bg-white border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={isDone}
+                        onChange={() => handleToggleTask(task)}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mt-0.5"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className="min-w-0">
+                        <p className={`text-xs font-semibold ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                          {task.title}
+                        </p>
+                        {task.description && (
+                          <p className="text-[11px] text-slate-500 mt-0.5">{task.description}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 

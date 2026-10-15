@@ -146,7 +146,16 @@ export default function CalendarTasksPage() {
     setUsers(db.getUsers());
     const isOfficer = getScope(user, 'tasks') === 'OWN';
     if (isOfficer) {
-      setAllTasks(db.getTasks().filter((t) => t.assignedTo === user.id || t.assignedTo === 'user_ravi'));
+      const uName = (user.fullName || '').toLowerCase();
+      const uFirst = uName.split(' ')[0] || '';
+      const officerTasks = db.getTasks().filter(
+        (t) =>
+          t.assignedTo === user.id ||
+          (t.assignedToName &&
+            (t.assignedToName.toLowerCase() === uName ||
+              (uFirst.length > 2 && t.assignedToName.toLowerCase().includes(uFirst))))
+      );
+      setAllTasks(officerTasks);
       setAllBeats(db.getTodayBeat(user.id));
       setAllCheques(db.getCheques().filter((c) => c.officerId === user.id));
     } else {
@@ -158,6 +167,9 @@ export default function CalendarTasksPage() {
 
   useEffect(() => {
     refreshData();
+    if (typeof window !== 'undefined') {
+      db.syncTasksFromSupabase().then(() => refreshData()).catch(() => {});
+    }
   }, []);
 
   const triggerToast = (msg: string) => {
@@ -389,14 +401,16 @@ export default function CalendarTasksPage() {
       return;
     }
 
-    const assignee = users.find((u) => u.id === modalAssigneeId);
+    const currentUsers = users.length > 0 ? users : db.getUsers();
+    const effectiveAssigneeId = modalAssigneeId || currentUsers[0]?.id || db.getCurrentUser().id;
+    const assignee = currentUsers.find((u) => u.id === effectiveAssigneeId);
     const assigneeName = assignee ? assignee.fullName : 'Sales Officer';
 
     if (editingTask) {
       db.updateTask(editingTask.id, {
         title: modalTitle,
         description: modalDesc,
-        assignedTo: modalAssigneeId,
+        assignedTo: effectiveAssigneeId,
         assignedToName: assigneeName,
         priority: modalPriority,
         dueDateBs: modalDateBs,
@@ -410,9 +424,9 @@ export default function CalendarTasksPage() {
       db.addTask({
         title: modalTitle,
         description: modalDesc,
-        assignedTo: modalAssigneeId,
+        assignedTo: effectiveAssigneeId,
         assignedToName: assigneeName,
-        createdBy: 'Admin Management',
+        createdBy: db.getCurrentUser().fullName || 'Admin Management',
         priority: modalPriority,
         dueDateBs: modalDateBs,
         dueDateAd: modalDateAd,

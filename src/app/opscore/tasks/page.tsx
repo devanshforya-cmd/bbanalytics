@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db/db-service';
 import { Task, Priority } from '@/lib/types';
-import { getTodayAd } from '@/lib/nepali-calendar';
+import { getTodayAd, getTodayBs } from '@/lib/nepali-calendar';
 import BulkActionBar from '@/components/common/BulkActionBar';
 import { toast } from '@/components/common/Toast';
 import { validateRequired } from '@/lib/validation';
@@ -50,6 +50,16 @@ export default function TasksPage() {
   const refreshTasks = () => {
     setTasks([...db.getTasks()]);
   };
+
+  useEffect(() => {
+    refreshTasks();
+    if (typeof window !== 'undefined') {
+      db.syncTasksFromSupabase().then(() => refreshTasks()).catch(() => {});
+    }
+    const handleDbUpdate = () => refreshTasks();
+    window.addEventListener('bb-db-updated', handleDbUpdate);
+    return () => window.removeEventListener('bb-db-updated', handleDbUpdate);
+  }, []);
 
   const handleToggleSelect = (id: string) => {
     setSelectedIds((prev) =>
@@ -123,17 +133,17 @@ export default function TasksPage() {
       return;
     }
 
-    const user = db.getUsers().find((u) => u.id === assignedTo);
+    const user = db.getUsers().find((u) => u.id === assignedTo) || currentUser;
 
     db.addTask({
       title: title.trim(),
       description: description.trim(),
-      assignedTo,
-      assignedToName: user?.fullName || 'Assigned Officer',
+      assignedTo: user.id,
+      assignedToName: user.fullName || 'Assigned Officer',
       createdBy: currentUser.fullName,
       priority,
       dueDateAd,
-      dueDateBs: 'Bhadra 24, 2083',
+      dueDateBs: getTodayBs(),
       relatedTo,
       status: 'PENDING',
       autoCreated: false,
@@ -144,7 +154,7 @@ export default function TasksPage() {
     setFormErrors({});
     setShowAddModal(false);
     refreshTasks();
-    toast.success('✓ Task created successfully.');
+    toast.success(`✓ Task created and assigned to ${user.fullName}.`);
   };
 
   const handleInstantiateTemplate = (e: React.FormEvent) => {
@@ -163,7 +173,14 @@ export default function TasksPage() {
 
   const visibleTasks = tasks.filter((t) => {
     if (getScope(currentUser, 'tasks') === 'OWN') {
-      return t.assignedTo === currentUser.id;
+      const uName = (currentUser.fullName || '').toLowerCase();
+      const uFirst = uName.split(' ')[0] || '';
+      return (
+        t.assignedTo === currentUser.id ||
+        (t.assignedToName &&
+          (t.assignedToName.toLowerCase() === uName ||
+            (uFirst.length > 2 && t.assignedToName.toLowerCase().includes(uFirst))))
+      );
     }
     return true;
   });

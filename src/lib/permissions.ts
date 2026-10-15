@@ -199,18 +199,12 @@ export const SUPER_ADMIN_TEMPLATE: UserCustomPermissions = {
 
 export interface UserWithPermissions {
   id?: string;
+  role?: string;
   is_super_admin?: boolean;
   isSuperAdmin?: boolean;
-  permissions?: Record<string, {
-    access?: FeatureAccess;
-    scope?: DataScope | null;
-    actions?: string[];
-  }>;
-  customPermissions?: Record<string, {
-    access?: FeatureAccess;
-    scope?: DataScope | null;
-    actions?: string[];
-  }>;
+  permissions?: Record<string, any>;
+  customPermissions?: Record<string, any>;
+  custom_permissions?: Record<string, any>;
   reports_to_id?: string | null;
   reportsToId?: string | null;
 }
@@ -223,15 +217,68 @@ export function isSuperAdmin(user?: UserWithPermissions | null): boolean {
   return Boolean(user.is_super_admin || user.isSuperAdmin);
 }
 
+export function getEffectivePermission(
+  user: UserWithPermissions | null | undefined,
+  feature: string
+): FeaturePermission | undefined {
+  if (!user) return undefined;
+
+  // 1. Check customPermissions first (where granular permissions are stored)
+  const custom = user.customPermissions || user.custom_permissions;
+  if (custom && custom[feature]) {
+    const p = custom[feature];
+    if (p && typeof p === 'object' && p.access) {
+      return {
+        access: p.access as FeatureAccess,
+        scope: (p.scope ?? null) as DataScope | null,
+        actions: (p.actions ?? []) as ActionPermission[],
+      };
+    }
+  }
+
+  // 2. Check permissions if structured as FeaturePermission
+  const perms = user.permissions;
+  if (perms && perms[feature]) {
+    const p = perms[feature];
+    if (p && typeof p === 'object' && p.access) {
+      return {
+        access: p.access as FeatureAccess,
+        scope: (p.scope ?? null) as DataScope | null,
+        actions: (p.actions ?? []) as ActionPermission[],
+      };
+    }
+  }
+
+  // 3. Fallback to pre-defined role templates based on user.role
+  const role = (user.role || '').toUpperCase();
+  let template: UserCustomPermissions | undefined;
+  if (role === 'SUPER_ADMIN') {
+    template = SUPER_ADMIN_TEMPLATE;
+  } else if (role === 'SALES_OFFICER') {
+    template = FIELD_SALES_OFFICER_TEMPLATE;
+  } else if (role === 'DATA_ENTRY' || role === 'OFFICE_STAFF') {
+    template = OFFICE_STAFF_TEMPLATE;
+  } else if (role === 'ADMIN' || role === 'MANAGER' || role === 'BRAND_MANAGER') {
+    template = MANAGER_TEMPLATE;
+  } else if (role === 'VIEWER') {
+    template = VIEWER_TEMPLATE;
+  }
+
+  if (template && template[feature]) {
+    return template[feature];
+  }
+
+  return undefined;
+}
+
 /**
  * Can the user SEE this feature at all?
- * Reads ONLY from permissions / customPermissions JSONB.
+ * Reads ONLY from permissions / customPermissions JSONB with role template fallback.
  */
 export function hasAccess(user: UserWithPermissions | null | undefined, feature: string): boolean {
   if (!user) return false;
   if (isSuperAdmin(user)) return true;
-  const perms = user.permissions || user.customPermissions;
-  const perm = perms?.[feature];
+  const perm = getEffectivePermission(user, feature);
   return perm != null && perm.access != null && perm.access !== 'HIDDEN';
 }
 
@@ -243,8 +290,7 @@ export const hasFeatureAccess = hasAccess;
 export function isViewOnly(user: UserWithPermissions | null | undefined, feature: string): boolean {
   if (!user) return true;
   if (isSuperAdmin(user)) return false;
-  const perms = user.permissions || user.customPermissions;
-  const perm = perms?.[feature];
+  const perm = getEffectivePermission(user, feature);
   return perm?.access === 'VIEW_ONLY';
 }
 
@@ -258,8 +304,7 @@ export function canPerform(
 ): boolean {
   if (!user) return false;
   if (isSuperAdmin(user)) return true;
-  const perms = user.permissions || user.customPermissions;
-  const perm = perms?.[feature];
+  const perm = getEffectivePermission(user, feature);
   if (!perm || perm.access === 'HIDDEN') return false;
   if (perm.access === 'VIEW_ONLY' && action !== 'VIEW') return false;
   return Array.isArray(perm.actions) && perm.actions.includes(action);
@@ -273,8 +318,7 @@ export const canPerformAction = canPerform;
 export function getScope(user: UserWithPermissions | null | undefined, feature: string): 'OWN' | 'TEAM' | 'ALL' {
   if (!user) return 'OWN';
   if (isSuperAdmin(user)) return 'ALL';
-  const perms = user.permissions || user.customPermissions;
-  const perm = perms?.[feature];
+  const perm = getEffectivePermission(user, feature);
   return (perm?.scope as 'OWN' | 'TEAM' | 'ALL') || 'OWN';
 }
 

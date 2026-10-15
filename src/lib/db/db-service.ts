@@ -1,4 +1,5 @@
-import { SUPER_ADMIN_TEMPLATE } from '../permissions';
+import { SUPER_ADMIN_TEMPLATE, getScope } from '../permissions';
+import { fetchTasksFromSupabase, addTask as addTaskToSupabase, updateTaskInSupabase } from './analytics-service';
 
 const DEFAULT_SUPER_ADMIN: User = {
   id: 'user_devansh',
@@ -520,6 +521,9 @@ export class DatabaseService {
       );
       this.products = (this.products || []).filter((p) => !PHANTOM_IDS.has(p.id));
       this.staffLiveLocations = (this.staffLiveLocations || []).filter((s) => !PHANTOM_IDS.has(s.officerId));
+      if (typeof window !== 'undefined') {
+        this.syncTasksFromSupabase().catch(() => {});
+      }
     } catch (e) {
       console.warn('Failed to load state from localStorage', e);
     }
@@ -2970,12 +2974,44 @@ export class DatabaseService {
   }
 
   // Tasks
+  public async syncTasksFromSupabase(): Promise<Task[]> {
+    try {
+      const supaTasks = await fetchTasksFromSupabase();
+      if (supaTasks && supaTasks.length > 0) {
+        const existingIds = new Set(supaTasks.map((t) => t.id));
+        const localOnly = this.tasks.filter((t) => !existingIds.has(t.id));
+        this.tasks = [...supaTasks, ...localOnly];
+        this.persistState();
+      }
+    } catch (e) {
+      console.warn('syncTasksFromSupabase error:', e);
+    }
+    return this.tasks;
+  }
+
   public getTasks(assignedTo?: string): Task[] {
     if (assignedTo) {
-      return this.tasks.filter((t) => t.assignedTo === assignedTo);
+      const q = assignedTo.toLowerCase();
+      return this.tasks.filter(
+        (t) => t.assignedTo === assignedTo || (t.assignedToName && t.assignedToName.toLowerCase() === q)
+      );
     }
-    if (this.currentUser.permissions?.tasks?.scope === 'OWN' || (!this.currentUser.is_super_admin && !this.currentUser.isSuperAdmin && this.currentUser.role === 'SALES_OFFICER')) {
-      return this.tasks.filter((t) => t.assignedTo === this.currentUser.id);
+    const user = this.getCurrentUser();
+    const isOfficer =
+      !user.is_super_admin &&
+      !user.isSuperAdmin &&
+      (user.role === 'SALES_OFFICER' || getScope(user, 'tasks') === 'OWN');
+
+    if (isOfficer) {
+      const uName = (user.fullName || '').toLowerCase();
+      const uFirst = uName.split(' ')[0] || '';
+      return this.tasks.filter(
+        (t) =>
+          t.assignedTo === user.id ||
+          (t.assignedToName &&
+            (t.assignedToName.toLowerCase() === uName ||
+              (uFirst.length > 2 && t.assignedToName.toLowerCase().includes(uFirst))))
+      );
     }
     return this.tasks;
   }
@@ -2988,6 +3024,7 @@ export class DatabaseService {
     };
     this.tasks.unshift(newTask);
     this.persistState();
+    addTaskToSupabase(newTask).catch((err) => console.warn('addTaskToSupabase error:', err));
     return newTask;
   }
 
@@ -3000,6 +3037,7 @@ export class DatabaseService {
     if (task) {
       task.status = status;
       this.persistState();
+      updateTaskInSupabase(taskId, { status }).catch((err) => console.warn('updateTaskInSupabase error:', err));
     }
   }
 
@@ -3008,6 +3046,7 @@ export class DatabaseService {
     if (task) {
       Object.assign(task, updates);
       this.persistState();
+      updateTaskInSupabase(taskId, updates).catch((err) => console.warn('updateTaskInSupabase error:', err));
       return task;
     }
     return null;
@@ -3023,6 +3062,8 @@ export class DatabaseService {
     task.assignedTo = officerId;
     task.assignedToName = assignedName;
 
+    updateTaskInSupabase(taskId, { assignedTo: officerId, assignedToName: assignedName }).catch(() => {});
+
     syncManager.enqueue(
       'TASK_REASSIGNED',
       { taskId, officerId, officerName: assignedName, reassignedBy: this.currentUser.fullName },
@@ -3037,6 +3078,8 @@ export class DatabaseService {
     if (!task) return null;
 
     task.priority = priority;
+
+    updateTaskInSupabase(taskId, { priority }).catch(() => {});
 
     syncManager.enqueue(
       'TASK_PRIORITY_UPDATED',
@@ -3901,8 +3944,21 @@ export class DatabaseService {
 
   public getFilteredTasks(user?: User): Task[] {
     const activeUser = user || this.currentUser;
-    if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && (activeUser.permissions?.tasks?.scope === 'OWN' || activeUser.role === 'SALES_OFFICER')) {
-      return this.tasks.filter((t) => t.assignedTo === activeUser.id);
+    const isOfficer =
+      !activeUser.is_super_admin &&
+      !activeUser.isSuperAdmin &&
+      (activeUser.role === 'SALES_OFFICER' || getScope(activeUser, 'tasks') === 'OWN');
+
+    if (isOfficer) {
+      const uName = (activeUser.fullName || '').toLowerCase();
+      const uFirst = uName.split(' ')[0] || '';
+      return this.tasks.filter(
+        (t) =>
+          t.assignedTo === activeUser.id ||
+          (t.assignedToName &&
+            (t.assignedToName.toLowerCase() === uName ||
+              (uFirst.length > 2 && t.assignedToName.toLowerCase().includes(uFirst))))
+      );
     }
     return this.tasks;
   }
