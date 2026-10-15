@@ -357,7 +357,7 @@ export default function CalendarTasksPage() {
     setEditingTask(null);
     setModalTitle('');
     setModalDesc('');
-    setModalAssigneeId(users[0]?.id || 'user_officer_ravi');
+    setModalAssigneeId(users[0]?.id || '');
     setModalPriority('MEDIUM');
     setModalDateBs(getTodayBs());
     setModalDateAd(new Date().toISOString().split('T')[0]);

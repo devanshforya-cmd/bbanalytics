@@ -345,7 +345,7 @@ export default function DocumentsPage() {
       docDateBs: getTodayBs(),
       referenceNumber: formRefNumber.trim() || undefined,
       photoUrls: formPhotoUrls,
-      officerId: 'user_officer_ravi',
+      officerId: currentUser.id,
       officerName: formOfficerName,
       currentHolder,
       status: newStatus,

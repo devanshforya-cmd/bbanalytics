@@ -82,7 +82,6 @@ export default function LiveStaffTrackingPage() {
     setIsRefreshing(true);
     try {
       await fetchLatestPingsFromSupabase();
-      db.ensureBaselineSeeds();
     } catch {
       // ignore
     }
@@ -98,6 +97,27 @@ export default function LiveStaffTrackingPage() {
       setSelectedStaffId(enriched[0].officerId);
     }
     setIsRefreshing(false);
+  };
+
+  const handlePingMyGps = () => {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const user = db.getCurrentUser();
+          db.updateStaffPing(user.id, lat, lng, 'IN_TRANSIT', undefined, 100);
+          reloadLocations();
+          triggerToast(`Live GPS pinned at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        },
+        (err) => {
+          triggerToast(`GPS access: ${err.message}`);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      triggerToast('Geolocation is not supported by your browser.');
+    }
   };
 
   useEffect(() => {
@@ -201,6 +221,16 @@ export default function LiveStaffTrackingPage() {
               Offline / Break
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={handlePingMyGps}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+            title="Pin current device GPS location to map"
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            <span>Ping My GPS</span>
+          </button>
 
           <button
             type="button"

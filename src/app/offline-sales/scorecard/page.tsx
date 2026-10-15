@@ -153,172 +153,33 @@ function ScorecardContent() {
   };
 
   // -------------------------------------------------------------
-  // 3b. 16 METRICS FROM PRD PART 4.7
+  // 3b. DYNAMIC METRIC DEFINITIONS (Computed from real active staff)
   // -------------------------------------------------------------
-  const ravi = displayScorecards.find((s) => s.officerId.includes('ravi')) || displayScorecards[0];
-  const pooja = displayScorecards.find((s) => s.officerId.includes('pooja')) || displayScorecards[1];
-  const suman = displayScorecards.find((s) => s.officerId.includes('suman')) || displayScorecards[2];
-
-  interface MetricRow {
+  interface MetricDefinition {
     name: string;
-    raviVal: string | number;
-    poojaVal: string | number;
-    sumanVal: string | number;
-    bestOfficer: string;
-    bestKey: 'ravi' | 'pooja' | 'suman';
-    worstKey: 'ravi' | 'pooja' | 'suman';
+    isLowerBetter?: boolean;
+    formatter?: (val: number) => string;
+    extract: (sc: OfficerScorecard) => number;
   }
 
-  const comparisonRows: MetricRow[] = useMemo(() => {
-    if (!ravi || !pooja || !suman) return [];
-
-    return [
-      {
-        name: 'Stores Visited',
-        raviVal: ravi.storesVisited,
-        poojaVal: pooja.storesVisited,
-        sumanVal: suman.storesVisited,
-        bestOfficer: 'Pooja ✓',
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Beat Compliance %',
-        raviVal: `${ravi.beatCompliancePct}%`,
-        poojaVal: `${pooja.beatCompliancePct}%`,
-        sumanVal: `${suman.beatCompliancePct}%`,
-        bestOfficer: 'Pooja ✓',
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Stores Skipped',
-        raviVal: ravi.storesSkipped,
-        poojaVal: pooja.storesSkipped,
-        sumanVal: suman.storesSkipped,
-        bestOfficer: 'Pooja ✓', // Lower is better
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Avg Visit Duration',
-        raviVal: `${ravi.avgVisitDurationMinutes}m`,
-        poojaVal: `${pooja.avgVisitDurationMinutes}m`,
-        sumanVal: `${suman.avgVisitDurationMinutes}m`,
-        bestOfficer: 'Pooja ✓',
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Calls Made',
-        raviVal: ravi.callsMade,
-        poojaVal: pooja.callsMade,
-        sumanVal: suman.callsMade,
-        bestOfficer: 'Pooja ✓',
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Productive Calls',
-        raviVal: ravi.productiveCalls,
-        poojaVal: pooja.productiveCalls,
-        sumanVal: suman.productiveCalls,
-        bestOfficer: 'Pooja ✓',
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Call-to-Order Ratio',
-        raviVal: `${ravi.callToOrderRatioPct}%`,
-        poojaVal: `${pooja.callToOrderRatioPct}%`,
-        sumanVal: `${suman.callToOrderRatioPct}%`,
-        bestOfficer: 'Pooja ✓',
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Orders Collected',
-        raviVal: ravi.ordersCollected,
-        poojaVal: pooja.ordersCollected,
-        sumanVal: suman.ordersCollected,
-        bestOfficer: 'Pooja ✓',
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Cheques Collected',
-        raviVal: ravi.chequesCollected,
-        poojaVal: pooja.chequesCollected,
-        sumanVal: suman.chequesCollected,
-        bestOfficer: 'Pooja ✓',
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Cheques Overdue',
-        raviVal: ravi.chequesOverdue,
-        poojaVal: pooja.chequesOverdue,
-        sumanVal: suman.chequesOverdue,
-        bestOfficer: 'Pooja ✓', // Lower is better (0 overdue)
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Cheque Handover Gap',
-        raviVal: `${ravi.avgChequeHandoverDays}d`,
-        poojaVal: `${pooja.avgChequeHandoverDays}d`,
-        sumanVal: `${suman.avgChequeHandoverDays}d`,
-        bestOfficer: 'Pooja ✓', // Lower is better (1.1d)
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Shelf Photos Taken',
-        raviVal: ravi.shelfPhotosTaken,
-        poojaVal: pooja.shelfPhotosTaken,
-        sumanVal: suman.shelfPhotosTaken,
-        bestOfficer: 'Pooja ✓',
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Documents Collected',
-        raviVal: ravi.documentsCollected,
-        poojaVal: pooja.documentsCollected,
-        sumanVal: suman.documentsCollected,
-        bestOfficer: 'Pooja ✓',
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Stock Counts Done',
-        raviVal: ravi.stockCountsDone,
-        poojaVal: pooja.stockCountsDone,
-        sumanVal: suman.stockCountsDone,
-        bestOfficer: 'Pooja ✓',
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Response Time',
-        raviVal: `${ravi.responseTimeHours || 2.1}h`,
-        poojaVal: `${pooja.responseTimeHours || 1.5}h`,
-        sumanVal: `${suman.responseTimeHours || 3.4}h`,
-        bestOfficer: 'Pooja ✓', // Lower is better (1.5h)
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-      {
-        name: 'Pending Tasks',
-        raviVal: ravi.pendingTasks,
-        poojaVal: pooja.pendingTasks,
-        sumanVal: suman.pendingTasks,
-        bestOfficer: 'Pooja ✓', // Lower is better (1 task)
-        bestKey: 'pooja',
-        worstKey: 'suman',
-      },
-    ];
-  }, [ravi, pooja, suman]);
+  const METRIC_DEFINITIONS: MetricDefinition[] = [
+    { name: 'Stores Visited', extract: (s) => s.storesVisited },
+    { name: 'Beat Compliance %', extract: (s) => s.beatCompliancePct, formatter: (v) => `${v}%` },
+    { name: 'Stores Skipped', extract: (s) => s.storesSkipped, isLowerBetter: true },
+    { name: 'Avg Visit Duration', extract: (s) => s.avgVisitDurationMinutes, formatter: (v) => `${v}m` },
+    { name: 'Calls Made', extract: (s) => s.callsMade },
+    { name: 'Productive Calls', extract: (s) => s.productiveCalls },
+    { name: 'Call-to-Order Ratio', extract: (s) => s.callToOrderRatioPct, formatter: (v) => `${v}%` },
+    { name: 'Orders Collected', extract: (s) => s.ordersCollected },
+    { name: 'Cheques Collected', extract: (s) => s.chequesCollected },
+    { name: 'Cheques Overdue', extract: (s) => s.chequesOverdue, isLowerBetter: true },
+    { name: 'Cheque Handover Gap', extract: (s) => s.avgChequeHandoverDays, formatter: (v) => `${v}d`, isLowerBetter: true },
+    { name: 'Shelf Photos Taken', extract: (s) => s.shelfPhotosTaken },
+    { name: 'Documents Collected', extract: (s) => s.documentsCollected },
+    { name: 'Stock Counts Done', extract: (s) => s.stockCountsDone },
+    { name: 'Response Time', extract: (s) => s.responseTimeHours || 2.0, formatter: (v) => `${v}h`, isLowerBetter: true },
+    { name: 'Pending Tasks', extract: (s) => s.pendingTasks, isLowerBetter: true },
+  ];
 
   // -------------------------------------------------------------
   // 3c. 8-WEEK COMPLIANCE TRENDS
@@ -792,7 +653,7 @@ function ScorecardContent() {
       {/* ========================================================================= */}
       {/* 3b. FULL 16-METRIC COMPARISON TABLE (ADMIN ONLY)                          */}
       {/* ========================================================================= */}
-      {!isOfficer && comparisonRows.length > 0 && (
+      {!isOfficer && (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
           <div>
@@ -818,74 +679,88 @@ function ScorecardContent() {
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-              <tr>
-                <th className="py-3 px-4 font-bold text-slate-900">Operational Metric</th>
-                <th className="py-3 px-4 text-center">{ravi?.officerName || 'Officer 1'}</th>
-                <th className="py-3 px-4 text-center">{pooja?.officerName || 'Officer 2'}</th>
-                <th className="py-3 px-4 text-center">{suman?.officerName || 'Officer 3'}</th>
-                <th className="py-3 px-4 text-center font-black text-slate-900">Best Leader</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {comparisonRows.map((row) => (
-                <tr key={row.name} className="hover:bg-slate-50/70 transition">
-                  <td className="py-3 px-4 font-bold text-slate-900 flex items-center gap-2">
-                    <span>{row.name}</span>
-                  </td>
-
-                  {/* Ravi Column */}
-                  <td
-                    className={`py-3 px-4 text-center ${
-                      row.bestKey === 'ravi'
-                        ? 'bg-emerald-50 font-black text-emerald-900'
-                        : row.worstKey === 'ravi'
-                        ? 'bg-rose-50/60 font-semibold text-rose-800'
-                        : 'font-medium text-slate-700'
-                    }`}
-                  >
-                    {row.raviVal}
-                  </td>
-
-                  {/* Pooja Column */}
-                  <td
-                    className={`py-3 px-4 text-center ${
-                      row.bestKey === 'pooja'
-                        ? 'bg-emerald-50 font-black text-emerald-900'
-                        : row.worstKey === 'pooja'
-                        ? 'bg-rose-50/60 font-semibold text-rose-800'
-                        : 'font-medium text-slate-700'
-                    }`}
-                  >
-                    {row.poojaVal}
-                  </td>
-
-                  {/* Suman Column */}
-                  <td
-                    className={`py-3 px-4 text-center ${
-                      row.bestKey === 'suman'
-                        ? 'bg-emerald-50 font-black text-emerald-900'
-                        : row.worstKey === 'suman'
-                        ? 'bg-rose-50/60 font-semibold text-rose-800'
-                        : 'font-medium text-slate-700'
-                    }`}
-                  >
-                    {row.sumanVal}
-                  </td>
-
-                  {/* Best Column */}
-                  <td className="py-3 px-4 text-center">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 font-black text-[11px] border border-emerald-300">
-                      {row.bestOfficer}
-                    </span>
-                  </td>
+        {displayScorecards.length === 0 ? (
+          <div className="py-8">
+            <EmptyState
+              type="visits"
+              title="No Staff Scorecards Available"
+              description="Staff performance scorecards will appear once sales officers log activity or complete beat store visits."
+            />
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <tr>
+                  <th className="py-3 px-4 font-bold text-slate-900">Operational Metric</th>
+                  {displayScorecards.map((sc) => (
+                    <th key={sc.officerId} className="py-3 px-4 text-center font-bold text-slate-900">
+                      {sc.officerName}
+                    </th>
+                  ))}
+                  {displayScorecards.length > 1 && (
+                    <th className="py-3 px-4 text-center font-black text-slate-900">Best Leader</th>
+                  )}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {METRIC_DEFINITIONS.map((metric) => {
+                  let bestOfficer: OfficerScorecard | undefined = undefined;
+                  let bestVal = metric.isLowerBetter ? Infinity : -Infinity;
+
+                  for (const sc of displayScorecards) {
+                    const val = metric.extract(sc);
+                    if (metric.isLowerBetter ? val < bestVal : val > bestVal) {
+                      bestVal = val;
+                      bestOfficer = sc;
+                    }
+                  }
+
+                  const bestId = bestOfficer ? bestOfficer.officerId : '';
+                  const bestName = bestOfficer ? bestOfficer.officerName : '';
+
+                  return (
+                    <tr key={metric.name} className="hover:bg-slate-50/70 transition">
+                      <td className="py-3 px-4 font-bold text-slate-900">{metric.name}</td>
+                      {displayScorecards.map((sc) => {
+                        const rawVal = metric.extract(sc);
+                        const formatted = metric.formatter ? metric.formatter(rawVal) : rawVal;
+                        const isBest =
+                          bestId === sc.officerId &&
+                          displayScorecards.length > 1;
+
+                        return (
+                          <td
+                            key={sc.officerId}
+                            className={`py-3 px-4 text-center ${
+                              isBest
+                                ? 'bg-emerald-50 font-black text-emerald-900'
+                                : 'font-medium text-slate-700'
+                            }`}
+                          >
+                            {formatted}
+                          </td>
+                        );
+                      })}
+
+                      {displayScorecards.length > 1 && (
+                        <td className="py-3 px-4 text-center">
+                          {bestName ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 font-black text-[11px] border border-emerald-300">
+                              {bestName} ✓
+                            </span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
       )}
 

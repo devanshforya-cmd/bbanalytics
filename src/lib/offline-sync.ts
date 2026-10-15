@@ -55,7 +55,29 @@ class OfflineSyncManager {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        this.queue = JSON.parse(stored);
+        const raw = JSON.parse(stored);
+        if (Array.isArray(raw)) {
+          const now = Date.now();
+          // Auto-purge ephemeral GPS pings, excessive retry failures, and items older than 24 hours
+          this.queue = raw.filter((item) => {
+            if (!item || typeof item !== 'object') return false;
+            if (item.type === 'GPS_PING') return false;
+            if (item.attempts >= 3) return false;
+            if (item.timestamp) {
+              const itemTime = new Date(item.timestamp).getTime();
+              if (!isNaN(itemTime) && now - itemTime > 24 * 60 * 60 * 1000) return false;
+            }
+            return true;
+          });
+          // Cap queue to avoid runaway memory
+          if (this.queue.length > 50) {
+            this.queue = this.queue.slice(-50);
+          }
+          // If items were pruned, persist clean queue immediately
+          if (this.queue.length !== raw.length) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue));
+          }
+        }
       }
     } catch {
       this.queue = [];
@@ -180,8 +202,11 @@ class OfflineSyncManager {
       attempts: 0,
     };
 
-    this.queue.push(item);
-    this.saveQueue();
+    // Do not persist ephemeral GPS pings into persistent offline queue
+    if (type !== 'GPS_PING') {
+      this.queue.push(item);
+      this.saveQueue();
+    }
 
     // Auto-sync only if online and NOT simulated offline
     if (this.isOnline && !this.isSimulatedOffline) {

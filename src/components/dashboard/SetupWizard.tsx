@@ -47,18 +47,13 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
   const [newProdMrp, setNewProdMrp] = useState<number>(350);
 
   // Step 3: Stores
-  const [storesToAdd, setStoresToAdd] = useState<string[]>([
-    'Bhatbhateni Supermarket - Maharajgunj',
-    'Saleways Department Store - Jawalakhel',
-  ]);
+  const [storesToAdd, setStoresToAdd] = useState<string[]>([]);
   const [newStoreInput, setNewStoreInput] = useState('');
 
   // Step 4: Staff
   const [staffToAdd, setStaffToAdd] = useState<
     { name: string; phone: string; role: 'SALES_OFFICER' | 'BRAND_MANAGER' }[]
-  >([
-    { name: 'Ravi Sharma', phone: '+977-9801234567', role: 'SALES_OFFICER' },
-  ]);
+  >([]);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffPhone, setNewStaffPhone] = useState('+977-98');
 

@@ -16,6 +16,7 @@ import {
   Check,
   PlusCircle,
   Radio,
+  Trash2,
 } from 'lucide-react';
 
 export default function SyncStatusDropdown() {
@@ -210,16 +211,28 @@ export default function SyncStatusDropdown() {
 
           {/* Action Buttons */}
           <div className="pt-3 space-y-2">
-            {/* Force Sync Now Button */}
-            <button
-              type="button"
-              onClick={handleForceSync}
-              disabled={isSyncing}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-2 px-3 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50 transition"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isSyncing ? 'Synchronizing Queue...' : justSynced ? 'Queue Synchronized ✓' : 'Force Sync Now'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleForceSync}
+                disabled={isSyncing}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-2 px-3 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Synchronizing...' : justSynced ? 'Queue Synchronized ✓' : 'Force Sync'}
+              </button>
+              {pendingCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => syncManager.clearQueue()}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 py-2 px-3 text-xs font-bold text-rose-700 hover:bg-rose-100 transition"
+                  title="Clear all pending queue items immediately"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Clear
+                </button>
+              )}
+            </div>
 
             {/* Testing Tools Strip */}
             <div className="flex items-center gap-1.5 pt-1">

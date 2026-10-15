@@ -353,18 +353,21 @@ export default function InteractiveMap({
     [centerLat, centerLng, zoom, panOffset, dimensions]
   );
 
-  // Tile image URL with fallback chain
+  // Tile image URL with multi-tier reliable fallback chain
   const getTileSrc = (tile: typeof tiles[0]) => {
     const failures = failedTiles[tile.key] || 0;
     if (failures === 0) {
-      // Primary: CartoDB Voyager tiles (clean, fast, highly reliable)
+      // Primary: CartoDB Voyager tiles (clean, fast, retina-ready)
       return `https://${tile.subdomainCarto}.basemaps.cartocdn.com/rastertiles/voyager/${tile.z}/${tile.x}/${tile.y}.png`;
     } else if (failures === 1) {
-      // Secondary fallback: OpenStreetMap Humanitarian / HOT
-      return `https://${tile.subdomainOsm}.tile.openstreetmap.fr/hot/${tile.z}/${tile.x}/${tile.y}.png`;
+      // Secondary: ArcGIS World Street Map (ESRI - high performance global CDN)
+      return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
+    } else if (failures === 2) {
+      // Tertiary: OpenStreetMap Standard
+      return `https://${tile.subdomainOsm}.tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`;
     } else {
-      // Tertiary fallback: Standard OSM
-      return `https://tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`;
+      // Quaternary: CartoDB Positron
+      return `https://${tile.subdomainCarto}.basemaps.cartocdn.com/light_all/${tile.z}/${tile.x}/${tile.y}.png`;
     }
   };
 
@@ -373,6 +376,26 @@ export default function InteractiveMap({
       ...prev,
       [key]: (prev[key] || 0) + 1,
     }));
+  };
+
+  // Center on device geolocation
+  const handleLocateMe = () => {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setCenterLat(pos.coords.latitude);
+          setCenterLng(pos.coords.longitude);
+          setPanOffset({ x: 0, y: 0 });
+          setZoom(15);
+        },
+        () => {
+          handleResetToReps();
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    } else {
+      handleResetToReps();
+    }
   };
 
   return (
@@ -392,33 +415,33 @@ export default function InteractiveMap({
       <div className="absolute inset-0 pointer-events-none">
         {tiles.map((tile) => {
           const failures = failedTiles[tile.key] || 0;
-          if (failures >= 3) {
-            // Render styled vector tile grid fallback if all CDNs are unreachable
+          if (failures >= 4) {
+            // Render styled subtle topographic grid fallback if all CDNs are unreachable
             return (
               <div
                 key={tile.key}
-                className="absolute w-[256px] h-[256px] bg-slate-100 border border-slate-200/60 flex items-center justify-center text-[10px] text-slate-400 font-mono"
+                className="absolute w-[256px] h-[256px] bg-slate-100 border border-slate-200/40"
                 style={{
                   left: `${tile.left}px`,
                   top: `${tile.top}px`,
+                  backgroundImage: 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)',
+                  backgroundSize: '24px 24px',
                 }}
-              >
-                <div className="text-center opacity-40">
-                  <MapPin className="w-4 h-4 mx-auto mb-1 text-slate-300" />
-                  <span>{tile.z}/{tile.x}/{tile.y}</span>
-                </div>
-              </div>
+              />
             );
           }
 
           return (
             <img
-              key={tile.key}
+              key={`${tile.key}-${failures}`}
               src={getTileSrc(tile)}
               alt=""
-              loading="lazy"
+              loading="eager"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
               onError={() => handleTileError(tile.key)}
-              className="absolute w-[256px] h-[256px] opacity-95 transition-opacity"
+              className="absolute w-[256px] h-[256px] opacity-95 transition-opacity duration-300"
               style={{
                 left: `${tile.left}px`,
                 top: `${tile.top}px`,
@@ -807,6 +830,17 @@ export default function InteractiveMap({
           title="Fit All Reps &amp; Stores"
         >
           <Maximize2 className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleLocateMe();
+          }}
+          className="w-8 h-8 rounded-lg bg-white/95 backdrop-blur-xs text-indigo-600 hover:text-indigo-700 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
+          title="Locate My GPS"
+        >
+          <Navigation className="w-4 h-4" />
         </button>
         <button
           type="button"

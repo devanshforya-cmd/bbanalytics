@@ -188,7 +188,7 @@ export class DatabaseService {
 
       // Listen for cross-tab storage changes
       window.addEventListener('storage', (e) => {
-        if (e.key === 'bb_command_center_db_state_v9') {
+        if (e.key === 'bb_command_center_db_state_v11') {
           this.loadState();
           window.dispatchEvent(new CustomEvent('bb-db-updated'));
         }
@@ -258,565 +258,6 @@ export class DatabaseService {
       ];
     }
 
-    // 2. Staff Live Locations & Users Baseline (Kathmandu Field Force)
-    const baselineOfficers = [
-      {
-        id: 'officer_ravi',
-        name: 'Ravi Sharma',
-        phone: '+977-9841122334',
-        email: 'ravi@brandbucket.com',
-        lat: 27.7360,
-        lng: 85.3310,
-        status: 'AT_STORE' as const,
-        store: 'Bhatbhateni Supermarket Maharajgunj',
-        battery: 88,
-        dist: 6.4,
-        route: [
-          { storeName: 'Krishna Store Chabahil', lat: 27.7172, lng: 85.3482, arrivedAt: '09:45 AM', status: 'COMPLETED' as const },
-          { storeName: 'Norvic Pharmacy Thapathali', lat: 27.6912, lng: 85.3188, arrivedAt: '11:15 AM', status: 'COMPLETED' as const },
-          { storeName: 'Bhatbhateni Supermarket Maharajgunj', lat: 27.7360, lng: 85.3310, arrivedAt: '01:30 PM', status: 'IN_PROGRESS' as const },
-        ],
-      },
-      {
-        id: 'officer_pooja',
-        name: 'Pooja Shrestha',
-        phone: '+977-9841556677',
-        email: 'pooja@brandbucket.com',
-        lat: 27.6890,
-        lng: 85.3420,
-        status: 'IN_TRANSIT' as const,
-        store: 'BigMart Baneshwor',
-        battery: 74,
-        dist: 8.2,
-        route: [
-          { storeName: 'Saleways Kalimati', lat: 27.6980, lng: 85.2970, arrivedAt: '10:00 AM', status: 'COMPLETED' as const },
-          { storeName: 'BigMart Baneshwor', lat: 27.6890, lng: 85.3420, arrivedAt: '01:10 PM', status: 'IN_PROGRESS' as const },
-        ],
-      },
-      {
-        id: 'officer_suman',
-        name: 'Suman Adhikari',
-        phone: '+977-9841889900',
-        email: 'suman@brandbucket.com',
-        lat: 27.7020,
-        lng: 85.3110,
-        status: 'AT_STORE' as const,
-        store: 'Civil Mall Cosmetics Hub',
-        battery: 92,
-        dist: 4.1,
-        route: [
-          { storeName: 'Civil Mall Cosmetics Hub', lat: 27.7020, lng: 85.3110, arrivedAt: '10:30 AM', status: 'IN_PROGRESS' as const },
-        ],
-      },
-    ];
-
-    // Ensure users array contains officers
-    baselineOfficers.forEach((bo) => {
-      if (!this.users.find((u) => u.id === bo.id)) {
-        this.users.push({
-          id: bo.id,
-          fullName: bo.name,
-          email: bo.email,
-          phone: bo.phone,
-          role: 'SALES_OFFICER',
-          dutyStatus: 'ONLINE',
-          active: true,
-          assignedBrands: ['ALL'],
-          territory: 'Kathmandu Valley',
-          permissions: {
-            canViewAnalytics: true,
-            canExportSheets: false,
-            canManageDispatches: false,
-            canManageCheques: true,
-            canApproveSkips: false,
-            canManageStaff: false,
-            canConfigureSettings: false,
-          },
-        });
-      }
-    });
-
-    // Ensure staff live locations exist
-    if (!this.staffLiveLocations || this.staffLiveLocations.length === 0) {
-      this.staffLiveLocations = baselineOfficers.map((bo) => ({
-        officerId: bo.id,
-        officerName: bo.name,
-        currentLat: bo.lat,
-        currentLng: bo.lng,
-        lastPingTimestamp: new Date().toISOString(),
-        status: bo.status,
-        currentStoreName: bo.store,
-        timeAtCurrentStoreMinutes: 18,
-        batteryLevel: bo.battery,
-        isOnline: true,
-        dutyStatus: 'ONLINE',
-        todayDistanceKm: bo.dist,
-        todayRoute: bo.route,
-      }));
-    }
-
-    // 3. Retail Stores & Distributors Baseline (Kathmandu)
-    if ((!this.distributors || this.distributors.length === 0) && (!this.retailers || this.retailers.length === 0)) {
-      this.distributors = [
-        {
-          id: 'dist_bbs',
-          name: 'Bhatbhateni Supermarket (HQ)',
-          type: 'Distributor',
-          city: 'Kathmandu',
-          contactName: 'Min Bahadur Gurung',
-          contactRole: 'Procurement Head',
-          contactPhone: '+977-9851022334',
-          contactEmail: 'procurement@bbs.com.np',
-          contacts: [
-            {
-              id: 'cnt_bbs_1',
-              name: 'Min Bahadur Gurung',
-              role: 'Owner',
-              phone: '+977-9851022334',
-              isPrimary: true,
-            },
-          ],
-          brandsCarried: ['FORYA', 'PEE_SAFE', 'FURR', 'RENEE'],
-          creditTerms: '30 Days Net Cheque',
-        },
-        {
-          id: 'dist_bigmart',
-          name: 'BigMart Supermarket Network',
-          type: 'Distributor',
-          city: 'Kathmandu',
-          contactName: 'Prakash Shrestha',
-          contactRole: 'Category Manager',
-          contactPhone: '+977-9851044556',
-          contactEmail: 'prakash@bigmart.com.np',
-          contacts: [
-            {
-              id: 'cnt_bigmart_1',
-              name: 'Prakash Shrestha',
-              role: 'Store Manager',
-              phone: '+977-9851044556',
-              isPrimary: true,
-            },
-          ],
-          brandsCarried: ['FORYA', 'PEE_SAFE', 'FURR'],
-          creditTerms: '15 Days Cheque',
-        },
-      ];
-
-      this.branches = [
-        {
-          id: 'br_bbs_mjg',
-          distributorId: 'dist_bbs',
-          distributorName: 'Bhatbhateni Supermarket (HQ)',
-          name: 'Bhatbhateni Maharajgunj',
-          address: 'Maharajgunj Ring Road, Kathmandu',
-          lat: 27.7360,
-          lng: 85.3310,
-          assignedOfficerId: 'officer_ravi',
-          assignedOfficerName: 'Ravi Sharma',
-          contactName: 'Ramesh Adhikari',
-          contactRole: 'Store Incharge',
-          contactPhone: '+977-9841238910',
-          contacts: [
-            {
-              id: 'cnt_bbs_mjg_1',
-              name: 'Ramesh Adhikari',
-              role: 'Store Manager',
-              phone: '+977-9841238910',
-              isPrimary: true,
-            },
-          ],
-          brandsAvailable: ['FORYA', 'PEE_SAFE', 'FURR', 'RENEE'],
-        },
-        {
-          id: 'br_bigmart_baneshwor',
-          distributorId: 'dist_bigmart',
-          distributorName: 'BigMart Supermarket Network',
-          name: 'BigMart New Baneshwor',
-          address: 'Baneshwor Chowk, Kathmandu',
-          lat: 27.6890,
-          lng: 85.3420,
-          assignedOfficerId: 'officer_pooja',
-          assignedOfficerName: 'Pooja Shrestha',
-          contactName: 'Kishor Maharjan',
-          contactRole: 'Floor Supervisor',
-          contactPhone: '+977-9841998877',
-          contacts: [
-            {
-              id: 'cnt_bigmart_baneshwor_1',
-              name: 'Kishor Maharjan',
-              role: 'Floor Supervisor',
-              phone: '+977-9841998877',
-              isPrimary: true,
-            },
-          ],
-          brandsAvailable: ['FORYA', 'PEE_SAFE', 'FURR'],
-        },
-      ];
-
-      this.retailers = [
-        {
-          id: 'ret_norvic_pharmacy',
-          name: 'Norvic Pharmacy Thapathali',
-          type: 'Pharmacy',
-          city: 'Kathmandu',
-          area: 'Thapathali',
-          address: 'Near Norvic Hospital, Thapathali, Kathmandu',
-          lat: 27.6912,
-          lng: 85.3188,
-          contactName: 'Dr. Binod Karki',
-          contactRole: 'Chief Pharmacist',
-          contactPhone: '+977-9841223344',
-          assignedOfficerId: 'officer_ravi',
-          assignedOfficerName: 'Ravi Sharma',
-          contacts: [
-            {
-              id: 'cnt_norvic_1',
-              name: 'Dr. Binod Karki',
-              role: 'Owner',
-              phone: '+977-9841223344',
-              isPrimary: true,
-            },
-          ],
-          brandsStocked: ['PEE_SAFE', 'FORYA'],
-        },
-        {
-          id: 'ret_saleways_kalimati',
-          name: 'Saleways Kalimati',
-          type: 'GT',
-          city: 'Kathmandu',
-          area: 'Kalimati',
-          address: 'Kalimati Commercial Complex, Kathmandu',
-          lat: 27.6980,
-          lng: 85.2970,
-          contactName: 'Sanjay Tuladhar',
-          contactRole: 'Owner',
-          contactPhone: '+977-9841667788',
-          assignedOfficerId: 'officer_pooja',
-          assignedOfficerName: 'Pooja Shrestha',
-          contacts: [
-            {
-              id: 'cnt_saleways_1',
-              name: 'Sanjay Tuladhar',
-              role: 'Owner',
-              phone: '+977-9841667788',
-              isPrimary: true,
-            },
-          ],
-          brandsStocked: ['FORYA', 'PEE_SAFE', 'RENEE'],
-        },
-        {
-          id: 'ret_krishna_chabahil',
-          name: 'Krishna Store Chabahil',
-          type: 'Kirana',
-          city: 'Kathmandu',
-          area: 'Chabahil',
-          address: 'Chabahil Stupa Marg, Kathmandu',
-          lat: 27.7172,
-          lng: 85.3482,
-          contactName: 'Krishna Shrestha',
-          contactRole: 'Proprietor',
-          contactPhone: '+977-9841778899',
-          assignedOfficerId: 'officer_ravi',
-          assignedOfficerName: 'Ravi Sharma',
-          contacts: [
-            {
-              id: 'cnt_krishna_1',
-              name: 'Krishna Shrestha',
-              role: 'Owner',
-              phone: '+977-9841778899',
-              isPrimary: true,
-            },
-          ],
-          brandsStocked: ['FORYA', 'PEE_SAFE'],
-        },
-        {
-          id: 'ret_civil_mall_cosmetics',
-          name: 'Civil Mall Cosmetics Hub',
-          type: 'Cosmetics',
-          city: 'Kathmandu',
-          area: 'Sundhara',
-          address: 'Civil Mall 2nd Floor, Sundhara, Kathmandu',
-          lat: 27.7020,
-          lng: 85.3110,
-          contactName: 'Sunita Shakya',
-          contactRole: 'Store Manager',
-          contactPhone: '+977-9841334455',
-          assignedOfficerId: 'officer_suman',
-          assignedOfficerName: 'Suman Adhikari',
-          contacts: [
-            {
-              id: 'cnt_civil_mall_1',
-              name: 'Sunita Shakya',
-              role: 'Store Manager',
-              phone: '+977-9841334455',
-              isPrimary: true,
-            },
-          ],
-          brandsStocked: ['RENEE', 'FORYA'],
-        },
-      ];
-    }
-
-    // 4. Beat Items Baseline
-    if (!this.beatItems || this.beatItems.length === 0) {
-      const todayAd = new Date().toISOString().split('T')[0];
-      const todayBs = getTodayBs();
-      this.beatItems = [
-        {
-          id: 'beat_1',
-          officerId: 'officer_ravi',
-          dateAd: todayAd,
-          dateBs: todayBs,
-          sequence: 1,
-          entityType: 'BRANCH',
-          entityId: 'br_bbs_mjg',
-          storeName: 'Bhatbhateni Supermarket Maharajgunj',
-          storeType: 'Chain Supermarket',
-          address: 'Maharajgunj Ring Road, Kathmandu',
-          lat: 27.7360,
-          lng: 85.3310,
-          contactName: 'Ramesh Adhikari',
-          contactPhone: '+977-9841238910',
-          contacts: [
-            {
-              id: 'cnt_b1',
-              name: 'Ramesh Adhikari',
-              role: 'Store Manager',
-              phone: '+977-9841238910',
-              isPrimary: true,
-            },
-          ],
-          lastVisitDaysAgo: 4,
-          pendingTasks: ['STOCK_COUNT', 'SHELF_PHOTO', 'SECONDARY_ORDER'],
-          status: 'PENDING',
-          priority: 'HIGH',
-        },
-        {
-          id: 'beat_2',
-          officerId: 'officer_pooja',
-          dateAd: todayAd,
-          dateBs: todayBs,
-          sequence: 1,
-          entityType: 'BRANCH',
-          entityId: 'br_bigmart_baneshwor',
-          storeName: 'BigMart New Baneshwor',
-          storeType: 'Chain Supermarket',
-          address: 'Baneshwor Chowk, Kathmandu',
-          lat: 27.6890,
-          lng: 85.3420,
-          contactName: 'Kishor Maharjan',
-          contactPhone: '+977-9841998877',
-          contacts: [
-            {
-              id: 'cnt_b2',
-              name: 'Kishor Maharjan',
-              role: 'Floor Supervisor',
-              phone: '+977-9841998877',
-              isPrimary: true,
-            },
-          ],
-          lastVisitDaysAgo: 2,
-          pendingTasks: ['STOCK_COUNT', 'SHELF_PHOTO'],
-          status: 'PENDING',
-          priority: 'HIGH',
-        },
-        {
-          id: 'beat_3',
-          officerId: 'officer_ravi',
-          dateAd: todayAd,
-          dateBs: todayBs,
-          sequence: 2,
-          entityType: 'RETAILER',
-          entityId: 'ret_norvic_pharmacy',
-          storeName: 'Norvic Pharmacy Thapathali',
-          storeType: 'Pharmacy',
-          address: 'Thapathali, Kathmandu',
-          lat: 27.6912,
-          lng: 85.3188,
-          contactName: 'Dr. Binod Karki',
-          contactPhone: '+977-9841223344',
-          contacts: [
-            {
-              id: 'cnt_b3',
-              name: 'Dr. Binod Karki',
-              role: 'Owner',
-              phone: '+977-9841223344',
-              isPrimary: true,
-            },
-          ],
-          lastVisitDaysAgo: 1,
-          pendingTasks: ['STOCK_COUNT'],
-          status: 'VISITED',
-          priority: 'MEDIUM',
-          checkedInAt: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
-        },
-        {
-          id: 'beat_4',
-          officerId: 'officer_pooja',
-          dateAd: todayAd,
-          dateBs: todayBs,
-          sequence: 2,
-          entityType: 'RETAILER',
-          entityId: 'ret_saleways_kalimati',
-          storeName: 'Saleways Kalimati',
-          storeType: 'Department Store',
-          address: 'Kalimati, Kathmandu',
-          lat: 27.6980,
-          lng: 85.2970,
-          contactName: 'Sanjay Tuladhar',
-          contactPhone: '+977-9841667788',
-          contacts: [
-            {
-              id: 'cnt_b4',
-              name: 'Sanjay Tuladhar',
-              role: 'Owner',
-              phone: '+977-9841667788',
-              isPrimary: true,
-            },
-          ],
-          lastVisitDaysAgo: 3,
-          pendingTasks: ['STOCK_COUNT', 'SHELF_PHOTO'],
-          status: 'VISITED',
-          priority: 'ROUTINE',
-          checkedInAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
-        },
-        {
-          id: 'beat_5',
-          officerId: 'officer_ravi',
-          dateAd: todayAd,
-          dateBs: todayBs,
-          sequence: 3,
-          entityType: 'RETAILER',
-          entityId: 'ret_krishna_chabahil',
-          storeName: 'Krishna Store Chabahil',
-          storeType: 'Kirana',
-          address: 'Chabahil, Kathmandu',
-          lat: 27.7172,
-          lng: 85.3482,
-          contactName: 'Krishna Shrestha',
-          contactPhone: '+977-9841778899',
-          contacts: [
-            {
-              id: 'cnt_b5',
-              name: 'Krishna Shrestha',
-              role: 'Owner',
-              phone: '+977-9841778899',
-              isPrimary: true,
-            },
-          ],
-          lastVisitDaysAgo: 2,
-          pendingTasks: ['STOCK_COUNT'],
-          status: 'VISITED',
-          priority: 'ROUTINE',
-          checkedInAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
-        },
-        {
-          id: 'beat_6',
-          officerId: 'officer_suman',
-          dateAd: todayAd,
-          dateBs: todayBs,
-          sequence: 1,
-          entityType: 'RETAILER',
-          entityId: 'ret_civil_mall_cosmetics',
-          storeName: 'Civil Mall Cosmetics Hub',
-          storeType: 'Cosmetics Outlet',
-          address: 'Sundhara, Kathmandu',
-          lat: 27.7020,
-          lng: 85.3110,
-          contactName: 'Sunita Shakya',
-          contactPhone: '+977-9841334455',
-          contacts: [
-            {
-              id: 'cnt_b6',
-              name: 'Sunita Shakya',
-              role: 'Store Manager',
-              phone: '+977-9841334455',
-              isPrimary: true,
-            },
-          ],
-          lastVisitDaysAgo: 5,
-          pendingTasks: ['STOCK_COUNT', 'SECONDARY_ORDER'],
-          status: 'PENDING',
-          priority: 'MEDIUM',
-        },
-      ];
-    }
-
-    // 5. Products Baseline
-    if (!this.products || this.products.length === 0) {
-      this.products = [
-        {
-          id: 'prod_forya_ro_pch',
-          sku: 'FOR-RO-PCH',
-          name: 'Forya Peach Roll-On Deodorant 50ml',
-          brandId: 'brand_forya',
-          brandCode: 'FORYA',
-          category: 'Personal Care',
-          mrp: 450,
-          unitPrice: 320,
-          costPrice: 240,
-          thresholdQty: 10,
-          keywords: ['peach', 'rollon', 'roll-on', 'deo', 'forya'],
-          active: true,
-        },
-        {
-          id: 'prod_forya_ser_vtc',
-          sku: 'FOR-SER-VTC',
-          name: 'Forya Vitamin C Glow Serum 30ml',
-          brandId: 'brand_forya',
-          brandCode: 'FORYA',
-          category: 'Skincare',
-          mrp: 850,
-          unitPrice: 620,
-          costPrice: 480,
-          thresholdQty: 8,
-          keywords: ['vitaminc', 'serum', 'glow', 'forya'],
-          active: true,
-        },
-        {
-          id: 'prod_ps_tss_75',
-          sku: 'PS-TSS-75',
-          name: 'Pee Safe Toilet Seat Sanitizer Spray 75ml',
-          brandId: 'brand_peesafe',
-          brandCode: 'PEE_SAFE',
-          category: 'Hygiene',
-          mrp: 320,
-          unitPrice: 230,
-          costPrice: 170,
-          thresholdQty: 15,
-          keywords: ['toilet', 'spray', 'sanitizer', 'peesafe'],
-          active: true,
-        },
-        {
-          id: 'prod_furr_ns_3n',
-          sku: 'FUR-NS-3N',
-          name: 'FURR Daily Cleansing Nose Strips 3N',
-          brandId: 'brand_furr',
-          brandCode: 'FURR',
-          category: 'Personal Care',
-          mrp: 299,
-          unitPrice: 210,
-          costPrice: 150,
-          thresholdQty: 12,
-          keywords: ['nose', 'strips', 'blackhead', 'furr'],
-          active: true,
-        },
-        {
-          id: 'prod_ren_fab_5',
-          sku: 'REN-FAB-5',
-          name: 'Renee Fab 5-in-1 Multi-Shade Matte Lipstick',
-          brandId: 'brand_renee',
-          brandCode: 'RENEE',
-          category: 'Cosmetics',
-          mrp: 999,
-          unitPrice: 720,
-          costPrice: 540,
-          thresholdQty: 6,
-          keywords: ['lipstick', 'fab5', 'matte', 'renee'],
-          active: true,
-        },
-      ];
-    }
   }
 
   /**
@@ -1005,7 +446,9 @@ export class DatabaseService {
       localStorage.removeItem('bb_command_center_db_state');
       localStorage.removeItem('bb_auth_user_session_v2');
 
-      const stored = localStorage.getItem('bb_command_center_db_state_v9');
+      localStorage.removeItem('bb_command_center_db_state_v10');
+      localStorage.removeItem('bb_command_center_db_state_v9');
+      const stored = localStorage.getItem('bb_command_center_db_state_v11');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.users && parsed.users.length > 0) this.users = parsed.users;
@@ -1054,6 +497,29 @@ export class DatabaseService {
         if (parsed.requireStorePhotoAtCheckIn !== undefined) this.requireStorePhotoAtCheckIn = parsed.requireStorePhotoAtCheckIn;
         if (parsed.recurringSchedules) this.recurringSchedules = parsed.recurringSchedules;
       }
+
+      // STRICT: Sanitize and purge any phantom mock entities
+      const PHANTOM_IDS = new Set([
+        'officer_ravi', 'officer_pooja', 'officer_suman', 'user_officer_ravi',
+        'dist_bbs', 'dist_bigmart', 'br_bbs_mjg', 'br_bigmart_baneshwor',
+        'ret_norvic', 'ret_saleways', 'ret_krishna', 'ret_civil_mall',
+        'ret_norvic_pharmacy', 'ret_saleways_kalimati', 'ret_krishna_chabahil', 'ret_civil_mall_cosmetics',
+        'beat_ravi_01', 'beat_2', 'beat_3', 'beat_4', 'beat_5', 'beat_6',
+        'prod_forya_ro_pch', 'prod_pee_safe_pantyliner', 'prod_furr_nose_strips', 'prod_ren_fab_5'
+      ]);
+
+      this.users = (this.users || []).filter((u) => !PHANTOM_IDS.has(u.id));
+      if (this.users.length === 0) {
+        this.users = [DEFAULT_SUPER_ADMIN];
+      }
+      this.distributors = (this.distributors || []).filter((d) => !PHANTOM_IDS.has(d.id));
+      this.branches = (this.branches || []).filter((b) => !PHANTOM_IDS.has(b.id));
+      this.retailers = (this.retailers || []).filter((r) => !PHANTOM_IDS.has(r.id));
+      this.beatItems = (this.beatItems || []).filter(
+        (b) => !PHANTOM_IDS.has(b.id) && !PHANTOM_IDS.has(b.officerId) && !PHANTOM_IDS.has(b.entityId)
+      );
+      this.products = (this.products || []).filter((p) => !PHANTOM_IDS.has(p.id));
+      this.staffLiveLocations = (this.staffLiveLocations || []).filter((s) => !PHANTOM_IDS.has(s.officerId));
     } catch (e) {
       console.warn('Failed to load state from localStorage', e);
     }
@@ -1114,7 +580,7 @@ export class DatabaseService {
         requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn,
         recurringSchedules: this.recurringSchedules,
       };
-      localStorage.setItem('bb_command_center_db_state_v9', JSON.stringify(state));
+      localStorage.setItem('bb_command_center_db_state_v11', JSON.stringify(state));
 
       // Dispatch local window event so all mounted React components re-render immediately
       window.dispatchEvent(new CustomEvent('bb-db-updated'));
@@ -1136,7 +602,7 @@ export class DatabaseService {
 
   public resetDatabase() {
     if (typeof window === 'undefined') return;
-    localStorage.removeItem('bb_command_center_db_state_v9');
+    localStorage.removeItem('bb_command_center_db_state_v11');
     localStorage.removeItem('bb_command_center_db_state_v8');
     localStorage.removeItem('bb_command_center_db_state_v7');
     localStorage.removeItem('bb_command_center_db_state_v6');
@@ -2431,7 +1897,29 @@ export class DatabaseService {
 
   // Real-Time Staff Tracking (PRD v2.2)
   public getStaffLiveLocations(): StaffLiveLocation[] {
-    return this.staffLiveLocations;
+    const validUserIds = new Set(this.users.map((u) => u.id));
+    const validLocs = (this.staffLiveLocations || []).filter((s) => validUserIds.has(s.officerId));
+
+    // Ensure all active real users from this.users are represented
+    const activeUsers = this.users.filter((u) => u.active !== false);
+    for (const u of activeUsers) {
+      if (!validLocs.some((s) => s.officerId === u.id)) {
+        validLocs.push({
+          officerId: u.id,
+          officerName: u.fullName,
+          currentLat: 27.700769,
+          currentLng: 85.31514,
+          lastPingTimestamp: new Date().toISOString(),
+          status: 'IN_TRANSIT',
+          batteryLevel: 98,
+          isOnline: u.dutyStatus !== 'OFFLINE',
+          dutyStatus: u.dutyStatus || 'ONLINE',
+          todayDistanceKm: 0,
+          todayRoute: [],
+        });
+      }
+    }
+    return validLocs;
   }
 
   public updateStaffPing(
@@ -2483,16 +1971,7 @@ export class DatabaseService {
       });
     }
 
-    syncManager.enqueue('GPS_PING', {
-      officer_id: officerId,
-      officer_name: staff.officerName,
-      lat,
-      lng,
-      status,
-      current_store_name: storeName || null,
-      battery_level: staff.batteryLevel,
-      created_at: new Date().toISOString(),
-    });
+    // Ephemeral GPS pings update live state directly without clogging offline queue
 
     this.persistState();
   }
