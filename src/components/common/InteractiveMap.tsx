@@ -58,6 +58,7 @@ export default function InteractiveMap({
   const [centerLat, setCenterLat] = useState(27.700769);
   const [centerLng, setCenterLng] = useState(85.31514);
   const [zoom, setZoom] = useState(13);
+  const [mapStyle, setMapStyle] = useState<'STREET' | 'SATELLITE' | 'TOPO'>('STREET');
 
   // Dynamic container dimensions
   const containerRef = useRef<HTMLDivElement>(null);
@@ -353,22 +354,25 @@ export default function InteractiveMap({
     [centerLat, centerLng, zoom, panOffset, dimensions]
   );
 
-  // Tile image URL with multi-tier reliable fallback chain
+  // Tile image URL from ultra-reliable ArcGIS / ESRI CDN (High-res Kathmandu street network)
   const getTileSrc = (tile: typeof tiles[0]) => {
     const failures = failedTiles[tile.key] || 0;
-    if (failures === 0) {
-      // Primary: CartoDB Voyager tiles (clean, fast, retina-ready)
-      return `https://${tile.subdomainCarto}.basemaps.cartocdn.com/rastertiles/voyager/${tile.z}/${tile.x}/${tile.y}.png`;
-    } else if (failures === 1) {
-      // Secondary: ArcGIS World Street Map (ESRI - high performance global CDN)
-      return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
+
+    // If active tile failed, fallback gracefully between ArcGIS services
+    if (failures === 1) {
+      return `https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
     } else if (failures === 2) {
-      // Tertiary: OpenStreetMap Standard
-      return `https://${tile.subdomainOsm}.tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`;
-    } else {
-      // Quaternary: CartoDB Positron
-      return `https://${tile.subdomainCarto}.basemaps.cartocdn.com/light_all/${tile.z}/${tile.x}/${tile.y}.png`;
+      return `https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
     }
+
+    if (mapStyle === 'SATELLITE') {
+      return `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
+    } else if (mapStyle === 'TOPO') {
+      return `https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
+    }
+
+    // Default: ArcGIS World Street Map (Sharp, crisp street names and landmarks)
+    return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
   };
 
   const handleTileError = (key: string) => {
@@ -415,7 +419,7 @@ export default function InteractiveMap({
       <div className="absolute inset-0 pointer-events-none">
         {tiles.map((tile) => {
           const failures = failedTiles[tile.key] || 0;
-          if (failures >= 4) {
+          if (failures >= 3) {
             // Render styled subtle topographic grid fallback if all CDNs are unreachable
             return (
               <div
@@ -433,7 +437,7 @@ export default function InteractiveMap({
 
           return (
             <img
-              key={`${tile.key}-${failures}`}
+              key={`${tile.key}-${mapStyle}-${failures}`}
               src={getTileSrc(tile)}
               alt=""
               loading="eager"
@@ -441,11 +445,10 @@ export default function InteractiveMap({
               referrerPolicy="no-referrer"
               crossOrigin="anonymous"
               onError={() => handleTileError(tile.key)}
-              className="absolute w-[256px] h-[256px] opacity-95 transition-opacity duration-300"
+              className="absolute w-[256px] h-[256px] opacity-100 transition-opacity duration-200"
               style={{
                 left: `${tile.left}px`,
                 top: `${tile.top}px`,
-                filter: 'saturate(1.05) contrast(1.02)',
               }}
             />
           );
@@ -796,6 +799,52 @@ export default function InteractiveMap({
         </div>
       )}
 
+      {/* Map Style Switcher (Street / Satellite / Terrain) */}
+      <div className="absolute left-3 top-3 z-30 flex items-center rounded-xl bg-white/95 backdrop-blur-xs p-1 shadow-md border border-slate-200 text-xs font-semibold">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setMapStyle('STREET');
+          }}
+          className={`px-2.5 py-1 rounded-lg transition ${
+            mapStyle === 'STREET'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Street
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setMapStyle('SATELLITE');
+          }}
+          className={`px-2.5 py-1 rounded-lg transition ${
+            mapStyle === 'SATELLITE'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Satellite
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setMapStyle('TOPO');
+          }}
+          className={`px-2.5 py-1 rounded-lg transition ${
+            mapStyle === 'TOPO'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Terrain
+        </button>
+      </div>
+
       {/* Floating Map Controls */}
       <div className="absolute right-3 top-3 z-30 flex flex-col gap-1.5 shadow-md">
         <button
@@ -873,15 +922,7 @@ export default function InteractiveMap({
         </div>
 
         <div className="text-[9px] text-slate-500 bg-white/80 px-2 py-0.5 rounded shadow pointer-events-auto">
-          CartoDB &bull; &copy;{' '}
-          <a
-            href="https://www.openstreetmap.org/copyright"
-            target="_blank"
-            rel="noreferrer"
-            className="underline"
-          >
-            OpenStreetMap
-          </a>
+          Map data &copy; Esri, HERE, Garmin, OpenStreetMap
         </div>
       </div>
     </div>
