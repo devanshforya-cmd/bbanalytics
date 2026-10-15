@@ -3,7 +3,7 @@
  * Provides offline caching for static assets, app shell, and background sync integration.
  */
 
-const CACHE_NAME = 'bb-command-center-v1';
+const CACHE_NAME = 'bb-command-center-v2';
 const STATIC_ASSETS = [
   '/',
   '/dashboard',

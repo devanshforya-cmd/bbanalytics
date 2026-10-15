@@ -57,7 +57,7 @@ export default function InteractiveMap({
   // Center on Kathmandu by default
   const [centerLat, setCenterLat] = useState(27.700769);
   const [centerLng, setCenterLng] = useState(85.31514);
-  const [zoom, setZoom] = useState(13);
+  const [zoom, setZoom] = useState(14);
   const [mapStyle, setMapStyle] = useState<'STREET' | 'SATELLITE' | 'TOPO'>('STREET');
 
   // Dynamic container dimensions
@@ -354,25 +354,26 @@ export default function InteractiveMap({
     [centerLat, centerLng, zoom, panOffset, dimensions]
   );
 
-  // Tile image URL from ultra-reliable ArcGIS / ESRI CDN (High-res Kathmandu street network)
+  // Ultra-vivid, reliable slippy map tiles with multi-CDN fallback pipeline
   const getTileSrc = (tile: typeof tiles[0]) => {
     const failures = failedTiles[tile.key] || 0;
-
-    // If active tile failed, fallback gracefully between ArcGIS services
-    if (failures === 1) {
-      return `https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
-    } else if (failures === 2) {
-      return `https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
-    }
 
     if (mapStyle === 'SATELLITE') {
       return `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
     } else if (mapStyle === 'TOPO') {
-      return `https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
+      return `https://a.tile.opentopomap.org/${tile.z}/${tile.x}/${tile.y}.png`;
     }
 
-    // Default: ArcGIS World Street Map (Sharp, crisp street names and landmarks)
-    return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
+    // Default STREET: OpenStreetMap (high-contrast, vivid roads, landmarks & Nepali/English labels)
+    if (failures === 0) {
+      return `https://tile.openstreetmap.de/${tile.z}/${tile.x}/${tile.y}.png`;
+    } else if (failures === 1) {
+      return `https://a.tile.openstreetmap.fr/osmfr/${tile.z}/${tile.x}/${tile.y}.png`;
+    } else if (failures === 2) {
+      return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
+    } else {
+      return `https://a.tile.opentopomap.org/${tile.z}/${tile.x}/${tile.y}.png`;
+    }
   };
 
   const handleTileError = (key: string) => {
@@ -419,7 +420,7 @@ export default function InteractiveMap({
       <div className="absolute inset-0 pointer-events-none">
         {tiles.map((tile) => {
           const failures = failedTiles[tile.key] || 0;
-          if (failures >= 3) {
+          if (failures >= 4) {
             // Render styled subtle topographic grid fallback if all CDNs are unreachable
             return (
               <div
@@ -442,10 +443,9 @@ export default function InteractiveMap({
               alt=""
               loading="eager"
               decoding="async"
-              referrerPolicy="no-referrer"
-              crossOrigin="anonymous"
+              draggable={false}
               onError={() => handleTileError(tile.key)}
-              className="absolute w-[256px] h-[256px] opacity-100 transition-opacity duration-200"
+              className="absolute w-[256px] h-[256px] opacity-100 transition-opacity duration-150 select-none pointer-events-none"
               style={{
                 left: `${tile.left}px`,
                 top: `${tile.top}px`,
@@ -922,7 +922,7 @@ export default function InteractiveMap({
         </div>
 
         <div className="text-[9px] text-slate-500 bg-white/80 px-2 py-0.5 rounded shadow pointer-events-auto">
-          Map data &copy; Esri, HERE, Garmin, OpenStreetMap
+          Map data &copy; OpenStreetMap contributors &bull; Esri
         </div>
       </div>
     </div>
