@@ -64,6 +64,7 @@ export default function DashboardPage() {
   const [dbVersion, setDbVersion] = useState(0);
 
   useEffect(() => {
+    db.syncWithSupabase().catch(() => {});
     const handleUpdate = () => setDbVersion((v) => v + 1);
     window.addEventListener('bb-db-updated', handleUpdate);
     return () => window.removeEventListener('bb-db-updated', handleUpdate);

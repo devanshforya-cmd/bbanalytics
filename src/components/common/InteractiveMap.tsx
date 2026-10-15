@@ -359,20 +359,20 @@ export default function InteractiveMap({
     const failures = failedTiles[tile.key] || 0;
 
     if (mapStyle === 'SATELLITE') {
-      return `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
+      return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
     } else if (mapStyle === 'TOPO') {
       return `https://a.tile.opentopomap.org/${tile.z}/${tile.x}/${tile.y}.png`;
     }
 
-    // Default STREET: OpenStreetMap (high-contrast, vivid roads, landmarks & Nepali/English labels)
+    // Default STREET: CartoDB Voyager (ultra-vivid, crystal clear roads, neighborhood landmarks & 100% reliable)
     if (failures === 0) {
-      return `https://tile.openstreetmap.de/${tile.z}/${tile.x}/${tile.y}.png`;
+      return `https://${tile.subdomainCarto}.basemaps.cartocdn.com/rastertiles/voyager/${tile.z}/${tile.x}/${tile.y}.png`;
     } else if (failures === 1) {
-      return `https://a.tile.openstreetmap.fr/osmfr/${tile.z}/${tile.x}/${tile.y}.png`;
+      return `https://${tile.subdomainCarto}.basemaps.cartocdn.com/light_all/${tile.z}/${tile.x}/${tile.y}.png`;
     } else if (failures === 2) {
       return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
     } else {
-      return `https://a.tile.opentopomap.org/${tile.z}/${tile.x}/${tile.y}.png`;
+      return `https://tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`;
     }
   };
 

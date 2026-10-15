@@ -148,6 +148,7 @@ export default function BeatPlanPage() {
 
     refreshData();
     if (typeof window !== 'undefined') {
+      db.syncWithSupabase().catch(() => {}).then(() => refreshData());
       db.syncTasksFromSupabase().then(() => refreshTasks()).catch(() => {});
     }
     window.addEventListener('bb-db-updated', refreshData);

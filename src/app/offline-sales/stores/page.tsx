@@ -149,6 +149,7 @@ export default function StoresPage() {
   };
 
   useEffect(() => {
+    db.syncWithSupabase().catch(() => {}).then(() => refreshData());
     refreshData();
     window.addEventListener('bb-db-updated', refreshData);
     return () => {

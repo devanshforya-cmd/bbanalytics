@@ -189,7 +189,7 @@ export class DatabaseService {
 
       // Listen for cross-tab storage changes
       window.addEventListener('storage', (e) => {
-        if (e.key === 'bb_command_center_db_state_v11') {
+        if (e.key === 'bb_command_center_db_state_v12') {
           this.loadState();
           window.dispatchEvent(new CustomEvent('bb-db-updated'));
         }
@@ -286,13 +286,11 @@ export class DatabaseService {
         supabase.from('cheques').select('*').limit(100),
       ]);
 
-      // Merge Users from Supabase
-      if (uRes.status === 'fulfilled' && uRes.value.data && uRes.value.data.length > 0) {
-        uRes.value.data.forEach((row: any) => {
-          const idx = this.users.findIndex(
-            (u) => u.id === row.id || (row.email && u.email && u.email.toLowerCase() === row.email.toLowerCase())
-          );
-          const mapped: User = {
+      // Sync Users from Supabase (single source of truth for staff and admin accounts)
+      if (uRes.status === 'fulfilled' && uRes.value.data) {
+        const rows = uRes.value.data as any[];
+        if (rows.length > 0) {
+          const mappedUsers: User[] = rows.map((row: any) => ({
             id: row.id,
             fullName: row.full_name || row.name || 'User',
             email: row.email,
@@ -307,14 +305,10 @@ export class DatabaseService {
             permissions: row.permissions || {},
             customPermissions: row.custom_permissions || {},
             calendarPreference: row.calendar_preference || 'BS',
-          };
-          if (idx >= 0) {
-            this.users[idx] = { ...this.users[idx], ...mapped };
-          } else {
-            this.users.push(mapped);
-          }
-          incomingCount++;
-        });
+          }));
+          this.users = mappedUsers;
+          incomingCount += mappedUsers.length;
+        }
       }
 
       // Merge Brands from Supabase
@@ -340,81 +334,46 @@ export class DatabaseService {
         });
       }
 
-      // Merge Products from Supabase
-      if (pRes.status === 'fulfilled' && pRes.value.data && pRes.value.data.length > 0) {
-        pRes.value.data.forEach((row: any) => {
-          const idx = this.products.findIndex((p) => p.id === row.id || p.sku === row.sku);
-          if (idx >= 0) {
-            this.products[idx] = { ...this.products[idx], ...row };
-          } else {
-            this.products.push(row);
-          }
-          incomingCount++;
-        });
+      // Sync Products from Supabase
+      if (pRes.status === 'fulfilled') {
+        const pData = (pRes.value.data as any[]) || [];
+        this.products = pData;
+        incomingCount += pData.length;
       }
 
-      // Merge Distributors & Branches from Supabase
-      if (dRes.status === 'fulfilled' && dRes.value.data && dRes.value.data.length > 0) {
-        dRes.value.data.forEach((row: any) => {
-          const idx = this.distributors.findIndex((d) => d.id === row.id);
-          if (idx >= 0) {
-            this.distributors[idx] = { ...this.distributors[idx], ...row };
-          } else {
-            this.distributors.push(row);
-          }
-          incomingCount++;
-        });
+      // Sync Distributors from Supabase (single source of truth: 0 phantom stores)
+      if (dRes.status === 'fulfilled') {
+        const dData = (dRes.value.data as any[]) || [];
+        this.distributors = dData;
+        incomingCount += dData.length;
       }
 
-      if (brRes.status === 'fulfilled' && brRes.value.data && brRes.value.data.length > 0) {
-        brRes.value.data.forEach((row: any) => {
-          const idx = this.branches.findIndex((b) => b.id === row.id);
-          if (idx >= 0) {
-            this.branches[idx] = { ...this.branches[idx], ...row };
-          } else {
-            this.branches.push(row);
-          }
-          incomingCount++;
-        });
+      // Sync Branches from Supabase
+      if (brRes.status === 'fulfilled') {
+        const brData = (brRes.value.data as any[]) || [];
+        this.branches = brData;
+        incomingCount += brData.length;
       }
 
-      // Merge Retailers from Supabase
-      if (rRes.status === 'fulfilled' && rRes.value.data && rRes.value.data.length > 0) {
-        rRes.value.data.forEach((row: any) => {
-          const idx = this.retailers.findIndex((r) => r.id === row.id);
-          if (idx >= 0) {
-            this.retailers[idx] = { ...this.retailers[idx], ...row };
-          } else {
-            this.retailers.push(row);
-          }
-          incomingCount++;
-        });
+      // Sync Retailers from Supabase
+      if (rRes.status === 'fulfilled') {
+        const rData = (rRes.value.data as any[]) || [];
+        this.retailers = rData;
+        incomingCount += rData.length;
       }
 
-      // Merge Orders from Supabase
-      if (oRes.status === 'fulfilled' && oRes.value.data && oRes.value.data.length > 0) {
-        oRes.value.data.forEach((row: any) => {
-          const idx = this.orders.findIndex((o) => o.id === row.id);
-          if (idx >= 0) {
-            this.orders[idx] = { ...this.orders[idx], ...row };
-          } else {
-            this.orders.push(row);
-          }
-          incomingCount++;
-        });
+      // Sync Orders from Supabase
+      if (oRes.status === 'fulfilled') {
+        const oData = (oRes.value.data as any[]) || [];
+        this.orders = oData;
+        incomingCount += oData.length;
       }
 
-      // Merge Cheques from Supabase
-      if (cRes.status === 'fulfilled' && cRes.value.data && cRes.value.data.length > 0) {
-        cRes.value.data.forEach((row: any) => {
-          const idx = this.cheques.findIndex((c) => c.id === row.id);
-          if (idx >= 0) {
-            this.cheques[idx] = { ...this.cheques[idx], ...row };
-          } else {
-            this.cheques.push(row);
-          }
-          incomingCount++;
-        });
+      // Sync Cheques from Supabase
+      if (cRes.status === 'fulfilled') {
+        const cData = (cRes.value.data as any[]) || [];
+        this.cheques = cData;
+        incomingCount += cData.length;
       }
 
       this.persistState();
@@ -447,18 +406,19 @@ export class DatabaseService {
       localStorage.removeItem('bb_command_center_db_state');
       localStorage.removeItem('bb_auth_user_session_v2');
 
+      localStorage.removeItem('bb_command_center_db_state_v11');
       localStorage.removeItem('bb_command_center_db_state_v10');
       localStorage.removeItem('bb_command_center_db_state_v9');
-      const stored = localStorage.getItem('bb_command_center_db_state_v11');
+      const stored = localStorage.getItem('bb_command_center_db_state_v12');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.users && parsed.users.length > 0) this.users = parsed.users;
-        if (parsed.products && parsed.products.length > 0) this.products = parsed.products;
+        if (parsed.products) this.products = parsed.products;
         if (parsed.combos) this.combos = parsed.combos;
         if (parsed.secondaryOrders) this.secondaryOrders = parsed.secondaryOrders;
         if (parsed.facingAudits) this.facingAudits = parsed.facingAudits;
         if (parsed.cheques) this.cheques = parsed.cheques;
-        if (parsed.beatItems && parsed.beatItems.length > 0) this.beatItems = parsed.beatItems;
+        if (parsed.beatItems) this.beatItems = parsed.beatItems;
         if (parsed.orders) this.orders = parsed.orders;
         if (parsed.customers) this.customers = parsed.customers;
         if (parsed.deliveryFailures) this.deliveryFailures = parsed.deliveryFailures;
@@ -466,9 +426,9 @@ export class DatabaseService {
         if (parsed.feedbackEntries) this.feedbackEntries = parsed.feedbackEntries;
         if (parsed.reviewCategories) this.reviewCategories = parsed.reviewCategories;
         if (parsed.tasks) this.tasks = parsed.tasks;
-        if (parsed.retailers && parsed.retailers.length > 0) this.retailers = parsed.retailers;
-        if (parsed.distributors && parsed.distributors.length > 0) this.distributors = parsed.distributors;
-        if (parsed.branches && parsed.branches.length > 0) this.branches = parsed.branches;
+        if (parsed.retailers) this.retailers = parsed.retailers;
+        if (parsed.distributors) this.distributors = parsed.distributors;
+        if (parsed.branches) this.branches = parsed.branches;
         if (parsed.dispatches) this.dispatches = parsed.dispatches;
         if (parsed.stockCounts) this.stockCounts = parsed.stockCounts;
         if (parsed.shelfPhotos) this.shelfPhotos = parsed.shelfPhotos;
@@ -584,7 +544,7 @@ export class DatabaseService {
         requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn,
         recurringSchedules: this.recurringSchedules,
       };
-      localStorage.setItem('bb_command_center_db_state_v11', JSON.stringify(state));
+      localStorage.setItem('bb_command_center_db_state_v12', JSON.stringify(state));
 
       // Dispatch local window event so all mounted React components re-render immediately
       window.dispatchEvent(new CustomEvent('bb-db-updated'));
@@ -606,6 +566,7 @@ export class DatabaseService {
 
   public resetDatabase() {
     if (typeof window === 'undefined') return;
+    localStorage.removeItem('bb_command_center_db_state_v12');
     localStorage.removeItem('bb_command_center_db_state_v11');
     localStorage.removeItem('bb_command_center_db_state_v8');
     localStorage.removeItem('bb_command_center_db_state_v7');
@@ -1901,12 +1862,14 @@ export class DatabaseService {
 
   // Real-Time Staff Tracking (PRD v2.2)
   public getStaffLiveLocations(): StaffLiveLocation[] {
-    const validUserIds = new Set(this.users.map((u) => u.id));
+    // Only field sales officers and non-superadmin operational staff should be tracked on the field map
+    const fieldStaffUsers = this.users.filter(
+      (u) => u.active !== false && !u.isSuperAdmin && !u.is_super_admin && u.role !== 'SUPER_ADMIN'
+    );
+    const validUserIds = new Set(fieldStaffUsers.map((u) => u.id));
     const validLocs = (this.staffLiveLocations || []).filter((s) => validUserIds.has(s.officerId));
 
-    // Ensure all active real users from this.users are represented
-    const activeUsers = this.users.filter((u) => u.active !== false);
-    for (const u of activeUsers) {
+    for (const u of fieldStaffUsers) {
       if (!validLocs.some((s) => s.officerId === u.id)) {
         validLocs.push({
           officerId: u.id,

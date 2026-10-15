@@ -121,6 +121,7 @@ export default function LiveStaffTrackingPage() {
   };
 
   useEffect(() => {
+    db.syncWithSupabase().catch(() => {}).then(() => reloadLocations());
     reloadLocations();
     const handleDbUpdate = () => {
       reloadLocations();
