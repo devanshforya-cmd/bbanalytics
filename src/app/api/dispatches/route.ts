@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-guard';
+import { requireFeatureAccess } from '@/lib/auth-guard';
 import { db } from '@/lib/db/db-service';
+import { getTodayBs } from '@/lib/nepali-calendar';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN', 'ADMIN']);
+  const auth = await requireFeatureAccess(request, 'dispatches', 'VIEW');
   if (auth.response) return auth.response;
 
   const dispatches = db.getDispatches();
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN', 'ADMIN']);
+  const auth = await requireFeatureAccess(request, 'dispatches', 'CREATE');
   if (auth.response) return auth.response;
 
   try {
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
       branchId: body.branchId,
       branchName: body.branchName,
       dispatchDateAd: body.dispatchDateAd || new Date().toISOString().split('T')[0],
-      dispatchDateBs: body.dispatchDateBs || '2083-05-27',
+      dispatchDateBs: body.dispatchDateBs || getTodayBs(),
       items: body.items,
       notes: body.notes,
       documentUrl: body.documentUrl,

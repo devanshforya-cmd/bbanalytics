@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import { FilterCriteria, BrandCode, FeedbackEntry, ComparisonMode, DashboardSalesMode } from '@/lib/types';
 import AdvancedFilterBar from '@/components/common/AdvancedFilterBar';
-import { matchesDateCriteria } from '@/lib/nepali-calendar';
+import { getTodayAd, matchesDateCriteria } from '@/lib/nepali-calendar';
 import MetricSparkline from './components/MetricSparkline';
 import MetricDrillDownModal, { DrillDownType } from './components/MetricDrillDownModal';
 import IssueChipDrillDownModal from './components/IssueChipDrillDownModal';
@@ -21,6 +21,9 @@ import SeasonalInsightsSection from './components/SeasonalInsightsSection';
 import StoreNetworkOverviewSection from './components/StoreNetworkOverviewSection';
 import SetupWizard from './components/SetupWizard';
 import PageGuard from '@/components/common/PageGuard';
+import { useExperiment } from '@/hooks/useExperiment';
+import { getSessionUser } from '@/lib/auth';
+import { FeatureKey, hasAccess } from '@/lib/permissions';
 import {
   ShoppingBag,
   RotateCcw,
@@ -37,14 +40,20 @@ import {
   Gift,
   CheckCircle,
   ArrowUp,
-  ArrowDown,
   AlertTriangle,
   Star,
   Sparkles,
   Globe,
 } from 'lucide-react';
 
+function DashboardFeature({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
+  return allowed ? <>{children}</> : null;
+}
+
 export default function DashboardPage() {
+  const currentUser = getSessionUser() || db.getCurrentUser();
+  const canSee = (feature: FeatureKey) => hasAccess(currentUser, feature);
+  const { variant: kpiVariant } = useExperiment('dashboard-kpi-layout');
   const globalBrand = db.getActiveBrandFilter();
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({
     calendarMode: 'BS',
@@ -59,7 +68,9 @@ export default function DashboardPage() {
   const [channelFilter, setChannelFilter] = useState<string>('');
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>('OFF');
   const [showSetupWizard, setShowSetupWizard] = useState(false);
-  const [salesMode, setSalesMode] = useState<DashboardSalesMode>('D2C');
+  const [salesMode, setSalesMode] = useState<DashboardSalesMode>(() =>
+    hasAccess(getSessionUser() || db.getCurrentUser(), 'orderflow') ? 'D2C' : 'B2B'
+  );
   const [includeMarketing, setIncludeMarketing] = useState(false);
   const [dbVersion, setDbVersion] = useState(0);
 
@@ -77,6 +88,11 @@ export default function DashboardPage() {
   const rawFeedback = db.getFeedback(activeBrand);
   const rawCheques = db.getCheques();
   const scorecards = db.getScorecards();
+  const rankedScorecards = [...scorecards].sort((a, b) =>
+    b.beatCompliancePct - a.beatCompliancePct
+    || b.callToOrderRatioPct - a.callToOrderRatioPct
+    || b.storesVisited - a.storesVisited
+  );
   const categories = db.getReviewCategories();
   const rawBeatItems = db.getTodayBeat();
   const rawSecondaryOrders = db.getSecondaryOrders();
@@ -226,7 +242,7 @@ export default function DashboardPage() {
         <MorningBriefCard />
 
         {/* Fix 1d: Prompt when brands table is empty */}
-        {db.getBrands('ACTIVE').length === 0 && (
+        {canSee('settings') && db.getBrands('ACTIVE').length === 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 shadow-xs">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -248,21 +264,47 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Top Welcome & Brand Filter Indicator */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              Brand Bucket Command Center
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Operational intelligence for {activeBrand === 'ALL' ? 'all portfolio brands' : activeBrand} • Kathmandu Valley & Nepal D2C
-            </p>
-          </div>
+        {/* Executive Overview Hero Card */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 text-white shadow-md border border-slate-800">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[11px] font-bold text-blue-300 border border-blue-400/30">
+                  Command Center v2.0
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-slate-300">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Live Operations • {activeBrand === 'ALL' ? 'All Portfolio Brands' : activeBrand}
+                </span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-2">
+                Executive Command Center
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
+                Unified multi-brand distribution, field sales force tracking, and online order intelligence across Nepal.
+              </p>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-3 py-1 text-xs">
-              Live Operational Health: Optimal
-            </span>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {canSee('beat_plans') && (
+                <Link
+                  href="/offline-sales/beat-plan"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-xs transition"
+                >
+                  <Compass className="w-4 h-4" />
+                  <span>Beat Routes</span>
+                </Link>
+              )}
+              {canSee('tasks') && (
+                <Link
+                  href="/opscore/tasks"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 text-xs font-bold transition backdrop-blur-sm"
+                >
+                  <CheckCircle className="w-4 h-4 text-emerald-300" />
+                  <span>Task Board</span>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
 
@@ -280,7 +322,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-700">Dashboard View:</span>
               <div className="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-medium gap-1">
-                <button
+                {canSee('orderflow') && <button
                   type="button"
                   onClick={() => setSalesMode('D2C')}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
@@ -291,8 +333,8 @@ export default function DashboardPage() {
                 >
                   <ShoppingBag className="w-3.5 h-3.5 text-emerald-600" />
                   <span>🛍️ D2C Online Dashboard</span>
-                </button>
-                <button
+                </button>}
+                {(canSee('beat_plans') || canSee('stores')) && <button
                   type="button"
                   onClick={() => setSalesMode('B2B')}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
@@ -303,8 +345,8 @@ export default function DashboardPage() {
                 >
                   <Store className="w-3.5 h-3.5 text-blue-600" />
                   <span>🏪 Offline Retail Dashboard</span>
-                </button>
-                <button
+                </button>}
+                {canSee('orderflow') && (canSee('beat_plans') || canSee('stores')) && <button
                   type="button"
                   onClick={() => setSalesMode('ALL')}
                   className={`px-3 py-1.5 rounded-lg transition-all ${
@@ -314,11 +356,11 @@ export default function DashboardPage() {
                   }`}
                 >
                   All Combined
-                </button>
+                </button>}
               </div>
             </div>
 
-            {salesMode !== 'B2B' && (
+            {canSee('marketing') && salesMode !== 'B2B' && (
               <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer bg-purple-50 hover:bg-purple-100/70 border border-purple-200 px-3 py-1.5 rounded-xl transition-colors">
                 <input
                   type="checkbox"
@@ -390,9 +432,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Dedicated KPI Cards for D2C Online Dashboard */}
-        {salesMode === 'D2C' && (
+        {salesMode === 'D2C' && canSee('orderflow') && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
             {/* 1. D2C Total Orders */}
+            <DashboardFeature allowed={canSee('orderflow')}>
             <div
               onClick={() => setActiveDrillDown('ORDERS')}
               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
@@ -424,8 +467,10 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
 
             {/* 2. D2C Delivery Failure Rate */}
+            <DashboardFeature allowed={canSee('orderflow')}>
             <div
               onClick={() => setActiveDrillDown('DELIVERY_FAILURES')}
               className={`rounded-2xl border p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between ${
@@ -460,8 +505,10 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
 
             {/* 3. D2C Actual Return Rate */}
+            <DashboardFeature allowed={canSee('reviews')}>
             <div
               onClick={() => setActiveDrillDown('RETURNS')}
               className={`rounded-2xl border p-4 shadow-sm hover:border-amber-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between ${
@@ -496,8 +543,10 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
 
             {/* 4. D2C Unresolved Complaints */}
+            <DashboardFeature allowed={canSee('reviews')}>
             <div
               onClick={() => setActiveDrillDown('COMPLAINTS')}
               className={`rounded-2xl border p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between ${
@@ -530,13 +579,15 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
           </div>
         )}
 
         {/* Dedicated KPI Cards for Offline Retail Dashboard */}
-        {salesMode === 'B2B' && (
+        {salesMode === 'B2B' && (canSee('beat_plans') || canSee('stores') || canSee('cheque_tracker')) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
             {/* 1. Secondary Orders Booked */}
+            <DashboardFeature allowed={canSee('orderflow')}>
             <div
               onClick={() => setActiveDrillDown('ORDERS')}
               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
@@ -560,8 +611,10 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
 
             {/* 2. Store Visits & Beat Compliance */}
+            <DashboardFeature allowed={canSee('beat_plans')}>
             <div
               onClick={() => setActiveDrillDown('STORES_VISITED')}
               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-emerald-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
@@ -585,8 +638,10 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
 
             {/* 3. Cheques in Custody / Pending */}
+            <DashboardFeature allowed={canSee('cheque_tracker')}>
             <div
               onClick={() => setActiveDrillDown('CHEQUES')}
               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-purple-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
@@ -610,8 +665,10 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
 
             {/* 4. Active Retail Outlets Stocked */}
+            <DashboardFeature allowed={canSee('stores')}>
             <div
               onClick={() => setActiveDrillDown('STORES_VISITED')}
               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
@@ -635,6 +692,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
           </div>
         )}
 
@@ -642,6 +700,7 @@ export default function DashboardPage() {
         {salesMode === 'ALL' && (
           <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
             {/* 1. Total Orders Card */}
+            <DashboardFeature allowed={canSee('orderflow')}>
             <div
               onClick={() => setActiveDrillDown('ORDERS')}
               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
@@ -661,8 +720,10 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
 
             {/* 2. Delivery Failure Rate Card */}
+            <DashboardFeature allowed={canSee('orderflow')}>
             <div
               onClick={() => setActiveDrillDown('DELIVERY_FAILURES')}
               className="rounded-2xl border border-rose-200 bg-white p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
@@ -682,8 +743,10 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
 
             {/* 3. Actual Return Rate Card */}
+            <DashboardFeature allowed={canSee('reviews')}>
             <div
               onClick={() => setActiveDrillDown('RETURNS')}
               className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm hover:border-amber-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
@@ -703,8 +766,10 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
 
             {/* 4. Complaints Card */}
+            <DashboardFeature allowed={canSee('reviews')}>
             <div
               onClick={() => setActiveDrillDown('COMPLAINTS')}
               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
@@ -726,8 +791,10 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
 
             {/* 5. Store Visits Today Card */}
+            <DashboardFeature allowed={canSee('beat_plans')}>
             <div
               onClick={() => setActiveDrillDown('STORES_VISITED')}
               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-emerald-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
@@ -749,8 +816,10 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
 
             {/* 6. Cheques Pending Card */}
+            <DashboardFeature allowed={canSee('cheque_tracker')}>
             <div
               onClick={() => setActiveDrillDown('CHEQUES')}
               className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-purple-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
@@ -772,10 +841,12 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            </DashboardFeature>
           </div>
         )}
 
         {/* SECTION 2.1: PRODUCT PERFORMANCE TABLE */}
+        <DashboardFeature allowed={canSee('products')}>
         <ProductPerformanceTable
           products={products}
           orders={orders}
@@ -785,9 +856,10 @@ export default function DashboardPage() {
           calendarMode={filterCriteria.calendarMode || 'BS'}
           comparisonMode={comparisonMode}
         />
+        </DashboardFeature>
 
       {/* SECTION 2.2: SALES CHANNEL PERFORMANCE (D2C / All Sales) */}
-      {salesMode !== 'B2B' && (
+      {canSee('orderflow') && salesMode !== 'B2B' && (
         <SalesChannelPerformance
           orders={rawOrders}
           returns={rawReturns}
@@ -798,7 +870,7 @@ export default function DashboardPage() {
       )}
 
       {/* SECTION 2.3: BRAND COMPARISON VIEW (Visible when ALL Brands selected) */}
-      {(!filterCriteria.brand || filterCriteria.brand === 'ALL') && (
+      {canSee('orderflow') && canSee('reviews') && canSee('products') && (!filterCriteria.brand || filterCriteria.brand === 'ALL') && (
         <BrandComparisonView
           orders={rawOrders}
           returns={rawReturns}
@@ -811,15 +883,15 @@ export default function DashboardPage() {
       )}
 
       {/* SECTION 2.4: REGIONAL BREAKDOWN */}
-      <RegionalPerformanceView
+      {canSee('orderflow') && canSee('reviews') && <RegionalPerformanceView
         orders={orders}
         returns={returns}
         deliveryFailures={deliveryFailures}
         feedback={feedback}
-      />
+      />}
 
       {/* SECTION 2.5: DISTRIBUTOR HEALTH (GT/MT Summary - B2B / All Sales) */}
-      {salesMode !== 'D2C' && (
+      {canSee('distributors') && canSee('cheque_tracker') && salesMode !== 'D2C' && (
         <DistributorHealthSection
           distributors={distributors}
           branches={branches}
@@ -831,6 +903,7 @@ export default function DashboardPage() {
       {/* OPERATIONAL HEALTH & ISSUE BREAKDOWN (Dynamic Checkbox Chips) */}
       <div className={`grid grid-cols-1 ${salesMode === 'B2B' ? '' : 'lg:grid-cols-2'} gap-6 text-xs`}>
         {/* Operational Health: Clickable Dynamic Issue Chips */}
+        <DashboardFeature allowed={canSee('reviews') && canSee('orderflow')}>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="font-bold text-slate-900 text-sm">
@@ -880,20 +953,23 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+        </DashboardFeature>
 
         {/* Customer Reviews & Marketing Intelligence (D2C / All Sales) */}
-        {salesMode !== 'B2B' && (
+        {canSee('reviews') && salesMode !== 'B2B' && (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="font-bold text-slate-900 text-sm">
-                Customer Feedback & Marketing Assets
+                {canSee('marketing') ? 'Customer Feedback & Marketing Assets' : 'Customer Feedback'}
               </div>
+              {canSee('customers') && (
             <Link
               href="/customers"
               className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
             >
               Customer 360 <ArrowUpRight className="h-3 w-3" />
             </Link>
+              )}
           </div>
 
           {/* Clickable Counters */}
@@ -962,7 +1038,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="rounded-xl bg-slate-50 p-3 border border-slate-200/60 flex items-center justify-between">
+          {canSee('customers') && <div className="rounded-xl bg-slate-50 p-3 border border-slate-200/60 flex items-center justify-between">
             <div>
               <div className="font-bold text-slate-800">Omnichannel Customer 360</div>
               <div className="text-[11px] text-slate-500">Phone-indexed profile with 70-base Karma scores</div>
@@ -973,13 +1049,13 @@ export default function DashboardPage() {
             >
               Explore 360
             </Link>
-          </div>
+          </div>}
         </div>
       )}
       </div>
 
       {/* SECTION 6: FIELD SALES FORCE PERFORMANCE (B2B / All Sales) */}
-      {salesMode !== 'D2C' && (
+      {canSee('staff_scorecards') && salesMode !== 'D2C' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
@@ -995,11 +1071,12 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-            {scorecards.map((sc, i) => {
+            {rankedScorecards.map((sc, i) => {
               const overdueCount = sc.chequesOverdue || 0;
-              const visitedToday = i === 0 ? '4/6' : i === 1 ? '5/6' : '3/6';
-              const complianceChange = i === 0 ? '+2.1%' : i === 1 ? '+1.4%' : '-3.2%';
-              const isPositiveChange = !complianceChange.startsWith('-');
+              const stopsToday = rawBeatItems.filter(
+                (beat) => beat.officerId === sc.officerId && beat.dateAd === getTodayAd()
+              );
+              const visitedToday = stopsToday.filter((beat) => beat.status === 'VISITED').length;
 
               return (
                 <Link
@@ -1022,17 +1099,7 @@ export default function DashboardPage() {
                   <div className="space-y-1.5 pt-1">
                     <div className="flex justify-between text-[11px] items-center">
                       <span className="text-slate-500">Beat Compliance:</span>
-                      <div className="flex items-center gap-1">
-                        <strong className="text-blue-600 text-xs">{sc.beatCompliancePct}%</strong>
-                        <span
-                          className={`text-[10px] font-bold flex items-center ${
-                            isPositiveChange ? 'text-emerald-600' : 'text-rose-600'
-                          }`}
-                        >
-                          {isPositiveChange ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />}
-                          {complianceChange}
-                        </span>
-                      </div>
+                      <strong className="text-blue-600 text-xs">{sc.beatCompliancePct}%</strong>
                     </div>
 
                     <div className="flex justify-between text-[11px]">
@@ -1047,7 +1114,7 @@ export default function DashboardPage() {
 
                     <div className="flex justify-between text-[11px]">
                       <span className="text-slate-500">Stores Visited Today:</span>
-                      <strong className="text-slate-900 font-bold">{visitedToday} stores</strong>
+                      <strong className="text-slate-900 font-bold">{visitedToday}/{stopsToday.length} stores</strong>
                     </div>
 
                     <div className="flex justify-between text-[11px] border-t border-slate-100 pt-1.5">
@@ -1074,25 +1141,27 @@ export default function DashboardPage() {
       )}
 
       {/* SECTION 2.6: 30-DAY TRENDS (2x2 GRID) */}
-      <ThirtyDayTrendCharts comparisonMode={comparisonMode} />
+      {canSee('staff_scorecards') && canSee('orderflow') && canSee('reviews') && (
+        <ThirtyDayTrendCharts comparisonMode={comparisonMode} />
+      )}
 
       {/* Fix 35: Seasonal Pattern Insights */}
-      <SeasonalInsightsSection />
+      {canSee('orderflow') && <SeasonalInsightsSection />}
 
       {/* Fix 34b & 47: Store Network Overview & Vendor Comparison (B2B / All Sales) */}
-      {salesMode !== 'D2C' && <StoreNetworkOverviewSection />}
+      {canSee('stores') && canSee('distributors') && salesMode !== 'D2C' && <StoreNetworkOverviewSection />}
 
       {/* DRILL-DOWN MODALS */}
       <MetricDrillDownModal
         type={activeDrillDown}
         onClose={() => setActiveDrillDown(null)}
-        orders={orders}
-        deliveryFailures={deliveryFailures}
-        returns={returns}
-        feedback={feedback}
-        cheques={cheques}
-        beatItems={beatItems}
-        scorecards={scorecards}
+        orders={canSee('orderflow') ? orders : []}
+        deliveryFailures={canSee('orderflow') ? deliveryFailures : []}
+        returns={canSee('reviews') ? returns : []}
+        feedback={canSee('reviews') ? feedback : []}
+        cheques={canSee('cheque_tracker') ? cheques : []}
+        beatItems={canSee('beat_plans') ? beatItems : []}
+        scorecards={canSee('staff_scorecards') ? scorecards : []}
         activeBrand={activeBrand}
         calendarMode={filterCriteria.calendarMode || 'BS'}
       />
@@ -1100,8 +1169,8 @@ export default function DashboardPage() {
       <IssueChipDrillDownModal
         categoryName={activeIssueChip}
         onClose={() => setActiveIssueChip(null)}
-        feedback={feedback}
-        returns={returns}
+        feedback={canSee('reviews') ? feedback : []}
+        returns={canSee('reviews') ? returns : []}
         calendarMode={filterCriteria.calendarMode || 'BS'}
       />
 
@@ -1112,11 +1181,11 @@ export default function DashboardPage() {
           setReviewModalFilter(null);
           setSelectedReview(null);
         }}
-        feedback={feedback}
+        feedback={canSee('reviews') ? feedback : []}
         calendarMode={filterCriteria.calendarMode || 'BS'}
       />
 
-      {showSetupWizard && (
+      {showSetupWizard && canSee('settings') && (
         <SetupWizard
           onComplete={() => setShowSetupWizard(false)}
           onDismiss={() => setShowSetupWizard(false)}

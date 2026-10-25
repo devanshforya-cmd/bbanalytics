@@ -327,6 +327,7 @@ export default function ManualOrderEntryPage() {
 
   // Total amount calculation
   const totalAmount = useMemo(() => {
+    if (isMarketing) return 0;
     if (comboApplied && detectedCombo && comboApplied.name === detectedCombo.name) {
       return comboApplied.comboPrice;
     }
@@ -335,7 +336,7 @@ export default function ManualOrderEntryPage() {
       const price = item.overridePrice ?? (prod?.mrp || 0);
       return sum + price * (item.quantity || 1);
     }, 0);
-  }, [orderItems, products, comboApplied, detectedCombo]);
+  }, [orderItems, products, comboApplied, detectedCombo, isMarketing]);
 
   const handleApplyCombo = () => {
     if (detectedCombo) {
@@ -399,8 +400,8 @@ export default function ManualOrderEntryPage() {
           productName: p?.name || 'Product',
           brandCode: p?.brandCode || brandCode,
           quantity: item.quantity,
-          unitPrice,
-          totalPrice: unitPrice * item.quantity,
+          unitPrice: isMarketing ? 0 : unitPrice,
+          totalPrice: isMarketing ? 0 : unitPrice * item.quantity,
         };
       });
 
@@ -501,7 +502,7 @@ export default function ManualOrderEntryPage() {
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         brandCode,
-        totalAmount,
+        totalAmount: isMarketing ? 0 : totalAmount,
         items: items.map((i) => ({
           name: i.productName,
           quantity: i.quantity,
@@ -509,7 +510,7 @@ export default function ManualOrderEntryPage() {
           totalPrice: i.totalPrice,
         })),
         deliveryMethod,
-        paymentTerms,
+        paymentTerms: isMarketing ? 'Product Seeding (NPR 0)' : paymentTerms,
         karmaAwarded: karmaBoost,
       });
 
@@ -682,13 +683,14 @@ export default function ManualOrderEntryPage() {
                 {orderItems.map((it, idx) => {
                   const p = products.find((prod) => prod.id === it.productId);
                   const price = it.overridePrice ?? (p?.mrp || 0);
+                  const lineTotal = isMarketing ? 0 : price * it.quantity;
                   return (
                     <div key={idx} className="flex justify-between items-center text-xs">
                       <span className="text-slate-800 font-medium">
-                        {it.quantity}× {p?.name || 'Item'} — NPR {price.toLocaleString()} each
+                        {it.quantity}× {p?.name || 'Item'} — {isMarketing ? 'Product seeding' : `NPR ${price.toLocaleString()} each`}
                       </span>
                       <strong className="font-mono text-slate-900">
-                        NPR {(price * it.quantity).toLocaleString()}
+                        NPR {lineTotal.toLocaleString()}
                       </strong>
                     </div>
                   );
@@ -706,14 +708,14 @@ export default function ManualOrderEntryPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-200 pt-3">
               <div>
                 <span className="text-[11px] font-semibold text-slate-500 block">Delivery & Payment:</span>
-                <strong className="text-slate-900">{deliveryMethod}</strong> • {paymentTerms}
+                  <strong className="text-slate-900">{deliveryMethod}</strong> • {isMarketing ? 'Product Seeding (NPR 0)' : paymentTerms}
                 <div className="text-slate-600 text-[11px] mt-0.5">
                   {address || district}, {district}, {province}
                 </div>
               </div>
               <div>
                 <span className="text-[11px] font-semibold text-slate-500 block">Platform & Date:</span>
-                <strong className="text-slate-900">{platform}</strong>
+                <strong className="text-slate-900">{isMarketing ? influencerPlatform : platform}</strong>
                 <div className="text-slate-600 text-[11px] mt-0.5">
                   {orderDateAd}
                 </div>
@@ -967,7 +969,7 @@ export default function ManualOrderEntryPage() {
                 {orderItems.map((item, idx) => {
                   const prod = products.find((p) => p.id === item.productId);
                   const price = item.overridePrice ?? (prod?.mrp || 0);
-                  const lineTotal = price * item.quantity;
+                  const lineTotal = isMarketing ? 0 : price * item.quantity;
 
                   return (
                     <div

@@ -1,5 +1,3 @@
-import { supabase } from './supabase-client';
-import { supabaseAdmin } from './supabase-server';
 import { StaffLiveLocation, StaffLiveStatus } from '../types';
 import { db } from './db-service';
 
@@ -26,51 +24,49 @@ export async function recordGpsPing(
   status: StaffLiveStatus = 'IN_TRANSIT',
   currentStoreName?: string,
   batteryLevel?: number
-): Promise<void> {
+): Promise<boolean> {
   // 1. Immediately update local database service
   db.updateStaffPing(officerId, lat, lng, status, currentStoreName, batteryLevel);
 
-  // 2. Persist to Supabase if available
+  // Send through the authenticated server route so the device cannot spoof another officer.
   try {
-    const client = typeof window === 'undefined' ? supabaseAdmin : supabase;
-    await client.from('gps_pings').insert([
-      {
-        officer_id: officerId,
-        officer_name: officerName,
-        lat,
-        lng,
-        status,
-        current_store_name: currentStoreName || null,
-        battery_level: batteryLevel ?? null,
-      },
-    ]);
+    const response = await fetch('/api/gps/ping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ lat, lng, status, currentStoreName, batteryLevel }),
+    });
+    if (!response.ok) {
+      const result = await response.json().catch(() => null);
+      console.warn('GPS ping was kept on this device but not synced:', result?.error || response.statusText);
+      return false;
+    }
+    return true;
   } catch (err) {
-    // Non-blocking: background sync or offline queue handles retries
-    console.warn('Supabase gps_pings insert error:', err);
+    console.warn('GPS ping was kept on this device but not synced:', err);
+    return false;
   }
 }
 
 /**
  * Fetch latest GPS pings from Supabase
  */
-export async function fetchLatestPingsFromSupabase(): Promise<StaffLiveLocation[]> {
+export async function fetchLatestPingsFromSupabase(): Promise<{ locations: StaffLiveLocation[]; error?: string }> {
   try {
-    const client = typeof window === 'undefined' ? supabaseAdmin : supabase;
-    const { data, error } = await client
-      .from('gps_pings')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(100);
-
-    if (error) {
-      console.warn('Error fetching gps_pings:', error.message);
-      return db.getStaffLiveLocations();
+    const response = await fetch('/api/gps/ping', { cache: 'no-store', credentials: 'same-origin' });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.success || !Array.isArray(result.data)) {
+      return {
+        locations: db.getStaffLiveLocations(),
+        error: result?.error || `Live GPS service is unavailable (${response.status}).`,
+      };
     }
 
-    if (data && data.length > 0) {
+    const data = result.data as GpsPingRecord[];
+    if (data.length > 0) {
       // Group by officer_id to pick latest ping per officer
       const latestByOfficer = new Map<string, GpsPingRecord>();
-      for (const row of data as GpsPingRecord[]) {
+      for (const row of data) {
         if (!latestByOfficer.has(row.officer_id)) {
           latestByOfficer.set(row.officer_id, row);
         }
@@ -84,15 +80,18 @@ export async function fetchLatestPingsFromSupabase(): Promise<StaffLiveLocation[
           Number(ping.lng),
           (ping.status as StaffLiveStatus) || 'IN_TRANSIT',
           ping.current_store_name || undefined,
-          ping.battery_level ?? undefined
+          ping.battery_level ?? undefined,
+          ping.created_at
         );
       });
     }
-  } catch (err) {
-    console.warn('Supabase fetchLatestPings error:', err);
+    return { locations: db.getStaffLiveLocations() };
+  } catch {
+    return {
+      locations: db.getStaffLiveLocations(),
+      error: 'Live GPS service could not be reached. Showing this device’s cached locations.',
+    };
   }
-
-  return db.getStaffLiveLocations();
 }
 
 /**

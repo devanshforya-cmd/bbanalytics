@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { User, UserRole } from '@/lib/types';
-import { db } from '@/lib/db/db-service';
-import { isSuperAdmin } from '@/lib/permissions';
+import { supabaseAdmin } from '@/lib/db/supabase-server';
+import { AUTH_SESSION_COOKIE, getAuthSessionSecret, verifySessionToken } from '@/lib/auth-session';
+import { canPerform, hasAccess, isSuperAdmin, type FeatureKey } from '@/lib/permissions';
+import { isLocalPreviewAuthEnabled, LOCAL_PREVIEW_USER } from '@/lib/local-preview-auth';
 
 export interface AuthContext {
   user: User;
@@ -17,85 +19,86 @@ export interface AuthError {
 
 export type AuthResult = AuthContext | AuthError;
 
-/**
- * 56d. Server-side API Route Guard
- * Enforces session validity, 24-hour expiration, active status, and role-based permissions.
- */
-export async function requireAuth(
-  request: Request,
-  allowedRoles?: UserRole[]
-): Promise<AuthResult> {
-  // 1. Extract token/session from Authorization header or custom header/cookie
-  const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
-  const userHeader = request.headers.get('x-user-id');
-  const cookieHeader = request.headers.get('cookie') || '';
+function unauthorized(error = 'Unauthorized. Please sign in again.'): AuthError {
+  return {
+    error,
+    response: NextResponse.json({ success: false, error }, { status: 401 }),
+  };
+}
 
-  let userId: string | null = null;
+function mapUser(row: any): User {
+  return {
+    id: row.id,
+    email: row.email,
+    phone: row.phone,
+    fullName: row.full_name || row.name || 'Staff User',
+    role: (row.role || (row.is_super_admin ? 'SUPER_ADMIN' : 'SALES_OFFICER')) as UserRole,
+    isSuperAdmin: !!row.is_super_admin || row.role === 'SUPER_ADMIN',
+    dutyStatus: row.duty_status || 'ONLINE',
+    assignedBrands: row.assigned_brands || ['ALL'],
+    territory: row.territory || row.assigned_territory,
+    reportsToId: row.reports_to_id,
+    permissions: row.permissions || {},
+    customPermissions: row.custom_permissions || {},
+    active: row.is_active !== false && row.active !== false,
+    calendarPreference: row.calendar_preference || 'BS',
+  };
+}
 
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7).trim();
-    // Parse Bearer token if it contains user ID or session ID
-    if (token.startsWith('user_') || token.startsWith('usr_')) {
-      userId = token;
-    } else {
-      // Decode potential JSON/base64 payload
-      try {
-        const decoded = JSON.parse(Buffer.from(token, 'base64').toString('utf-8'));
-        userId = decoded.userId || decoded.id || null;
-      } catch {
-        userId = token;
-      }
-    }
-  } else if (userHeader) {
-    userId = userHeader;
-  } else if (cookieHeader) {
-    const match = cookieHeader.match(/bb_user_id=([^;]+)/);
-    if (match) {
-      userId = decodeURIComponent(match[1]);
-    }
-  }
-
-  // If no auth token provided, check for demo / default admin session header or fallback
-  if (!userId) {
-    // In development or local demo, check x-bb-role header or fallback to super admin if not strictly enforced
-    const devRole = request.headers.get('x-bb-role') as UserRole | null;
-    if (devRole) {
-      const users = db.getUsers();
-      const matched = users.find((u) => u.role === devRole && u.active !== false);
-      if (matched) {
-        userId = matched.id;
-      }
+function readCookie(request: Request, name: string): string | null {
+  const rawCookies = request.headers.get('cookie') || '';
+  for (const cookie of rawCookies.split(';')) {
+    const separator = cookie.indexOf('=');
+    if (separator < 0 || cookie.slice(0, separator).trim() !== name) continue;
+    try {
+      return decodeURIComponent(cookie.slice(separator + 1).trim());
+    } catch {
+      return null;
     }
   }
+  return null;
+}
 
-  if (!userId) {
+export async function requireAuth(request: Request, allowedRoles?: UserRole[]): Promise<AuthResult> {
+  const secret = getAuthSessionSecret();
+  const localPreviewEnabled = isLocalPreviewAuthEnabled();
+  if (!secret || (!localPreviewEnabled && (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY))) {
     return {
-      error: 'Unauthorized: Missing or invalid authentication credentials.',
+      error: 'Authentication is not configured for this deployment.',
       response: NextResponse.json(
-        { success: false, error: 'Unauthorized. Authentication token required.' },
-        { status: 401 }
+        { success: false, error: 'Authentication is not configured for this deployment.' },
+        { status: 503 }
       ),
     };
   }
 
-  // 2. Lookup user in database
-  const users = db.getUsers();
-  const user = users.find((u) => u.id === userId);
+  const token = readCookie(request, AUTH_SESSION_COOKIE);
+  const claims = token ? verifySessionToken(token, secret) : null;
+  if (!claims) return unauthorized();
 
-  if (!user) {
+  if (localPreviewEnabled && claims.sub === LOCAL_PREVIEW_USER.id) {
+    return { user: LOCAL_PREVIEW_USER };
+  }
+
+  let row: any;
+  try {
+    const { data, error } = await supabaseAdmin.from('users').select('*').eq('id', claims.sub).maybeSingle();
+    if (error) throw error;
+    row = data;
+  } catch {
     return {
-      error: 'Unauthorized: User not found.',
+      error: 'Authentication service is temporarily unavailable.',
       response: NextResponse.json(
-        { success: false, error: 'Unauthorized: User not found or session expired.' },
-        { status: 401 }
+        { success: false, error: 'Authentication service is temporarily unavailable.' },
+        { status: 503 }
       ),
     };
   }
 
-  // 3. Verify user is active (not deactivated)
-  if (user.active === false) {
+  if (!row) return unauthorized();
+  if (row.is_active === false || row.active === false) {
     return {
-      error: 'Forbidden: Account deactivated.',
+      error: 'Account is deactivated. Contact your administrator.',
       response: NextResponse.json(
         { success: false, error: 'Account is deactivated. Contact your administrator.' },
         { status: 403 }
@@ -103,23 +106,38 @@ export async function requireAuth(
     };
   }
 
-  // 4. Role-based enforcement
-  if (allowedRoles && allowedRoles.length > 0) {
-    const superAdmin = isSuperAdmin(user) || user.role === 'SUPER_ADMIN';
-
-    if (!superAdmin && user.role && !allowedRoles.includes(user.role as UserRole)) {
-      return {
-        error: `Forbidden: Role ${user.role} does not have access to this resource.`,
-        response: NextResponse.json(
-          {
-            success: false,
-            error: `Access denied. Requires one of: ${allowedRoles.join(', ')}.`,
-          },
-          { status: 403 }
-        ),
-      };
-    }
+  const user = mapUser(row);
+  const hasAllowedRole = typeof user.role === 'string' && allowedRoles?.includes(user.role as UserRole);
+  if (allowedRoles?.length && !isSuperAdmin(user) && !hasAllowedRole) {
+    return {
+      error: `Forbidden: Role ${user.role} does not have access to this resource.`,
+      response: NextResponse.json(
+        { success: false, error: `Access denied. Requires one of: ${allowedRoles.join(', ')}.` },
+        { status: 403 }
+      ),
+    };
   }
 
   return { user };
+}
+
+/** Enforce the same per-feature access configured by Super Admin on server routes. */
+export async function requireFeatureAccess(
+  request: Request,
+  feature: FeatureKey,
+  action: 'VIEW' | 'CREATE' | 'EDIT' | 'DELETE' = 'VIEW'
+): Promise<AuthResult> {
+  const auth = await requireAuth(request);
+  if (auth.response) return auth;
+
+  if (!hasAccess(auth.user, feature)) {
+    const error = 'Not found.';
+    return { error, response: NextResponse.json({ success: false, error }, { status: 404 }) };
+  }
+  if (!canPerform(auth.user, feature, action)) {
+    const error = 'You do not have permission to perform this action.';
+    return { error, response: NextResponse.json({ success: false, error }, { status: 403 }) };
+  }
+
+  return auth;
 }

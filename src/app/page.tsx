@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSessionUser, getRedirectPathForRole } from '@/lib/auth';
+import { getSessionUser, getRedirectPathForUser } from '@/lib/auth';
 import { db } from '@/lib/db/db-service';
 
 export default function RootPage() {
@@ -17,7 +17,7 @@ export default function RootPage() {
       if (db.getCurrentUser().id !== sessionUser.id) {
         db.setCurrentUser(sessionUser.id);
       }
-      router.replace(getRedirectPathForRole(sessionUser.role));
+      router.replace(getRedirectPathForUser(sessionUser));
     }
   }, [router]);
 

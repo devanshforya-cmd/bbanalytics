@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import { Task, BeatItem, Cheque, User, Priority, TaskStatus } from '@/lib/types';
-import { NEPALI_MONTHS, BS_MONTH_DAYS, bsToAd, adToBs, getTodayBs } from '@/lib/nepali-calendar';
+import { NEPALI_MONTHS, BS_MONTH_DAYS, bsToAd, adToBs, getTodayBs, getTodayAd } from '@/lib/nepali-calendar';
 import { toast } from '@/components/common/Toast';
 import { useCalendarPreference } from '@/lib/hooks/useCalendarPreference';
 import {
@@ -65,10 +65,12 @@ export default function CalendarTasksPage() {
   const [calendarMode, setCalendarMode] = useState<'BS' | 'AD'>('BS');
   const [viewType, setViewType] = useState<'MONTH' | 'LIST'>('MONTH');
   const [weekOffset, setWeekOffset] = useState(0);
-  const [currentBsYear, setCurrentBsYear] = useState(2083);
-  const [currentBsMonth, setCurrentBsMonth] = useState(5); // Bhadra (index 5)
-  const [currentAdYear, setCurrentAdYear] = useState(2026);
-  const [currentAdMonth, setCurrentAdMonth] = useState(8); // September (0-indexed: 8 = Sep)
+  const todayBsInitial = adToBs(getTodayAd());
+  const todayAdInitial = new Date();
+  const [currentBsYear, setCurrentBsYear] = useState(todayBsInitial.year);
+  const [currentBsMonth, setCurrentBsMonth] = useState(todayBsInitial.month);
+  const [currentAdYear, setCurrentAdYear] = useState(todayAdInitial.getFullYear());
+  const [currentAdMonth, setCurrentAdMonth] = useState(todayAdInitial.getMonth());
 
   // Sync calendar mode with user preference
   useEffect(() => {
@@ -88,19 +90,20 @@ export default function CalendarTasksPage() {
 
   // Fix 65: Compute 7 days of the active week
   const getWeekDays = () => {
-    const baseDate = new Date(2026, 8, 9); // Sep 9, 2026 / Bhadra 24, 2083
+    const baseDate = new Date();
     const dayOfWeek = baseDate.getDay();
     const startOfWeek = new Date(baseDate);
     startOfWeek.setDate(baseDate.getDate() - dayOfWeek + weekOffset * 7);
 
     const days = [];
+    const todayStr = getTodayAd();
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(startOfWeek.getDate() + i);
       const adStr = d.toISOString().split('T')[0];
       const bsObj = adToBs(adStr);
       const bsStr = `${bsObj.monthName} ${bsObj.day}, ${bsObj.year}`;
-      const isToday = d.getDate() === 9 && d.getMonth() === 8 && d.getFullYear() === 2026;
+      const isToday = adStr === todayStr;
       days.push({
         dateAd: adStr,
         dateBs: bsStr,
@@ -135,8 +138,8 @@ export default function CalendarTasksPage() {
   const [modalDesc, setModalDesc] = useState('');
   const [modalAssigneeId, setModalAssigneeId] = useState('');
   const [modalPriority, setModalPriority] = useState<Priority>('MEDIUM');
-  const [modalDateBs, setModalDateBs] = useState('Bhadra 24, 2083');
-  const [modalDateAd, setModalDateAd] = useState('2026-09-09');
+  const [modalDateBs, setModalDateBs] = useState(() => getTodayBs());
+  const [modalDateAd, setModalDateAd] = useState(() => getTodayAd());
   const [modalRelatedTo, setModalRelatedTo] = useState('');
   const [modalEntityType, setModalEntityType] = useState<'STORE' | 'CHEQUE' | 'COMPLAINT' | 'CALL'>('STORE');
   const [modalStatus, setModalStatus] = useState<TaskStatus>('OPEN');
@@ -592,10 +595,10 @@ export default function CalendarTasksPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setCurrentBsYear(2083);
-                  setCurrentBsMonth(5);
-                  setCurrentAdYear(2026);
-                  setCurrentAdMonth(8);
+                  setCurrentBsYear(todayBsInitial.year);
+                  setCurrentBsMonth(todayBsInitial.month);
+                  setCurrentAdYear(todayAdInitial.getFullYear());
+                  setCurrentAdMonth(todayAdInitial.getMonth());
                 }}
                 className="ml-1 px-2.5 py-1 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-lg transition border-l border-slate-200"
               >
@@ -781,8 +784,8 @@ export default function CalendarTasksPage() {
               );
               const isToday =
                 calendarMode === 'BS'
-                  ? currentBsYear === 2083 && currentBsMonth === 5 && dayNumber === 24
-                  : currentAdYear === 2026 && currentAdMonth === 8 && dayNumber === 9;
+                  ? currentBsYear === todayBsInitial.year && currentBsMonth === todayBsInitial.month && dayNumber === todayBsInitial.day
+                  : currentAdYear === todayAdInitial.getFullYear() && currentAdMonth === todayAdInitial.getMonth() && dayNumber === todayAdInitial.getDate();
 
               return (
                 <div

@@ -85,7 +85,16 @@ export default function BeatRouteList({
 
       {/* Ordered Stores Checklist Grid */}
       <div className="space-y-3">
-        {beatItems.map((item, index) => {
+        {beatItems.length === 0 ? (
+          <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+            <Compass className="w-8 h-8 text-slate-300 mx-auto" />
+            <h4 className="text-sm font-bold text-slate-800">No Beat Visits Scheduled Today</h4>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              There are no stores queued on your route for today. You can add a one-time visit using the Override action above or assign stores from the Stores directory.
+            </p>
+          </div>
+        ) : (
+          beatItems.map((item, index) => {
           const isVisited = item.status === 'VISITED';
           const isSkipped = item.status === 'SKIPPED';
           const isActive = activeBeatId === item.id;
@@ -239,7 +248,7 @@ export default function BeatRouteList({
               </div>
             </div>
           );
-        })}
+        }))}
       </div>
     </div>
   );

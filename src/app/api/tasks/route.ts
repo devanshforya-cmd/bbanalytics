@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-guard';
+import { requireFeatureAccess } from '@/lib/auth-guard';
 import { db } from '@/lib/db/db-service';
+import { getTodayBs } from '@/lib/nepali-calendar';
 import { getScope } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const auth = await requireAuth(request);
+  const auth = await requireFeatureAccess(request, 'tasks', 'VIEW');
   if (auth.response) return auth.response;
 
   const { user } = auth;
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAuth(request);
+  const auth = await requireFeatureAccess(request, 'tasks', 'CREATE');
   if (auth.response) return auth.response;
 
   try {
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
       assignedToName: assignedUser.fullName || body.assignedToName || 'Assigned Officer',
       createdBy: auth.user.fullName || 'HQ Admin',
       priority: body.priority || 'MEDIUM',
-      dueDateBs: body.dueDateBs || '2083-05-28',
+      dueDateBs: body.dueDateBs || getTodayBs(),
       dueDateAd: body.dueDateAd || new Date().toISOString().split('T')[0],
       relatedTo: body.relatedTo || 'Store visit',
       relatedEntityType: body.relatedEntityType || 'STORE',

@@ -11,6 +11,7 @@ export interface QueuedSyncItem {
   payload: Record<string, unknown>;
   timestamp: string;
   attempts: number;
+  lastAttemptAt?: string;
 }
 
 const STORAGE_KEY = 'bb_command_center_offline_queue';
@@ -57,23 +58,13 @@ class OfflineSyncManager {
       if (stored) {
         const raw = JSON.parse(stored);
         if (Array.isArray(raw)) {
-          const now = Date.now();
-          // Auto-purge ephemeral GPS pings, excessive retry failures, and items older than 24 hours
+          // GPS pings are transient; business records stay queued until sync succeeds.
           this.queue = raw.filter((item) => {
             if (!item || typeof item !== 'object') return false;
             if (item.type === 'GPS_PING') return false;
-            if (item.attempts >= 3) return false;
-            if (item.timestamp) {
-              const itemTime = new Date(item.timestamp).getTime();
-              if (!isNaN(itemTime) && now - itemTime > 24 * 60 * 60 * 1000) return false;
-            }
             return true;
           });
-          // Cap queue to avoid runaway memory
-          if (this.queue.length > 50) {
-            this.queue = this.queue.slice(-50);
-          }
-          // If items were pruned, persist clean queue immediately
+          // If invalid or transient records were pruned, persist the remaining queue.
           if (this.queue.length !== raw.length) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue));
           }
@@ -239,21 +230,20 @@ class OfflineSyncManager {
         continue;
       }
 
+      const retryDelayMs = Math.min(5 * 60 * 1000, 1000 * 2 ** Math.min(item.attempts, 8));
+      if (item.lastAttemptAt && Date.now() - new Date(item.lastAttemptAt).getTime() < retryDelayMs) {
+        failedItems.push(item);
+        continue;
+      }
+
       try {
-        // Process the sync item — in mock mode, simulate a brief network delay
-        // In production, this would POST to item.endpoint via Supabase/API
         await this.processItem(item);
         syncedCount++;
       } catch (err) {
         console.warn(`[OfflineSync] Failed to sync item ${item.id} (attempt ${item.attempts + 1}):`, err);
-        item.attempts += 1;
-
-        // Keep retrying up to 5 attempts, then discard with warning
-        if (item.attempts < 5) {
-          failedItems.push(item);
-        } else {
-          console.error(`[OfflineSync] Giving up on item ${item.id} after 5 attempts. Type: ${item.type}`);
-        }
+        item.attempts = Math.min(item.attempts + 1, 30);
+        item.lastAttemptAt = new Date().toISOString();
+        failedItems.push(item);
       }
     }
 
@@ -271,59 +261,54 @@ class OfflineSyncManager {
   }
 
   private async processItem(item: QueuedSyncItem): Promise<void> {
-    // If online, push record to Supabase
-    try {
-      const { supabase } = await import('./db/supabase-client');
-      const payload = item.payload || {};
+    const { supabase } = await import('./db/supabase-client');
+    const payload = item.payload || {};
+    let result: any;
 
-      switch (item.type) {
-        case 'ORDER_CREATED':
-          await supabase.from('orders').upsert([payload]);
-          break;
-        case 'GPS_PING':
-          await supabase.from('gps_pings').insert([payload]);
-          break;
-        case 'CHEQUE_COLLECTED':
-          await supabase.from('cheques').upsert([payload]);
-          break;
-        case 'STOCK_COUNT':
-          await supabase.from('stock_counts').upsert([payload]);
-          break;
-        case 'DISPATCH_LOGGED':
-          await supabase.from('dispatches').upsert([payload]);
-          break;
-        case 'STORE_CREATED':
-        case 'RETAILER_CREATED':
-          await supabase.from('retailers').upsert([payload]);
-          break;
-        case 'DISTRIBUTOR_CREATED':
-          await supabase.from('distributors').upsert([payload]);
-          break;
-        case 'BRANCH_CREATED':
-          await supabase.from('branches').upsert([payload]);
-          break;
-        case 'DELIVERY_FAILURE':
-          await supabase.from('delivery_failures').upsert([payload]);
-          break;
-        case 'RETURN_SUBMITTED':
-          await supabase.from('returns').upsert([payload]);
-          break;
-        case 'DUTY_STATUS':
-          if (payload.officerId) {
-            await supabase
-              .from('users')
-              .update({ duty_status: payload.status })
-              .eq('id', payload.officerId);
-          }
-          break;
-        default:
-          break;
-      }
-    } catch (err) {
-      console.warn(`[OfflineSync] Sync note for ${item.type} (persisted locally):`, err);
+    switch (item.type) {
+      case 'ORDER_CREATED':
+        result = await supabase.from('orders').upsert([payload]);
+        break;
+      case 'GPS_PING':
+        result = await supabase.from('gps_pings').insert([payload]);
+        break;
+      case 'CHEQUE_COLLECTED':
+        result = await supabase.from('cheques').upsert([payload]);
+        break;
+      case 'STOCK_COUNT':
+        result = await supabase.from('stock_counts').upsert([payload]);
+        break;
+      case 'DISPATCH_LOGGED':
+        result = await supabase.from('dispatches').upsert([payload]);
+        break;
+      case 'STORE_CREATED':
+      case 'RETAILER_CREATED':
+        result = await supabase.from('retailers').upsert([payload]);
+        break;
+      case 'DISTRIBUTOR_CREATED':
+        result = await supabase.from('distributors').upsert([payload]);
+        break;
+      case 'BRANCH_CREATED':
+        result = await supabase.from('branches').upsert([payload]);
+        break;
+      case 'DELIVERY_FAILURE':
+        result = await supabase.from('delivery_failures').upsert([payload]);
+        break;
+      case 'RETURN_SUBMITTED':
+        result = await supabase.from('returns').upsert([payload]);
+        break;
+      case 'DUTY_STATUS':
+        if (!payload.officerId) throw new Error('Missing officerId for duty status sync.');
+        result = await supabase
+          .from('users')
+          .update({ duty_status: payload.status })
+          .eq('id', payload.officerId);
+        break;
+      default:
+        throw new Error(`Unsupported offline sync type: ${item.type}`);
     }
 
-    console.log(`[OfflineSync] ✓ Synced ${item.type} (${item.id})`);
+    assertSyncSuccess(result, item.type);
   }
 
   public async forceSyncNow(): Promise<number> {
@@ -355,12 +340,6 @@ class OfflineSyncManager {
     return this.triggerSync();
   }
 
-  public seedDemoOfflineQueue(): number {
-    this.enqueue('STOCK_COUNT', { storeId: 'ret_1', product: 'Peach Roll-On', qty: 24 });
-    this.enqueue('STOCK_COUNT', { storeId: 'ret_2', product: 'Vitamin C Serum', qty: 12 });
-    this.enqueue('CHEQUE_COLLECTED', { chequeNumber: 'CHQ-882190', amount: 45000, bank: 'Nabil Bank' });
-    return 3;
-  }
 
   private updateLastSync() {
     const now = new Date();
@@ -381,6 +360,12 @@ class OfflineSyncManager {
 }
 
 export const syncManager = new OfflineSyncManager();
+
+export function assertSyncSuccess(result: { error?: { message?: string } | null }, operation: string): void {
+  if (result?.error) {
+    throw new Error(`${operation} failed: ${result.error.message || 'remote write rejected'}`);
+  }
+}
 
 import {
   Product,

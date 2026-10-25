@@ -79,15 +79,13 @@ function FeedbackContent() {
   const [fullText, setFullText] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [sentiment, setSentiment] = useState<Sentiment>('POSITIVE');
-  const [hasScreenshot, setHasScreenshot] = useState(true);
-  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([
-    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&auto=format&fit=crop&q=80',
-  ]);
+  const [hasScreenshot, setHasScreenshot] = useState(false);
+  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
   const [proofPhotoUrl, setProofPhotoUrl] = useState('');
   const [usedInDesign, setUsedInDesign] = useState(false);
   const [postedOnWebsite, setPostedOnWebsite] = useState(false);
   const [priority, setPriority] = useState<Priority>('MEDIUM');
-  const [assignedTo, setAssignedTo] = useState('user_bm_forya');
+  const [assignedTo, setAssignedTo] = useState(() => db.getCurrentUser()?.id || '');
 
   // Input refs for file upload & camera
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -220,9 +218,7 @@ function FeedbackContent() {
     setCustomerPhone('');
     setFullText('');
     setSelectedCategories([]);
-    setUploadedPhotos([
-      'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&auto=format&fit=crop&q=80',
-    ]);
+    setUploadedPhotos([]);
   };
 
   const handleStatusChange = (status: ComplaintStatus) => {
@@ -1045,47 +1041,6 @@ function FeedbackContent() {
                         setUploadedPhotos((prev) => [...prev, ...results.map((r) => r.url)]);
                       }}
                     />
-
-                    {/* Fast Presets */}
-                    <div className="flex flex-wrap gap-1.5 text-[10px] pt-1">
-                      <span className="text-slate-400 font-semibold self-center">Quick Samples:</span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setUploadedPhotos((prev) => [
-                            ...prev,
-                            'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&auto=format&fit=crop&q=80',
-                          ])
-                        }
-                        className="px-2 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-800 font-medium transition"
-                      >
-                        Cosmetic Texture
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setUploadedPhotos((prev) => [
-                            ...prev,
-                            'https://images.unsplash.com/photo-1576426863848-c21f53c60b19?w=800&auto=format&fit=crop&q=80',
-                          ])
-                        }
-                        className="px-2 py-0.5 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-medium transition"
-                      >
-                        Shelf Display
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setUploadedPhotos((prev) => [
-                            ...prev,
-                            'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=80',
-                          ])
-                        }
-                        className="px-2 py-0.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium transition"
-                      >
-                        Damaged Box / Courier Proof
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>

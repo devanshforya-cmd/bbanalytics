@@ -1,168 +1,61 @@
-# Brand Bucket Command Center — Deployment & Operations Guide
-## Complete Production Pipeline & Infrastructure Runbook (Fixes 56 & 57)
+# Deployment and Release Readiness
 
-This document provides step-by-step instructions for deploying and maintaining the Brand Bucket Command Center (`command.brandbucket.com.np`) across Vercel, Supabase, and GitHub.
+## Release status
 
----
+**Hold production publishing.** The app builds and its current unit tests pass, but the current persistence path is not a durable, shared system of record. The main UI database is browser-local, several API routes use process memory, the offline outbox posts to a missing `/api/sync` write handler, and the app's custom session cookie is not a Supabase Auth identity for the policies in `supabase/rls.sql`. A successful-looking page or API response therefore does not prove a record is saved for other users.
 
-## 1. Architecture Overview
+See [docs/USER_FLOW.md](docs/USER_FLOW.md) for the product map, known broken loops, and minimum end-to-end release checks.
 
-- **Frontend & Serverless**: Next.js 14 (App Router) on **Vercel**
-- **Database & Storage**: PostgreSQL & Blob Storage on **Supabase**
-- **Authentication**: Bcrypt-secured mobile login with 24-hour expiring sessions & Row-Level Security
-- **Cron Jobs**: Vercel Cron (`15 2 * * *` -> Daily 8:00 AM NPT)
-- **Emails**: Resend API (Free Tier: 3,000 emails/month)
-- **Monitoring**: Better Uptime / Cronitor (Free Tier) + Vercel Speed Insights
+## Current stack and verified safeguards
 
----
+- Next.js 15 App Router, React 18, Tailwind CSS 4.
+- Supabase is configured as the intended database. `supabase/schema.sql` and `supabase/rls.sql` are not yet verified end-to-end with this app's custom HMAC session model.
+- Sign-in verifies bcrypt hashes server-side and issues a signed, HTTP-only, SameSite=Strict 24-hour cookie. Protected APIs must use `requireAuth`; cron routes use `CRON_SECRET`.
+- Login throttling is currently process-local and is not reliable as a distributed production rate limiter.
+- Client-side browser storage remains part of the current data path. Local preview mode intentionally keeps brand changes in this browser only and marks them as unsynced. Do not treat this as backup or cross-device persistence.
+- `/api/cron/daily-check` currently returns in-memory counts; it does not save a backup. The weekly report route returns HTML and does not send email. Configure no cron, email, or backup expectation from those routes until implemented and tested.
 
-## 2. Git & Branching Workflow (Fix 57a)
+## Required environment variables
 
-The repository follows a clean two-tier continuous deployment model:
+Set these in the target environment, using unique production secrets:
 
-```
-feature/* ──(PR)──> dev [Staging/Preview] ──(PR)──> main [Production]
-                         │                              │
-                         ▼                              ▼
-             preview.brandbucket.app         command.brandbucket.com.np
-```
+| Variable | Required | Use |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes for current browser client | Supabase public/anonymous key; never use it as a server secret |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes for sign-in and protected server lookups | Server-only Supabase admin key; never expose to browser code |
+| `AUTH_SESSION_SECRET` | Yes | Random server-only HMAC key, at least 32 bytes |
+| `CRON_SECRET` | Yes if cron routes are enabled | Random bearer secret, at least 32 bytes |
+| `NEXT_PUBLIC_APP_URL` | Recommended | Canonical application URL |
 
-### Initial Git Repository Setup
+Optional integrations such as Resend, VAPID, Google Drive, and Google Sheets should only be configured after their routes are tested against real staging credentials. Never commit `.env.local` or production credentials.
 
-If not already initialized:
-```bash
-cd forya-admin
-git init
-git add .
-git commit -m "feat: complete brand bucket command center v2.0 with security hardening"
-git branch -M main
-git remote add origin git@github.com:brandbucket-nepal/command-center.git
-git push -u origin main
+## Database and migration gate
 
-# Create and push development branch
-git checkout -b dev
-git push -u origin dev
-```
+1. Create a separate Supabase staging project and take a restorable backup before applying migrations.
+2. Review and reconcile the app types, API payloads, `supabase/schema.sql`, and `supabase/rls.sql` first. In particular, decide how the custom app cookie maps to RLS authorization. Do not loosen RLS or enable anonymous writes as a workaround.
+3. Apply `supabase/migrations/20261025000000_brand_settings_fields.sql` to staging for full brand metadata (color, category, company, and description).
+4. Apply `supabase/migrations/20261025010000_brand_code_unique.sql` to staging. It stops if case-normalized duplicate codes exist; resolve those before retrying.
+5. Apply the remaining schema changes only after the app/RLS mapping exists; create and test storage policies for every bucket before uploading operational documents or photos.
+6. Seed the first administrator with `INITIAL_ADMIN_PASSWORD` and the service-role key using `npx tsx scripts/seed-admin.ts`. Rotate the initial password after first sign-in.
+7. Run the role-by-role end-to-end checks in `docs/USER_FLOW.md` against staging and confirm data visibility from a second device/account.
 
-### Branch Rules:
-1. **`main`**: Production branch. Direct commits disabled. Requires PR review and passing build.
-2. **`dev`**: Integration branch for QA and staging testing. Deploys to preview environments on Vercel.
-3. **`feature/*`**: Short-lived feature branches branched off `dev`.
+## Build and deployment gate
 
----
+The project uses `npm ci`, `npm run lint`, `npm test`, and `npm run build`. Run all four on the exact release commit. The current lint command reports warnings; warnings still need review when they touch the flow being released.
 
-## 3. Supabase Setup & Database Migration (Fix 57c)
+Do not connect the production domain or enable scheduled jobs until the persistence/auth gate above passes. After staging passes, deploy a preview, inspect login and all permitted routes for each role, verify cron side effects and stored backup artifacts, then promote through the organization's approved review process.
 
-### Step 1: Create Supabase Project
-1. Go to [database.new](https://database.new) and sign in.
-2. Create project:
-   - **Name**: `brand-bucket-production`
-   - **Region**: `Singapore (ap-southeast-1)` (lowest latency to Kathmandu, Nepal)
-   - **Password**: Generate a high-entropy 32-character database password and store in 1Password.
+## Current audit snapshot
 
-### Step 2: Run Database Schema Migrations
-1. Open the Supabase Dashboard -> **SQL Editor**.
-2. Copy and paste the full contents of `supabase/schema.sql` and click **Run**.
-3. Copy and paste the full contents of `supabase/rls.sql` and click **Run**.
-   - This enables Row Level Security on all 13+ tables.
-   - Enforces the append-only, immutable policy for `activity_logs`.
-   - Isolates brand managers to their assigned brands.
-   - Restricts sales officers to their own visits, routes, and cheques.
+This snapshot reflects the repository review on 2026-10-25; rerun checks before any release:
 
-### Step 3: Create Storage Buckets
-Under **Storage** -> **New Bucket**, create the following 5 buckets (Set to Public or Restricted as needed):
-- `shelf-photos` (for before/after retail shelf verification)
-- `cheque-photos` (for physical cheque front/back scans)
-- `delivery-proofs` (for customer doorstep delivery photos)
-- `documents` (for distributor agreements, VAT invoices, delivery chalans)
-- `brand-logos` (for brand branding assets)
-
----
-
-## 4. Vercel Deployment Configuration (Fix 57b & 57d)
-
-### Step 1: Connect Repository
-1. Log into [Vercel Dashboard](https://vercel.com) and click **Add New Project**.
-2. Import `brandbucket-nepal/command-center`.
-3. Framework Preset: **Next.js**.
-4. Root Directory: `./` (or `forya-admin` if mono-repo).
-
-### Step 2: Configure Environment Variables
-Add the following under **Project Settings > Environment Variables**:
-
-| Variable | Environment | Description |
-| :--- | :--- | :--- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Production, Preview | Supabase Project URL (`https://xyz.supabase.co`) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production, Preview | Supabase Anon Public Key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Production, Preview | Supabase Service Role Secret Key (Server-only) |
-| `NEXT_PUBLIC_APP_URL` | Production | `https://command.brandbucket.com.np` |
-| `NEXT_PUBLIC_APP_URL` | Preview | `https://$VERCEL_URL` |
-| `CRON_SECRET` | Production | High-entropy secret token (32+ chars) |
-| `RESEND_API_KEY` | Production | Resend API Key (`re_...`) |
-| `EMAIL_FROM` | Production | `Brand Bucket HQ <operations@brandbucket.com.np>` |
-| `WEEKLY_REPORT_RECIPIENTS` | Production | `admin@brandbucket.com.np,ceo@brandbucket.com.np` |
-| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Production, Preview | PWA Web-Push Public Key |
-| `VAPID_PRIVATE_KEY` | Production | PWA Web-Push Private Key |
-
-### Step 3: Custom Domain Setup (`command.brandbucket.com.np`)
-1. In Vercel Project Settings, navigate to **Domains**.
-2. Add `command.brandbucket.com.np`.
-3. In your DNS Provider (Cloudflare / Mercantile / cPanel):
-   - **Type**: `CNAME`
-   - **Name**: `command`
-   - **Target**: `cname.vercel-dns.com`
-   - **TTL**: Auto / 300 seconds
-4. Vercel will verify DNS within 60 seconds and auto-provision an SSL certificate via Let's Encrypt.
-
----
-
-## 5. Automated Vercel Cron Scheduling (Fix 57g)
-
-The deployment includes `vercel.json` pre-configured for automated execution:
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/daily-check",
-      "schedule": "15 2 * * *"
-    }
-  ]
-}
-```
-
-- **Execution Schedule**: `02:15 UTC` = `08:00 AM NPT` (Nepal Time) every morning.
-- **Operations Performed**:
-  1. **Smart Alerts**: Evaluates bounced cheques, customer karma (<20 blacklist), unassigned urgent complaints, and delayed cheques.
-  2. **Friday Operations Report**: On Fridays, compiles the 7-day multi-brand summary and dispatches the HTML briefing via Resend.
-  3. **Automated Database Backup Snapshot**: Exports JSON representation of active tables with row counts and checksums.
-
----
-
-## 6. Security & Audit Verification Checklist (Fix 56 Pre-Flight)
-
-Before promoting any release to live production:
-
-- [x] **56a. Bcrypt Password Hashing**: Passwords stored as bcrypt hashes with 12 salt rounds. No plain-text passwords in DB or responses.
-- [x] **56b. Session Expiration**: Sessions expire after 24 hours. Deactivated users are blocked instantly.
-- [x] **56c. Row Level Security**: Enabled across all tables with role-based policies in `supabase/rls.sql`.
-- [x] **56d. API Protection**: `/lib/auth-guard.ts` validates sessions and roles across all `/api/*` routes.
-- [x] **56e. File Upload Verification**: Magic bytes inspected, 5MB file cap enforced, EXIF metadata stripped via canvas.
-- [x] **56f. Input Sanitization**: XSS escaping and script stripping via `/lib/sanitize.ts`.
-- [x] **56g. Secrets Protection**: `.gitignore` strictly ignores `.env*` local files. `.env.example` provides template.
-- [x] **56h. Rate Limiting**: Max 5 login attempts per 15-minute sliding window with countdown UI.
-- [x] **56i. Backups**: Database backup snapshot generated in `/api/cron/daily-check`.
-- [x] **56j. Immutable Audit Trail**: `activity_logs` table allows only `INSERT` queries. `UPDATE` and `DELETE` are disallowed.
-- [x] **56k. Security Headers**: Strict HSTS, CSP, X-Frame-Options, and nosniff configured in `next.config.mjs`.
-
----
-
-## 7. Monitoring & Incident Response (Fix 57e)
-
-1. **Uptime Monitoring**:
-   - Register a free monitor on [Better Uptime](https://betteruptime.com) or [UptimeRobot](https://uptimerobot.com).
-   - Point monitor to `https://command.brandbucket.com.np/api/cron/daily-check`.
-   - Notification channel: Telegram / SMS to Ops Lead.
-
-2. **Emergency Rollback**:
-   - In Vercel Dashboard -> **Deployments**, locate the last known healthy deployment.
-   - Click **Instant Rollback**. Traffic switches in ~2 seconds without rebuilding.
+- Unit tests: 27 passed after the current changes.
+- ESLint: no errors; 35 hook dependency and image optimization warnings remain.
+- TypeScript: `npx tsc --noEmit --pretty false` passed.
+- Dependency audit: 0 known vulnerabilities after dependency overrides were applied. Re-run `npm audit` at release time.
+- Clean install: `npm ci` passed from `package-lock.json`.
+- Production build: passed on the current code in an isolated working copy to keep the localhost dev server intact.
+- Runtime checks requiring connected staging Supabase, email, storage, and separate user accounts have not been completed.
+- A read-only probe found that the configured Supabase project host returns public DNS `NXDOMAIN`; re-copy the Project URL from Supabase Project Settings and restart the dev server. Local-preview brand CRUD is explicitly browser-only; no Supabase migration or write was applied during this review.
+- The `bis_skin_checked` hydration mismatch shown in the screenshot does not appear in app source and is likely injected by a browser extension. Verify in a clean browser before treating it as an application defect.

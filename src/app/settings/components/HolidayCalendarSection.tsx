@@ -4,17 +4,19 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Plus, Trash2, Shield, AlertCircle, Sparkles, Check } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
 import { Holiday, HolidayType } from '@/lib/types';
-import { getTodayBs, NEPALI_MONTHS } from '@/lib/nepali-calendar';
+import { getTodayBs, getTodayAd, adToBs, NEPALI_MONTHS } from '@/lib/nepali-calendar';
 
 export default function HolidayCalendarSection() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
-  const [yearBs, setYearBs] = useState<number>(2083);
+  const todayAdStr = getTodayAd();
+  const todayBsObj = adToBs(todayAdStr);
+  const [yearBs, setYearBs] = useState<number>(todayBsObj.year);
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Form state
   const [name, setName] = useState('');
-  const [dateBs, setDateBs] = useState('2083-06-03');
-  const [dateAd, setDateAd] = useState('2026-09-19');
+  const [dateBs, setDateBs] = useState(getTodayBs());
+  const [dateAd, setDateAd] = useState(todayAdStr);
   const [type, setType] = useState<HolidayType>('PUBLIC');
   const [notes, setNotes] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<number>(5); // 0-indexed (Bhadra = 4 or 5)

@@ -38,16 +38,15 @@ const securityHeaders = [
       "img-src 'self' data: blob: https:",
       "connect-src 'self' https://*.supabase.co https://*.vercel.app",
       "frame-ancestors 'self'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "object-src 'none'",
     ].join('; '),
   },
 ];
 
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   async headers() {
     return [
       {

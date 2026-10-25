@@ -572,6 +572,7 @@ export interface Cheque {
   id: string;
   entityType: 'BRANCH' | 'RETAILER';
   entityId: string;
+  brandCodes?: BrandCode[];
   storeName: string;
   officerId: string;
   officerName: string;

@@ -207,6 +207,8 @@ export interface UserWithPermissions {
   custom_permissions?: Record<string, any>;
   reports_to_id?: string | null;
   reportsToId?: string | null;
+  assignedBrands?: string[];
+  assigned_brands?: string[];
 }
 
 /**
@@ -215,6 +217,20 @@ export interface UserWithPermissions {
 export function isSuperAdmin(user?: UserWithPermissions | null): boolean {
   if (!user) return false;
   return Boolean(user.is_super_admin || user.isSuperAdmin);
+}
+
+/** Missing assignments retain legacy all-brand access; an explicit empty list means no brands. */
+export function getAssignedBrandCodes(user?: UserWithPermissions | null): string[] {
+  if (!user) return [];
+  if (isSuperAdmin(user)) return ['ALL'];
+  const assignments = user.assignedBrands ?? user.assigned_brands;
+  if (!Array.isArray(assignments)) return ['ALL'];
+  return assignments.map((code) => String(code).trim().toUpperCase()).filter(Boolean);
+}
+
+export function canAccessBrand(user: UserWithPermissions | null | undefined, brandCode: string): boolean {
+  const assigned = getAssignedBrandCodes(user);
+  return assigned.includes('ALL') || assigned.includes(String(brandCode).trim().toUpperCase());
 }
 
 export function getEffectivePermission(

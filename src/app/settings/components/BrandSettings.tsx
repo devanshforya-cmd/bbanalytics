@@ -11,6 +11,7 @@ import {
   updateBrand as apiUpdateBrand,
   deactivateBrand as apiDeactivateBrand,
   reactivateBrand as apiReactivateBrand,
+  isBrandStorageLocalPreview,
   canDeleteBrand,
   deleteBrand as apiDeleteBrand,
   getBrandEntityCounts,
@@ -21,6 +22,8 @@ import SubmitButton from '@/components/common/SubmitButton';
 export default function BrandSettings() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [isPreviewOnly, setIsPreviewOnly] = useState(false);
 
   // Modal / Form state
   const [showModal, setShowModal] = useState(false);
@@ -47,17 +50,14 @@ export default function BrandSettings() {
   const loadBrands = async () => {
     setLoading(true);
     try {
-      const fetched = await fetchBrandsFromSupabase();
-      if (fetched) {
-        setBrands(fetched);
-        // Sync local memory and persistence
-        (db as any).brands = fetched;
-        (db as any).persistState();
-      } else {
-        setBrands(db.getBrands('ALL'));
-      }
-    } catch {
+      const fetched = await fetchBrandsFromSupabase({ requireRemote: true });
+      setBrands(fetched);
+      setIsPreviewOnly(isBrandStorageLocalPreview());
+      setLoadError('');
+    } catch (err: any) {
       setBrands(db.getBrands('ALL'));
+      setIsPreviewOnly(false);
+      setLoadError(err?.message || 'The shared brand list could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ export default function BrandSettings() {
       toast.error('Brand name is required');
       return;
     }
-    const cleanCode = (brandCode || brandName).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+    const cleanCode = (brandCode || brandName).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
     if (!cleanCode) {
       toast.error('Valid brand code is required');
       return;
@@ -122,10 +122,13 @@ export default function BrandSettings() {
           category: brandCategory,
           principalCompany: principalCompany.trim() || undefined,
         };
-        db.updateBrand(editingBrand.id, updates);
         await apiUpdateBrand(editingBrand.id, updates);
         toast.success(`Brand "${brandName}" updated successfully`);
       } else {
+        if (db.getBrands('ALL').some((brand) => brand.code.toUpperCase() === cleanCode)) {
+          toast.error(`Brand code ${cleanCode} already exists. Edit that brand instead.`);
+          return;
+        }
         // Create new brand
         const newBrandObj: Brand = {
           id: `brand_${cleanCode.toLowerCase()}`,
@@ -138,15 +141,17 @@ export default function BrandSettings() {
           isActive: true,
           status: 'ACTIVE',
         };
-        db.addBrand(newBrandObj);
         await apiAddBrand(newBrandObj);
-        toast.success(`Brand "${brandName}" added! Now available across the platform.`);
+        toast.success(isBrandStorageLocalPreview()
+          ? `Brand "${brandName}" saved in this browser preview only.`
+          : `Brand "${brandName}" added! Now available across the platform.`);
       }
 
       setShowModal(false);
       await loadBrands();
     } catch (err: any) {
-      toast.error('Failed to save brand: ' + (err?.message || 'Unknown error'));
+      setBrands(db.getBrands('ALL'));
+      toast.error(`Brand could not be saved to shared storage: ${err?.message || 'Unknown error'}`);
     }
   };
 
@@ -162,17 +167,16 @@ export default function BrandSettings() {
 
     try {
       if (isCurrentlyActive) {
-        db.updateBrand(b.id, { isActive: false, status: 'ARCHIVED' });
         await apiDeactivateBrand(b.id);
         toast.success(`Brand "${b.name}" deactivated. Historical data preserved.`);
       } else {
-        db.updateBrand(b.id, { isActive: true, status: 'ACTIVE' });
         await apiReactivateBrand(b.id);
         toast.success(`Brand "${b.name}" reactivated and restored to forms.`);
       }
       await loadBrands();
     } catch (err: any) {
-      toast.error('Status update failed: ' + (err?.message || 'Unknown error'));
+      setBrands(db.getBrands('ALL'));
+      toast.error(`Brand could not be updated in shared storage: ${err?.message || 'Unknown error'}`);
     }
   };
 
@@ -218,6 +222,20 @@ export default function BrandSettings() {
 
   return (
     <div className="space-y-6">
+      {isPreviewOnly && (
+        <div role="status" className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-900">
+          Local preview mode: brand changes are saved in this browser only and will not sync to Supabase.
+        </div>
+      )}
+      {loadError && (
+        <div role="alert" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p>Shared brand storage could not be read: {loadError}</p>
+          <button type="button" onClick={() => void loadBrands()} className="shrink-0 font-bold underline underline-offset-2">
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div>
@@ -250,19 +268,29 @@ export default function BrandSettings() {
             <Tag className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-800">No brands configured yet</h3>
+            <h3 className="text-sm font-bold text-slate-800">
+              {loadError ? 'Brand list unavailable' : 'No brands configured yet'}
+            </h3>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Add your first brand to get started. Brands appear across all filters, product catalogs, and field sales forms.
+              {loadError
+                ? 'This empty list is not proof that the portfolio has no brands. Restore the shared brand connection, then retry.'
+                : 'Add your first brand to get started. Brands appear across all filters, product catalogs, and field sales forms.'}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={openAddModal}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add First Brand</span>
-          </button>
+          {loadError ? (
+            <button type="button" onClick={() => void loadBrands()} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700">
+              Retry brand list
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={openAddModal}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add First Brand</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

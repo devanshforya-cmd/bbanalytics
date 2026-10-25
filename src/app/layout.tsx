@@ -16,8 +16,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  viewportFit: 'cover',
   themeColor: '#2563eb',
 };
 
@@ -29,6 +28,29 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                window.addEventListener('error', function(e) {
+                  if (e.filename && (e.filename.indexOf('chrome-extension://') !== -1 || e.filename.indexOf('moz-extension://') !== -1 || e.filename.indexOf('extension') !== -1)) {
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
+                    return true;
+                  }
+                }, true);
+                window.addEventListener('unhandledrejection', function(e) {
+                  var reason = (e && e.reason) ? (e.reason.stack || String(e.reason)) : '';
+                  if (reason.indexOf('chrome-extension://') !== -1 || reason.indexOf('moz-extension://') !== -1) {
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
+                    return true;
+                  }
+                }, true);
+              })();
+            `,
+          }}
+        />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#2563eb" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

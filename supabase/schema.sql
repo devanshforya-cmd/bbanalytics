@@ -10,8 +10,13 @@ CREATE TABLE IF NOT EXISTS brands (
     code VARCHAR(50) UNIQUE NOT NULL, -- 'FORYA', 'PEE_SAFE', 'FURR', 'RENEE'
     name VARCHAR(100) NOT NULL,
     logo_url TEXT,
+    color VARCHAR(20) DEFAULT '#3b82f6',
+    description TEXT DEFAULT '',
+    category VARCHAR(100),
+    principal_company VARCHAR(255),
     active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 2. Users Table (Aligned with NextAuth / Supabase Auth)

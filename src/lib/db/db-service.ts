@@ -1,7 +1,13 @@
-import { SUPER_ADMIN_TEMPLATE, getScope } from '../permissions';
+import {
+  SUPER_ADMIN_TEMPLATE,
+  MANAGER_TEMPLATE,
+  FIELD_SALES_OFFICER_TEMPLATE,
+  OFFICE_STAFF_TEMPLATE,
+  getScope,
+} from '../permissions';
 import { fetchTasksFromSupabase, addTask as addTaskToSupabase, updateTaskInSupabase } from './analytics-service';
 
-const DEFAULT_SUPER_ADMIN: User = {
+export const DEFAULT_SUPER_ADMIN: User = {
   id: 'user_devansh',
   fullName: 'Devansh Agarwal',
   email: 'devansh@brandbucket.com',
@@ -23,6 +29,79 @@ const DEFAULT_SUPER_ADMIN: User = {
   },
   customPermissions: SUPER_ADMIN_TEMPLATE,
 };
+
+export const DEFAULT_OPS_ADMIN: User = {
+  id: 'user_ops_admin',
+  fullName: 'Operations Manager',
+  email: 'ops@brandbucket.com',
+  phone: '+977-9801112233',
+  role: 'ADMIN',
+  isSuperAdmin: false,
+  dutyStatus: 'ONLINE',
+  active: true,
+  assignedBrands: ['ALL'],
+  territory: 'ALL',
+  permissions: {
+    canViewAnalytics: true,
+    canExportSheets: true,
+    canManageDispatches: true,
+    canManageCheques: true,
+    canApproveSkips: true,
+    canManageStaff: false,
+    canConfigureSettings: false,
+  },
+  customPermissions: MANAGER_TEMPLATE,
+};
+
+export const DEFAULT_SALES_OFFICER: User = {
+  id: 'user_rohan',
+  fullName: 'Rohan Shrestha',
+  email: 'rohan@brandbucket.com',
+  phone: '+977-9841234567',
+  role: 'SALES_OFFICER',
+  isSuperAdmin: false,
+  dutyStatus: 'ONLINE',
+  active: true,
+  assignedBrands: ['ALL'],
+  territory: 'Kathmandu Central',
+  permissions: {
+    canViewAnalytics: false,
+    canExportSheets: false,
+    canManageDispatches: false,
+    canManageCheques: true,
+    canApproveSkips: false,
+    canManageStaff: false,
+    canConfigureSettings: false,
+  },
+  customPermissions: FIELD_SALES_OFFICER_TEMPLATE,
+};
+
+export const DEFAULT_MARKETING_LEAD: User = {
+  id: 'user_sita',
+  fullName: 'Sita Gurung',
+  email: 'sita@brandbucket.com',
+  phone: '+977-9851122334',
+  role: 'OFFICE_STAFF',
+  isSuperAdmin: false,
+  dutyStatus: 'ONLINE',
+  active: true,
+  assignedBrands: ['ALL'],
+  territory: 'Kathmandu Valley',
+  permissions: {
+    canViewAnalytics: true,
+    canExportSheets: false,
+    canManageDispatches: false,
+    canManageCheques: false,
+    canApproveSkips: false,
+    canManageStaff: false,
+    canConfigureSettings: false,
+  },
+  customPermissions: OFFICE_STAFF_TEMPLATE,
+};
+
+export const DEFAULT_STAFF_USERS: User[] = [
+  DEFAULT_SUPER_ADMIN,
+];
 
 const DEFAULT_BRANDS: Brand[] = [];
 
@@ -105,7 +184,7 @@ export interface OrderRealtimeEvent {
 }
 
 export class DatabaseService {
-  private users: User[] = [DEFAULT_SUPER_ADMIN];
+  private users: User[] = [...DEFAULT_STAFF_USERS];
   private currentUser: User = DEFAULT_SUPER_ADMIN;
   private brands: Brand[] = DEFAULT_BRANDS;
   private products: Product[] = [];
@@ -217,48 +296,10 @@ export class DatabaseService {
    * Prevents blank screens, missing map markers, and uninitialized states.
    */
   public ensureBaselineSeeds() {
-    // 1. Brands Baseline
-    if (!this.brands || this.brands.length === 0) {
-      this.brands = [
-        {
-          id: 'brand_forya',
-          code: 'FORYA',
-          name: 'Forya Organics',
-          description: 'Natural skincare and body wellness solutions',
-          color: '#0d9488',
-          status: 'ACTIVE',
-          isActive: true,
-        },
-        {
-          id: 'brand_peesafe',
-          code: 'PEE_SAFE',
-          name: 'Pee Safe Nepal',
-          description: 'Intimate hygiene and personal wellness',
-          color: '#2563eb',
-          status: 'ACTIVE',
-          isActive: true,
-        },
-        {
-          id: 'brand_furr',
-          code: 'FURR',
-          name: 'FURR by Pee Safe',
-          description: 'Daily grooming and skincare essentials',
-          color: '#7c3aed',
-          status: 'ACTIVE',
-          isActive: true,
-        },
-        {
-          id: 'brand_renee',
-          code: 'RENEE',
-          name: 'Renee Cosmetics',
-          description: 'Premium color cosmetics and beauty range',
-          color: '#db2777',
-          status: 'ACTIVE',
-          isActive: true,
-        },
-      ];
+    // Clean slate: brands and staff are configured by the administrator in Settings
+    if (!this.brands) {
+      this.brands = [];
     }
-
   }
 
   /**
@@ -271,24 +312,32 @@ export class DatabaseService {
     }
 
     try {
-      const { supabase } = await import('./supabase-client');
       let incomingCount = 0;
+      const response = await fetch('/api/sync', { cache: 'no-store', credentials: 'same-origin' });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.success || !result.data) {
+        return {
+          success: false,
+          syncedCount: 0,
+          message: result?.error || 'Could not load workspace data.',
+        };
+      }
 
-      // 1. Fetch tables in parallel
-      const [uRes, bRes, dRes, brRes, rRes, pRes, oRes, cRes] = await Promise.allSettled([
-        supabase.from('users').select('*'),
-        supabase.from('brands').select('*'),
-        supabase.from('distributors').select('*'),
-        supabase.from('branches').select('*'),
-        supabase.from('retailers').select('*'),
-        supabase.from('products').select('*'),
-        supabase.from('orders').select('*').limit(200),
-        supabase.from('cheques').select('*').limit(100),
-      ]);
+      const syncErrors: string[] = Array.isArray(result.errors) ? result.errors : [];
+      const rowsFrom = (table: string, key: string): any[] | null =>
+        syncErrors.includes(table) ? null : (Array.isArray(result.data[key]) ? result.data[key] : []);
+      const userRows = rowsFrom('users', 'users');
+      const brandRows = rowsFrom('brands', 'brands');
+      const distributorRows = rowsFrom('distributors', 'distributors');
+      const branchRows = rowsFrom('branches', 'branches');
+      const retailerRows = rowsFrom('retailers', 'retailers');
+      const productRows = rowsFrom('products', 'products');
+      const orderRows = rowsFrom('orders', 'orders');
+      const chequeRows = rowsFrom('cheques', 'cheques');
 
       // Sync Users from Supabase (single source of truth for staff and admin accounts)
-      if (uRes.status === 'fulfilled' && uRes.value.data) {
-        const rows = uRes.value.data as any[];
+      if (userRows) {
+        const rows = userRows as any[];
         if (rows.length > 0) {
           const mappedUsers: User[] = rows.map((row: any) => ({
             id: row.id,
@@ -296,9 +345,9 @@ export class DatabaseService {
             email: row.email,
             phone: row.phone,
             role: row.role || 'SALES_OFFICER',
-            isSuperAdmin: !!row.is_super_admin,
+            isSuperAdmin: !!row.is_super_admin || row.role === 'SUPER_ADMIN',
             dutyStatus: row.duty_status || 'ONLINE',
-            active: row.is_active !== false,
+            active: row.is_active !== false && row.active !== false,
             assignedBrands: row.assigned_brands || ['ALL'],
             territory: row.territory || row.assigned_territory || 'Kathmandu Valley',
             reportsToId: row.reports_to_id,
@@ -308,12 +357,15 @@ export class DatabaseService {
           }));
           this.users = mappedUsers;
           incomingCount += mappedUsers.length;
+        } else {
+          this.users = [this.currentUser];
         }
       }
 
       // Merge Brands from Supabase
-      if (bRes.status === 'fulfilled' && bRes.value.data && bRes.value.data.length > 0) {
-        bRes.value.data.forEach((row: any) => {
+      if (brandRows) {
+        this.brands = [];
+        brandRows.forEach((row: any) => {
           const idx = this.brands.findIndex((b) => b.id === row.id || b.code === row.code);
           const brand: Brand = {
             id: row.id,
@@ -322,8 +374,8 @@ export class DatabaseService {
             description: row.description || `${row.name} brand catalog`,
             color: row.color || '#2563eb',
             logoUrl: row.logo_url,
-            status: (row.is_active !== false ? 'ACTIVE' : 'ARCHIVED') as any,
-            isActive: row.is_active !== false,
+            status: (row.is_active !== false && row.active !== false ? 'ACTIVE' : 'ARCHIVED') as any,
+            isActive: row.is_active !== false && row.active !== false,
           };
           if (idx >= 0) {
             this.brands[idx] = { ...this.brands[idx], ...brand };
@@ -335,52 +387,52 @@ export class DatabaseService {
       }
 
       // Sync Products from Supabase
-      if (pRes.status === 'fulfilled') {
-        const pData = (pRes.value.data as any[]) || [];
-        this.products = pData;
-        incomingCount += pData.length;
+      if (productRows) {
+        this.products = productRows as any[];
+        incomingCount += productRows.length;
       }
 
       // Sync Distributors from Supabase (single source of truth: 0 phantom stores)
-      if (dRes.status === 'fulfilled') {
-        const dData = (dRes.value.data as any[]) || [];
-        this.distributors = dData;
-        incomingCount += dData.length;
+      if (distributorRows) {
+        this.distributors = distributorRows as any[];
+        incomingCount += distributorRows.length;
       }
 
       // Sync Branches from Supabase
-      if (brRes.status === 'fulfilled') {
-        const brData = (brRes.value.data as any[]) || [];
-        this.branches = brData;
-        incomingCount += brData.length;
+      if (branchRows) {
+        this.branches = branchRows as any[];
+        incomingCount += branchRows.length;
       }
 
       // Sync Retailers from Supabase
-      if (rRes.status === 'fulfilled') {
-        const rData = (rRes.value.data as any[]) || [];
-        this.retailers = rData;
-        incomingCount += rData.length;
+      if (retailerRows) {
+        this.retailers = retailerRows as any[];
+        incomingCount += retailerRows.length;
       }
 
       // Sync Orders from Supabase
-      if (oRes.status === 'fulfilled') {
-        const oData = (oRes.value.data as any[]) || [];
-        this.orders = oData;
-        incomingCount += oData.length;
+      if (orderRows) {
+        this.orders = orderRows as any[];
+        incomingCount += orderRows.length;
       }
 
       // Sync Cheques from Supabase
-      if (cRes.status === 'fulfilled') {
-        const cData = (cRes.value.data as any[]) || [];
-        this.cheques = cData;
-        incomingCount += cData.length;
+      if (chequeRows) {
+        this.cheques = chequeRows.map((row: any) => ({
+          ...row,
+          brandCodes: row.brand_codes || row.brandCodes || (row.brand_code ? [row.brand_code] : []),
+        })) as any[];
+        incomingCount += chequeRows.length;
       }
 
+      this.repairDuplicateProductIds();
       this.persistState();
       return {
-        success: true,
+        success: syncErrors.length === 0,
         syncedCount: incomingCount,
-        message: `Successfully synchronized ${incomingCount} entities with Supabase cloud.`,
+        message: syncErrors.length
+          ? `Loaded ${incomingCount} entities; failed to read ${syncErrors.join(', ')}.`
+          : `Loaded ${incomingCount} entities from Supabase.`,
       };
     } catch (err: any) {
       console.warn('[DatabaseService] syncWithSupabase caught error:', err);
@@ -406,10 +458,12 @@ export class DatabaseService {
       localStorage.removeItem('bb_command_center_db_state');
       localStorage.removeItem('bb_auth_user_session_v2');
 
+      localStorage.removeItem('bb_command_center_db_state_v13');
+      localStorage.removeItem('bb_command_center_db_state_v12');
       localStorage.removeItem('bb_command_center_db_state_v11');
       localStorage.removeItem('bb_command_center_db_state_v10');
       localStorage.removeItem('bb_command_center_db_state_v9');
-      const stored = localStorage.getItem('bb_command_center_db_state_v12');
+      const stored = localStorage.getItem('bb_command_center_db_state_v14');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.users && parsed.users.length > 0) this.users = parsed.users;
@@ -462,6 +516,8 @@ export class DatabaseService {
       // STRICT: Sanitize and purge any phantom mock entities
       const PHANTOM_IDS = new Set([
         'officer_ravi', 'officer_pooja', 'officer_suman', 'user_officer_ravi',
+        'user_ops_admin', 'user_sales_officer', 'user_sita',
+        'brand_forya', 'brand_peesafe', 'brand_furr', 'brand_renee',
         'dist_bbs', 'dist_bigmart', 'br_bbs_mjg', 'br_bigmart_baneshwor',
         'ret_norvic', 'ret_saleways', 'ret_krishna', 'ret_civil_mall',
         'ret_norvic_pharmacy', 'ret_saleways_kalimati', 'ret_krishna_chabahil', 'ret_civil_mall_cosmetics',
@@ -469,10 +525,19 @@ export class DatabaseService {
         'prod_forya_ro_pch', 'prod_pee_safe_pantyliner', 'prod_furr_nose_strips', 'prod_ren_fab_5'
       ]);
 
-      this.users = (this.users || []).filter((u) => !PHANTOM_IDS.has(u.id));
+      const DUMMY_EMAILS = new Set([
+        'ops@brandbucket.com',
+        'rohan@brandbucket.com',
+        'sita@brandbucket.com',
+      ]);
+
+      this.users = (this.users || []).filter(
+        (u) => !PHANTOM_IDS.has(u.id) && !DUMMY_EMAILS.has(u.email)
+      );
       if (this.users.length === 0) {
-        this.users = [DEFAULT_SUPER_ADMIN];
+        this.users = [...DEFAULT_STAFF_USERS];
       }
+      this.brands = (this.brands || []).filter((b) => !PHANTOM_IDS.has(b.id));
       this.distributors = (this.distributors || []).filter((d) => !PHANTOM_IDS.has(d.id));
       this.branches = (this.branches || []).filter((b) => !PHANTOM_IDS.has(b.id));
       this.retailers = (this.retailers || []).filter((r) => !PHANTOM_IDS.has(r.id));
@@ -481,6 +546,68 @@ export class DatabaseService {
       );
       this.products = (this.products || []).filter((p) => !PHANTOM_IDS.has(p.id));
       this.staffLiveLocations = (this.staffLiveLocations || []).filter((s) => !PHANTOM_IDS.has(s.officerId));
+
+      // Clean up and deduplicate brands by code
+      const seenBrandCodes = new Set<string>();
+      this.brands = (this.brands || []).filter((b) => {
+        const code = (b.code || '').trim().toUpperCase();
+        if (!code || seenBrandCodes.has(code)) return false;
+        seenBrandCodes.add(code);
+        return true;
+      });
+      let repairedIds = false;
+      const retailersByStoredId = new Map<string, Retailer[]>();
+      const seenRetailerIds = new Set<string>();
+      for (const retailer of this.retailers) {
+        const storedId = retailer.id || '';
+        const group = retailersByStoredId.get(storedId) || [];
+        if (!storedId || seenRetailerIds.has(storedId)) {
+          retailer.id = this.generateId('ret');
+          repairedIds = true;
+        }
+        seenRetailerIds.add(retailer.id);
+        group.push(retailer);
+        retailersByStoredId.set(storedId, group);
+      }
+
+      const normalizeReference = (value?: string) => (value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      const reassignRetailerReference = (record: any) => {
+        if (!record?.entityId) return;
+        const candidates = retailersByStoredId.get(record.entityId);
+        if (!candidates || candidates.length < 2) return;
+        const name = normalizeReference(record.storeName);
+        const namedCandidates = candidates.filter((candidate) => normalizeReference(candidate.name) === name);
+        const address = normalizeReference(record.address);
+        const phone = normalizeReference(record.contactPhone).replace(/\D/g, '');
+        const exactCandidates = namedCandidates.filter((candidate) =>
+          normalizeReference(candidate.address) === address
+          && normalizeReference(candidate.contactPhone).replace(/\D/g, '') === phone
+        );
+        const match = exactCandidates.length === 1 ? exactCandidates[0] : namedCandidates.length === 1 ? namedCandidates[0] : null;
+        if (match && record.entityId !== match.id) {
+          record.entityId = match.id;
+          repairedIds = true;
+        }
+      };
+      this.beatItems.forEach(reassignRetailerReference);
+      this.visits.forEach(reassignRetailerReference);
+      this.stockCounts.forEach(reassignRetailerReference);
+      this.shelfPhotos.forEach(reassignRetailerReference);
+      this.callLogs.forEach(reassignRetailerReference);
+
+      const seenBeatIds = new Set<string>();
+      for (const beat of this.beatItems) {
+        if (!beat.id || seenBeatIds.has(beat.id)) {
+          beat.id = this.generateId('beat');
+          repairedIds = true;
+        }
+        seenBeatIds.add(beat.id);
+      }
+
+      repairedIds = this.repairDuplicateProductIds() || repairedIds;
+      repairedIds = this.repairDuplicateActivityLogIds() || repairedIds;
+
+      if (repairedIds) this.persistState();
       if (typeof window !== 'undefined') {
         this.syncTasksFromSupabase().catch(() => {});
       }
@@ -489,9 +616,89 @@ export class DatabaseService {
     }
   }
 
+  private repairDuplicateProductIds(): boolean {
+    let repaired = false;
+    const normalize = (value?: string) => (value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const repairs: Array<{ oldId: string; productId: string; name: string; brandCode: string }> = [];
+    const seen = new Set<string>();
+
+    for (const product of this.products || []) {
+      const oldId = product.id || '';
+      if (!oldId || seen.has(oldId)) {
+        const identity = normalize(product.sku || `${product.brandCode}_${product.name}`).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'legacy';
+        const baseId = `${oldId || 'product'}_${identity}`;
+        let productId = baseId;
+        let suffix = 2;
+        while (seen.has(productId)) productId = `${baseId}_${suffix++}`;
+        product.id = productId;
+        repairs.push({
+          oldId,
+          productId,
+          name: normalize(product.name),
+          brandCode: String(product.brandCode || '').toUpperCase(),
+        });
+        repaired = true;
+      }
+      seen.add(product.id);
+    }
+
+    const reassignReference = (record: any) => {
+      if (!record || typeof record.productId !== 'string' || !record.productId) return;
+      const candidates = repairs.filter((candidate) => candidate.oldId === record.productId);
+      if (!candidates.length) return;
+      const name = normalize(record.productName);
+      const named = candidates.filter((candidate) => candidate.name === name && name);
+      const brand = String(record.brandCode || '').toUpperCase();
+      const branded = brand ? named.filter((candidate) => candidate.brandCode === brand) : [];
+      const match = branded.length === 1 ? branded[0] : named.length === 1 ? named[0] : null;
+      if (match) {
+        record.productId = match.productId;
+        repaired = true;
+      }
+    };
+    const repairReferenceTree = (value: any) => {
+      if (Array.isArray(value)) {
+        value.forEach(repairReferenceTree);
+      } else if (value && typeof value === 'object') {
+        reassignReference(value);
+        Object.values(value).forEach(repairReferenceTree);
+      }
+    };
+
+    [this.orders, this.secondaryOrders, this.dispatches, this.stockCounts, this.returns, this.feedbackEntries, this.products, this.combos]
+      .forEach(repairReferenceTree);
+    (this.promotions || []).forEach((promotion) => {
+      if (!Array.isArray(promotion.productIds)) return;
+      promotion.productIds.forEach((productId, index) => {
+        const reference = { productId, productName: promotion.productNames?.[index], brandCode: promotion.brandCode };
+        reassignReference(reference);
+        promotion.productIds[index] = reference.productId;
+      });
+    });
+
+    return repaired;
+  }
+
+  private repairDuplicateActivityLogIds(): boolean {
+    let repaired = false;
+    const seen = new Set<string>();
+    for (const log of this.activityLogs || []) {
+      if (!log.id || seen.has(log.id)) {
+        let id = this.generateId('act');
+        while (seen.has(id)) id = this.generateId('act');
+        log.id = id;
+        repaired = true;
+      }
+      seen.add(log.id);
+    }
+    return repaired;
+  }
+
   private generateId(prefix: string): string {
-    const rand = Math.random().toString(36).substring(2, 8);
-    return `${prefix}_${Date.now()}_${rand}`;
+    const suffix = typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : `${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    return `${prefix}_${suffix}`;
   }
 
   private persistState() {
@@ -544,7 +751,7 @@ export class DatabaseService {
         requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn,
         recurringSchedules: this.recurringSchedules,
       };
-      localStorage.setItem('bb_command_center_db_state_v12', JSON.stringify(state));
+      localStorage.setItem('bb_command_center_db_state_v14', JSON.stringify(state));
 
       // Dispatch local window event so all mounted React components re-render immediately
       window.dispatchEvent(new CustomEvent('bb-db-updated'));
@@ -566,6 +773,8 @@ export class DatabaseService {
 
   public resetDatabase() {
     if (typeof window === 'undefined') return;
+    localStorage.removeItem('bb_command_center_db_state_v14');
+    localStorage.removeItem('bb_command_center_db_state_v13');
     localStorage.removeItem('bb_command_center_db_state_v12');
     localStorage.removeItem('bb_command_center_db_state_v11');
     localStorage.removeItem('bb_command_center_db_state_v8');
@@ -581,16 +790,36 @@ export class DatabaseService {
 
   // Brands Portfolio Management (Multi-Brand Distributor Engine)
   public getBrands(status?: 'ACTIVE' | 'ALL'): Brand[] {
+    const seen = new Set<string>();
+    const unique = this.brands.filter((b) => {
+      const code = (b.code || '').trim().toUpperCase();
+      if (!code || seen.has(code)) return false;
+      seen.add(code);
+      return true;
+    });
     if (status === 'ACTIVE') {
-      return this.brands.filter(
+      return unique.filter(
         (b) => b.status === 'ACTIVE' && b.isActive !== false && (b as any).is_active !== false
       );
     }
-    return this.brands;
+    return unique;
+  }
+
+  public replaceBrands(brands: Brand[]): void {
+    this.brands = brands.map((brand) => ({ ...brand }));
+    this.persistState();
   }
 
   public addBrand(brand: Brand): Brand {
-    this.brands.push(brand);
+    const normCode = (brand.code || '').trim().toUpperCase();
+    const existingIndex = this.brands.findIndex(
+      (b) => b.id === brand.id || (b.code || '').trim().toUpperCase() === normCode
+    );
+    if (existingIndex >= 0) {
+      this.brands[existingIndex] = { ...this.brands[existingIndex], ...brand };
+    } else {
+      this.brands.push(brand);
+    }
     this.persistState();
     return brand;
   }
@@ -675,7 +904,7 @@ export class DatabaseService {
   public addNewUser(user: Omit<User, 'id'> & { id?: string }): User {
     const newUser: User = {
       ...user,
-      id: user.id || `user_${Date.now()}`,
+      id: user.id || `user_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       active: user.active !== false,
     };
     this.users.push(newUser);
@@ -716,6 +945,16 @@ export class DatabaseService {
     }
     this.persistState();
     return user;
+  }
+
+  public deleteUser(userId: string): boolean {
+    const idx = this.users.findIndex((u) => u.id === userId);
+    if (idx !== -1) {
+      this.users.splice(idx, 1);
+      this.persistState();
+      return true;
+    }
+    return false;
   }
 
   public getCurrentUser(): User {
@@ -797,7 +1036,7 @@ export class DatabaseService {
   public addProduct(product: Omit<Product, 'id'>): Product {
     const newProduct: Product = {
       ...product,
-      id: `prod_${product.brandCode.toLowerCase()}_${Date.now()}`,
+      id: this.generateId(`prod_${product.brandCode.toLowerCase()}`),
       active: product.active ?? true,
     };
     this.products.unshift(newProduct);
@@ -905,7 +1144,7 @@ export class DatabaseService {
     const orderNumber = `SO-${dateStr}-${rand}`;
     const newOrder: SecondaryOrder = {
       ...order,
-      id: `sec_ord_${Date.now()}`,
+      id: this.generateId('sec_ord'),
       orderNumber,
       createdAt: new Date().toISOString(),
     };
@@ -953,7 +1192,7 @@ export class DatabaseService {
   public recordFacingAudit(audit: Omit<FacingAudit, 'id' | 'createdAt'>): FacingAudit {
     const newAudit: FacingAudit = {
       ...audit,
-      id: `fa_${Date.now()}`,
+      id: this.generateId('fa'),
       createdAt: new Date().toISOString(),
     };
     this.facingAudits.unshift(newAudit);
@@ -975,7 +1214,7 @@ export class DatabaseService {
   ): Distributor {
     const newDist: Distributor = {
       ...dist,
-      id: `dist_${Date.now()}`,
+      id: this.generateId('dist'),
       contacts: dist.contacts || [],
     };
     this.distributors.unshift(newDist);
@@ -996,7 +1235,7 @@ export class DatabaseService {
   ): Branch {
     const newBranch: Branch = {
       ...branch,
-      id: `br_${Date.now()}`,
+      id: this.generateId('br'),
       contacts: branch.contacts || [],
     };
     this.branches.unshift(newBranch);
@@ -1014,7 +1253,7 @@ export class DatabaseService {
   ): Retailer {
     const newRetailer: Retailer = {
       ...ret,
-      id: `ret_${Date.now()}`,
+      id: this.generateId('ret'),
       contacts: ret.contacts || [],
     };
     this.retailers.unshift(newRetailer);
@@ -1022,7 +1261,7 @@ export class DatabaseService {
     // Also add to today's beat if assigned to current officer
     if (this.currentUser.id === newRetailer.assignedOfficerId) {
       this.beatItems.push({
-        id: `beat_${Date.now()}`,
+        id: this.generateId('beat'),
         officerId: newRetailer.assignedOfficerId,
         dateAd: new Date().toISOString().split('T')[0],
         dateBs: getTodayBs(),
@@ -1302,7 +1541,7 @@ export class DatabaseService {
   ): VendorContact {
     const newContact: VendorContact = {
       ...contact,
-      id: `cnt_${Date.now()}`,
+      id: this.generateId('cnt'),
       storeId: entityType !== 'BRANCH' ? entityId : undefined,
       branchId: entityType === 'BRANCH' ? entityId : undefined,
       addedById: this.currentUser.id,
@@ -1538,7 +1777,7 @@ export class DatabaseService {
 
   public addDocumentType(name: string): DocumentTypeConfig {
     const newDocType: DocumentTypeConfig = {
-      id: `doc_${Date.now()}`,
+      id: this.generateId('doc'),
       name: name.trim(),
       isActive: true,
       createdAt: new Date().toISOString(),
@@ -1563,7 +1802,7 @@ export class DatabaseService {
 
   public addStoreCategory(name: string): StoreCategoryConfig {
     const newCat: StoreCategoryConfig = {
-      id: `cat_${Date.now()}`,
+      id: this.generateId('cat'),
       name: name.trim(),
       isActive: true,
       createdAt: new Date().toISOString(),
@@ -1625,7 +1864,7 @@ export class DatabaseService {
     const storeName = store ? store.name : storeId;
     const isDist = store && store.type === 'DISTRIBUTOR';
     const newBeat: BeatItem = {
-      id: `beat_override_${Date.now()}`,
+      id: this.generateId('beat_override'),
       officerId,
       dateAd,
       dateBs: getTodayBs(),
@@ -1652,6 +1891,108 @@ export class DatabaseService {
     return newBeat;
   }
 
+  public createAndAssignBeatRoute(params: {
+    officerId: string;
+    dateAd: string;
+    storeIds: string[];
+    priority?: 'HIGH' | 'MEDIUM' | 'ROUTINE';
+    managerNotes?: string;
+  }): BeatItem[] {
+    const { officerId, dateAd, storeIds, priority = 'HIGH', managerNotes } = params;
+    const newItems: BeatItem[] = [];
+    const dateBs = getTodayBs();
+
+    for (let i = 0; i < storeIds.length; i++) {
+      const storeId = storeIds[i];
+      const store = this.getUnifiedStoreById(storeId);
+      const isDist = store && store.type === 'DISTRIBUTOR';
+      const item: BeatItem = {
+        id: this.generateId(`beat_${i + 1}`),
+        officerId,
+        dateAd,
+        dateBs,
+        sequence: this.beatItems.length + i + 1,
+        entityType: isDist ? 'BRANCH' : 'RETAILER',
+        entityId: store ? store.id : storeId,
+        storeName: store ? store.name : storeId,
+        storeType: store?.subType || 'Store',
+        address: store?.address || 'Kathmandu Valley',
+        lat: store?.coordinates?.lat || 27.7172,
+        lng: store?.coordinates?.lng || 85.324,
+        contactName: store?.primaryContactName || 'Store Manager',
+        contactPhone: store?.primaryContactPhone || '+977-9800000000',
+        contacts: store?.contacts || [],
+        lastVisitDaysAgo: 0,
+        pendingTasks: [],
+        status: 'PENDING',
+        priority,
+        managerNotes,
+      };
+      newItems.push(item);
+      this.beatItems.unshift(item);
+    }
+
+    this.logActivity('BEAT_ROUTE_ASSIGNED', 'BEAT', officerId, {
+      officerId,
+      storeCount: storeIds.length,
+      dateAd,
+    });
+
+    this.persistState();
+    return newItems;
+  }
+
+  public reassignOfficerBeatsAndTasks(params: {
+    fromOfficerId: string;
+    toOfficerId: string;
+    leaveStartDateAd: string;
+    leaveEndDateAd: string;
+    reason?: string;
+  }): { reassignedBeatsCount: number; reassignedTasksCount: number } {
+    const { fromOfficerId, toOfficerId, leaveStartDateAd, leaveEndDateAd, reason } = params;
+    const fromOfficer = this.users.find((u) => u.id === fromOfficerId);
+    const toOfficer = this.users.find((u) => u.id === toOfficerId);
+
+    // 1. Mark officer on leave
+    if (fromOfficer) {
+      fromOfficer.dutyStatus = 'ON_LEAVE';
+    }
+
+    let reassignedBeatsCount = 0;
+    let reassignedTasksCount = 0;
+
+    // 2. Reassign pending beat items
+    this.beatItems.forEach((b) => {
+      if (b.officerId === fromOfficerId && b.status === 'PENDING') {
+        b.officerId = toOfficerId;
+        b.managerNotes = `${b.managerNotes ? b.managerNotes + ' • ' : ''}Covering for ${fromOfficer?.fullName || 'Relieved Staff'} (${reason || 'On Leave'})`;
+        reassignedBeatsCount++;
+      }
+    });
+
+    // 3. Reassign pending tasks
+    this.tasks.forEach((t) => {
+      if (t.assignedTo === fromOfficerId && t.status !== 'COMPLETED') {
+        t.assignedTo = toOfficerId;
+        t.assignedToName = toOfficer?.fullName || 'Covering Staff';
+        t.description = `${t.description ? t.description + ' ' : ''}[Covering for ${fromOfficer?.fullName || 'Staff'}: ${reason || 'Leave'}]`;
+        reassignedTasksCount++;
+      }
+    });
+
+    this.logActivity('STAFF_LEAVE_REASSIGNED', 'USER', fromOfficerId, {
+      fromOfficer: fromOfficer?.fullName,
+      toOfficer: toOfficer?.fullName,
+      leaveStartDateAd,
+      leaveEndDateAd,
+      reassignedBeatsCount,
+      reassignedTasksCount,
+    });
+
+    this.persistState();
+    return { reassignedBeatsCount, reassignedTasksCount };
+  }
+
   public setOfficerLeave(
     officerId: string,
     startDateAd: string,
@@ -1659,23 +2000,21 @@ export class DatabaseService {
     coveringOfficerId?: string,
     storeIdsToReassign: string[] = []
   ): void {
-    // 1. Mark officer on leave
+    if (coveringOfficerId) {
+      this.reassignOfficerBeatsAndTasks({
+        fromOfficerId: officerId,
+        toOfficerId: coveringOfficerId,
+        leaveStartDateAd: startDateAd,
+        leaveEndDateAd: endDateAd,
+        reason: 'Officer Leave Coverage',
+      });
+      return;
+    }
+
     const officer = this.users.find((u) => u.id === officerId);
     if (officer) {
       officer.dutyStatus = 'ON_LEAVE';
     }
-
-    // 2. Reassign requested beats
-    if (coveringOfficerId && storeIdsToReassign.length > 0) {
-      const coveringOfficer = this.users.find((u) => u.id === coveringOfficerId);
-      this.beatItems.forEach((b) => {
-        if (b.officerId === officerId && storeIdsToReassign.includes(b.entityId)) {
-          b.officerId = coveringOfficerId;
-          b.managerNotes = `${b.managerNotes ? b.managerNotes + ' • ' : ''}Covering for ${officer?.fullName || 'Officer'}`;
-        }
-      });
-    }
-
     this.persistState();
   }
 
@@ -1718,7 +2057,7 @@ export class DatabaseService {
     beat.checkInDistanceM = dist || 0;
 
     const visit: Visit = {
-      id: `vis_${Date.now()}`,
+      id: this.generateId('vis'),
       officerId: beat.officerId,
       officerName: this.currentUser.fullName,
       entityType: beat.entityType,
@@ -1862,31 +2201,24 @@ export class DatabaseService {
 
   // Real-Time Staff Tracking (PRD v2.2)
   public getStaffLiveLocations(): StaffLiveLocation[] {
-    // Only field sales officers and non-superadmin operational staff should be tracked on the field map
+    // Only genuine field sales officers should be tracked on the field force GPS radar
     const fieldStaffUsers = this.users.filter(
-      (u) => u.active !== false && !u.isSuperAdmin && !u.is_super_admin && u.role !== 'SUPER_ADMIN'
+      (u) => u.active !== false && u.role === 'SALES_OFFICER'
     );
-    const validUserIds = new Set(fieldStaffUsers.map((u) => u.id));
-    const validLocs = (this.staffLiveLocations || []).filter((s) => validUserIds.has(s.officerId));
+    const validOfficerIds = new Set(fieldStaffUsers.map((u) => u.id));
+    // Purge any non-sales-officer entries from memory
+    this.staffLiveLocations = (this.staffLiveLocations || []).filter((s) => validOfficerIds.has(s.officerId));
 
-    for (const u of fieldStaffUsers) {
-      if (!validLocs.some((s) => s.officerId === u.id)) {
-        validLocs.push({
-          officerId: u.id,
-          officerName: u.fullName,
-          currentLat: 27.700769,
-          currentLng: 85.31514,
-          lastPingTimestamp: new Date().toISOString(),
-          status: 'IN_TRANSIT',
-          batteryLevel: 98,
-          isOnline: u.dutyStatus !== 'OFFLINE',
-          dutyStatus: u.dutyStatus || 'ONLINE',
-          todayDistanceKm: 0,
-          todayRoute: [],
-        });
-      }
-    }
-    return validLocs;
+    // Return only active field officers who have recorded live locations
+    return this.staffLiveLocations.map((loc) => {
+      const u = fieldStaffUsers.find((user) => user.id === loc.officerId);
+      return {
+        ...loc,
+        officerName: u ? u.fullName : loc.officerName,
+        dutyStatus: u?.dutyStatus || loc.dutyStatus || 'ONLINE',
+        isOnline: u?.dutyStatus !== 'OFFLINE',
+      };
+    });
   }
 
   public updateStaffPing(
@@ -1895,7 +2227,8 @@ export class DatabaseService {
     lng: number,
     status: StaffLiveLocation['status'],
     storeName?: string,
-    batteryLevel?: number
+    batteryLevel?: number,
+    pingTimestamp?: string
   ) {
     let staff = this.staffLiveLocations.find((s) => s.officerId === officerId);
     if (!staff) {
@@ -1905,7 +2238,7 @@ export class DatabaseService {
         officerName: user?.fullName || 'Sales Officer',
         currentLat: lat,
         currentLng: lng,
-        lastPingTimestamp: new Date().toISOString(),
+        lastPingTimestamp: pingTimestamp || new Date().toISOString(),
         status,
         batteryLevel: batteryLevel ?? 100,
         isOnline: true,
@@ -1921,7 +2254,7 @@ export class DatabaseService {
       }
       staff.currentLat = lat;
       staff.currentLng = lng;
-      staff.lastPingTimestamp = new Date().toISOString();
+      staff.lastPingTimestamp = pingTimestamp || new Date().toISOString();
       staff.status = status;
       if (batteryLevel !== undefined) {
         staff.batteryLevel = batteryLevel;
@@ -1951,7 +2284,7 @@ export class DatabaseService {
   public recordShelfPhotos(photos: Omit<ShelfPhoto, 'id' | 'createdAt' | 'officerId' | 'officerName'>): ShelfPhoto {
     const item: ShelfPhoto = {
       ...photos,
-      id: `sp_${Date.now()}`,
+      id: this.generateId('sp'),
       officerId: this.currentUser.id,
       officerName: this.currentUser.fullName,
       createdAt: new Date().toISOString(),
@@ -1998,7 +2331,7 @@ export class DatabaseService {
   public recordCall(call: Omit<CallLog, 'id' | 'createdAt' | 'officerId' | 'officerName'>): CallLog {
     const item: CallLog = {
       ...call,
-      id: `call_${Date.now()}`,
+      id: this.generateId('call'),
       officerId: this.currentUser.id,
       officerName: this.currentUser.fullName,
       createdAt: new Date().toISOString(),
@@ -2022,13 +2355,13 @@ export class DatabaseService {
     const now = new Date().toISOString();
     const newCheque: Cheque = {
       ...cheque,
-      id: `chq_${Date.now()}`,
+      id: this.generateId('chq'),
       officerId: this.currentUser.id,
       officerName: this.currentUser.fullName,
       status: 'COLLECTED_IN_FIELD',
       history: [
         {
-          id: `chqh_${Date.now()}`,
+          id: this.generateId('chqh'),
           newStatus: 'COLLECTED_IN_FIELD',
           changedBy: this.currentUser.fullName,
           notes: 'Cheque collected in field',
@@ -2079,7 +2412,7 @@ export class DatabaseService {
     }
 
     cheque.history.unshift({
-      id: `chqh_${Date.now()}`,
+      id: this.generateId('chqh'),
       previousStatus: oldStatus,
       newStatus,
       changedBy: this.currentUser.fullName,
@@ -2117,13 +2450,13 @@ export class DatabaseService {
 
     const newDoc: HandoverDocument = {
       ...doc,
-      id: `doc_${Date.now()}`,
+      id: this.generateId('doc'),
       officerId,
       officerName,
       currentHolder: doc.currentHolder || `${officerName} (Field)`,
       timeline: doc.timeline && doc.timeline.length > 0 ? doc.timeline : [
         {
-          id: `ce_${Date.now()}`,
+          id: this.generateId('ce'),
           action: 'COLLECTED',
           actorName: officerName,
           locationOrFolder: doc.storeName,
@@ -2172,7 +2505,7 @@ export class DatabaseService {
       doc.handoverDate = now.toISOString().split('T')[0];
       doc.currentHolder = recipient;
       doc.timeline.push({
-        id: `ce_${Date.now()}`,
+        id: this.generateId('ce'),
         action: 'HANDED_OVER',
         actorName: this.currentUser.fullName,
         recipientName: recipient,
@@ -2191,7 +2524,7 @@ export class DatabaseService {
       doc.filedLocation = folder;
       doc.currentHolder = `Central Archive (${folder})`;
       doc.timeline.push({
-        id: `ce_${Date.now()}`,
+        id: this.generateId('ce'),
         action: 'FILED',
         actorName: this.currentUser.fullName,
         locationOrFolder: folder,
@@ -2207,7 +2540,7 @@ export class DatabaseService {
     } else if (newStatus === 'MISSING') {
       doc.currentHolder = 'MISSING / UNACCOUNTED';
       doc.timeline.push({
-        id: `ce_${Date.now()}`,
+        id: this.generateId('ce'),
         action: 'MISSING',
         actorName: this.currentUser.fullName,
         locationOrFolder: 'Field Custody Discrepancy',
@@ -2243,7 +2576,7 @@ export class DatabaseService {
   public addDispatch(dispatch: Omit<Dispatch, 'id' | 'createdAt' | 'createdBy'>): Dispatch {
     const newDispatch: Dispatch = {
       ...dispatch,
-      id: `disp_${Date.now()}`,
+      id: this.generateId('disp'),
       createdBy: this.currentUser.fullName,
       createdAt: new Date().toISOString(),
       edits: [],
@@ -2265,7 +2598,7 @@ export class DatabaseService {
 
     if (!disp.edits) disp.edits = [];
     disp.edits.push({
-      id: `de_${Date.now()}`,
+      id: this.generateId('de'),
       dispatchId,
       productId,
       productName: item.productName,
@@ -2287,7 +2620,7 @@ export class DatabaseService {
   public recordStockCount(count: Omit<StockCount, 'id' | 'createdAt' | 'officerId' | 'officerName'>): StockCount {
     const newCount: StockCount = {
       ...count,
-      id: `sc_${Date.now()}`,
+      id: this.generateId('sc'),
       officerId: this.currentUser.id,
       officerName: this.currentUser.fullName,
       createdAt: new Date().toISOString(),
@@ -2315,7 +2648,7 @@ export class DatabaseService {
   public addOrder(order: Omit<Order, 'id' | 'createdAt'>): Order {
     const newOrder: Order = {
       ...order,
-      id: `ord_${Date.now()}`,
+      id: this.generateId('ord'),
       createdAt: new Date().toISOString(),
     };
 
@@ -2339,7 +2672,7 @@ export class DatabaseService {
       customer = updatedCustomer;
     } else {
       const newCust: Customer = {
-        id: `cust_${Date.now()}`,
+        id: this.generateId('cust'),
         phone: newOrder.customerPhone,
         name: newOrder.customerName,
         city: newOrder.district,
@@ -2457,14 +2790,14 @@ export class DatabaseService {
   public getLastCatalogUpdate() {
     const activeProds = this.products.filter((p) => p.active !== false);
     const activeCombos = this.combos.filter((c) => c.active !== false && c.isActive !== false);
-    const activeBrands = this.brands.filter((b) => b.status !== 'ARCHIVED');
+    const activeBrands = this.getBrands('ACTIVE');
     return {
       activeProductsCount: activeProds.length,
       activeCombosCount: activeCombos.length,
       activeBrandsCount: activeBrands.length,
-      lastUpdatedText: '2 hours ago',
-      newProductsCount: 1,
-      newCombosCount: 1,
+      lastUpdatedText: 'Live & Synced',
+      newProductsCount: 0,
+      newCombosCount: 0,
     };
   }
 
@@ -2494,7 +2827,7 @@ export class DatabaseService {
   public addDeliveryFailure(failure: Omit<DeliveryFailure, 'id' | 'createdAt'>): DeliveryFailure {
     const newDf: DeliveryFailure = {
       ...failure,
-      id: `df_${Date.now()}`,
+      id: this.generateId('df'),
       createdAt: new Date().toISOString(),
     };
     this.deliveryFailures.unshift(newDf);
@@ -2579,7 +2912,7 @@ export class DatabaseService {
   public addReturn(ret: Omit<ReturnEntry, 'id' | 'createdAt'>): ReturnEntry {
     const newRet: ReturnEntry = {
       ...ret,
-      id: `ret_item_${Date.now()}`,
+      id: this.generateId('ret_item'),
       createdAt: new Date().toISOString(),
     };
     this.returns.unshift(newRet);
@@ -2642,7 +2975,7 @@ export class DatabaseService {
     }
 
     const newCat: ReviewCategory = {
-      id: `cat_${Date.now()}`,
+      id: this.generateId('cat'),
       name: trimmed,
       tickCount: 1,
       isArchived: false,
@@ -2773,10 +3106,10 @@ export class DatabaseService {
     const now = new Date().toISOString();
     const newFb: FeedbackEntry = {
       ...fb,
-      id: `fb_${Date.now()}`,
+      id: this.generateId('fb'),
       history: fb.type === 'COMPLAINT' ? [
         {
-          id: `fsh_${Date.now()}`,
+          id: this.generateId('fsh'),
           newStatus: 'OPEN',
           changedBy: this.currentUser.fullName,
           notes: 'Complaint registered',
@@ -2825,7 +3158,7 @@ export class DatabaseService {
 
     if (!entry.history) entry.history = [];
     entry.history.unshift({
-      id: `fsh_${Date.now()}`,
+      id: this.generateId('fsh'),
       previousStatus: oldStatus,
       newStatus,
       changedBy: this.currentUser.fullName,
@@ -2844,7 +3177,7 @@ export class DatabaseService {
     if (notes) entry.resolutionNotes = notes;
     if (!entry.history) entry.history = [];
     entry.history.unshift({
-      id: `fsh_${Date.now()}`,
+      id: this.generateId('fsh'),
       previousStatus: entry.complaintStatus,
       newStatus: entry.complaintStatus || 'OPEN',
       changedBy: this.currentUser.fullName,
@@ -2982,7 +3315,7 @@ export class DatabaseService {
   public addTask(task: Omit<Task, 'id' | 'createdAt'>): Task {
     const newTask: Task = {
       ...task,
-      id: `task_${Date.now()}`,
+      id: this.generateId('task'),
       createdAt: new Date().toISOString(),
     };
     this.tasks.unshift(newTask);
@@ -3002,6 +3335,16 @@ export class DatabaseService {
       this.persistState();
       updateTaskInSupabase(taskId, { status }).catch((err) => console.warn('updateTaskInSupabase error:', err));
     }
+  }
+
+  public deleteTask(taskId: string): boolean {
+    const idx = this.tasks.findIndex((t) => t.id === taskId);
+    if (idx !== -1) {
+      this.tasks.splice(idx, 1);
+      this.persistState();
+      return true;
+    }
+    return false;
   }
 
   public updateTask(taskId: string, updates: Partial<Task>): Task | null {
@@ -3096,7 +3439,88 @@ export class DatabaseService {
 
   // Scorecards
   public getScorecards(): OfficerScorecard[] {
-    return this.scorecards;
+    if (this.scorecards && this.scorecards.length > 0) {
+      return this.scorecards;
+    }
+
+    const officers = this.users.filter(
+      (u) => u.role === 'SALES_OFFICER' || (u.permissions && (u.permissions as any).beat_plans)
+    );
+    const targetOfficers = officers.length > 0 ? officers : this.users;
+
+    return targetOfficers.map((u) => {
+      const officerVisits = this.visits.filter((v) => v.officerId === u.id || v.officerName === u.fullName);
+      const officerBeatItems = this.beatItems.filter((b) => b.officerId === u.id);
+      const officerCalls = this.callLogs.filter((c) => c.officerId === u.id || c.officerName === u.fullName);
+      const officerCheques = this.cheques.filter((c) => c.officerId === u.id || c.officerName === u.fullName);
+      const officerPhotos = this.shelfPhotos.filter((p) => p.officerId === u.id || p.officerName === u.fullName);
+      const officerDocs = this.documents.filter((d) => d.officerId === u.id || d.officerName === u.fullName);
+      const officerStockCounts = this.stockCounts.filter((s) => s.officerId === u.id);
+      const officerTasks = this.tasks.filter((t) => t.assignedTo === u.id && t.status !== 'COMPLETED');
+
+      const visitedCount =
+        officerVisits.length ||
+        officerBeatItems.filter((b) => b.status === 'VISITED').length;
+      const skippedCount = officerBeatItems.filter((b) => b.status === 'SKIPPED').length;
+      const productiveCalls = officerCalls.filter(
+        (c) => c.outcome === 'Order Received' || c.outcome === 'Payment Promised'
+      ).length;
+      const callRatio = officerCalls.length > 0 ? Math.round((productiveCalls / officerCalls.length) * 100) : 0;
+      const compliance =
+        visitedCount + skippedCount > 0 ? Math.round((visitedCount / (visitedCount + skippedCount)) * 100) : 0;
+
+      // Real visit duration from completed visits with timestamps
+      let totalDurationMin = 0;
+      let durationCount = 0;
+      for (const v of officerVisits) {
+        if (v.checkInTime && v.checkOutTime) {
+          const diffMs = new Date(v.checkOutTime).getTime() - new Date(v.checkInTime).getTime();
+          const mins = Math.round(diffMs / 60000);
+          if (mins > 0 && mins < 480) {
+            totalDurationMin += mins;
+            durationCount++;
+          }
+        }
+      }
+      const avgDuration = durationCount > 0 ? Math.round(totalDurationMin / durationCount) : 0;
+
+      // Real cheque handover gap from deposited cheques
+      let totalHandoverDays = 0;
+      let handoverCount = 0;
+      for (const c of officerCheques) {
+        if (c.receivedDateAd && c.handoverTimestamp) {
+          const diffMs = new Date(c.handoverTimestamp).getTime() - new Date(c.receivedDateAd).getTime();
+          const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
+          if (days >= 0) {
+            totalHandoverDays += days;
+            handoverCount++;
+          }
+        }
+      }
+      const avgHandover = handoverCount > 0 ? Math.round(totalHandoverDays / handoverCount) : 0;
+
+      return {
+        officerId: u.id,
+        officerName: u.fullName || 'Sales Officer',
+        area: u.territory || 'Kathmandu Valley',
+        storesVisited: visitedCount,
+        beatCompliancePct: compliance,
+        storesSkipped: skippedCount,
+        skipReasonsBreakdown: {},
+        avgVisitDurationMinutes: avgDuration,
+        callsMade: officerCalls.length,
+        productiveCalls,
+        callToOrderRatioPct: callRatio,
+        ordersCollected: productiveCalls,
+        chequesCollected: officerCheques.length,
+        chequesOverdue: officerCheques.filter((c) => c.status === 'DELAYED' || c.status === 'BOUNCED').length,
+        avgChequeHandoverDays: avgHandover,
+        shelfPhotosTaken: officerPhotos.length,
+        documentsCollected: officerDocs.length,
+        stockCountsDone: officerStockCounts.length,
+        pendingTasks: officerTasks.length,
+      };
+    });
   }
 
   // Activity Logs
@@ -3298,7 +3722,7 @@ export class DatabaseService {
     const compliance = officerBeats.length > 0 ? Math.round((visited.length / officerBeats.length) * 1000) / 10 : 100;
 
     const summary: FieldOfficerDailySummary = {
-      id: `sum_${officerId}_${Date.now()}`,
+      id: this.generateId(`sum_${officerId}`),
       officerId,
       officerName: officer.fullName,
       dateAd: new Date().toISOString().split('T')[0],
@@ -3489,7 +3913,8 @@ export class DatabaseService {
 
     const orderTier = (bucket: BeatItem[]) => {
       const remaining = [...bucket];
-      while (remaining.length > 0) {
+      let safetyLimit = remaining.length * 2 + 5;
+      while (remaining.length > 0 && safetyLimit-- > 0) {
         // Find closest
         let closestIdx = 0;
         let minDist = Infinity;
@@ -3797,6 +4222,7 @@ export class DatabaseService {
       distributors?: Distributor[];
       branches?: Branch[];
       products?: Product[];
+      dispatches?: Dispatch[];
     }
   ): { success: boolean; record: DataImportRecord } {
     const importRecord: DataImportRecord = {
@@ -3832,6 +4258,11 @@ export class DatabaseService {
     if (entities.distributors && entities.distributors.length > 0) {
       this.distributors.push(...entities.distributors);
       importRecord.importedCount = entities.distributors.length;
+    }
+
+    if (entities.dispatches && entities.dispatches.length > 0) {
+      this.dispatches.push(...entities.dispatches);
+      importRecord.importedCount = entities.dispatches.length;
     }
 
     this.importHistory.unshift(importRecord);
@@ -4196,8 +4627,10 @@ export class DatabaseService {
   }
 
   private logActivity(action: string, entityType: string, entityId: string, details?: Record<string, unknown>) {
+    let id = this.generateId('act');
+    while (this.activityLogs.some((existing) => existing.id === id)) id = this.generateId('act');
     const log: ActivityLog = {
-      id: `act_${Date.now()}`,
+      id,
       userName: this.currentUser.fullName,
       userRole: (this.currentUser.role as any) || 'STAFF',
       action,

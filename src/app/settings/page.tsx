@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Users,
   Tag,
@@ -44,6 +44,25 @@ export type SettingsTab =
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('STAFF');
 
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab')?.trim().toLowerCase();
+    const tabByQuery: Record<string, SettingsTab> = {
+      staff: 'STAFF',
+      'field-sales': 'FIELD_SALES',
+      brands: 'BRANDS',
+      'brand-management': 'BRANDS',
+      channels: 'CHANNELS',
+      rules: 'RULES',
+      holidays: 'HOLIDAYS',
+      templates: 'TEMPLATES',
+      promotions: 'PROMOTIONS',
+      import: 'IMPORT',
+      'shared-access': 'SHARED_ACCESS',
+      'feature-flags': 'FEATURE_FLAGS',
+    };
+    if (tab && tabByQuery[tab]) setActiveTab(tabByQuery[tab]);
+  }, []);
+
   const tabs = [
     { id: 'STAFF' as SettingsTab, label: 'Staff & Roles', icon: Users },
     { id: 'FIELD_SALES' as SettingsTab, label: 'Field Sales & Beats', icon: Compass },
@@ -85,7 +104,25 @@ export default function SettingsPage() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    const url = new URL(window.location.href);
+                    const queryByTab: Record<SettingsTab, string> = {
+                      STAFF: 'staff',
+                      FIELD_SALES: 'field-sales',
+                      BRANDS: 'brands',
+                      CHANNELS: 'channels',
+                      RULES: 'rules',
+                      HOLIDAYS: 'holidays',
+                      TEMPLATES: 'templates',
+                      PROMOTIONS: 'promotions',
+                      IMPORT: 'import',
+                      SHARED_ACCESS: 'shared-access',
+                      FEATURE_FLAGS: 'feature-flags',
+                    };
+                    url.searchParams.set('tab', queryByTab[tab.id]);
+                    window.history.replaceState(null, '', url);
+                  }}
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-xs'

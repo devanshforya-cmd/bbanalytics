@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-guard';
+import { requireFeatureAccess } from '@/lib/auth-guard';
 import { db } from '@/lib/db/db-service';
+import { getTodayBs } from '@/lib/nepali-calendar';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY']);
+  const auth = await requireFeatureAccess(request, 'reviews', 'VIEW');
   if (auth.response) return auth.response;
 
   const { user } = auth;
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY']);
+  const auth = await requireFeatureAccess(request, 'reviews', 'CREATE');
   if (auth.response) return auth.response;
 
   try {
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
       type: body.type || 'FEEDBACK',
       channel: body.channel || 'WhatsApp',
       dateReceivedAd: body.dateReceivedAd || new Date().toISOString().split('T')[0],
-      dateReceivedBs: body.dateReceivedBs || '2083-05-27',
+      dateReceivedBs: body.dateReceivedBs || getTodayBs(),
       fullText: body.fullText,
       screenshotUrls: body.screenshotUrls || [],
       issueCategories: body.issueCategories || [],

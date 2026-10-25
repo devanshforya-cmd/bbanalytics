@@ -44,7 +44,7 @@ export default function CallsPage() {
   // Inline Order Creation (When outcome === 'Order Received')
   const products = db.getProducts();
   const [orderProductId, setOrderProductId] = useState(products[0]?.id || '');
-  const [orderQuantity, setOrderQuantity] = useState(12);
+  const [orderQuantity, setOrderQuantity] = useState(1);
   const [paymentTerms, setPaymentTerms] = useState('Credit 15 days');
 
   const handleSaveCall = () => {

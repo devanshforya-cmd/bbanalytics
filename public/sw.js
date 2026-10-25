@@ -3,7 +3,7 @@
  * Provides offline caching for static assets, app shell, and background sync integration.
  */
 
-const CACHE_NAME = 'bb-command-center-v2';
+const CACHE_NAME = 'bb-command-center-v5';
 const STATIC_ASSETS = [
   '/',
   '/dashboard',
@@ -17,27 +17,16 @@ const STATIC_ASSETS = [
 
 // Install: Precache core app shell & static routes
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .then(() => self.skipWaiting())
-  );
+  self.skipWaiting();
 });
 
-// Activate: Clean up old cache versions and claim clients
+// Activate: Clean up all old cache versions and claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
       .then((keys) => {
-        return Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key))
-        );
+        return Promise.all(keys.map((key) => caches.delete(key)));
       })
       .then(() => self.clients.claim())
   );
@@ -55,6 +44,11 @@ self.addEventListener('fetch', (event) => {
 
   // Handle Chrome extension schemes or non-HTTP
   if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // In local development, bypass cache completely so all code updates are immediate
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '0.0.0.0') {
     return;
   }
 

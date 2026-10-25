@@ -114,3 +114,38 @@ export function validateUniqueChequeNumber(
 
   return null;
 }
+
+/**
+ * Defensive Security: Input sanitization to prevent Stored XSS and script injection.
+ * Strips script tags, unsafe protocols (javascript:, data:text/html), and control characters.
+ */
+export function sanitizeText(input: string | null | undefined): string {
+  if (!input) return '';
+  return input
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    .trim();
+}
+
+/**
+ * Validates that user input does not contain malicious script payloads.
+ */
+export function validateSafeInput(input: string, fieldName: string = 'Input'): string | null {
+  if (!input) return null;
+  const dangerousPatterns = [
+    /<script/i,
+    /javascript:/i,
+    /data:text\/html/i,
+    /onload=/i,
+    /onerror=/i,
+    /<iframe/i,
+  ];
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(input)) {
+      return `${fieldName} contains disallowed characters or unsafe script tags.`;
+    }
+  }
+  return null;
+}

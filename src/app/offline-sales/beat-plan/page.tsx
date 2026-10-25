@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -14,6 +14,12 @@ import {
   Camera,
   CreditCard,
   X,
+  Navigation,
+  UserCheck,
+  Users,
+  Search,
+  Filter,
+  Check,
 } from 'lucide-react';
 import {
   BeatItem,
@@ -23,9 +29,10 @@ import {
   FieldOfficerDailySummary,
 } from '@/lib/types';
 import { db } from '@/lib/db/db-service';
+import { recordGpsPing } from '@/lib/db/gps-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
-import { canPerform, isSuperAdmin } from '@/lib/permissions';
+import { canPerform, getScope, isSuperAdmin } from '@/lib/permissions';
 import { toast } from '@/components/common/Toast';
 
 // 58a. Modular Beat Plan Sub-components
@@ -93,13 +100,67 @@ export default function BeatPlanPage() {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
 
-  // Admin One-Time Beat Override State (Section 7)
-  const isAdmin = isSuperAdmin(currentUser) || canPerform(currentUser, 'beat_plans', 'EDIT');
+  // Admin Beat Route Planning & Leave Coverage
+  const isAdmin = isSuperAdmin(currentUser)
+    || (currentUser.role === 'ADMIN' && canPerform(currentUser, 'beat_plans', 'CREATE') && getScope(currentUser, 'beat_plans') !== 'OWN');
+  const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>('ALL');
+
+  // One-Time Beat Override State (Section 7)
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overrideOfficerId, setOverrideOfficerId] = useState(currentUser.id);
   const [overrideStoreId, setOverrideStoreId] = useState('');
   const [overridePriority, setOverridePriority] = useState<'HIGH' | 'MEDIUM' | 'ROUTINE'>('HIGH');
   const [overrideNote, setOverrideNote] = useState('');
+
+  // Assign Beat Route Modal State
+  const [showAssignRouteModal, setShowAssignRouteModal] = useState(false);
+  const [routeOfficerId, setRouteOfficerId] = useState(currentUser.id);
+  const [routeDate, setRouteDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [routePriority, setRoutePriority] = useState<'HIGH' | 'MEDIUM' | 'ROUTINE'>('HIGH');
+  const [routeNotes, setRouteNotes] = useState('');
+  const [selectedStoreIds, setSelectedStoreIds] = useState<Set<string>>(new Set());
+  const [storeSearchTerm, setStoreSearchTerm] = useState('');
+  const [storeAreaFilter, setStoreAreaFilter] = useState('ALL');
+
+  // Staff Leave & Relief Coverage Modal State
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [leaveFromOfficerId, setLeaveFromOfficerId] = useState(currentUser.id);
+  const [leaveStartDate, setLeaveStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [leaveEndDate, setLeaveEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [leaveReason, setLeaveReason] = useState('Sick Leave');
+  const [leaveToOfficerId, setLeaveToOfficerId] = useState('');
+
+  const allStores = useMemo(() => db.getStoresUnified(), []);
+  const availableAreas = useMemo(() => {
+    const areas = new Set<string>();
+    allStores.forEach((s) => {
+      if (s.area) areas.add(s.area);
+      else if (s.city) areas.add(s.city);
+    });
+    return Array.from(areas);
+  }, [allStores]);
+
+  const filteredStoresForRoute = useMemo(() => {
+    return allStores.filter((s) => {
+      const q = storeSearchTerm.toLowerCase().trim();
+      const matchSearch =
+        !q ||
+        s.name.toLowerCase().includes(q) ||
+        s.address.toLowerCase().includes(q) ||
+        (s.area && s.area.toLowerCase().includes(q));
+      const matchArea = storeAreaFilter === 'ALL' || s.area === storeAreaFilter || s.city === storeAreaFilter;
+      return matchSearch && matchArea;
+    });
+  }, [allStores, storeSearchTerm, storeAreaFilter]);
+
+  const reloadBeatData = (targetStaff?: string) => {
+    const filter = targetStaff !== undefined ? targetStaff : selectedStaffFilter;
+    if (isAdmin && filter !== 'ALL') {
+      setBeatItems([...db.getTodayBeat(filter)]);
+    } else {
+      setBeatItems([...db.getTodayBeat()]);
+    }
+  };
 
   const handleSaveOverride = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,8 +178,58 @@ export default function BeatPlanPage() {
     );
     setShowOverrideModal(false);
     setOverrideNote('');
-    setBeatItems([...db.getTodayBeat()]);
+    reloadBeatData();
     toast.success('Store added to today’s beat plan as an admin priority stop.');
+  };
+
+  const handleAssignBeatRoute = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedStoreIds.size === 0) {
+      toast.error('Please select at least 1 retail store for this beat route.');
+      return;
+    }
+    const targetUser = db.getUsers().find((u) => u.id === routeOfficerId);
+    db.createAndAssignBeatRoute({
+      officerId: routeOfficerId,
+      dateAd: routeDate,
+      storeIds: Array.from(selectedStoreIds),
+      priority: routePriority,
+      managerNotes: routeNotes || undefined,
+    });
+    setShowAssignRouteModal(false);
+    setSelectedStoreIds(new Set());
+    setRouteNotes('');
+    reloadBeatData();
+    toast.success(
+      `✓ Successfully assigned beat route with ${selectedStoreIds.size} stops to ${targetUser?.fullName || 'Sales Staff'}!`
+    );
+  };
+
+  const handleConfirmLeaveReassign = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!leaveToOfficerId) {
+      toast.error('Please select a covering/reliever sales staff member.');
+      return;
+    }
+    if (leaveFromOfficerId === leaveToOfficerId) {
+      toast.error('Covering staff member cannot be the same person on leave.');
+      return;
+    }
+    const fromUser = db.getUsers().find((u) => u.id === leaveFromOfficerId);
+    const toUser = db.getUsers().find((u) => u.id === leaveToOfficerId);
+    const result = db.reassignOfficerBeatsAndTasks({
+      fromOfficerId: leaveFromOfficerId,
+      toOfficerId: leaveToOfficerId,
+      leaveStartDateAd: leaveStartDate,
+      leaveEndDateAd: leaveEndDate,
+      reason: leaveReason,
+    });
+    setShowLeaveModal(false);
+    reloadBeatData();
+    refreshTasks();
+    toast.success(
+      `✓ Leave registered for ${fromUser?.fullName || 'Staff'}! Reassigned ${result.reassignedBeatsCount} beat stops and ${result.reassignedTasksCount} tasks to ${toUser?.fullName || 'Covering Staff'}.`
+    );
   };
 
   const refreshTasks = () => {
@@ -171,8 +282,9 @@ export default function BeatPlanPage() {
           const status = activeBeatId ? 'AT_STORE' : 'IN_TRANSIT';
           const activeStore = activeBeatId ? beatItems.find((b) => b.id === activeBeatId)?.storeName : undefined;
 
-          db.updateStaffPing(
+          void recordGpsPing(
             currentUser.id,
+            currentUser.fullName,
             latitude,
             longitude,
             status,
@@ -249,8 +361,9 @@ export default function BeatPlanPage() {
       photoUrl
     );
 
-    db.updateStaffPing(
+    void recordGpsPing(
       currentUser.id,
+      currentUser.fullName,
       lat,
       lng,
       'AT_STORE',
@@ -345,9 +458,7 @@ export default function BeatPlanPage() {
       receivedDateBs: targetBeat.dateBs,
       cashDateAd: chequeCashDate,
       cashDateBs: chequeCashDate,
-      photoUrl:
-        chequePhotoUrl ||
-        'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=60',
+      photoUrl: chequePhotoUrl || '',
       status: 'COLLECTED_IN_FIELD',
       notes: chequeNotes || undefined,
     });
@@ -375,14 +486,8 @@ export default function BeatPlanPage() {
       entityType: targetBeat.entityType,
       entityId: targetBeat.entityId,
       rackSection: shelfRackSection,
-      beforePhotoUrls:
-        beforePhotoUrls.length > 0
-          ? beforePhotoUrls
-          : ['https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800&auto=format&fit=crop&q=60'],
-      afterPhotoUrls:
-        afterPhotoUrls.length > 0
-          ? afterPhotoUrls
-          : ['https://images.unsplash.com/photo-1526947425960-945c6e72858f?w=800&auto=format&fit=crop&q=60'],
+      beforePhotoUrls,
+      afterPhotoUrls,
       dateAd: targetBeat.dateAd,
       dateBs: targetBeat.dateBs,
     });
@@ -411,6 +516,16 @@ export default function BeatPlanPage() {
 
   // Conclude store stop
   const handleConcludeStoreVisit = () => {
+    if (!targetBeat) return;
+    db.checkOutBeat(
+      targetBeat.id,
+      undefined,
+      currentGpsCoords?.lat ?? targetBeat.lat,
+      currentGpsCoords?.lng ?? targetBeat.lng
+    );
+    const completedBeat = db.getTodayBeat(currentUser.id).find((beat) => beat.id === targetBeat.id) || targetBeat;
+    setTargetBeat(completedBeat);
+    setBeatItems(db.getTodayBeat(currentUser.id));
     setShowStoreActionDashboard(false);
     setShowCheckOutSummary(true);
   };
@@ -419,8 +534,11 @@ export default function BeatPlanPage() {
     setShowCheckOutSummary(false);
     setTargetBeat(null);
     setCompletedActions(new Set());
-    setBeatItems(db.getTodayBeat());
-    toast.info('Proceeding to next stop on route.');
+    const updatedBeats = db.getTodayBeat(currentUser.id);
+    const nextStop = updatedBeats.find((beat) => beat.status === 'PENDING');
+    setActiveBeatId(nextStop?.id || null);
+    setBeatItems(updatedBeats);
+    toast.info(nextStop ? `Next stop selected: ${nextStop.storeName}.` : 'All planned stops are complete.');
   };
 
   // End Day submit
@@ -481,18 +599,38 @@ export default function BeatPlanPage() {
 
           <div className="flex items-center gap-2.5 flex-wrap">
             {isAdmin && (
-              <button
-                type="button"
-                onClick={() => {
-                  const stores = db.getStoresUnified();
-                  if (stores[0]) setOverrideStoreId(stores[0].id);
-                  setShowOverrideModal(true);
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 transition shadow-2xs"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                <span>+ One-Time Beat Stop</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowAssignRouteModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition shadow-xs"
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>+ Assign Beat Route</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowLeaveModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100 transition shadow-2xs"
+                >
+                  <UserCheck className="w-3.5 h-3.5 text-amber-600" />
+                  <span>🌴 Staff Leave & Reassign</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const stores = db.getStoresUnified();
+                    if (stores[0]) setOverrideStoreId(stores[0].id);
+                    setShowOverrideModal(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold hover:bg-slate-100 transition shadow-2xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                  <span>+ One-Time Stop</span>
+                </button>
+              </>
             )}
 
             <button
@@ -533,6 +671,37 @@ export default function BeatPlanPage() {
             </button>
           </div>
         </div>
+
+        {/* Manager/Admin Staff Filter Banner */}
+        {isAdmin && db.getUsers().length > 1 && (
+          <div className="flex items-center justify-between flex-wrap gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs shadow-2xs">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                <Users className="w-4 h-4 text-blue-600" />
+                <span>Viewing Beat Plan for:</span>
+              </div>
+              <select
+                value={selectedStaffFilter}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedStaffFilter(val);
+                  reloadBeatData(val);
+                }}
+                className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="ALL">All Active Field Staff (Unified View)</option>
+                {db.getUsers().map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.fullName} ({u.territory || u.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="text-slate-500 text-xs font-medium">
+              Showing <span className="font-bold text-slate-800">{beatItems.length}</span> planned stop{beatItems.length === 1 ? '' : 's'}
+            </div>
+          </div>
+        )}
 
         {/* Assigned Directives & Tasks */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-3.5">
@@ -638,6 +807,7 @@ export default function BeatPlanPage() {
           targetBeat={targetBeat}
           checkInTime={activeCheckInTime}
           completedActions={completedActions}
+          hasNextStop={beatItems.some((beat) => beat.status === 'PENDING')}
           onProceedNextStore={handleProceedNextStore}
           onClose={() => setShowCheckOutSummary(false)}
         />
@@ -1038,6 +1208,346 @@ export default function BeatPlanPage() {
                     className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-2xs"
                   >
                     Add to Today&apos;s Beat
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Manager Create & Assign Beat Route Modal */}
+        {showAssignRouteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between border-b border-slate-100 p-5 bg-slate-50/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                    <Navigation className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-base">Create &amp; Assign Beat Route</h3>
+                    <p className="text-xs text-slate-500">Assign targeted store visits and priorities to sales officers</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAssignRouteModal(false)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAssignBeatRoute} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Assign to Sales Staff</label>
+                    <select
+                      value={routeOfficerId}
+                      onChange={(e) => setRouteOfficerId(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-blue-500"
+                    >
+                      {db.getUsers().map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.fullName} ({u.territory || u.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Beat Route Date</label>
+                    <input
+                      type="date"
+                      value={routeDate}
+                      onChange={(e) => setRouteDate(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Route Priority</label>
+                    <select
+                      value={routePriority}
+                      onChange={(e) => setRoutePriority(e.target.value as any)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                    >
+                      <option value="HIGH">★★★ High Priority</option>
+                      <option value="MEDIUM">★★ Medium Priority</option>
+                      <option value="ROUTINE">★ Routine Check</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Manager Directives / Note (Optional)</label>
+                    <input
+                      type="text"
+                      value={routeNotes}
+                      onChange={(e) => setRouteNotes(e.target.value)}
+                      placeholder="e.g. Focus on stocking new summer SKUs..."
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                {/* Retail Store Multi-Selection */}
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="font-bold text-slate-800">
+                      Select Retail Outlets ({selectedStoreIds.size} selected)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = new Set(selectedStoreIds);
+                          filteredStoresForRoute.forEach((s) => next.add(s.id));
+                          setSelectedStoreIds(next);
+                        }}
+                        className="text-[11px] font-bold text-blue-600 hover:underline"
+                      >
+                        Select All Filtered
+                      </button>
+                      <span className="text-slate-300">•</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStoreIds(new Set())}
+                        className="text-[11px] font-bold text-slate-500 hover:underline"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2.5">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
+                      <input
+                        type="text"
+                        value={storeSearchTerm}
+                        onChange={(e) => setStoreSearchTerm(e.target.value)}
+                        placeholder="Search outlet by name or street..."
+                        className="w-full pl-8 pr-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+                      />
+                    </div>
+                    {availableAreas.length > 0 && (
+                      <select
+                        value={storeAreaFilter}
+                        onChange={(e) => setStoreAreaFilter(e.target.value)}
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+                      >
+                        <option value="ALL">All Areas / Zones</option>
+                        {availableAreas.map((area) => (
+                          <option key={area} value={area}>
+                            {area}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  <div className="border border-slate-200 rounded-xl max-h-52 overflow-y-auto divide-y divide-slate-100 bg-white">
+                    {filteredStoresForRoute.length === 0 ? (
+                      <div className="p-6 text-center text-slate-400">
+                        No stores found matching your search.
+                      </div>
+                    ) : (
+                      filteredStoresForRoute.map((store) => {
+                        const isChecked = selectedStoreIds.has(store.id);
+                        return (
+                          <label
+                            key={store.id}
+                            className={`flex items-start gap-3 p-2.5 hover:bg-slate-50 cursor-pointer transition ${
+                              isChecked ? 'bg-blue-50/50' : ''
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                const next = new Set(selectedStoreIds);
+                                if (e.target.checked) {
+                                  next.add(store.id);
+                                } else {
+                                  next.delete(store.id);
+                                }
+                                setSelectedStoreIds(next);
+                              }}
+                              className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-slate-900 truncate">{store.name}</p>
+                              <p className="text-[11px] text-slate-500 truncate">
+                                {store.address} {store.area ? `• ${store.area}` : ''}
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-semibold text-slate-400 px-1.5 py-0.5 bg-slate-100 rounded-md">
+                              {store.storeType || store.category || 'STORE'}
+                            </span>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <span className="text-xs font-semibold text-slate-500">
+                    {selectedStoreIds.size} outlet{selectedStoreIds.size === 1 ? '' : 's'} staged
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAssignRouteModal(false)}
+                      className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={selectedStoreIds.size === 0}
+                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold shadow-xs transition"
+                    >
+                      Assign Beat Plan
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Staff Leave & Relief Coverage Reassignment Modal */}
+        {showLeaveModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between border-b border-slate-100 p-5 bg-amber-50/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-base">Staff Leave &amp; Relief Coverage</h3>
+                    <p className="text-xs text-slate-500">Reassign pending beat stops &amp; tasks to covering sales staff</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowLeaveModal(false)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleConfirmLeaveReassign} className="p-5 space-y-4 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Staff Officer Taking Leave</label>
+                  <select
+                    value={leaveFromOfficerId}
+                    onChange={(e) => setLeaveFromOfficerId(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-blue-500"
+                  >
+                    {db.getUsers().map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.fullName} ({u.territory || u.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Leave Start Date</label>
+                    <input
+                      type="date"
+                      value={leaveStartDate}
+                      onChange={(e) => setLeaveStartDate(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Leave End Date</label>
+                    <input
+                      type="date"
+                      value={leaveEndDate}
+                      onChange={(e) => setLeaveEndDate(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Reason for Leave</label>
+                  <select
+                    value={leaveReason}
+                    onChange={(e) => setLeaveReason(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  >
+                    <option value="Sick Leave">Sick Leave</option>
+                    <option value="Emergency Leave">Emergency Leave</option>
+                    <option value="Annual Leave">Annual Leave</option>
+                    <option value="Casual Leave">Casual Leave</option>
+                    <option value="Festival / Holiday Leave">Festival / Holiday Leave</option>
+                    <option value="Official Off-Duty / Travel">Official Off-Duty / Travel</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Select Covering / Reliever Sales Staff
+                  </label>
+                  <select
+                    value={leaveToOfficerId}
+                    onChange={(e) => setLeaveToOfficerId(e.target.value)}
+                    className="w-full p-2.5 bg-amber-50/50 border border-amber-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-amber-500"
+                    required
+                  >
+                    <option value="">-- Choose Covering Staff Member --</option>
+                    {db
+                      .getUsers()
+                      .filter((u) => u.id !== leaveFromOfficerId)
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.fullName} ({u.territory || u.role})
+                        </option>
+                      ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    The chosen reliever will immediately take ownership of all pending beat routes and to-do items.
+                  </p>
+                </div>
+
+                {/* Live Preview Box */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-bold text-slate-700 block">Pending Assignments Impacted:</span>
+                    <span className="text-slate-500 text-[11px]">
+                      {beatItems.filter((b) => b.officerId === leaveFromOfficerId && b.status === 'PENDING').length} store stops •{' '}
+                      {db.getTasks().filter((t) => t.assignedTo === leaveFromOfficerId && t.status !== 'COMPLETED').length} active tasks
+                    </span>
+                  </div>
+                  <span className="px-2.5 py-1 bg-amber-100 text-amber-800 font-bold rounded-lg text-[11px]">
+                    Auto-reassigned
+                  </span>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowLeaveModal(false)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-xs transition"
+                  >
+                    Confirm Leave &amp; Reassign
                   </button>
                 </div>
               </form>

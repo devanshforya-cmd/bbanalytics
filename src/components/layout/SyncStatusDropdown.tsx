@@ -69,10 +69,6 @@ export default function SyncStatusDropdown() {
     syncManager.toggleSimulatedOffline();
   };
 
-  const handleSeedDemoQueue = () => {
-    syncManager.seedDemoOfflineQueue();
-  };
-
   const queueBreakdown = syncManager.getQueueBreakdown();
   const storageInfo = syncManager.getStorageUsage();
   const lastSyncTime = syncManager.getLastSyncTime();
@@ -240,7 +236,7 @@ export default function SyncStatusDropdown() {
               <button
                 type="button"
                 onClick={handleToggleOffline}
-                className={`flex-1 flex items-center justify-center gap-1 rounded-lg border py-1.5 px-2 text-[10px] font-semibold transition ${
+                className={`w-full flex items-center justify-center gap-1 rounded-lg border py-1.5 px-2 text-[10px] font-semibold transition cursor-pointer ${
                   isOffline
                     ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
                     : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
@@ -248,18 +244,7 @@ export default function SyncStatusDropdown() {
                 title="Toggle offline state to simulate field internet loss"
               >
                 <Radio className="h-3 w-3" />
-                {isOffline ? 'Go Back Online' : 'Simulate Offline'}
-              </button>
-
-              {/* Seed Demo Queue */}
-              <button
-                type="button"
-                onClick={handleSeedDemoQueue}
-                className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-slate-200 bg-slate-50 py-1.5 px-2 text-[10px] font-semibold text-slate-600 hover:bg-slate-100 transition"
-                title="Add 3 offline items to test pending badge"
-              >
-                <PlusCircle className="h-3 w-3 text-blue-600" />
-                Queue 3 Items
+                {isOffline ? 'Go Back Online' : 'Simulate Offline Mode'}
               </button>
             </div>
           </div>

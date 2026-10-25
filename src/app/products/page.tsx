@@ -102,6 +102,7 @@ export default function ProductsPage() {
   const [returns, setReturns] = useState<ReturnEntry[]>([]);
   const [retailers, setRetailers] = useState<Retailer[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [activeBrandsList, setActiveBrandsList] = useState(() => db.getBrands('ACTIVE'));
 
   const [activeBrand, setActiveBrand] = useState<BrandCode>('ALL');
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'COMBOS'>('PRODUCTS');
@@ -153,6 +154,7 @@ export default function ProductsPage() {
     setReturns(db.getReturns());
     setRetailers(db.getRetailers());
     setBranches(db.getBranches());
+    setActiveBrandsList(db.getBrands('ACTIVE'));
   };
 
   useEffect(() => {
@@ -508,9 +510,9 @@ export default function ProductsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
           <div className="text-xs font-semibold text-slate-500">Active Brands</div>
-          <div className="text-2xl font-black text-slate-900 mt-1">3</div>
-          <div className="text-[11px] text-slate-500 mt-1">
-            Forya, Pee Safe &amp; FURR, Renee
+          <div className="text-2xl font-black text-slate-900 mt-1">{activeBrandsList.length}</div>
+          <div className="text-[11px] text-slate-500 mt-1 truncate" title={activeBrandsList.map((b) => b.name).join(', ')}>
+            {activeBrandsList.map((b) => b.name).join(', ') || 'No brands registered'}
           </div>
         </div>
 
@@ -529,7 +531,7 @@ export default function ProductsPage() {
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
           <div className="text-xs font-semibold text-slate-500">Warehouse Stock</div>
           <div className="text-2xl font-black text-emerald-600 mt-1">
-            {products.reduce((acc, p) => acc + (p.stockQty !== undefined ? p.stockQty : 180), 0).toLocaleString()}
+            {products.reduce((acc, p) => acc + (p.stockQty !== undefined ? p.stockQty : 0), 0).toLocaleString()}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">Units available in depot</div>
         </div>

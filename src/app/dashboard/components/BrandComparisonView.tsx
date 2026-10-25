@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import {
@@ -47,7 +47,19 @@ export default function BrandComparisonView({
   retailers,
   products,
 }: BrandComparisonViewProps) {
-  const allBrands: Brand[] = db.getBrands();
+  // Get deduplicated list of unique brands by code
+  const allBrands: Brand[] = useMemo(() => {
+    const raw = db.getBrands();
+    const map = new Map<string, Brand>();
+    for (const b of raw) {
+      const code = (b.code || '').trim().toUpperCase();
+      if (code && !map.has(code)) {
+        map.set(code, b);
+      }
+    }
+    return Array.from(map.values());
+  }, []);
+
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [selectedBrands, setSelectedBrands] = useState<string[]>(() => allBrands.map((b) => b.code));
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,32 +102,25 @@ export default function BrandComparisonView({
     // Active customers (unique buyers)
     const activeCustomers = new Set(bOrders.map((o) => o.customerPhone)).size;
 
-    // Top selling product
+    // Top selling product (computed strictly from real order items)
     const prodCounts: Record<string, number> = {};
     bOrders.forEach((o) => {
       o.items.forEach((i) => {
         prodCounts[i.productName] = (prodCounts[i.productName] || 0) + i.quantity;
       });
     });
-    const topSelling =
-      Object.entries(prodCounts).sort((x, y) => y[1] - x[1])[0]?.[0] ||
-      (b.code === 'FORYA'
-        ? 'Roll-On Peach'
-        : b.code === 'RENEE'
-        ? 'Fab 5 5-in-1 Lipstick'
-        : b.code === 'MAMAEARTH'
-        ? 'Onion Hair Oil'
-        : 'Sanitizer Spray');
+    const topEntry = Object.entries(prodCounts).sort((x, y) => y[1] - x[1])[0];
+    const topSelling = topEntry ? topEntry[0] : '—';
 
-    // Return SKU
-    const worstProduct =
-      b.code === 'FORYA'
-        ? 'Roll-On Peach (12% ret)'
-        : b.code === 'RENEE'
-        ? 'pH Gloss (8% ret)'
-        : b.code === 'MAMAEARTH'
-        ? 'Face Wash (4% ret)'
-        : 'Sanitizer Spray (2% ret)';
+    // Return SKU (computed strictly from real returns)
+    const retCounts: Record<string, number> = {};
+    bReturns.forEach((r) => {
+      if (r.productName) {
+        retCounts[r.productName] = (retCounts[r.productName] || 0) + (r.quantity || 1);
+      }
+    });
+    const retEntry = Object.entries(retCounts).sort((x, y) => y[1] - x[1])[0];
+    const worstProduct = retEntry ? retEntry[0] : '—';
 
     return {
       ...b,

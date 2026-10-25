@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { db } from '@/lib/db/db-service';
+import { requireFeatureAccess } from '@/lib/auth-guard';
+import { hasAccess, isSuperAdmin } from '@/lib/permissions';
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireFeatureAccess(request, 'export', 'CREATE');
+  if (authResult.response) return authResult.response;
+  if (!isSuperAdmin(authResult.user) || !hasAccess(authResult.user, 'settings')) {
+    return NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 });
+  }
   try {
     const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const privateKeyRaw = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;

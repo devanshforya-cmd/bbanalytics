@@ -50,7 +50,7 @@ export default function InfluencerDirectoryPage() {
   const [qualityRating, setQualityRating] = useState<InfluencerQualityRating>('NOT_RATED');
   const [notes, setNotes] = useState('');
   const [platforms, setPlatforms] = useState<Array<{ platform: InfluencerPlatformType; handle: string; followers?: number }>>([
-    { platform: 'Instagram', handle: '@', followers: 10000 },
+    { platform: 'Instagram', handle: '@' },
   ]);
 
   const loadData = () => {
@@ -126,7 +126,7 @@ export default function InfluencerDirectoryPage() {
     setCategory('Beauty');
     setQualityRating('NOT_RATED');
     setNotes('');
-    setPlatforms([{ platform: 'Instagram', handle: '@', followers: 10000 }]);
+    setPlatforms([{ platform: 'Instagram', handle: '@' }]);
   };
 
   // Filter & Sort
@@ -428,7 +428,7 @@ export default function InfluencerDirectoryPage() {
                         <Users className="w-8 h-8 text-slate-300" />
                         <p className="font-semibold text-sm text-slate-700">No influencers found</p>
                         <p className="text-xs text-slate-400">
-                          Try adjusting your filters or click "+ Add Influencer" to create a new profile.
+                          Try adjusting your filters or click &quot;+ Add Influencer&quot; to create a new profile.
                         </p>
                       </div>
                     </td>

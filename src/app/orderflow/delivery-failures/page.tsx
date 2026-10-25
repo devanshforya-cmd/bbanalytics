@@ -10,6 +10,7 @@ import { DeliveryFailure, BrandCode, DeliveryFailureStatus, Order } from '@/lib/
 import { getTodayAd, getTodayBs } from '@/lib/nepali-calendar';
 import { toast } from '@/components/common/Toast';
 import { validateRequired, validateNepaliPhone } from '@/lib/validation';
+import CameraCapture from '@/components/common/CameraCapture';
 import {
   TruckIcon,
   Plus,
@@ -42,11 +43,16 @@ import {
 
 function getHistoricalWeeklyTrend(failures: DeliveryFailure[]) {
   const now = new Date();
-  const allOrders = db.getOrders();
+  const allOrders = db.getOrders().filter((order) => !order.isMarketing);
+  const currentWeekStart = new Date(now);
+  currentWeekStart.setHours(0, 0, 0, 0);
+  currentWeekStart.setDate(currentWeekStart.getDate() - ((currentWeekStart.getDay() + 6) % 7));
+
   return Array.from({ length: 12 }, (_, idx) => {
-    const weekStartMs = now.getTime() - (11 - idx) * 7 * 24 * 60 * 60 * 1000;
-    const weekEndMs = weekStartMs + 7 * 24 * 60 * 60 * 1000;
-    const startDate = new Date(weekStartMs);
+    const startDate = new Date(currentWeekStart);
+    startDate.setDate(startDate.getDate() - (11 - idx) * 7);
+    const weekStartMs = startDate.getTime();
+    const weekEndMs = idx === 11 ? now.getTime() + 1 : weekStartMs + 7 * 24 * 60 * 60 * 1000;
     const monthShort = startDate.toLocaleString('en-US', { month: 'short' });
     const dayNum = String(startDate.getDate()).padStart(2, '0');
     const label = `${monthShort} ${dayNum}`;
@@ -75,6 +81,16 @@ function getHistoricalWeeklyTrend(failures: DeliveryFailure[]) {
 export default function DeliveryFailuresPage() {
   const [failures, setFailures] = useState<DeliveryFailure[]>(() => db.getDeliveryFailures());
   const HISTORICAL_WEEKLY_TREND = useMemo(() => getHistoricalWeeklyTrend(failures), [failures]);
+  const currentWeekTrend = HISTORICAL_WEEKLY_TREND[HISTORICAL_WEEKLY_TREND.length - 1];
+  const previousWeekWithOrders = [...HISTORICAL_WEEKLY_TREND.slice(0, -1)]
+    .reverse()
+    .find((week) => week.attempts > 0);
+  const rateChange = currentWeekTrend.attempts > 0 && (previousWeekWithOrders?.rate || 0) > 0
+    ? Math.round(((previousWeekWithOrders!.rate - currentWeekTrend.rate) / previousWeekWithOrders!.rate) * 100)
+    : null;
+  const currentRateSummary = currentWeekTrend.attempts === 0
+    ? 'No delivery attempts this week'
+    : `Current Week: ${currentWeekTrend.rate.toFixed(1)}%${rateChange === null ? '' : ` (${Math.abs(rateChange)}% ${rateChange >= 0 ? 'drop' : 'increase'})`}`;
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBrand, setSelectedBrand] = useState<string>('ALL');
   const [selectedValley, setSelectedValley] = useState<string>('ALL');
@@ -99,11 +115,9 @@ export default function DeliveryFailuresPage() {
     proof: NonNullable<Order['deliveryProof']>;
   } | null>(null);
   const [showUploadPodModal, setShowUploadPodModal] = useState<DeliveryFailure | null>(null);
-  const [podDeliveredBy, setPodDeliveredBy] = useState('Pathao Express Courier #882');
+  const [podDeliveredBy, setPodDeliveredBy] = useState('');
   const [podRecipient, setPodRecipient] = useState('');
-  const [podPhotoUrl, setPodPhotoUrl] = useState(
-    'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=500&auto=format&fit=crop&q=60'
-  );
+  const [podPhotoUrl, setPodPhotoUrl] = useState('');
 
   const handleSavePod = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,10 +138,11 @@ export default function DeliveryFailuresPage() {
   };
 
   // Form State for new failure
+  const products = db.getProducts();
   const [orderNumber, setOrderNumber] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [productName, setProductName] = useState('Forya Roll-On Peach 50ml');
+  const [productName, setProductName] = useState(products[0]?.name || '');
   const [brandCode, setBrandCode] = useState<BrandCode>('FORYA');
   const [deliveryMethod, setDeliveryMethod] = useState<'Standard' | 'Pathao' | 'In-house Rider' | 'Nepal Post'>('Standard');
   const [reason, setReason] = useState<DeliveryFailure['reason']>('Call not received');
@@ -485,10 +500,14 @@ export default function DeliveryFailuresPage() {
               Courier Channel Reliability
             </div>
             <div className="text-xl font-bold text-slate-900">
-              Pathao Fails {patterns.pathaoToStandardMultiplier}x Less
+              {patterns.pathaoCount === patterns.standardCount
+                ? 'Equal Failure Counts'
+                : patterns.pathaoCount < patterns.standardCount
+                ? 'Fewer Pathao Failures'
+                : 'More Pathao Failures'}
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Pathao deliveries log {patterns.pathaoCount} failures versus {patterns.standardCount} on Standard Courier. Direct rider GPS tracking sharply cuts location misses.
+              Pathao deliveries log {patterns.pathaoCount} failures versus {patterns.standardCount} on Standard Courier. Counts show volume only; compare against shipment totals to assess carrier reliability.
             </p>
           </div>
         </div>
@@ -509,8 +528,10 @@ export default function DeliveryFailuresPage() {
 
           <div className="flex items-center gap-3 text-xs">
             <div className="flex items-center gap-1.5 font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1">
-              <TrendingDown className="h-3.5 w-3.5" />
-              Current Rate: 1.5% (-73% drop)
+              {rateChange !== null && rateChange >= 0
+                ? <TrendingDown className="h-3.5 w-3.5" />
+                : <Activity className="h-3.5 w-3.5" />}
+              {currentRateSummary}
             </div>
             <div className="flex items-center gap-1 text-slate-500">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -1308,13 +1329,13 @@ export default function DeliveryFailuresPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Proof Photo URL *</label>
-                <input
-                  type="url"
-                  required
-                  value={podPhotoUrl}
-                  onChange={(e) => setPodPhotoUrl(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2 outline-none focus:border-blue-500 font-mono text-[11px]"
+                <CameraCapture
+                  label="Photograph Proof of Delivery (Signature / Stamp)"
+                  sublabel="Take or upload courier run-sheet or recipient signature"
+                  maxFiles={1}
+                  existingUrls={podPhotoUrl ? [podPhotoUrl] : []}
+                  onRemoveExisting={() => setPodPhotoUrl('')}
+                  onUpload={(results) => setPodPhotoUrl(results[0]?.url || '')}
                 />
               </div>
 

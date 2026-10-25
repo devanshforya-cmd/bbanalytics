@@ -1,25 +1,31 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-guard';
+import { requireFeatureAccess } from '@/lib/auth-guard';
 import { db } from '@/lib/db/db-service';
+import { getTodayBs } from '@/lib/nepali-calendar';
+import { getAssignedBrandCodes, getScope } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY', 'VIEWER']);
+  const auth = await requireFeatureAccess(request, 'orderflow', 'VIEW');
   if (auth.response) return auth.response;
 
   const { user } = auth;
   let orders = db.getOrders();
 
-  if (user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
-    orders = orders.filter((o) => user.assignedBrands!.includes(o.brandCode as any));
+  const assignedBrands = getAssignedBrandCodes(user);
+  if (!assignedBrands.includes('ALL')) {
+    orders = orders.filter((o) => assignedBrands.includes(String(o.brandCode).toUpperCase()));
+  }
+  if (getScope(user, 'orderflow') === 'OWN') {
+    orders = orders.filter((order) => (order as any).officerId === user.id || (order as any).createdBy === user.id);
   }
 
   return NextResponse.json({ success: true, count: orders.length, data: orders });
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY']);
+  const auth = await requireFeatureAccess(request, 'orderflow', 'CREATE');
   if (auth.response) return auth.response;
 
   try {
@@ -49,7 +55,7 @@ export async function POST(request: Request) {
       customerPhone: body.customerPhone,
       platform: body.platform || 'WhatsApp',
       orderDateAd: body.orderDateAd || new Date().toISOString().split('T')[0],
-      orderDateBs: body.orderDateBs || '2083-05-27',
+      orderDateBs: body.orderDateBs || getTodayBs(),
       province: body.province || 'Bagmati',
       district: body.district || 'Kathmandu',
       address: body.address || 'Kathmandu Valley',

@@ -79,7 +79,14 @@ function ScorecardContent() {
 
   const [currentUser, setCurrentUser] = useState<User>(() => getSessionUser() || db.getCurrentUser());
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodPreset>('THIS_MONTH');
-  const [customRange, setCustomRange] = useState({ start: '2026-08-17', end: '2026-09-16' });
+  const [customRange, setCustomRange] = useState(() => {
+    const end = new Date();
+    const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+    return {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0],
+    };
+  });
   const [showCustomModal, setShowCustomModal] = useState(false);
 
   // Drilldown states
@@ -142,7 +149,8 @@ function ScorecardContent() {
   // If officer logged in, filter to their card only
   const visibleCards = isOfficer
     ? displayScorecards.filter((s) =>
-        s.officerName.toLowerCase().includes(currentUser.fullName.split(' ')[0].toLowerCase())
+        s.officerId === currentUser.id ||
+        s.officerName.toLowerCase().includes((currentUser?.fullName || '').split(' ')[0].toLowerCase())
       )
     : displayScorecards;
 
@@ -166,18 +174,18 @@ function ScorecardContent() {
     { name: 'Stores Visited', extract: (s) => s.storesVisited },
     { name: 'Beat Compliance %', extract: (s) => s.beatCompliancePct, formatter: (v) => `${v}%` },
     { name: 'Stores Skipped', extract: (s) => s.storesSkipped, isLowerBetter: true },
-    { name: 'Avg Visit Duration', extract: (s) => s.avgVisitDurationMinutes, formatter: (v) => `${v}m` },
+    { name: 'Avg Visit Duration', extract: (s) => s.avgVisitDurationMinutes, formatter: (v) => v > 0 ? `${v}m` : '—' },
     { name: 'Calls Made', extract: (s) => s.callsMade },
     { name: 'Productive Calls', extract: (s) => s.productiveCalls },
     { name: 'Call-to-Order Ratio', extract: (s) => s.callToOrderRatioPct, formatter: (v) => `${v}%` },
     { name: 'Orders Collected', extract: (s) => s.ordersCollected },
     { name: 'Cheques Collected', extract: (s) => s.chequesCollected },
     { name: 'Cheques Overdue', extract: (s) => s.chequesOverdue, isLowerBetter: true },
-    { name: 'Cheque Handover Gap', extract: (s) => s.avgChequeHandoverDays, formatter: (v) => `${v}d`, isLowerBetter: true },
+    { name: 'Cheque Handover Gap', extract: (s) => s.avgChequeHandoverDays, formatter: (v) => v > 0 ? `${v}d` : '—', isLowerBetter: true },
     { name: 'Shelf Photos Taken', extract: (s) => s.shelfPhotosTaken },
     { name: 'Documents Collected', extract: (s) => s.documentsCollected },
     { name: 'Stock Counts Done', extract: (s) => s.stockCountsDone },
-    { name: 'Response Time', extract: (s) => s.responseTimeHours || 2.0, formatter: (v) => `${v}h`, isLowerBetter: true },
+    { name: 'Response Time', extract: (s) => s.responseTimeHours || 0, formatter: (v) => v > 0 ? `${v}h` : '—', isLowerBetter: true },
     { name: 'Pending Tasks', extract: (s) => s.pendingTasks, isLowerBetter: true },
   ];
 
@@ -203,7 +211,7 @@ function ScorecardContent() {
     ? trendLines.filter(
         (t) =>
           t.officerId === currentUser.id ||
-          t.officerName.toLowerCase().includes(currentUser.fullName.split(' ')[0].toLowerCase())
+          t.officerName.toLowerCase().includes((currentUser?.fullName || '').split(' ')[0].toLowerCase())
       )
     : trendLines;
 
@@ -297,9 +305,9 @@ function ScorecardContent() {
         {/* Period Selector Controls */}
         <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-100 p-1.5 border border-slate-200">
           {[
-            { key: 'THIS_WEEK', label: 'This Week', sub: 'Bhadra 18 - 24' },
-            { key: 'THIS_MONTH', label: 'This Month', sub: 'Bhadra 2083' },
-            { key: 'LAST_MONTH', label: 'Last Month', sub: 'Shrawan 2083' },
+            { key: 'THIS_WEEK', label: 'This Week', sub: 'Current Week' },
+            { key: 'THIS_MONTH', label: 'This Month', sub: 'Current Month' },
+            { key: 'LAST_MONTH', label: 'Last Month', sub: 'Previous Month' },
             { key: 'CUSTOM', label: 'Custom', sub: 'BS/AD' },
           ].map((preset) => {
             const isActive = selectedPeriod === preset.key;
@@ -499,7 +507,7 @@ function ScorecardContent() {
                   <div className="flex justify-between text-[11px] text-slate-500 pt-1">
                     <span>Visited: <strong className="text-slate-900 font-bold">{sc.storesVisited}</strong></span>
                     <span>Skipped: <strong className="text-rose-700 font-bold">{sc.storesSkipped}</strong></span>
-                    <span>Avg Duration: <strong className="text-slate-900 font-bold">{sc.avgVisitDurationMinutes}m</strong></span>
+                    <span>Avg Duration: <strong className="text-slate-900 font-bold">{sc.avgVisitDurationMinutes > 0 ? `${sc.avgVisitDurationMinutes}m` : '—'}</strong></span>
                   </div>
                 </div>
 
@@ -567,7 +575,7 @@ function ScorecardContent() {
                       <div className="text-[10px] text-slate-500">Cheques Coll.</div>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
-                      <div className="text-base font-black text-amber-600">{sc.avgChequeHandoverDays}d</div>
+                      <div className="text-base font-black text-amber-600">{sc.avgChequeHandoverDays > 0 ? `${sc.avgChequeHandoverDays}d` : '—'}</div>
                       <div className="text-[10px] text-slate-500">Handover Gap</div>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
@@ -793,7 +801,9 @@ function ScorecardContent() {
             const max = 100;
 
             const points = trend.weeks.map((val, idx) => {
-              const x = (idx / (trend.weeks.length - 1)) * (width - 24) + 12;
+              const x = trend.weeks.length > 1
+                ? (idx / (trend.weeks.length - 1)) * (width - 24) + 12
+                : width / 2;
               const y = height - ((val - min) / (max - min)) * (height - 20) - 10;
               return { x, y, val };
             });
@@ -1091,23 +1101,28 @@ function ScorecardContent() {
                     {officerPhotos.length === 0 ? (
                       <div className="col-span-3 p-6 text-center text-slate-400">No shelf photos submitted yet.</div>
                     ) : (
-                      officerPhotos.map((p) => (
-                        <div key={p.id} className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
-                          <img
-                            src={
-                              (p.afterPhotoUrls && p.afterPhotoUrls[0]) ||
-                              (p.beforePhotoUrls && p.beforePhotoUrls[0]) ||
-                              'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500'
-                            }
-                            alt={p.storeName}
-                            className="h-32 w-full object-cover"
-                          />
-                          <div className="p-2.5 space-y-0.5">
-                            <div className="font-bold text-slate-900 truncate">{p.storeName}</div>
-                            <div className="text-[10px] text-slate-400">{p.dateBs}</div>
+                      officerPhotos.map((p) => {
+                        const img = (p.afterPhotoUrls && p.afterPhotoUrls[0]) || (p.beforePhotoUrls && p.beforePhotoUrls[0]);
+                        return (
+                          <div key={p.id} className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+                            {img ? (
+                              <img
+                                src={img}
+                                alt={p.storeName}
+                                className="h-32 w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-32 w-full flex items-center justify-center bg-slate-100 text-slate-400">
+                                <Camera className="w-6 h-6" />
+                              </div>
+                            )}
+                            <div className="p-2.5 space-y-0.5">
+                              <div className="font-bold text-slate-900 truncate">{p.storeName}</div>
+                              <div className="text-[10px] text-slate-400">{p.dateBs}</div>
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>

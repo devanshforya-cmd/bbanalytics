@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
+import { getTodayBs } from '@/lib/nepali-calendar';
 import { ReviewCategory, BrandCode } from '@/lib/types';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
@@ -489,7 +490,7 @@ export default function ReviewCategoriesPage() {
 
                       {/* Created Date */}
                       <td className="py-3 px-4 text-slate-500 whitespace-nowrap">
-                        {cat.createdAt || 'Bhadra 15, 2083'}
+                        {cat.createdAt || getTodayBs()}
                       </td>
 
                       {/* Times Used (All Time) */}
@@ -501,7 +502,7 @@ export default function ReviewCategoriesPage() {
 
                       {/* Last Used */}
                       <td className="py-3 px-4 text-slate-500 whitespace-nowrap">
-                        {cat.lastUsedDate || 'Bhadra 24, 2083'}
+                        {cat.lastUsedDate || getTodayBs()}
                       </td>
 
                       {/* Status */}
@@ -631,7 +632,7 @@ export default function ReviewCategoriesPage() {
                 <span className="text-xl font-black font-mono text-blue-700">
                   {analyticsMap[selectedAnalyticsCat.id]?.monthTicks}
                 </span>
-                <span className="text-[10px] text-slate-400 block">Bhadra 2083</span>
+                <span className="text-[10px] text-slate-400 block">Current Month</span>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1 col-span-2">
@@ -853,7 +854,7 @@ export default function ReviewCategoriesPage() {
         details={categoryToArchive ? [
           { label: 'Category Name', value: categoryToArchive.name },
           { label: 'Usage Frequency', value: `${categoryToArchive.tickCount} tagged times` },
-          { label: 'Last Logged Activity', value: categoryToArchive.lastUsedDate || 'Bhadra 18, 2083' },
+          { label: 'Last Logged Activity', value: categoryToArchive.lastUsedDate || 'Recently' },
         ] : []}
         consequences={[
           'Hide it from future order, return, and complaint input forms',

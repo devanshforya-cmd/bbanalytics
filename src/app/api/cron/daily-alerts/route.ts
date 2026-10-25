@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/db-service';
+import { requireCronAuth } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const authError = requireCronAuth(request);
+  if (authError) return authError;
   try {
     const cheques = db.getCheques();
     const feedback = db.getFeedback();

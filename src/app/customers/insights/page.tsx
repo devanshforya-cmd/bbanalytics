@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
+import { toast } from '@/components/common/Toast';
+import { getTodayAd } from '@/lib/nepali-calendar';
 import { Customer, Order, DeliveryFailure, ReturnEntry, FeedbackEntry } from '@/lib/types';
 import {
   Users,
@@ -33,17 +35,18 @@ type TabCategory = 'ALL' | 'CHURN_WINBACK' | 'REVENUE_LTV' | 'BRAND_CHANNEL' | '
 export default function CustomerInsightsPage() {
   const [activeTab, setActiveTab] = useState<TabCategory>('ALL');
   const [contactedMap, setContactedMap] = useState<Record<string, boolean>>({});
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Core dynamic datasets from db service
-  const customers: Customer[] = useMemo(() => db.getCustomers(), []);
-  const orders: Order[] = useMemo(() => db.getOrders(), []);
-  const deliveryFailures: DeliveryFailure[] = useMemo(() => db.getDeliveryFailures(), []);
-  const returns: ReturnEntry[] = useMemo(() => db.getReturns(), []);
-  const feedback: FeedbackEntry[] = useMemo(() => db.getFeedback(), []);
+  const customers: Customer[] = useMemo(() => db.getCustomers(), [refreshKey]);
+  const orders: Order[] = useMemo(() => db.getOrders(), [refreshKey]);
+  const deliveryFailures: DeliveryFailure[] = useMemo(() => db.getDeliveryFailures(), [refreshKey]);
+  const returns: ReturnEntry[] = useMemo(() => db.getReturns(), [refreshKey]);
+  const feedback: FeedbackEntry[] = useMemo(() => db.getFeedback(), [refreshKey]);
 
   const norm = (p?: string) => (p ? p.replace(/\D/g, '') : '');
-  const TODAY_STR = '2026-09-08';
-  const TODAY_MS = new Date(TODAY_STR).getTime();
+  const TODAY_STR = getTodayAd();
+  const TODAY_MS = new Date().getTime();
 
   // Helper: total spend for a given customer
   const customerSpendMap = useMemo(() => {
@@ -205,10 +208,10 @@ export default function CustomerInsightsPage() {
           targetBrand: missing[0] || 'Forya',
           suggestedPitch:
             missing[0] === 'FORYA'
-              ? 'Introduce Forya Roll-On Peach (bestseller teaser)'
+              ? 'Introduce best-selling Forya catalog essentials'
               : missing[0] === 'RENEE'
-              ? 'Recommend Renee Fab 5-in-1 Lipstick with 10% bundle code'
-              : 'Include Pee Safe Toilet Sanitizer 75ml sample',
+              ? 'Recommend Renee beauty collection with introductory bundle'
+              : 'Include Pee Safe hygiene sample with next order',
         };
       })
       .sort((a, b) => b.customer.karmaScore - a.customer.karmaScore)
@@ -492,52 +495,63 @@ export default function CustomerInsightsPage() {
   // 2k. PRODUCT AFFINITY BY SEGMENT
   // -------------------------------------------------------------
   const productAffinity = useMemo(() => {
+    const computeTopProductsForSegment = (segmentKey: string) => {
+      const segCustomers = customers.filter((c) => c.segment === segmentKey);
+      const segPhones = new Set(segCustomers.map((c) => c.phone));
+      const segOrders = orders.filter((o) => segPhones.has(o.customerPhone));
+      const prodMap: Record<string, { count: number; brand: string }> = {};
+
+      segOrders.forEach((o) => {
+        o.items?.forEach((it) => {
+          if (!prodMap[it.productName]) {
+            prodMap[it.productName] = { count: 0, brand: o.brandCode || 'General' };
+          }
+          prodMap[it.productName].count += it.quantity;
+        });
+      });
+
+      const totalItems = Object.values(prodMap).reduce((s, p) => s + p.count, 0);
+      return Object.entries(prodMap)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 3)
+        .map(([name, data]) => ({
+          name,
+          share: totalItems > 0 ? `${Math.round((data.count / totalItems) * 100)}% share` : '—',
+          brand: data.brand,
+        }));
+    };
+
     return [
       {
         segment: 'VIP Champions',
         badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
         kpi: 'High Basket Size & Multi-Brand',
-        topProducts: [
-          { name: 'Forya Nourishing Hair Serum 100ml', share: '84% adoption', brand: 'Forya' },
-          { name: 'Renee FAB 5 Matte Lipstick 5-in-1', share: '72% adoption', brand: 'Renee' },
-          { name: 'Pee Safe Toilet Seat Sanitizer Spray 75ml', share: '68% adoption', brand: 'Pee Safe' },
-        ],
+        topProducts: computeTopProductsForSegment('VIP'),
         strategy: 'Pitch premium bundle gift kits and early access to newly launched SKUs.',
       },
       {
         segment: 'Loyal Regulars',
         badgeColor: 'bg-blue-100 text-blue-900 border-blue-300',
         kpi: 'Predictable Monthly Repeat',
-        topProducts: [
-          { name: 'Forya Roll-On Deodorant Peach 50ml', share: '78% adoption', brand: 'Forya' },
-          { name: 'FURR Face Razor for Women (Pack of 3)', share: '64% adoption', brand: 'Pee Safe' },
-          { name: 'Forya Hydrating Face Mist 100ml', share: '45% adoption', brand: 'Forya' },
-        ],
+        topProducts: computeTopProductsForSegment('LOYAL'),
         strategy: 'Prompt recurring 30-day refills via automated WhatsApp reminder sequences.',
       },
       {
         segment: 'New / First-Time Buyers',
         badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
         kpi: 'Low Friction Conversion',
-        topProducts: [
-          { name: 'Renee Madness pH Gloss Black Lipstick', share: '58% entry share', brand: 'Renee' },
-          { name: 'Pee Safe Organic Cotton Panty Liners 20N', share: '42% entry share', brand: 'Pee Safe' },
-          { name: 'Forya Roll-On Peach 50ml', share: '36% entry share', brand: 'Forya' },
-        ],
+        topProducts: computeTopProductsForSegment('REGULAR'),
         strategy: 'Send immediate Day-5 post-delivery usage tips to trigger second conversion.',
       },
       {
         segment: 'At-Risk / Dormant',
         badgeColor: 'bg-rose-100 text-rose-900 border-rose-300',
         kpi: 'Drop-off & Churn Candidates',
-        topProducts: [
-          { name: 'Forya Roll-On Peach 50ml', share: '52% past share', brand: 'Forya' },
-          { name: 'Renee Everyday Matte Liquid Lip', share: '38% past share', brand: 'Renee' },
-        ],
+        topProducts: computeTopProductsForSegment('AT_RISK'),
         strategy: 'Reactivate with low-AOV hero refills or apology coupon bundles.',
       },
     ];
-  }, []);
+  }, [customers, orders]);
 
   // -------------------------------------------------------------
   // 2l. LTV DISTRIBUTION
@@ -636,9 +650,12 @@ export default function CustomerInsightsPage() {
             Customer 360 Directory
           </Link>
           <button
-            onClick={() => db.resetDatabase()}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition"
-            title="Reset to fresh seed data"
+            onClick={() => {
+              setRefreshKey((k) => k + 1);
+              toast.success('Customer metrics recalculated.');
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-100 transition cursor-pointer"
+            title="Re-calculate customer analytics"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Re-calculate

@@ -1,28 +1,18 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/db-service';
+import { requireCronAuth } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * 56i & 57g. Combined Daily Vercel Cron Endpoint
  * - Smart Alerts (Cheque overdue, bounced, karma drop, urgent complaints)
- * - Friday Weekly Email Report trigger
- * - Complete Database JSON Backup Snapshot
+ * - Reports the scheduled report/backup work that is not yet wired to storage/email
  * Protected by CRON_SECRET Bearer token
  */
 export async function GET(request: Request) {
-  // 1. Verify CRON_SECRET authorization
-  const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (cronSecret) {
-    if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Invalid CRON_SECRET.' },
-        { status: 401 }
-      );
-    }
-  }
+  const authError = requireCronAuth(request);
+  if (authError) return authError;
 
   const url = new URL(request.url);
   const forceBackup = url.searchParams.get('backup') === 'true';
@@ -74,46 +64,8 @@ export async function GET(request: Request) {
     // --------------------------------------------------------------------------
     let weeklyReportStatus = 'Skipped (Runs only on Fridays)';
     if (isFriday || forceReport) {
-      // In production, triggers Resend email dispatch
-      const resendApiKey = process.env.RESEND_API_KEY;
-      if (resendApiKey) {
-        weeklyReportStatus = 'Dispatched via Resend API';
-      } else {
-        weeklyReportStatus = 'Generated (Resend API key not configured, logged to console)';
-      }
+      weeklyReportStatus = 'Not sent (email dispatch is not implemented)';
     }
-
-    // --------------------------------------------------------------------------
-    // C. DATABASE JSON BACKUP SNAPSHOT (Fix 56i)
-    // --------------------------------------------------------------------------
-    const backupSnapshot = {
-      timestamp: now.toISOString(),
-      metadata: {
-        system: 'Brand Bucket Command Center',
-        environment: process.env.NODE_ENV || 'production',
-      },
-      counts: {
-        orders: db.getOrders().length,
-        cheques: cheques.length,
-        feedback: feedback.length,
-        customers: customers.length,
-        tasks: tasks.length,
-        stores: db.getStores().length,
-        dispatches: db.getDispatches().length,
-        returns: db.getReturns().length,
-      },
-      tables: {
-        orders: db.getOrders(),
-        cheques,
-        feedback,
-        customers,
-        tasks,
-        stores: db.getStores(),
-        dispatches: db.getDispatches(),
-        returns: db.getReturns(),
-        products: db.getProducts(),
-      },
-    };
 
     return NextResponse.json({
       success: true,
@@ -127,10 +79,9 @@ export async function GET(request: Request) {
       },
       weeklyReport: weeklyReportStatus,
       backup: {
-        status: 'Completed',
-        tableCounts: backupSnapshot.counts,
-        dataSizeEstimateBytes: JSON.stringify(backupSnapshot).length,
+        status: 'Not saved (backup storage is not implemented)',
       },
+      dataSource: 'process-local application state; not a durable production source',
     });
   } catch (error: any) {
     return NextResponse.json(

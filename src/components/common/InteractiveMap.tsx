@@ -45,7 +45,6 @@ function lat2pixel(lat: number, zoom: number): number {
 
 // Subdomains for load balancing tile requests
 const CARTO_SUBDOMAINS = ['a', 'b', 'c', 'd'];
-const OSM_SUBDOMAINS = ['a', 'b', 'c'];
 
 export default function InteractiveMap({
   reps,
@@ -305,7 +304,6 @@ export default function InteractiveMap({
       top: number;
       key: string;
       subdomainCarto: string;
-      subdomainOsm: string;
     }[] = [];
     const maxTiles = Math.pow(2, zoom);
 
@@ -317,7 +315,6 @@ export default function InteractiveMap({
           const top = ty * 256 - (centerPxY - height / 2);
 
           const subCarto = CARTO_SUBDOMAINS[Math.abs(normTx + ty) % CARTO_SUBDOMAINS.length];
-          const subOsm = OSM_SUBDOMAINS[Math.abs(normTx + ty) % OSM_SUBDOMAINS.length];
 
           result.push({
             x: normTx,
@@ -327,7 +324,6 @@ export default function InteractiveMap({
             top,
             key: `${zoom}-${normTx}-${ty}`,
             subdomainCarto: subCarto,
-            subdomainOsm: subOsm,
           });
         }
       }
@@ -358,20 +354,21 @@ export default function InteractiveMap({
   const getTileSrc = (tile: typeof tiles[0]) => {
     const failures = failedTiles[tile.key] || 0;
 
-    if (mapStyle === 'SATELLITE') {
+    if (mapStyle === 'SATELLITE' && failures === 0) {
       return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
-    } else if (mapStyle === 'TOPO') {
+    } else if (mapStyle === 'TOPO' && failures === 0) {
       return `https://a.tile.opentopomap.org/${tile.z}/${tile.x}/${tile.y}.png`;
     }
 
-    // Default STREET: CartoDB Voyager (ultra-vivid, crystal clear roads, neighborhood landmarks & 100% reliable)
-    if (failures === 0) {
+    // Use best-effort public tiles with per-tile fallback. No public tile provider promises 100% uptime.
+    const streetFallback = mapStyle === 'STREET' ? failures : failures - 1;
+    if (streetFallback <= 0) {
       return `https://${tile.subdomainCarto}.basemaps.cartocdn.com/rastertiles/voyager/${tile.z}/${tile.x}/${tile.y}.png`;
-    } else if (failures === 1) {
+    } else if (streetFallback === 1) {
       return `https://${tile.subdomainCarto}.basemaps.cartocdn.com/light_all/${tile.z}/${tile.x}/${tile.y}.png`;
-    } else if (failures === 2) {
-      return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${tile.z}/${tile.y}/${tile.x}`;
     } else {
+      // ArcGIS can respond with an HTTP 200 "API KEY REQUIRED" image, which
+      // never fires <img onError>. Keep the no-key OSM source as the fallback.
       return `https://tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`;
     }
   };
@@ -656,7 +653,7 @@ export default function InteractiveMap({
               {/* Name Tag Pill */}
               <div className="absolute top-9 bg-slate-950/90 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded-full border border-slate-800 shadow-md whitespace-nowrap flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span>{rep.officerName.split(' ')[0]}</span>
+                <span>{(rep.officerName || 'Officer').split(' ')[0]}</span>
                 {rep.status === 'AT_STORE' && (
                   <span className="text-emerald-400 font-normal">(@Store)</span>
                 )}
@@ -922,7 +919,7 @@ export default function InteractiveMap({
         </div>
 
         <div className="text-[9px] text-slate-500 bg-white/80 px-2 py-0.5 rounded shadow pointer-events-auto">
-          Map data &copy; OpenStreetMap contributors &bull; Esri
+          &copy; OpenStreetMap contributors &bull; CARTO &bull; Esri &bull; OpenTopoMap
         </div>
       </div>
     </div>

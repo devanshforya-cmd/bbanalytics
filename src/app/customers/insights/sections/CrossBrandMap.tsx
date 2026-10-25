@@ -230,20 +230,26 @@ export default function CrossBrandMap({
               </div>
 
               <div className="space-y-1.5">
-                {seg.topProducts.map((p) => (
-                  <div
-                    key={p.name}
-                    className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-100 text-xs"
-                  >
-                    <div>
-                      <span className="font-bold text-slate-900">{p.name}</span>
-                      <span className="ml-2 text-[10px] text-slate-400 font-medium">{p.brand}</span>
-                    </div>
-                    <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
-                      {p.share}
-                    </span>
+                {seg.topProducts.length === 0 ? (
+                  <div className="p-3 rounded-lg bg-white border border-slate-100 text-xs text-slate-400 text-center">
+                    No orders recorded for this segment yet
                   </div>
-                ))}
+                ) : (
+                  seg.topProducts.map((p) => (
+                    <div
+                      key={p.name}
+                      className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-100 text-xs"
+                    >
+                      <div>
+                        <span className="font-bold text-slate-900">{p.name}</span>
+                        <span className="ml-2 text-[10px] text-slate-400 font-medium">{p.brand}</span>
+                      </div>
+                      <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                        {p.share}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
 
               <div className="text-[11px] text-slate-600 bg-white/70 p-2.5 rounded-lg border border-slate-100 italic">

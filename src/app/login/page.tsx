@@ -2,7 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, Phone, AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import {
+  Lock,
+  Mail,
+  Phone,
+  AlertCircle,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+} from 'lucide-react';
 import { loginWithMobile, getSessionUser, getRedirectPathForUser } from '@/lib/auth';
 
 export default function LoginPage() {
@@ -50,15 +59,15 @@ export default function LoginPage() {
   const isEmail = identifier.includes('@') || /[a-zA-Z]/.test(identifier);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between p-4 sm:p-6 selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 text-slate-800 flex flex-col justify-between p-4 sm:p-6 selection:bg-blue-600 selection:text-white">
       {/* Top Header */}
       <div className="flex items-center justify-between max-w-md mx-auto w-full pt-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-500/20 font-black text-white text-base tracking-tight">
+          <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/25 font-black text-white text-base tracking-tight ring-4 ring-blue-50">
             BB
           </div>
           <div>
-            <h1 className="font-bold text-base leading-tight tracking-wide text-slate-900">
+            <h1 className="font-black text-base leading-tight tracking-tight text-slate-900">
               Brand Bucket Command Center
             </h1>
             <p className="text-[11px] text-slate-500 font-medium">Enterprise Field Operations &bull; Secondary Sales Telemetry</p>
@@ -67,14 +76,18 @@ export default function LoginPage() {
       </div>
 
       {/* Main Login Card */}
-      <div className="max-w-md mx-auto w-full my-auto py-8">
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/50">
+      <div className="max-w-md mx-auto w-full my-auto py-6 sm:py-8">
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-slate-300/40">
           <div className="text-center mb-6">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold mb-3 border border-slate-200/60">
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+              <span>Secure Operations Portal</span>
+            </div>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 mb-1.5">
               Sign In
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500">
-              Enter your credentials to access the operations command center.
+            <p className="text-xs sm:text-sm text-slate-500 font-medium">
+              Enter your authorized credentials to access the command center.
             </p>
           </div>
 
@@ -88,7 +101,7 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             {/* Email / Mobile Identifier */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
                 Email or Mobile Number
               </label>
               <div className="relative">
@@ -100,7 +113,7 @@ export default function LoginPage() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="name@brandbucket.com or 98XXXXXXXX"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium tracking-wide transition-all"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-semibold tracking-wide transition-all"
                   required
                   autoFocus
                 />
@@ -109,12 +122,12 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
                 Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Lock className="w-4 h-4" />
+                  <Lock className="w-4 h-4 text-slate-500" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -128,6 +141,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-700 transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -138,22 +152,27 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm tracking-wide shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 active:scale-[0.99] transition-all disabled:opacity-60 cursor-pointer"
+              className="w-full mt-2 py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm tracking-wide shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 active:scale-[0.99] transition-all disabled:opacity-60 cursor-pointer"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>Sign In</span>
+                  <span>Sign In to Command Center</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
           </form>
+
+          <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Secure sign-in · 24-hour session</span>
+            <span className="font-mono">v2.0 · Live</span>
+          </div>
         </div>
 
-        <div className="mt-6 text-center text-xs text-slate-500 font-medium">
-          Operational Intelligence Platform
+        <div className="mt-5 text-center text-xs text-slate-500 font-medium">
+          Operational Intelligence &bull; FMCG / D2C Multi-Brand Telemetry
         </div>
       </div>
 

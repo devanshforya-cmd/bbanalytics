@@ -1,293 +1,102 @@
 'use client';
 
-import bcrypt from 'bcryptjs';
-import { User, UserRole } from './types';
+import { User } from './types';
 import { db } from './db/db-service';
-import { supabase } from './db/supabase-client';
-import { supabaseAdmin } from './db/supabase-server';
 import { hasAccess, isSuperAdmin } from './permissions';
+import { normalizePhoneNumber } from './auth-utils';
 
 const SESSION_KEY = 'bb_auth_user_session_v3';
-const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
-const SALT_ROUNDS = 12;
+const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+export { normalizePhoneNumber };
 
 export interface UserSessionData {
   user: Omit<User, 'password'>;
   createdAt: number;
   expiresAt: number;
-  sessionId: string;
 }
 
-/**
- * 56a. Hash password with bcrypt (12 salt rounds)
- */
-export async function hashPassword(plainPassword: string): Promise<string> {
-  return bcrypt.hash(plainPassword, SALT_ROUNDS);
-}
-
-export function normalizePhoneNumber(input: string): string {
-  if (!input) return '';
-  let clean = input.replace(/[\s\-\(\)\.]/g, '');
-  if (clean.startsWith('+977')) clean = clean.slice(4);
-  else if (clean.startsWith('977')) clean = clean.slice(3);
-  if (clean.startsWith('0')) clean = clean.slice(1);
-  return clean;
-}
-
-/**
- * Verify input password against stored hash or fallback
- */
-export async function verifyPassword(inputPassword: string, storedHashOrPlain?: string): Promise<boolean> {
-  const trimmedInput = (inputPassword || '').trim();
-  if (!trimmedInput) return false;
-
-  // Master initial seed password
-  if (trimmedInput === 'BrandBucket@2083') {
-    return true;
-  }
-
-  if (!storedHashOrPlain) return false;
-
-  // Direct match
-  if (trimmedInput === storedHashOrPlain) return true;
-  if (trimmedInput.toLowerCase() === storedHashOrPlain.toLowerCase()) return true;
-
-  // Bcrypt verification ($2a$, $2b$, $2y$)
-  if (storedHashOrPlain.startsWith('$2')) {
-    try {
-      const match = await bcrypt.compare(trimmedInput, storedHashOrPlain);
-      if (match) return true;
-    } catch {
-      // fallback
-    }
-  }
-  return false;
-}
-
-/**
- * Persist safe user session to localStorage with 24-hour expiration
- */
 export function setAuthSession(user: User): void {
   if (typeof window === 'undefined') return;
   const now = Date.now();
-  const { password: _p, ...safeUser } = user;
+  const { password: _password, ...safeUser } = user;
   const sessionData: UserSessionData = {
-    user: safeUser as User,
+    user: safeUser,
     createdAt: now,
     expiresAt: now + SESSION_MAX_AGE_MS,
-    sessionId: `sess_${now}_${Math.random().toString(36).slice(2, 9)}`,
   };
   localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
 }
 
-/**
- * Real Login with Supabase / DB authentication
- */
 export async function loginWithMobile(
-  phoneOrEmailInput: string,
-  passwordInput: string
+  identifier: string,
+  password: string
 ): Promise<{ success: boolean; user?: User; error?: string }> {
-  const rawInput = (phoneOrEmailInput || '').trim();
-  if (!rawInput) {
-    return { success: false, error: 'Please enter your email or mobile number.' };
-  }
-  const password = (passwordInput || '').trim();
-  if (!password) {
-    return { success: false, error: 'Please enter your password.' };
-  }
-
-  const isEmail = rawInput.includes('@');
-  const cleanPhone = normalizePhoneNumber(rawInput);
-  const inputLower = rawInput.toLowerCase();
-
-  let matchedUser: User | null = null;
-
-  // 1. Attempt Supabase direct query
   try {
-    const client = typeof window === 'undefined' ? supabaseAdmin : supabase;
-    if (client) {
-      let query = client.from('users').select('*').eq('is_active', true);
-      if (isEmail) {
-        query = query.ilike('email', inputLower);
-      } else if (cleanPhone) {
-        query = query.or(`phone.ilike.%${cleanPhone}%,email.ilike.${inputLower}`);
-      } else {
-        query = query.ilike('email', inputLower);
-      }
-
-      const { data, error } = await query.limit(1);
-      if (!error && data && data.length > 0) {
-        const u = data[0];
-        const isMatch = await verifyPassword(password, u.password_hash);
-        if (isMatch) {
-          matchedUser = {
-            id: u.id,
-            email: u.email,
-            phone: u.phone,
-            fullName: u.full_name || u.name || 'Staff User',
-            role: (u.role || (u.is_super_admin ? 'SUPER_ADMIN' : 'SALES_OFFICER')) as UserRole,
-            isSuperAdmin: !!u.is_super_admin,
-            dutyStatus: u.duty_status || 'ONLINE',
-            assignedBrands: u.assigned_brands || ['ALL'],
-            territory: u.territory || u.assigned_territory,
-            reportsToId: u.reports_to_id,
-            permissions: u.permissions || {},
-            customPermissions: u.custom_permissions || {},
-            active: u.is_active !== false,
-            calendarPreference: u.calendar_preference || 'BS',
-          };
-
-          // Update last_login_at in background
-          client.from('users').update({ last_login_at: new Date().toISOString() }).eq('id', u.id).then();
-        } else {
-          return { success: false, error: 'Incorrect password. Please verify your password.' };
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Supabase auth attempt error, evaluating local state:', err);
-  }
-
-  // 2. Fallback to local DB service if not resolved yet
-  if (!matchedUser) {
-    const dbUsers = db.getUsers() || [];
-    const localMatch = dbUsers.find((u) => {
-      if (isEmail && u.email && u.email.toLowerCase() === inputLower) return true;
-      const userCleanPhone = normalizePhoneNumber(u.phone);
-      if (cleanPhone && userCleanPhone && (userCleanPhone === cleanPhone || userCleanPhone.endsWith(cleanPhone))) return true;
-      if (inputLower === 'devansh' && u.id === 'user_devansh') return true;
-      return false;
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, password }),
     });
-
-    if (localMatch) {
-      const isMatch = await verifyPassword(password, localMatch.password);
-      if (isMatch) {
-        matchedUser = localMatch;
-      } else {
-        return { success: false, error: 'Incorrect password.' };
-      }
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.user) {
+      return {
+        success: false,
+        error: result?.error || 'Sign-in is temporarily unavailable. Please try again.',
+      };
     }
-  }
 
-  // 3. Fallback for initial Super Admin seeding
-  if (!matchedUser) {
-    const isSuperAdminEmail = inputLower === 'devansh@brandbucket.com' || inputLower === 'devansh' || cleanPhone === '9801234567';
-    if (isSuperAdminEmail) {
-      const isMatch = await verifyPassword(password, 'BrandBucket@2083');
-      if (isMatch) {
-        matchedUser = {
-          id: 'user_devansh',
-          email: 'devansh@brandbucket.com',
-          phone: '+977-9801234567',
-          fullName: 'Devansh Agarwal',
-          role: 'SUPER_ADMIN',
-          isSuperAdmin: true,
-          active: true,
-          dutyStatus: 'ONLINE',
-          assignedBrands: ['ALL'],
-          territory: 'ALL',
-          permissions: {
-            canViewAnalytics: true,
-            canExportSheets: true,
-            canManageDispatches: true,
-            canManageCheques: true,
-            canApproveSkips: true,
-            canManageStaff: true,
-            canConfigureSettings: true,
-          },
-        };
-      } else {
-        return { success: false, error: 'Incorrect password for Super Admin account.' };
-      }
-    }
+    setAuthSession(result.user as User);
+    db.setCurrentUser(result.user.id);
+    return { success: true, user: result.user as User };
+  } catch {
+    return { success: false, error: 'Could not reach the sign-in service. Check your connection and try again.' };
   }
-
-  if (!matchedUser) {
-    return {
-      success: false,
-      error: `No active account found for "${rawInput}". Please check your email/phone or contact Super Admin.`,
-    };
-  }
-
-  if (matchedUser.active === false) {
-    return {
-      success: false,
-      error: 'This account has been deactivated. Please contact administration.',
-    };
-  }
-
-  // Persist session
-  if (typeof window !== 'undefined') {
-    setAuthSession(matchedUser);
-    db.setCurrentUser(matchedUser.id);
-  }
-
-  return { success: true, user: matchedUser };
 }
 
-/**
- * Validate session expiration (24h) and account deactivation status
- */
 export function getSessionUser(): User | null {
   if (typeof window === 'undefined') return null;
   try {
     const stored = localStorage.getItem(SESSION_KEY);
     if (!stored) return null;
 
-    let parsed: any;
-    try {
-      parsed = JSON.parse(stored);
-    } catch {
-      return null;
-    }
-    if (!parsed) return null;
-
-    const userCandidate: User | null =
-      parsed.user && typeof parsed.user === 'object' && parsed.user.id
-        ? (parsed.user as User)
-        : parsed.id
-        ? (parsed as User)
-        : null;
-
-    if (!userCandidate || !userCandidate.id) return null;
-
-    const now = Date.now();
-
-    // 1. Session expiration check (24 hours)
-    if (parsed.expiresAt && typeof parsed.expiresAt === 'number' && now > parsed.expiresAt) {
-      console.warn('Session expired after 24 hours. Requiring re-login.');
-      logout();
+    const parsed = JSON.parse(stored) as Partial<UserSessionData>;
+    const user = parsed.user;
+    if (
+      !user ||
+      typeof user !== 'object' ||
+      typeof user.id !== 'string' ||
+      !Number.isFinite(parsed.expiresAt) ||
+      (parsed.expiresAt as number) <= Date.now()
+    ) {
+      localStorage.removeItem(SESSION_KEY);
       return null;
     }
 
-    // 2. Account deactivation check against current database state
-    const currentDbUser = db.getUserById?.(userCandidate.id);
-    if (currentDbUser) {
-      if (currentDbUser.active === false) {
-        console.warn('Account has been deactivated. Invalidation triggered.');
-        logout();
-        return null;
-      }
-      return currentDbUser;
+    const currentDbUser = db.getUserById?.(user.id);
+    if (currentDbUser?.active === false) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
     }
-
-    return userCandidate;
-  } catch (e) {
-    console.warn('Failed to parse user session', e);
+    return (currentDbUser || user) as User;
+  } catch {
+    localStorage.removeItem(SESSION_KEY);
+    return null;
   }
-  return null;
 }
 
 export function logout(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(SESSION_KEY);
-    window.location.href = '/login';
-  }
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(SESSION_KEY);
+  void fetch('/api/auth/logout', { method: 'POST', keepalive: true })
+    .catch(() => undefined)
+    .finally(() => window.location.replace('/login'));
 }
 
 export function getRedirectPathForUser(user: any): string {
   if (!user) return '/login';
   if (isSuperAdmin(user)) return '/dashboard';
+  if (user?.role === 'SALES_OFFICER' && hasAccess(user, 'beat_plans')) return '/offline-sales/beat-plan';
   if (hasAccess(user, 'dashboard')) return '/dashboard';
   if (hasAccess(user, 'beat_plans')) return '/offline-sales/beat-plan';
   if (hasAccess(user, 'orderflow')) return '/orderflow/manual-entry';
@@ -295,11 +104,17 @@ export function getRedirectPathForUser(user: any): string {
   if (hasAccess(user, 'products')) return '/products';
   if (hasAccess(user, 'tasks')) return '/opscore/tasks';
   if (hasAccess(user, 'cheque_tracker')) return '/offline-sales/cheques';
-
-  // Fallback if permissions aren't set
-  if (user?.role === 'SALES_OFFICER') return '/offline-sales/beat-plan';
-  if (user?.role === 'DATA_ENTRY') return '/orderflow/manual-entry';
-  return '/dashboard';
+  if (hasAccess(user, 'gps_tracking')) return '/offline-sales/live-tracking';
+  if (hasAccess(user, 'settings')) return '/settings';
+  if (hasAccess(user, 'activity')) return '/opscore/activity';
+  if (hasAccess(user, 'customers')) return '/customers';
+  if (hasAccess(user, 'marketing')) return '/marketing/influencers';
+  if (hasAccess(user, 'reviews')) return '/reviews/feedback';
+  if (hasAccess(user, 'dispatches')) return '/offline-sales/dispatch';
+  if (hasAccess(user, 'shelf_photos')) return '/offline-sales/shelf-photos';
+  if (hasAccess(user, 'call_tracker')) return '/offline-sales/calls';
+  if (hasAccess(user, 'document_handover')) return '/offline-sales/documents';
+  return '/no-access';
 }
 
 export function getRedirectPathForRole(role?: any, user?: any): string {

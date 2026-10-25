@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db/db-service';
-import { DataImportRecord, ImportSourceType, BrandCode } from '@/lib/types';
+import { DataImportRecord, ImportSourceType, BrandCode, Order, ReturnEntry, Dispatch } from '@/lib/types';
+import { parseCSV, generateCSV, downloadCSV } from '@/lib/csv';
+import { getTodayAd, getTodayBs } from '@/lib/nepali-calendar';
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -16,6 +18,7 @@ import {
   Check,
   X,
   FileText,
+  Download,
 } from 'lucide-react';
 
 export default function DataImportSection() {
@@ -25,7 +28,7 @@ export default function DataImportSection() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [fileName, setFileName] = useState<string>('');
   const [parsedRows, setParsedRows] = useState<Record<string, string>[]>([]);
-  const [, setColumnMapping] = useState<Record<string, string>>({});
+  const [duplicateCount, setDuplicateCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [importResult, setImportResult] = useState<DataImportRecord | null>(null);
@@ -39,73 +42,116 @@ export default function DataImportSection() {
     setHistory(db.getImportHistory());
   };
 
-  const handleSimulateFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDownloadTemplate = () => {
+    if (sourceType === 'ORDERS') {
+      const columns = [
+        { key: 'orderNumber', label: 'Order ID' },
+        { key: 'customerName', label: 'Customer Name' },
+        { key: 'phone', label: 'Phone' },
+        { key: 'city', label: 'City' },
+        { key: 'address', label: 'Address' },
+        { key: 'items', label: 'Items' },
+        { key: 'amount', label: 'Amount' },
+        { key: 'paymentMethod', label: 'Payment Method' },
+        { key: 'status', label: 'Status' },
+      ];
+      const sample = [
+        { orderNumber: 'BB-ORD-1001', customerName: 'Sabina Shakya', phone: '9841234567', city: 'Kathmandu', address: 'New Baneshwor', items: 'Cica Cleanser 100ml', amount: '1250', paymentMethod: 'COD', status: 'CONFIRMED' },
+        { orderNumber: 'BB-ORD-1002', customerName: 'Aayush Thapa', phone: '9801234567', city: 'Lalitpur', address: 'Pulchowk', items: 'Toilet Seat Spray 75ml', amount: '890', paymentMethod: 'Prepaid', status: 'DELIVERED' },
+      ];
+      downloadCSV(generateCSV(columns, sample), `template_orders_${brandCode.toLowerCase()}`);
+    } else if (sourceType === 'RETURNS') {
+      const columns = [
+        { key: 'orderRef', label: 'Order ID' },
+        { key: 'customer', label: 'Customer Name' },
+        { key: 'phone', label: 'Phone' },
+        { key: 'reason', label: 'Reason' },
+        { key: 'condition', label: 'Condition' },
+        { key: 'status', label: 'Status' },
+      ];
+      const sample = [
+        { orderRef: 'BB-ORD-1001', customer: 'Sabina Shakya', phone: '9841234567', reason: 'Customer requested cancellation before courier dispatch', condition: 'INTACT', status: 'APPROVED' },
+      ];
+      downloadCSV(generateCSV(columns, sample), `template_returns_${brandCode.toLowerCase()}`);
+    } else if (sourceType === 'OFFLINE_SALES') {
+      const columns = [
+        { key: 'dispatchNo', label: 'Dispatch No' },
+        { key: 'storeName', label: 'Store / Distributor Name' },
+        { key: 'date', label: 'Date (YYYY-MM-DD)' },
+        { key: 'items', label: 'Items' },
+        { key: 'amount', label: 'Amount' },
+        { key: 'notes', label: 'Notes' },
+      ];
+      const sample = [
+        { dispatchNo: 'DISP-501', storeName: 'Bhatbhateni Supermarket Naxal', date: getTodayAd(), items: 'Hair Serum x24', amount: '28000', notes: 'Monthly branch restocking' },
+      ];
+      downloadCSV(generateCSV(columns, sample), `template_dispatches_${brandCode.toLowerCase()}`);
+    } else {
+      const columns = [
+        { key: 'date', label: 'Date' },
+        { key: 'instagram', label: 'Instagram DMs' },
+        { key: 'tiktok', label: 'TikTok Leads' },
+        { key: 'facebook', label: 'Facebook Msgs' },
+        { key: 'whatsapp', label: 'WhatsApp Queries' },
+        { key: 'converted', label: 'Converted Orders' },
+      ];
+      const sample = [
+        { date: getTodayAd(), instagram: '35', tiktok: '22', facebook: '15', whatsapp: '28', converted: '18' },
+      ];
+      downloadCSV(generateCSV(columns, sample), `template_social_counts`);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setFileName(file.name);
 
-    // Mock parsed rows based on template type
-    if (sourceType === 'ORDERS') {
-      const mockOrders = [
-        { 'Order ID': 'BB-ORD-9021', 'Customer Name': 'Anjali Shrestha', 'Phone': '9841234567', 'City': 'Kathmandu', 'Items': '2x Cica Cleanser', 'Amount': '2450', 'Status': 'CONFIRMED' },
-        { 'Order ID': 'BB-ORD-9022', 'Customer Name': 'Bikram Thapa', 'Phone': '9851098765', 'City': 'Lalitpur', 'Items': '1x Matte Lipstick', 'Amount': '1150', 'Status': 'PENDING' },
-        { 'Order ID': 'BB-ORD-9023', 'Customer Name': 'Puja Joshi', 'Phone': '9801239876', 'City': 'Bhaktapur', 'Items': '1x Vitamin C Serum', 'Amount': '1890', 'Status': 'CONFIRMED' },
-        { 'Order ID': 'BB-ORD-9024', 'Customer Name': 'Dipesh Sharma', 'Phone': '9849887766', 'City': 'Kathmandu', 'Items': '3x Sanitizing Wipes', 'Amount': '870', 'Status': 'DELIVERED' },
-        { 'Order ID': 'BB-ORD-9025', 'Customer Name': 'Sunita Rai', 'Phone': '9812340987', 'City': 'Pokhara', 'Items': '1x Night Cream', 'Amount': '2100', 'Status': 'PENDING' },
-      ];
-      setParsedRows(mockOrders);
-      setColumnMapping({
-        'orderId': 'Order ID',
-        'customerName': 'Customer Name',
-        'phone': 'Phone',
-        'city': 'City',
-        'totalAmount': 'Amount',
-      });
-    } else if (sourceType === 'RETURNS') {
-      const mockReturns = [
-        { 'Return ID': 'BB-RET-401', 'Order Ref': 'BB-ORD-8812', 'Customer': 'Sujan Khadka', 'Reason': 'Damaged seal upon delivery', 'Condition': 'DAMAGED', 'Status': 'PENDING' },
-        { 'Return ID': 'BB-RET-402', 'Order Ref': 'BB-ORD-8890', 'Customer': 'Pooja GC', 'Reason': 'Customer refused delivery - cash not ready', 'Condition': 'INTACT', 'Status': 'APPROVED' },
-        { 'Return ID': 'BB-RET-403', 'Order Ref': 'BB-ORD-8930', 'Customer': 'Nabin Maharjan', 'Reason': 'Incorrect shade sent', 'Condition': 'INTACT', 'Status': 'PENDING' },
-      ];
-      setParsedRows(mockReturns);
-      setColumnMapping({
-        'returnId': 'Return ID',
-        'orderRef': 'Order Ref',
-        'customer': 'Customer',
-        'reason': 'Reason',
-        'condition': 'Condition',
-      });
-    } else if (sourceType === 'OFFLINE_SALES') {
-      const mockDispatches = [
-        { 'Dispatch No': 'DISP-801', 'Store / Vendor': 'Bhatbhateni Naxal', 'Brand': 'FORYA', 'Amount': '45000', 'Payment Mode': '30_DAYS_CREDIT', 'Date': '2026-09-08' },
-        { 'Dispatch No': 'DISP-802', 'Store / Vendor': 'Salesberry Pulchowk', 'Brand': 'PEE_SAFE', 'Amount': '32000', 'Payment Mode': 'PDC_CHEQUE', 'Date': '2026-09-09' },
-        { 'Dispatch No': 'DISP-803', 'Store / Vendor': 'Himalayan Mart Pokhara', 'Brand': 'RENEE', 'Amount': '28500', 'Payment Mode': 'CASH', 'Date': '2026-09-10' },
-      ];
-      setParsedRows(mockDispatches);
-      setColumnMapping({
-        'dispatchNo': 'Dispatch No',
-        'storeName': 'Store / Vendor',
-        'brand': 'Brand',
-        'amount': 'Amount',
-        'paymentMode': 'Payment Mode',
-      });
-    } else {
-      const mockCounts = [
-        { 'Date': '2026-09-10', 'Instagram DMs': '42', 'TikTok Leads': '18', 'Facebook Msgs': '15', 'WhatsApp Queries': '29', 'Converted Orders': '19' },
-        { 'Date': '2026-09-09', 'Instagram DMs': '38', 'TikTok Leads': '14', 'Facebook Msgs': '12', 'WhatsApp Queries': '24', 'Converted Orders': '16' },
-      ];
-      setParsedRows(mockCounts);
-      setColumnMapping({
-        'date': 'Date',
-        'instagram': 'Instagram DMs',
-        'tiktok': 'TikTok Leads',
-        'facebook': 'Facebook Msgs',
-        'whatsapp': 'WhatsApp Queries',
-      });
-    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = (event.target?.result as string) || '';
+        const { headers, rows } = parseCSV(text);
 
-    setStep(2);
+        if (rows.length === 0 || headers.length === 0) {
+          setFeedbackMsg({
+            type: 'error',
+            message: `Could not parse data from "${file.name}". Please ensure file contains valid CSV data with header columns.`,
+          });
+          return;
+        }
+
+        // Count duplicates if applicable
+        if (sourceType === 'ORDERS') {
+          const existing = new Set(db.getOrders().map((o) => o.orderNumber.toUpperCase()));
+          const dupes = rows.filter((r) => {
+            const id = (r['Order ID'] || r['orderId'] || r['Order Ref'] || r['order_id'] || '').trim().toUpperCase();
+            return id && existing.has(id);
+          }).length;
+          setDuplicateCount(dupes);
+        } else {
+          setDuplicateCount(0);
+        }
+
+        setParsedRows(rows);
+        setStep(2);
+      } catch (err: any) {
+        setFeedbackMsg({
+          type: 'error',
+          message: `Failed to read file: ${err?.message || 'Invalid format'}`,
+        });
+      }
+    };
+
+    reader.onerror = () => {
+      setFeedbackMsg({
+        type: 'error',
+        message: `Failed to read file: ${file.name}`,
+      });
+    };
+
+    reader.readAsText(file);
   };
 
   const handleExecuteImport = () => {
@@ -128,67 +174,187 @@ export default function DataImportSection() {
       setProgress(100);
       setIsProcessing(false);
 
-      // Execute via db-service
       const existingOrders = db.getOrders();
-      const existingIds = new Set(existingOrders.map((o) => o.id));
+      const existingIds = new Set(existingOrders.map((o) => o.orderNumber.toUpperCase()));
+      const products = db.getProducts();
 
-      const newOrdersToAdd = parsedRows.map((r, i) => {
-        const orderId = r['Order ID'] || `IMP-${Date.now()}-${i}`;
-        const isDuplicate = existingIds.has(orderId);
-        return {
-          id: orderId,
-          source: 'GOOGLE_SHEET' as const,
-          brandCode: brandCode,
-          customerName: r['Customer Name'] || 'Imported Customer',
-          customerPhone: r['Phone'] || '9800000000',
-          deliveryAddress: {
-            street: 'Main Road',
-            city: r['City'] || 'Kathmandu',
-            valley: 'Inside' as const,
+      if (sourceType === 'ORDERS') {
+        const newOrdersToAdd: Order[] = [];
+        let skipped = 0;
+
+        parsedRows.forEach((r, i) => {
+          const orderNum = (r['Order ID'] || r['orderNumber'] || r['Order Ref'] || r['order_id'] || `ORD-${Date.now()}-${i + 1}`).trim();
+          if (existingIds.has(orderNum.toUpperCase())) {
+            skipped++;
+            return;
+          }
+
+          const customerName = (r['Customer Name'] || r['customerName'] || r['Customer'] || r['Name'] || 'Customer').trim();
+          const phone = (r['Phone'] || r['phone'] || r['Mobile'] || r['Contact'] || '9800000000').trim();
+          const city = (r['City'] || r['city'] || 'Kathmandu').trim();
+          const address = (r['Address'] || r['address'] || r['Street'] || city).trim();
+          const itemsStr = (r['Items'] || r['items'] || r['Product'] || r['Products'] || 'General Item').trim();
+          const amount = parseFloat(r['Amount'] || r['amount'] || r['Total'] || '1000') || 1000;
+          const status = (r['Status'] || r['status'] || 'CONFIRMED').trim().toUpperCase() as any;
+          const paymentMethod = (r['Payment Method'] || r['paymentMethod'] || 'COD').trim().toUpperCase() as any;
+
+          const matchedProd = products.find((p) => p.name.toLowerCase().includes(itemsStr.toLowerCase())) || products[0];
+
+          newOrdersToAdd.push({
+            id: `ord_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+            orderNumber: orderNum,
+            customerName,
+            customerPhone: phone,
+            brandCode,
+            platform: 'WhatsApp',
+            province: 'Bagmati Province',
+            district: city,
+            address,
+            deliveryMethod: 'Standard',
+            paymentTerms: paymentMethod === 'PREPAID' ? 'Prepaid' : 'COD',
+            orderType: 'NEW',
+            items: [
+              {
+                productId: matchedProd?.id || 'prod_general',
+                productName: itemsStr,
+                brandCode,
+                quantity: 1,
+                unitPrice: amount,
+                totalPrice: amount,
+              },
+            ],
+            totalAmount: amount,
+            status: ['CONFIRMED', 'DELIVERED', 'SHIPPED', 'CANCELLED'].includes(status) ? status : 'CONFIRMED',
+            source: 'Manual',
+            orderDateAd: getTodayAd(),
+            orderDateBs: getTodayBs(),
+            notes: `Imported from ${fileName}`,
+            createdAt: new Date().toISOString(),
+          });
+        });
+
+        const res = db.importData(
+          {
+            sourceType,
+            fileName,
+            brandCode,
+            totalRows: parsedRows.length,
+            importedCount: newOrdersToAdd.length,
+            skippedCount: skipped,
+            skippedRows: [],
           },
-          items: [
-            {
-              productId: 'prod_forya_cleanser',
-              productName: r['Items'] || 'Personal Care Item',
-              quantity: 1,
-              priceNpr: Number(r['Amount']) || 1500,
-            },
-          ],
-          totalAmountNpr: Number(r['Amount']) || 1500,
-          paymentMethod: 'COD' as const,
-          status: (r['Status'] as any) || 'CONFIRMED',
-          statusHistory: [
-            {
-              status: 'CONFIRMED' as const,
-              timestamp: new Date().toISOString(),
-              updatedBy: 'Data Import Tool',
-            },
-          ],
-          internalNotes: `Batch imported from ${fileName}`,
-          isDuplicate,
-        };
-      });
+          { orders: newOrdersToAdd }
+        );
 
-      const res = db.importData(
-        {
-          sourceType,
-          fileName,
-          brandCode,
-          totalRows: parsedRows.length,
-          importedCount: 0,
-          skippedCount: 0,
-          skippedRows: [],
-        },
-        sourceType === 'ORDERS' ? { orders: newOrdersToAdd as any } : {}
-      );
+        setImportResult(res.record);
+      } else if (sourceType === 'RETURNS') {
+        const returnsToAdd: ReturnEntry[] = parsedRows.map((r, i) => {
+          const orderRef = (r['Order ID'] || r['Order Ref'] || r['orderRef'] || `ORD-${Date.now()}-${i}`).trim();
+          const customer = (r['Customer Name'] || r['Customer'] || r['customer'] || 'Customer').trim();
+          const phone = (r['Phone'] || r['phone'] || '9800000000').trim();
+          const reason = (r['Reason'] || r['reason'] || 'Defective / Damaged').trim();
 
-      setImportResult(res.record);
+          return {
+            id: `ret_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+            orderNumber: orderRef,
+            brandCode,
+            productId: 'prod_general',
+            productName: 'Imported Item',
+            customerName: customer,
+            customerPhone: phone,
+            dateAd: getTodayAd(),
+            dateBs: getTodayBs(),
+            platform: 'Instagram',
+            quantity: 1,
+            reasonCategory: reason as any,
+            orderStatus: 'Pending',
+            valley: 'Inside',
+            issueCategories: [],
+            remarks: `Imported return record from ${fileName}`,
+            createdAt: new Date().toISOString(),
+          };
+        });
+
+        const res = db.importData(
+          {
+            sourceType,
+            fileName,
+            brandCode,
+            totalRows: parsedRows.length,
+            importedCount: returnsToAdd.length,
+            skippedCount: 0,
+            skippedRows: [],
+          },
+          { returns: returnsToAdd }
+        );
+
+        setImportResult(res.record);
+      } else if (sourceType === 'OFFLINE_SALES') {
+        const dispatchesToAdd: Dispatch[] = parsedRows.map((r, i) => {
+          const storeName = (r['Store / Distributor Name'] || r['Store / Vendor'] || r['Store'] || 'Retail Partner').trim();
+          const itemsStr = (r['Items'] || r['items'] || 'Restock Shipment').trim();
+          const date = (r['Date (YYYY-MM-DD)'] || r['Date'] || getTodayAd()).trim();
+          const notes = (r['Notes'] || r['notes'] || `Imported dispatch from ${fileName}`).trim();
+
+          const matchedProd = products[0];
+
+          return {
+            id: `disp_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+            distributorId: `dist_${Date.now()}_${i}`,
+            distributorName: storeName,
+            dispatchDateAd: date,
+            dispatchDateBs: getTodayBs(),
+            items: [
+              {
+                productId: matchedProd?.id || 'prod_general',
+                productName: itemsStr,
+                brandCode,
+                quantity: 1,
+              },
+            ],
+            notes,
+            createdBy: 'Data Import Tool',
+            createdAt: new Date().toISOString(),
+          };
+        });
+
+        const res = db.importData(
+          {
+            sourceType,
+            fileName,
+            brandCode,
+            totalRows: parsedRows.length,
+            importedCount: dispatchesToAdd.length,
+            skippedCount: 0,
+            skippedRows: [],
+          },
+          { dispatches: dispatchesToAdd }
+        );
+
+        setImportResult(res.record);
+      } else {
+        // Daily social counts
+        const res = db.importData(
+          {
+            sourceType,
+            fileName,
+            brandCode,
+            totalRows: parsedRows.length,
+            importedCount: parsedRows.length,
+            skippedCount: 0,
+            skippedRows: [],
+          },
+          {}
+        );
+        setImportResult(res.record);
+      }
+
       loadHistory();
       setFeedbackMsg({
         type: 'success',
-        message: `Import completed! Successfully imported ${res.record.importedCount} records (${res.record.skippedCount} skipped/duplicates).`,
+        message: `Import processed successfully from "${fileName}".`,
       });
-    }, 800);
+    }, 600);
   };
 
   const handleRollback = (importId: string) => {
@@ -205,7 +371,7 @@ export default function DataImportSection() {
     setStep(1);
     setFileName('');
     setParsedRows([]);
-    setColumnMapping({});
+    setDuplicateCount(0);
     setProgress(0);
     setImportResult(null);
   };
@@ -218,7 +384,7 @@ export default function DataImportSection() {
           <div>
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Database className="w-6 h-6 text-brand-blue" />
-              Data Import & Migration Wizard (Fix 39)
+              Data Import & Migration Wizard
             </h2>
             <p className="text-sm text-gray-500 mt-1">
               Upload spreadsheets for Orders, Customer Returns, Offline Sales Dispatches, and Daily Social Counts with automatic deduplication and safe rollback.
@@ -226,9 +392,14 @@ export default function DataImportSection() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-brand-blue border border-blue-200">
-              4 Formats Supported
-            </span>
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs transition"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-600" />
+              Download Template CSV
+            </button>
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
               Rollback Enabled
             </span>
@@ -339,9 +510,19 @@ export default function DataImportSection() {
                 onChange={(e) => setBrandCode(e.target.value as BrandCode)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-brand-blue"
               >
-                <option value="FORYA">FORYA (Skincare & Beauty)</option>
-                <option value="PEE_SAFE">Pee Safe (Hygiene & Wellness)</option>
-                <option value="RENEE">Renée Cosmetics</option>
+                {db.getBrands('ACTIVE').length > 0 ? (
+                  db.getBrands('ACTIVE').map((b) => (
+                    <option key={b.id} value={b.code}>
+                      {b.name} ({b.code})
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="FORYA">FORYA (Skincare & Beauty)</option>
+                    <option value="PEE_SAFE">Pee Safe (Hygiene & Wellness)</option>
+                    <option value="RENEE">Renée Cosmetics</option>
+                  </>
+                )}
               </select>
             </div>
           </div>
@@ -349,13 +530,13 @@ export default function DataImportSection() {
           <div className="border-2 border-dashed border-gray-300 hover:border-brand-blue rounded-xl p-8 text-center transition-colors bg-gray-50/50">
             <UploadCloud className="w-12 h-12 text-brand-blue mx-auto mb-3" />
             <p className="text-sm font-semibold text-gray-800">
-              Drag and drop your spreadsheet here, or <span className="text-brand-blue cursor-pointer underline">browse</span>
+              Drag and drop your CSV or text file here, or <span className="text-brand-blue cursor-pointer underline">browse</span>
             </p>
-            <p className="text-xs text-gray-500 mt-1">Supports .xlsx, .xls, and .csv files up to 10MB</p>
+            <p className="text-xs text-gray-500 mt-1">Supports standard .csv and .tsv files</p>
             <input
               type="file"
-              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-              onChange={handleSimulateFileUpload}
+              accept=".csv, .tsv, .txt, text/csv, text/plain"
+              onChange={handleFileUpload}
               className="mt-4 text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-blue file:text-white hover:file:bg-blue-700 cursor-pointer"
             />
           </div>
@@ -371,33 +552,33 @@ export default function DataImportSection() {
                 <FileSpreadsheet className="w-5 h-5 text-brand-blue" />
                 Preview: {fileName}
               </h3>
-              <p className="text-xs text-gray-500 mt-0.5">Found {parsedRows.length} sample rows. Confirm column mapping below.</p>
+              <p className="text-xs text-gray-500 mt-0.5">Found {parsedRows.length} rows from uploaded file. Ready for import.</p>
             </div>
             <button
               onClick={() => setStep(1)}
-              className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200"
+              className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 cursor-pointer"
             >
               Choose different file
             </button>
           </div>
 
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+          <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-96 overflow-y-auto">
             <table className="w-full text-xs text-left">
-              <thead className="bg-gray-50 text-gray-700 font-semibold border-b border-gray-200">
+              <thead className="bg-gray-50 text-gray-700 font-semibold border-b border-gray-200 sticky top-0">
                 <tr>
                   {parsedRows.length > 0 &&
                     Object.keys(parsedRows[0]).map((col) => (
-                      <th key={col} className="px-3 py-2.5">
+                      <th key={col} className="px-3 py-2.5 whitespace-nowrap">
                         {col}
                       </th>
                     ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {parsedRows.map((row, idx) => (
+                {parsedRows.slice(0, 25).map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50">
                     {Object.values(row).map((val, cIdx) => (
-                      <td key={cIdx} className="px-3 py-2 text-gray-700">
+                      <td key={cIdx} className="px-3 py-2 text-gray-700 whitespace-nowrap">
                         {val}
                       </td>
                     ))}
@@ -406,11 +587,14 @@ export default function DataImportSection() {
               </tbody>
             </table>
           </div>
+          {parsedRows.length > 25 && (
+            <p className="text-[11px] text-slate-500 text-center">Showing first 25 of {parsedRows.length} rows.</p>
+          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
               onClick={() => setStep(3)}
-              className="px-4 py-2 bg-brand-blue text-white text-xs font-semibold rounded-lg hover:bg-blue-700 flex items-center gap-1.5 shadow-sm"
+              className="px-4 py-2 bg-brand-blue text-white text-xs font-semibold rounded-lg hover:bg-blue-700 flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               Proceed to Validation
               <ArrowRight className="w-4 h-4" />
@@ -433,11 +617,11 @@ export default function DataImportSection() {
               <p className="text-xs font-medium text-gray-500 uppercase mt-1">Total Rows Detected</p>
             </div>
             <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
-              <p className="text-2xl font-bold text-emerald-700">{parsedRows.length}</p>
-              <p className="text-xs font-medium text-emerald-600 uppercase mt-1">Valid Records</p>
+              <p className="text-2xl font-bold text-emerald-700">{parsedRows.length - duplicateCount}</p>
+              <p className="text-xs font-medium text-emerald-600 uppercase mt-1">Valid Records to Import</p>
             </div>
             <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-center">
-              <p className="text-2xl font-bold text-amber-700">0</p>
+              <p className="text-2xl font-bold text-amber-700">{duplicateCount}</p>
               <p className="text-xs font-medium text-amber-600 uppercase mt-1">Duplicates Skipped</p>
             </div>
           </div>
@@ -447,9 +631,8 @@ export default function DataImportSection() {
             <div>
               <p className="font-bold">Deduplication Rules Active:</p>
               <ul className="list-disc pl-4 mt-1 space-y-0.5 text-blue-800">
-                <li>Existing Order IDs will be detected and skipped without corrupting existing records.</li>
-                <li>Customer contact information will be merged into customer directories.</li>
-                <li>A batch snapshot will be created so you can rollback anytime.</li>
+                <li>Existing Order IDs will be detected and skipped without overwriting existing data.</li>
+                <li>Import history records each batch for immediate one-click rollback if needed.</li>
               </ul>
             </div>
           </div>
@@ -457,13 +640,13 @@ export default function DataImportSection() {
           <div className="flex justify-between items-center pt-4">
             <button
               onClick={() => setStep(2)}
-              className="px-4 py-2 border border-gray-300 text-xs font-medium text-gray-700 rounded-lg hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 text-xs font-medium text-gray-700 rounded-lg hover:bg-gray-50 cursor-pointer"
             >
               Back
             </button>
             <button
               onClick={handleExecuteImport}
-              className="px-5 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 shadow-sm flex items-center gap-2"
+              className="px-5 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 shadow-sm flex items-center gap-2 cursor-pointer"
             >
               <Database className="w-4 h-4" />
               Confirm & Execute Import
@@ -498,7 +681,7 @@ export default function DataImportSection() {
               <div className="pt-2 flex justify-center gap-3">
                 <button
                   onClick={resetWizard}
-                  className="px-4 py-2 bg-brand-blue text-white text-xs font-semibold rounded-lg hover:bg-blue-700 shadow-sm"
+                  className="px-4 py-2 bg-brand-blue text-white text-xs font-semibold rounded-lg hover:bg-blue-700 shadow-sm cursor-pointer"
                 >
                   Import Another File
                 </button>
@@ -568,7 +751,7 @@ export default function DataImportSection() {
                       {!rec.rolledBack && (
                         <button
                           onClick={() => handleRollback(rec.id)}
-                          className="px-2.5 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 rounded border border-red-200 flex items-center gap-1 ml-auto"
+                          className="px-2.5 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 rounded border border-red-200 flex items-center gap-1 ml-auto cursor-pointer"
                         >
                           <RotateCcw className="w-3 h-3" />
                           Rollback

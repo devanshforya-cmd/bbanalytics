@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-guard';
+import { requireFeatureAccess } from '@/lib/auth-guard';
 import { db } from '@/lib/db/db-service';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN', 'ADMIN']);
+  const auth = await requireFeatureAccess(request, 'settings', 'VIEW');
   if (auth.response) return auth.response;
 
   const brands = db.getBrands();
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN']);
+  const auth = await requireFeatureAccess(request, 'settings', 'EDIT');
   if (auth.response) return auth.response;
 
   try {

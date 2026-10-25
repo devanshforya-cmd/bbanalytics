@@ -127,8 +127,8 @@ export default function ShelfPhotosPage() {
     db.addShelfPhoto({
       storeId: ret?.id || `custom_${Date.now()}`,
       storeName: uploadStoreName,
-      officerId: currentUser.id || 'usr_so1',
-      officerName: currentUser.fullName || 'Rohan Shrestha',
+      officerId: currentUser.id,
+      officerName: currentUser.fullName || 'Field Officer',
       rackSection: uploadSection,
       beforePhotoUrls: uploadBeforeUrls,
       afterPhotoUrls: uploadAfterUrls,

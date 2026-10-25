@@ -9,6 +9,7 @@ interface CheckOutSummaryProps {
   targetBeat: BeatItem | null;
   checkInTime: string;
   completedActions: Set<string>;
+  hasNextStop: boolean;
   onProceedNextStore: () => void;
   onClose: () => void;
 }
@@ -18,6 +19,7 @@ export default function CheckOutSummary({
   targetBeat,
   checkInTime,
   completedActions,
+  hasNextStop,
   onProceedNextStore,
   onClose,
 }: CheckOutSummaryProps) {
@@ -28,10 +30,17 @@ export default function CheckOutSummary({
     SHELF_PHOTOS: 'Before & After Merchandising Photos uploaded',
     COLLECT_CHEQUE: 'Physical payment cheque collected',
     SECONDARY_ORDER: 'Secondary retailer order queued',
-    FACING_AUDIT: 'Shelf share & facing audit saved',
   };
 
-  const actionKeys = ['STOCK_COUNT', 'SHELF_PHOTOS', 'COLLECT_CHEQUE', 'SECONDARY_ORDER', 'FACING_AUDIT'];
+  const actionKeys = ['STOCK_COUNT', 'SHELF_PHOTOS', 'COLLECT_CHEQUE', 'SECONDARY_ORDER'];
+  const checkInMs = targetBeat.checkedInAt ? new Date(targetBeat.checkedInAt).getTime() : NaN;
+  const checkOutMs = targetBeat.checkedOutAt ? new Date(targetBeat.checkedOutAt).getTime() : Date.now();
+  const durationMinutes = Number.isFinite(checkInMs) ? Math.max(0, Math.round((checkOutMs - checkInMs) / 60000)) : null;
+  const durationLabel = durationMinutes === null
+    ? '—'
+    : durationMinutes < 1
+    ? 'Less than 1 minute'
+    : `${durationMinutes} minute${durationMinutes === 1 ? '' : 's'}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
@@ -62,7 +71,7 @@ export default function CheckOutSummary({
             </div>
             <div>
               <div className="text-[10px] text-slate-400 font-bold uppercase">Time on Site</div>
-              <div className="text-slate-900 font-bold mt-0.5">28 minutes</div>
+              <div className="text-slate-900 font-bold mt-0.5">{durationLabel}</div>
             </div>
           </div>
 
@@ -99,15 +108,15 @@ export default function CheckOutSummary({
             type="button"
             onClick={onClose}
             className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white font-semibold text-slate-700 hover:bg-slate-50 text-xs transition"
-          >
-            Stay in Store
+            >
+              Return to Beat Plan
           </button>
           <button
             type="button"
             onClick={onProceedNextStore}
             className="flex-1 flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition"
           >
-            <span>Proceed to Next Stop</span>
+            <span>{hasNextStop ? 'Proceed to Next Stop' : 'Finish Route'}</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>

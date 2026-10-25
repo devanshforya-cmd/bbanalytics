@@ -29,6 +29,7 @@ export default function StoreNetworkOverviewSection() {
     return stores.map((s) => {
       const score = healthScores[s.id] || db.getStoreHealthScore(s.id);
       const storeOrders = db.getSecondaryOrders().filter((o) => o.entityId === s.id);
+      const storeCheques = db.getCheques().filter((cheque) => cheque.entityId === s.id);
       const realUnits = storeOrders.reduce((sum, o) => sum + (o.totalUnits || 0), 0);
       const reorderDays = storeOrders.length > 1 ? Math.round(30 / storeOrders.length) : (s as any).reorderFrequencyDays || 0;
       return {
@@ -36,6 +37,7 @@ export default function StoreNetworkOverviewSection() {
         score,
         unitsMoved: (s as any).monthlyUnitsMoved !== undefined ? (s as any).monthlyUnitsMoved : realUnits,
         reorderFreqDays: reorderDays,
+        hasPaymentHistory: storeCheques.length > 0,
       };
     });
   }, [stores, healthScores]);
@@ -277,7 +279,9 @@ export default function StoreNetworkOverviewSection() {
                       {store.unitsMoved} pcs
                     </td>
                     <td className="py-3.5 px-3 text-slate-600">
-                      {store.score.paymentDiscipline >= 20 ? (
+                      {!store.hasPaymentHistory ? (
+                        <span className="text-slate-400">No payment history</span>
+                      ) : store.score.paymentDiscipline >= 20 ? (
                         <span className="text-emerald-700 font-medium">✓ 100% On-Time</span>
                       ) : store.score.paymentDiscipline >= 10 ? (
                         <span className="text-amber-700 font-medium">⚠️ Minor Delay</span>

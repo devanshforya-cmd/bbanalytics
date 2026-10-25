@@ -32,6 +32,13 @@ type ViewMode = 'FLAT' | 'BY_DAY' | 'BY_USER';
 // Action Color Mapping per PRD Part 4.7
 type ActionCategory = 'GREEN' | 'BLUE' | 'AMBER' | 'RED';
 
+function toLocalDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function getActionCategory(action: string): ActionCategory {
   const upper = action.toUpperCase();
 
@@ -176,11 +183,19 @@ export default function ActivityTrailPage() {
         return false;
 
       // Date preset filter
-      const logDate = log.createdAt ? log.createdAt.substring(0, 10) : '';
-      if (selectedDateFilter === 'TODAY' && logDate !== '2026-09-08') return false;
-      if (selectedDateFilter === 'YESTERDAY' && logDate !== '2026-09-07') return false;
+      const logDate = log.createdAt ? toLocalDateKey(new Date(log.createdAt)) : '';
+      const today = new Date();
+      const todayKey = toLocalDateKey(today);
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayKey = toLocalDateKey(yesterday);
+      const weekStart = new Date(today);
+      weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+      const weekStartKey = toLocalDateKey(weekStart);
+      if (selectedDateFilter === 'TODAY' && logDate !== todayKey) return false;
+      if (selectedDateFilter === 'YESTERDAY' && logDate !== yesterdayKey) return false;
       if (selectedDateFilter === 'THIS_WEEK') {
-        if (logDate < '2026-09-02' || logDate > '2026-09-08') return false;
+        if (logDate < weekStartKey || logDate > todayKey) return false;
       }
       if (selectedDateFilter === 'CUSTOM') {
         if (customStartDate && logDate < customStartDate) return false;
@@ -218,7 +233,7 @@ export default function ActivityTrailPage() {
   const logsGroupedByDay = useMemo(() => {
     const groups: Record<string, { bsDate: string; items: ActivityLog[] }> = {};
     filteredLogs.forEach((log) => {
-      const dateKey = log.createdAt ? log.createdAt.substring(0, 10) : '2026-09-08';
+      const dateKey = log.createdAt ? toLocalDateKey(new Date(log.createdAt)) : 'unknown';
       if (!groups[dateKey]) {
         const bsFormatted = formatBsDateOnly(new Date(log.createdAt));
         groups[dateKey] = {
@@ -440,9 +455,9 @@ export default function ActivityTrailPage() {
               className="w-full rounded-xl border border-slate-200 bg-slate-50/60 p-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
             >
               <option value="ALL">All Time History</option>
-              <option value="TODAY">Today (Bhadra 23, 2083 / Sep 8)</option>
-              <option value="YESTERDAY">Yesterday (Bhadra 22, 2083 / Sep 7)</option>
-              <option value="THIS_WEEK">This Week (Bhadra 18 - 24)</option>
+              <option value="TODAY">Today</option>
+              <option value="YESTERDAY">Yesterday</option>
+              <option value="THIS_WEEK">This Week</option>
               <option value="CUSTOM">Custom Date Range (BS/AD)</option>
             </select>
           </div>

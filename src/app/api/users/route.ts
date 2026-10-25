@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-guard';
+import { requireFeatureAccess } from '@/lib/auth-guard';
 import { db } from '@/lib/db/db-service';
-import { hashPassword } from '@/lib/auth';
+import { hashPassword } from '@/lib/password-utils';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN', 'ADMIN']);
+  const auth = await requireFeatureAccess(request, 'settings', 'VIEW');
   if (auth.response) return auth.response;
 
   const users = db.getUsers();
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   // Only SUPER_ADMIN can create/modify users
-  const auth = await requireAuth(request, ['SUPER_ADMIN']);
+  const auth = await requireFeatureAccess(request, 'settings', 'CREATE');
   if (auth.response) return auth.response;
 
   try {
