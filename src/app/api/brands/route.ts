@@ -140,7 +140,7 @@ export async function POST(request: Request) {
       category: body.category || null,
       principal_company: body.principalCompany || null,
       logo_url: body.logoUrl || null,
-      active: body.isActive !== false,
+      is_active: body.isActive !== false,
       updated_at: new Date().toISOString(),
     };
 
@@ -174,10 +174,10 @@ export async function POST(request: Request) {
 
     const candidates: Record<string, unknown>[] = [
       fullBrand,
-      { code, name, logo_url: body.logoUrl || null, active: body.isActive !== false },
       { code, name, logo_url: body.logoUrl || null, is_active: body.isActive !== false },
-      { code, name, active: body.isActive !== false },
+      { code, name, logo_url: body.logoUrl || null, active: body.isActive !== false },
       { code, name, is_active: body.isActive !== false },
+      { code, name, active: body.isActive !== false },
       { code, name },
     ];
     let saved: any = null;
@@ -223,15 +223,22 @@ export async function PATCH(request: Request) {
     if (body.category !== undefined) updates.category = body.category || null;
     if (body.principalCompany !== undefined) updates.principal_company = body.principalCompany || null;
     if (body.logoUrl !== undefined) updates.logo_url = body.logoUrl || null;
-    if (body.isActive !== undefined) updates.active = body.isActive;
+    if (body.isActive !== undefined) updates.is_active = body.isActive;
     let { data, error } = await supabaseAdmin.from('brands').update(updates).eq('id', body.id).select('*').maybeSingle();
     if (error && isMissingColumn(error)) {
       const legacyUpdates = Object.fromEntries(
-        Object.entries(updates).filter(([key]) => ['name', 'code', 'logo_url', 'active'].includes(key))
+        Object.entries(updates).filter(([key]) => ['name', 'code', 'logo_url', 'is_active'].includes(key))
       );
       if (Object.keys(legacyUpdates).length > 0) {
         ({ data, error } = await supabaseAdmin.from('brands').update(legacyUpdates).eq('id', body.id).select('*').maybeSingle());
       }
+    }
+    if (error && isMissingColumn(error) && body.isActive !== undefined) {
+      const legacyUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([key]) => ['name', 'code', 'logo_url'].includes(key))
+      );
+      legacyUpdates.active = body.isActive;
+      ({ data, error } = await supabaseAdmin.from('brands').update(legacyUpdates).eq('id', body.id).select('*').maybeSingle());
     }
     if (error || !data) return NextResponse.json({ success: false, error: 'Brand could not be updated.' }, { status: error ? 400 : 404 });
     return NextResponse.json({ success: true, data: mapBrand(data) });
