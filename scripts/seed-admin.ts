@@ -2,6 +2,9 @@
 
 import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
+import { loadEnvConfig } from '@next/env';
+
+loadEnvConfig(process.cwd());
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -11,6 +14,9 @@ async function seedSuperAdmin() {
   if (!supabaseUrl || !serviceRoleKey || !initialPassword) {
     throw new Error('Set NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and INITIAL_ADMIN_PASSWORD before seeding.');
   }
+  if (Buffer.byteLength(initialPassword) < 16) {
+    throw new Error('INITIAL_ADMIN_PASSWORD must be at least 16 bytes.');
+  }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
   const { error } = await supabase.from('users').upsert(
@@ -19,9 +25,10 @@ async function seedSuperAdmin() {
       phone: '9800000001',
       full_name: 'Devansh Agarwal',
       role: 'SUPER_ADMIN',
+      is_super_admin: true,
       password_hash: await bcrypt.hash(initialPassword, 12),
-      assigned_brands: ['FORYA', 'PEE_SAFE', 'FURR', 'RENEE'],
-      active: true,
+      assigned_brands: ['ALL'],
+      is_active: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
