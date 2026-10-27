@@ -566,6 +566,7 @@ export default function ShelfPhotosPage() {
               {/* Before Photos Section */}
               <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200">
                 <CameraCapture
+                folder="shelf_photos"
                   label="Before Arrangement Photos"
                   sublabel="Capture or browse shelf arrangement photos before audit / restock"
                   maxFiles={6}
@@ -580,6 +581,7 @@ export default function ShelfPhotosPage() {
               {/* After Photos Section */}
               <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
                 <CameraCapture
+                folder="shelf_photos"
                   label="After Arrangement Photos"
                   sublabel="Capture or browse aligned shelf photos after planogram restock"
                   maxFiles={6}

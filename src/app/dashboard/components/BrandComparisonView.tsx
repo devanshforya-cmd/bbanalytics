@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import {
@@ -48,7 +48,7 @@ export default function BrandComparisonView({
   products,
 }: BrandComparisonViewProps) {
   // Get deduplicated list of unique brands by code
-  const allBrands: Brand[] = useMemo(() => {
+  const allBrands: Brand[] = (() => {
     const raw = db.getBrands();
     const map = new Map<string, Brand>();
     for (const b of raw) {
@@ -58,10 +58,11 @@ export default function BrandComparisonView({
       }
     }
     return Array.from(map.values());
-  }, []);
+  })();
 
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-  const [selectedBrands, setSelectedBrands] = useState<string[]>(() => allBrands.map((b) => b.code));
+  const [brandSelection, setSelectedBrands] = useState<string[] | null>(null);
+  const selectedBrands = brandSelection ?? allBrands.slice(0, 4).map((b) => b.code);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Compute metrics for every brand dynamically

@@ -19,7 +19,8 @@ export interface UserSessionData {
 export function setAuthSession(user: User): void {
   if (typeof window === 'undefined') return;
   const now = Date.now();
-  const { password: _password, ...safeUser } = user;
+  const { password: _password, passwordHash: _hash, ...safeUser } = user;
+  delete (safeUser as any).password_hash;
   const sessionData: UserSessionData = {
     user: safeUser,
     createdAt: now,
@@ -47,7 +48,7 @@ export async function loginWithMobile(
     }
 
     setAuthSession(result.user as User);
-    db.setCurrentUser(result.user.id);
+    db.setSessionUser(result.user as User);
     return { success: true, user: result.user as User };
   } catch {
     return { success: false, error: 'Could not reach the sign-in service. Check your connection and try again.' };
@@ -88,6 +89,7 @@ export function getSessionUser(): User | null {
 export function logout(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(SESSION_KEY);
+  db.setSessionUser(null);
   void fetch('/api/auth/logout', { method: 'POST', keepalive: true })
     .catch(() => undefined)
     .finally(() => window.location.replace('/login'));

@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db/db-service';
+import { openSystemWorkspace } from '@/lib/db/server-workspace';
+import { apiFailure } from '../../_workspace';
 import { requireCronAuth } from '@/lib/cron-auth';
+import { createHash } from 'node:crypto';
+import { supabaseAdmin } from '@/lib/db/supabase-server';
+import { isSuperAdmin } from '@/lib/permissions';
+import { thresholdAlerts } from '@/lib/alert-rules';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,10 +20,10 @@ export async function GET(request: Request) {
   if (authError) return authError;
 
   const url = new URL(request.url);
-  const forceBackup = url.searchParams.get('backup') === 'true';
   const forceReport = url.searchParams.get('report') === 'true';
 
   try {
+    const { db } = await openSystemWorkspace();
     const now = new Date();
     const isFriday = now.getDay() === 5; // 5 = Friday
 
@@ -28,7 +33,6 @@ export async function GET(request: Request) {
     const cheques = db.getCheques();
     const feedback = db.getFeedback();
     const customers = db.getCustomers();
-    const tasks = db.getTasks();
 
     const redAlerts: string[] = [];
     const amberAlerts: string[] = [];
@@ -58,6 +62,17 @@ export async function GET(request: Request) {
     if (delayed.length > 0) {
       amberAlerts.push(`${delayed.length} cheque(s) delayed or pending bank clearance.`);
     }
+    amberAlerts.push(...thresholdAlerts({ cheques, stores: [...db.getRetailers(), ...db.getBranches()], visits: db.getVisits(), orders: db.getOrders(), deliveryFailures: db.getDeliveryFailures() }, db.getAlertRules(), now.getTime()));
+    const administrators = db.getUsers().filter(user => user.active !== false && isSuperAdmin(user));
+    const actor = administrators[0];
+    const notifications = administrators.flatMap(user => [...redAlerts.map(message => ({ message, priority: 'URGENT' })), ...amberAlerts.map(message => ({ message, priority: 'MEDIUM' }))].map(alert => {
+      const id = `daily_alert_${createHash('sha256').update(`${now.toISOString().slice(0, 10)}:${user.id}:${alert.message}`).digest('hex')}`;
+      return { collection: 'notifications', id, created_by: actor.id, version: 1, last_mutation_id: id, data: { id, userId: user.id, title: 'Daily operations alert', ...alert, read: false, entityType: 'systemAlerts', createdAt: now.toISOString() } };
+    }));
+    if (notifications.length) {
+      const { error } = await supabaseAdmin.from('workspace_records').upsert(notifications, { onConflict: 'collection,id', ignoreDuplicates: true });
+      if (error) return NextResponse.json({ success: false, error: 'Daily alerts could not be saved.' }, { status: 503 });
+    }
 
     // --------------------------------------------------------------------------
     // B. WEEKLY REPORT EVALUATION (FRIDAYS OR FORCED)
@@ -70,7 +85,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       timestamp: now.toISOString(),
-      cronJob: 'Daily Health, Alerts & Backup',
+      cronJob: 'Daily health and in-app alerts',
       alerts: {
         redCount: redAlerts.length,
         amberCount: amberAlerts.length,
@@ -81,12 +96,7 @@ export async function GET(request: Request) {
       backup: {
         status: 'Not saved (backup storage is not implemented)',
       },
-      dataSource: 'process-local application state; not a durable production source',
+      dataSource: 'Supabase workspace records',
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Daily cron execution failed.' },
-      { status: 500 }
-    );
-  }
+  } catch (error) { return apiFailure(error, 'Scheduled operation failed.'); }
 }

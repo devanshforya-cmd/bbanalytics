@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useCalendarPreference } from '@/lib/hooks/useCalendarPreference';
-import { getScope, isSuperAdmin } from '@/lib/permissions';
+import { getScope, hasAccess, isSuperAdmin } from '@/lib/permissions';
 
 interface UserProfileDrawerProps {
   isOpen: boolean;
@@ -101,7 +101,7 @@ export default function UserProfileDrawer({
     setDutyStatus(newStatus);
     db.setOfficerDutyStatus(currentUser.id, newStatus);
     db.setCurrentUser(currentUser.id);
-    setStatusFeedback(`Duty status updated to ${DUTY_STATUS_CONFIG[newStatus].label}`);
+    setStatusFeedback(`Duty status queued: ${DUTY_STATUS_CONFIG[newStatus].label}. Check Sync status for confirmation.`);
     setTimeout(() => setStatusFeedback(null), 3000);
     if (onUserUpdate) onUserUpdate();
   };
@@ -312,7 +312,7 @@ export default function UserProfileDrawer({
             </div>
 
             {/* Field Performance Snapshot for Officers */}
-            {isOfficer && (
+            {isOfficer && hasAccess(currentUser, 'staff_scorecards') && (
               <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -353,7 +353,7 @@ export default function UserProfileDrawer({
                   <CalendarDays className="h-4 w-4 text-blue-600" />
                   <span className="text-xs font-bold text-slate-900">Default Calendar</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-medium">Persists across devices</span>
+                <span className="text-[10px] text-slate-400 font-medium">Saved on this device</span>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 {(['BS', 'AD', 'BOTH'] as const).map((pref) => (

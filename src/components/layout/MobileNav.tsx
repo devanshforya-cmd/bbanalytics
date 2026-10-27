@@ -54,8 +54,10 @@ export default function MobileNav() {
   const [showFabDrawer, setShowFabDrawer] = useState(false);
 
   useEffect(() => {
-    const session = getSessionUser();
-    if (session) setCurrentUser(session);
+    const refresh = () => { const session = getSessionUser(); if (session) setCurrentUser(session); };
+    refresh();
+    window.addEventListener('bb-db-updated', refresh);
+    return () => window.removeEventListener('bb-db-updated', refresh);
   }, [pathname]);
 
   const visibleBottomTabs = CANDIDATE_BOTTOM_TABS.filter((t) => hasAccess(currentUser, t.permKey)).slice(0, 5);

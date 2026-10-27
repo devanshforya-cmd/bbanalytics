@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { requireAuth, requireFeatureAccess } from '@/lib/auth-guard';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
-import { canAccessBrand, hasAccess } from '@/lib/permissions';
+import { canAccessBrand, canPerform, hasAccess } from '@/lib/permissions';
+import { readWorkspaceContext } from '@/lib/db/server-workspace';
+import { recordBrandCodes } from '@/lib/db/workspace-policy';
 import { isLocalPreviewAuthEnabled, LOCAL_PREVIEW_USER } from '@/lib/local-preview-auth';
 
 export const dynamic = 'force-dynamic';
@@ -61,22 +63,30 @@ async function getBrandUsage(code: string) {
   const brandId = brandResult.data.id;
 
   const tables = [
-    ['orders', 'orders'],
-    ['products', 'products'],
-    ['stock_count_items', 'stockCounts'],
-    ['feedback_entries', 'feedback'],
-    ['returns', 'returns'],
+    ['orders', 'orders', 'brand_code'],
+    ['products', 'products', 'brand_id'],
+    ['feedback_entries', 'feedback', 'brand_code'],
+    ['returns', 'returns', 'brand_code'],
   ] as const;
-  const results = await Promise.all(tables.map(async ([table, key]) => {
+  const results = await Promise.all(tables.map(async ([table, key, column]) => {
     const result = await supabaseAdmin
       .from(table)
       .select('id', { count: 'exact', head: true })
-      .eq('brand_id', brandId);
+      .eq(column, column === 'brand_id' ? brandId : code);
     return { key, count: result.count || 0, error: result.error };
   }));
   const error = results.find((result) => result.error)?.error;
+  const counts: Record<string, number> = Object.fromEntries(results.map(({ key, count }) => [key, count]));
+  if (!error) {
+    try {
+      const context = await readWorkspaceContext();
+      for (const row of context.records) {
+        if (recordBrandCodes(row, context.records).includes(code)) counts[row.collection] = (counts[row.collection] || 0) + 1;
+      }
+    } catch { return { counts, error: { message: 'Workspace references could not be checked.' } }; }
+  }
   return {
-    counts: Object.fromEntries(results.map(({ key, count }) => [key, count])),
+    counts,
     error,
   };
 }
@@ -98,7 +108,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, canDelete, counts });
   }
 
-  if (!['settings', 'products', 'beat_plans', 'dashboard'].some((feature) => hasAccess(auth.user, feature))) {
+  if (!['settings', 'products', 'beat_plans', 'dashboard', 'orderflow', 'dispatches', 'reviews', 'marketing', 'stores', 'distributors', 'cheque_tracker', 'document_handover', 'shelf_photos', 'call_tracker'].some((feature) => hasAccess(auth.user, feature))) {
     return NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 });
   }
   if (!isConfigured()) return unavailable();
@@ -165,6 +175,7 @@ export async function POST(request: Request) {
     }
 
     const existingId = matches[0]?.id;
+    if (existingId && !canPerform(auth.user, 'settings', 'EDIT')) return NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 });
     const write = async (values: Record<string, unknown>) => {
       const query = existingId
         ? supabaseAdmin.from('brands').update(values).eq('id', existingId)
@@ -215,6 +226,19 @@ export async function PATCH(request: Request) {
   try {
     const body = await request.json();
     if (!body.id) return NextResponse.json({ success: false, error: 'Brand ID is required.' }, { status: 400 });
+    if (body.name !== undefined && (!String(body.name).trim() || String(body.name).length > 160)) return NextResponse.json({ success: false, error: 'Enter a valid brand name.' }, { status: 400 });
+    if (body.code !== undefined) {
+      const code = String(body.code).trim().toUpperCase();
+      if (!/^[A-Z0-9]+(?:_[A-Z0-9]+)*$/.test(code) || code.length > 64) return NextResponse.json({ success: false, error: 'Enter a valid brand code.' }, { status: 400 });
+      const existing = await supabaseAdmin.from('brands').select('code').eq('id', body.id).maybeSingle();
+      if (existing.error) return unavailable(existing.error);
+      if (!existing.data) return NextResponse.json({ success: false, error: 'Brand not found.' }, { status: 404 });
+      if (existing.data.code !== code) {
+        const usage = await getBrandUsage(existing.data.code);
+        if (usage.error) return unavailable(usage.error);
+        if (Object.values(usage.counts).some((count) => count > 0)) return NextResponse.json({ success: false, error: 'A brand code with linked records cannot be changed. You can change its display name.' }, { status: 409 });
+      }
+    }
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (body.name !== undefined) updates.name = String(body.name).trim();
     if (body.code !== undefined) updates.code = String(body.code).trim().toUpperCase();
@@ -256,7 +280,10 @@ export async function DELETE(request: Request) {
   try {
     const body = await request.json();
     if (!body.id || !body.code) return NextResponse.json({ success: false, error: 'Brand ID and code are required.' }, { status: 400 });
-    const { counts, error: usageError } = await getBrandUsage(String(body.code).toUpperCase());
+    const existing = await supabaseAdmin.from('brands').select('code').eq('id', body.id).maybeSingle();
+    if (existing.error) return unavailable(existing.error);
+    if (!existing.data) return NextResponse.json({ success: false, error: 'Brand not found.' }, { status: 404 });
+    const { counts, error: usageError } = await getBrandUsage(existing.data.code);
     if (usageError) return unavailable();
     if (Object.values(counts).some((count) => count > 0)) {
       return NextResponse.json({ success: false, error: 'Brand has linked records and cannot be deleted.', counts }, { status: 409 });

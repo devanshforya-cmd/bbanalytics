@@ -33,6 +33,7 @@ export default function BrandDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +47,7 @@ export default function BrandDropdown({
         setBrands(visible(loaded.filter((brand) => brand.isActive !== false && brand.status !== 'ARCHIVED')));
       } catch {
         setBrands(visible(db.getBrands('ACTIVE')));
-      }
+      } finally { setLoading(false); }
     }
     load();
 
@@ -124,6 +125,8 @@ export default function BrandDropdown({
 
   const canOnboardBrand =
     isSuperAdmin(currentUser) || hasAccess(currentUser, 'settings');
+
+  if (loading && brands.length === 0) return <span role="status" className={`px-3 py-1.5 text-xs text-slate-500 ${className}`}>Loading brands…</span>;
 
   if (brands.length === 0) {
     if (!canOnboardBrand) {

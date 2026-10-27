@@ -115,7 +115,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
         (getScope(currentUser, 'cheque_tracker') !== 'OWN' || c.officerId === currentUser.id)
       )
       : []);
-  }, [currentUser.id, isOpen]);
+  }, [currentUser, isOpen]);
 
   // Filtered categorized results
   const categorizedResults = useMemo(() => {
@@ -351,7 +351,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            placeholder="Search customers, stores, products, cheques..."
+            placeholder="Search your workspace"
             className="w-full text-sm sm:text-base font-medium text-slate-900 placeholder-slate-400 bg-transparent outline-none"
           />
           {query.length > 0 && (

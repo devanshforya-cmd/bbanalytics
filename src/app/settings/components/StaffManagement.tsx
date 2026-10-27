@@ -146,12 +146,12 @@ export default function StaffManagement() {
     }
 
     if (!editingUser) {
-      if (!staffPassword.trim() || staffPassword.trim().length < 8) {
-        toast.error('Password must be at least 8 characters long.');
+      if (!staffPassword.trim() || staffPassword.trim().length < 16) {
+        toast.error('Password must be at least 16 characters long.');
         return;
       }
-    } else if (staffPassword.trim() && staffPassword.trim().length < 8) {
-      toast.error('Password must be at least 8 characters long.');
+    } else if (staffPassword.trim() && staffPassword.trim().length < 16) {
+      toast.error('Password must be at least 16 characters long.');
       return;
     }
 
@@ -166,13 +166,13 @@ export default function StaffManagement() {
           fullName: cleanName,
           email: cleanEmail,
           phone: cleanPhone,
-          reportsToId: reportsToId || undefined,
+          reportsToId: reportsToId || '',
           territory: cleanTerritory,
           customPermissions: permissionsState,
           ...(staffPassword.trim() ? { password: staffPassword.trim() } : {}),
         };
-        db.updateUser(editingUser.id, updates);
-        await apiUpdateUser(editingUser.id, updates);
+        const saved = await apiUpdateUser(editingUser.id, updates);
+        db.updateUser(editingUser.id, saved);
         toast.success(`Updated account for ${cleanName}.`);
       } else {
         let inferredRole: UserRole = 'SALES_OFFICER';
@@ -193,7 +193,7 @@ export default function StaffManagement() {
           role: inferredRole,
           territory: cleanTerritory,
           assignedBrands: assignedBrands,
-          reportsToId: reportsToId || undefined,
+          reportsToId: reportsToId || '',
           customPermissions: permissionsState,
           active: true,
           permissions: {
@@ -207,8 +207,8 @@ export default function StaffManagement() {
           },
         };
 
-        db.addNewUser(newUserObj);
-        await apiCreateUser(newUserObj);
+        const saved = await apiCreateUser(newUserObj);
+        db.addNewUser(saved);
         toast.success(`Staff account created for ${cleanName}. Login enabled immediately.`);
       }
 
@@ -221,14 +221,14 @@ export default function StaffManagement() {
 
   const handleToggleActive = async (user: User) => {
     const updatedStatus = !(user.active !== false);
-    user.active = updatedStatus;
-    if (!updatedStatus) {
-      user.deactivatedAt = new Date().toISOString();
+    try {
+      const saved = await apiUpdateUser(user.id, { active: updatedStatus });
+      db.updateUser(user.id, saved);
+      toast.info(`${user.fullName} is now ${updatedStatus ? 'Active' : 'Deactivated'}.`);
+      refreshUsers();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'The account status was not saved.');
     }
-    db.updateUser(user.id, { active: updatedStatus, deactivatedAt: user.deactivatedAt });
-    await apiUpdateUser(user.id, { active: updatedStatus, deactivatedAt: user.deactivatedAt });
-    toast.info(`${user.fullName} is now ${updatedStatus ? 'Active' : 'Deactivated'}.`);
-    refreshUsers();
   };
 
   const offlineSalesKeys: FeatureKey[] = [
@@ -449,7 +449,7 @@ export default function StaffManagement() {
                         type={showPassword ? 'text' : 'password'}
                         value={staffPassword}
                         onChange={(e) => setStaffPassword(e.target.value)}
-                        placeholder={editingUser ? 'Unchanged' : 'Minimum 8 characters'}
+                        placeholder={editingUser ? 'Unchanged' : 'Minimum 16 characters'}
                         minLength={editingUser ? undefined : 8}
                         required={!editingUser}
                         className="w-full px-3 py-2 pr-10 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
@@ -465,7 +465,7 @@ export default function StaffManagement() {
                     </div>
                     {staffPassword && staffPassword.length < 8 && (
                       <p className="text-red-500 text-xs mt-1 font-semibold">
-                        Password must be at least 8 characters
+                        Password must be at least 16 characters
                       </p>
                     )}
                   </div>

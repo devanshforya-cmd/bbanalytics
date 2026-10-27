@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 import { normalizePhoneNumber } from '@/lib/auth-utils';
 import { verifyPassword } from '@/lib/password-utils';
-import { createSessionToken, AUTH_SESSION_COOKIE, AUTH_SESSION_MAX_AGE_SECONDS, getAuthSessionSecret } from '@/lib/auth-session';
+import { createSessionToken, AUTH_SESSION_COOKIE, AUTH_SESSION_MAX_AGE_SECONDS, getAuthSessionSecret, secureSessionCookie } from '@/lib/auth-session';
 import { rateLimitCheck, rateLimitRecordFailure, rateLimitReset } from '@/lib/rate-limit';
 import { isLocalPreviewAuthEnabled, LOCAL_PREVIEW_USER, matchesLocalPreviewCredentials } from '@/lib/local-preview-auth';
+import { loginThrottleKey, takeLoginAttempt, clearLoginAttempts } from '@/lib/login-throttle';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set(AUTH_SESSION_COOKIE, createSessionToken(LOCAL_PREVIEW_USER.id, secret), {
       httpOnly: true,
       secure: false,
-      sameSite: 'strict',
+      sameSite: 'lax',
       path: '/',
       maxAge: AUTH_SESSION_MAX_AGE_SECONDS,
     });
@@ -83,6 +84,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const throttleKey = loginThrottleKey(validEmail ? email : phone, ip, secret);
+    const durableLimit = await takeLoginAttempt(throttleKey);
+    if (!durableLimit.allowed) return NextResponse.json({ success: false, error: 'Too many sign-in attempts. Try again in 15 minutes.' }, { status: 429, headers: { 'Retry-After': String(durableLimit.retryAfterSeconds) } });
     const query = supabaseAdmin.from('users').select('*');
     const { data, error } = validEmail
       ? await query.eq('email', email).limit(2)
@@ -103,13 +107,14 @@ export async function POST(request: NextRequest) {
     }
 
     const user = mapUser(row);
+    await clearLoginAttempts(throttleKey);
     const token = createSessionToken(String(row.id), secret);
     rateLimitReset(rateKey);
     const response = NextResponse.json({ success: true, user });
     response.cookies.set(AUTH_SESSION_COOKIE, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: secureSessionCookie(request),
+      sameSite: 'lax',
       path: '/',
       maxAge: AUTH_SESSION_MAX_AGE_SECONDS,
     });

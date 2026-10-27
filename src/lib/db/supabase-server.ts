@@ -1,15 +1,22 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { getServerSupabaseConfig } from '../runtime-config';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder';
+let cached: { url: string; key: string; client: SupabaseClient } | undefined;
 
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
+export function getSupabaseServerClient(): SupabaseClient {
+  if (typeof window !== 'undefined') throw new Error('The privileged database client is server-only.');
+  const { url, key } = getServerSupabaseConfig();
+  if (!cached || cached.url !== url || cached.key !== key) {
+    cached = { url, key, client: createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } }) };
+  }
+  return cached.client;
+}
+
+// Lazy creation lets Next build routes before runtime secrets are provisioned.
+export const supabaseAdmin = new Proxy({} as SupabaseClient, {
+  get(_target, property) {
+    const client = getSupabaseServerClient();
+    const value = Reflect.get(client, property);
+    return typeof value === 'function' ? value.bind(client) : value;
   },
 });
-
-export function getSupabaseServerClient() {
-  return supabaseAdmin;
-}

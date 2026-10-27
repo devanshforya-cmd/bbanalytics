@@ -25,6 +25,7 @@ export default function SyncStatusDropdown() {
   const [pendingCount, setPendingCount] = useState<number>(() => syncManager.getPendingCount());
   const [isSyncing, setIsSyncing] = useState(false);
   const [justSynced, setJustSynced] = useState(false);
+  const [, refreshSyncView] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Subscribe to live sync manager changes
@@ -32,6 +33,7 @@ export default function SyncStatusDropdown() {
     const unsub = syncManager.subscribe((state, count) => {
       setSyncState(state);
       setPendingCount(count);
+      refreshSyncView((revision) => revision + 1);
     });
     return () => unsub();
   }, []);
@@ -58,7 +60,7 @@ export default function SyncStatusDropdown() {
     try {
       await syncManager.forceSyncNow();
       setIsSyncing(false);
-      setJustSynced(true);
+      setJustSynced(syncManager.getPendingCount() === 0 && syncManager.getErrors().length === 0);
       setTimeout(() => setJustSynced(false), 3000);
     } catch {
       setIsSyncing(false);
@@ -69,6 +71,12 @@ export default function SyncStatusDropdown() {
     syncManager.toggleSimulatedOffline();
   };
 
+  const downloadPending = () => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(syncManager.getQueue(), null, 2)], { type: 'application/json' }));
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'bb-pending-changes.json'; anchor.click(); URL.revokeObjectURL(url);
+  };
+  const errors = syncManager.getErrors();
+  const conflicts = syncManager.getQueue().filter((item) => item.conflictVersion !== undefined);
   const queueBreakdown = syncManager.getQueueBreakdown();
   const storageInfo = syncManager.getStorageUsage();
   const lastSyncTime = syncManager.getLastSyncTime();
@@ -117,7 +125,7 @@ export default function SyncStatusDropdown() {
                 Offline Sync & Local Cache
               </div>
               <div className="text-[10px] text-slate-500 mt-0.5">
-                Zero-data-loss field architecture
+                Changes stay on this device until the server confirms them
               </div>
             </div>
 
@@ -176,6 +184,24 @@ export default function SyncStatusDropdown() {
             )}
           </div>
 
+          {errors.length > 0 && (
+            <div role="alert" className="mt-3 space-y-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-[11px] text-rose-800">
+              {Array.from(new Set(errors)).map((error) => <p key={error}>{error}</p>)}
+              {conflicts.map((item) => (
+                <details key={item.id}>
+                  <summary className="cursor-pointer font-semibold">Review {String(item.payload.collection)} change</summary>
+                  <p className="mt-2">Local version: {String(item.payload.expectedVersion)}. Server version: {item.conflictVersion === -1 ? 'unknown' : item.conflictVersion}.</p>
+                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap py-2">{JSON.stringify(item.payload.data || { operation: item.payload.operation, id: item.payload.id }, null, 2)}</pre>
+                  {item.conflictVersion !== undefined && item.conflictVersion >= 0 && (
+                    <button type="button" onClick={() => { syncManager.retryConflict(item.id); void handleForceSync(); }} className="rounded border border-rose-300 bg-white p-2 font-semibold">
+                      Save this local version over server version {item.conflictVersion}
+                    </button>
+                  )}
+                </details>
+              ))}
+            </div>
+          )}
+
           {/* Metadata Rows: Last Sync Time & Storage Used */}
           <div className="py-3 border-b border-slate-100 space-y-2 text-[11px]">
             {/* Last Sync */}
@@ -218,14 +244,8 @@ export default function SyncStatusDropdown() {
                 {isSyncing ? 'Synchronizing...' : justSynced ? 'Queue Synchronized ✓' : 'Force Sync'}
               </button>
               {pendingCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => syncManager.clearQueue()}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 py-2 px-3 text-xs font-bold text-rose-700 hover:bg-rose-100 transition"
-                  title="Clear all pending queue items immediately"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Clear
+                <button type="button" onClick={downloadPending} className="rounded-xl border border-slate-200 py-2 px-3 font-semibold text-slate-700">
+                  Download backup
                 </button>
               )}
             </div>

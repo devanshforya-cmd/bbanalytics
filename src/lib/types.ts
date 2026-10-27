@@ -1134,6 +1134,9 @@ export interface DataImportRecord {
   skippedCount: number;
   skippedRows: { rowNumber: number; data: Record<string, unknown>; reason: string }[];
   rolledBack?: boolean;
+  persistence?: 'CONFIRMED';
+  requestHash?: string;
+  importedRecordIds?: { collection: 'orders' | 'returns' | 'dispatches'; id: string }[];
 }
 
 // Influencer & Marketing Tracking Types (Fix 60 & 61)

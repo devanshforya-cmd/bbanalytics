@@ -167,7 +167,7 @@ export default function LoginPage() {
 
           <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
             <span>Secure sign-in · 24-hour session</span>
-            <span className="font-mono">v2.0 · Live</span>
+            <span className="font-mono">v2.1</span>
           </div>
         </div>
 

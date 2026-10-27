@@ -1,5 +1,4 @@
 // Brand Bucket Command Center — Granular Custom Permission System (Section 1)
-import { supabase } from './db/supabase-client';
 
 export type FeatureKey =
   | 'beat_plans'
@@ -361,23 +360,13 @@ export async function getTeamMemberIds(userId: string, allUsers?: any[]): Promis
     return result;
   }
 
+  if (typeof window === 'undefined') return [];
   try {
-    const { data } = await supabase
-      .from('users')
-      .select('id')
-      .eq('reports_to_id', userId)
-      .eq('is_active', true);
-
-    const directReports = data?.map((u: any) => u.id) || [];
-    const nestedReports = await Promise.all(
-      directReports.map((id: string) => getTeamMemberIds(id))
-    );
-
-    return [...directReports, ...nestedReports.flat()];
-  } catch (err) {
-    console.warn('getTeamMemberIds error:', err);
-    return [];
-  }
+    const response = await fetch('/api/sync', { credentials: 'same-origin', cache: 'no-store' });
+    const payload = await response.json();
+    if (!response.ok || !Array.isArray(payload?.data?.users)) return [];
+    return getTeamMemberIds(userId, payload.data.users);
+  } catch { return []; }
 }
 
 /**

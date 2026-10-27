@@ -55,6 +55,7 @@ export default function CameraCapture({
 
   const [capturedItems, setCapturedItems] = useState<CapturedItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const totalCount = existingUrls.length + capturedItems.length;
@@ -70,6 +71,7 @@ export default function CameraCapture({
     if (filesToProcess.length === 0) return;
 
     setIsProcessing(true);
+    setUploadError('');
 
     const newItems: CapturedItem[] = [];
     const processedFiles: File[] = [];
@@ -107,7 +109,10 @@ export default function CameraCapture({
           const res = await uploadImage(finalFile, folder, false);
           uploadResults.push(res);
         } catch (e) {
-          console.error('Error uploading image', e);
+          const failed = newItems.pop();
+          if (failed) URL.revokeObjectURL(failed.previewUrl);
+          processedFiles.pop();
+          setUploadError(e instanceof Error ? e.message : 'Upload failed. Please try again.');
         }
       }
     }
@@ -213,11 +218,13 @@ export default function CameraCapture({
         </div>
       </div>
 
+      {uploadError && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-xs text-rose-800">{uploadError}</p>}
+
       {/* Processing indicator */}
       {isProcessing && (
         <div className="flex items-center gap-2 p-2.5 bg-blue-50/60 border border-blue-200 rounded-lg text-xs text-blue-800">
           <Loader2 className="w-4 h-4 animate-spin text-blue-600 shrink-0" />
-          <span className="font-medium">Compressing and optimizing photo for instant storage...</span>
+          <span className="font-medium">Preparing and saving photos to Drive…</span>
         </div>
       )}
 

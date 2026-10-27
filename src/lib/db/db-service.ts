@@ -5,7 +5,9 @@ import {
   OFFICE_STAFF_TEMPLATE,
   getScope,
 } from '../permissions';
-import { fetchTasksFromSupabase, addTask as addTaskToSupabase, updateTaskInSupabase } from './analytics-service';
+import { WORKSPACE_COLLECTIONS, WorkspaceCollection, WorkspaceMutation, WorkspaceSnapshot, WorkspaceVersions } from './workspace-types';
+import { canReadWorkspaceRecord, canWriteWorkspaceRecord, StoredWorkspaceRecord } from './workspace-policy';
+import { DEFAULT_ALERT_RULES, validateAlertRules, type AlertRules } from '../alert-rules';
 
 export const DEFAULT_SUPER_ADMIN: User = {
   id: 'user_devansh',
@@ -246,49 +248,142 @@ export class DatabaseService {
   ];
 
   private requireStorePhotoAtCheckIn: boolean = false;
+  private alertRules: AlertRules = { ...DEFAULT_ALERT_RULES };
   private recurringSchedules: RecurringScheduleEntry[] = [];
 
   private activeBrandFilter: BrandCode = 'ALL';
   private calendarMode: 'BS' | 'AD' = 'BS';
 
-  constructor() {
+  private readonly server: boolean;
+  private activeUserId: string | null = null;
+  private baseline: WorkspaceSnapshot = {};
+  private versions: WorkspaceVersions = {};
+  private pending = new Map<string, WorkspaceMutation>();
+  private initialSnapshot: WorkspaceSnapshot = {};
+  private legacySnapshot: WorkspaceSnapshot | null = null;
+  private syncPromise: Promise<{ success: boolean; syncedCount: number; message: string }> | null = null;
+
+  constructor(options: { server?: boolean } = {}) {
+    this.server = options.server === true || typeof window === 'undefined';
+    this.initialSnapshot = this.exportSnapshot();
+    this.baseline = this.exportSnapshot();
+    if (this.server) return;
+    const sessionUser = this.readSessionUser();
+    this.activeUserId = sessionUser?.id || null;
+    if (sessionUser) { this.currentUser = sessionUser; this.users = [sessionUser]; }
+    syncManager.setUser(this.activeUserId);
+    syncManager.setRefreshHandler(() => this.syncWithSupabase());
+    syncManager.setBeforeSyncHandler(async () => {
+      if (this.activeUserId && this.legacySnapshot) {
+        const result = await this.pullWorkspace(this.activeUserId);
+        if (!result.success) throw new Error(result.message);
+      }
+    });
     this.loadState();
-    this.ensureBaselineSeeds();
+    this.baseline = this.exportSnapshot();
+    setTimeout(() => { if (this.activeUserId) void syncManager.forceSyncNow(); }, 1000);
+    window.addEventListener('online', () => { if (this.activeUserId) void syncManager.forceSyncNow(); });
+    window.addEventListener('storage', (event) => {
+      if (event.key === this.cacheKey()) {
+        this.loadState(); this.baseline = this.exportSnapshot();
+        window.dispatchEvent(new CustomEvent('bb-db-updated'));
+      }
+      if (event.key === 'bb_auth_user_session_v3') this.setSessionUser(this.readSessionUser());
+    });
+    window.addEventListener('bb-workspace-mutation-synced', (event) => {
+      const { collection, id, version } = (event as CustomEvent).detail;
+      this.versions[collection as WorkspaceCollection] = { ...this.versions[collection as WorkspaceCollection], [id]: version };
+      this.writeCache();
+    });
+  }
 
-    if (typeof window !== 'undefined') {
-      // Trigger background sync with Supabase after mount
-      setTimeout(() => {
-        this.syncWithSupabase().catch((e) => console.warn('[DatabaseService] Initial sync error:', e));
-      }, 1000);
+  private readSessionUser(): User | null {
+    try {
+      const session = JSON.parse(localStorage.getItem('bb_auth_user_session_v3') || 'null');
+      return session?.user?.id && session.expiresAt > Date.now() ? session.user as User : null;
+    } catch { return null; }
+  }
+  private cacheKey() { return this.activeUserId ? `bb_workspace_cache_v1:${this.activeUserId}` : null; }
 
-      // Listen for browser coming back online
-      window.addEventListener('online', () => {
-        this.syncWithSupabase().catch((e) => console.warn('[DatabaseService] Online sync error:', e));
-      });
+  private recoverableSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapshot {
+    const records: StoredWorkspaceRecord[] = WORKSPACE_COLLECTIONS.flatMap((collection) => (snapshot[collection] || []).map((data) => ({ collection, id: data.id, data, created_by: this.currentUser.id, version: 0 })));
+    const result: WorkspaceSnapshot = {};
+    for (const collection of WORKSPACE_COLLECTIONS) result[collection] = records.filter((row) => row.collection === collection
+      && canWriteWorkspaceRecord(this.currentUser, row, 'CREATE', this.users, records)
+      && (collection !== 'sharedAccessLinks' || /^bb_[A-Za-z0-9_-]{43,128}$/.test(row.data.token || ''))).map((row) => row.data);
+    return result;
+  }
 
-      // Listen for cross-tab storage changes
-      window.addEventListener('storage', (e) => {
-        if (e.key === 'bb_command_center_db_state_v12') {
-          this.loadState();
-          window.dispatchEvent(new CustomEvent('bb-db-updated'));
-        }
-      });
+  public exportSnapshot(): WorkspaceSnapshot {
+    const snapshot: WorkspaceSnapshot = {};
+    for (const collection of WORKSPACE_COLLECTIONS) {
+      if (collection === 'workspaceConfig') snapshot[collection] = [{ id: 'workspace', requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn, alertRules: this.alertRules }];
+      else snapshot[collection] = ((this as any)[collection] || []).map((row: any) => JSON.parse(JSON.stringify({ ...row, id: row.id || (collection === 'staffLiveLocations' ? row.officerId : undefined) })));
+    }
+    return snapshot;
+  }
 
-      // Listen for BroadcastChannel updates from other tabs
-      if (typeof BroadcastChannel !== 'undefined') {
-        try {
-          const bc = new BroadcastChannel('bb_db_channel');
-          bc.onmessage = (msg) => {
-            if (msg.data?.type === 'SYNC_UPDATE') {
-              this.loadState();
-              window.dispatchEvent(new CustomEvent('bb-db-updated'));
-            }
-          };
-        } catch {
-          // ignore
-        }
+  public hydrateSnapshot(snapshot: WorkspaceSnapshot, user?: User, versions: WorkspaceVersions = {}): void {
+    for (const collection of WORKSPACE_COLLECTIONS) {
+      if (collection === 'workspaceConfig') {
+        const config = snapshot.workspaceConfig?.find((row) => row.id === 'workspace');
+        this.requireStorePhotoAtCheckIn = config?.requireStorePhotoAtCheckIn === true;
+        this.alertRules = config?.alertRules ? validateAlertRules(config.alertRules) : { ...DEFAULT_ALERT_RULES };
+      }
+      else (this as any)[collection] = JSON.parse(JSON.stringify(snapshot[collection] || []));
+    }
+    if (user) this.currentUser = user;
+    this.versions = JSON.parse(JSON.stringify(versions)); this.pending.clear();
+    this.baseline = this.exportSnapshot();
+    if (!this.server) syncManager.setVersions(this.versions);
+  }
+
+  private captureMutations() {
+    const snapshot = this.exportSnapshot();
+    for (const collection of WORKSPACE_COLLECTIONS) {
+      // GPS and audit records have dedicated server writers.
+      if (collection === 'staffLiveLocations' || collection === 'activityLogs') continue;
+      const before = new Map((this.baseline[collection] || []).map((row) => [row.id, row]));
+      const after = new Map((snapshot[collection] || []).map((row) => [row.id, row]));
+      for (const id of new Set([...before.keys(), ...after.keys()])) {
+        if (!id || JSON.stringify(before.get(id)) === JSON.stringify(after.get(id))) continue;
+        const notification = after.get(id) || before.get(id);
+        const isAdmin = this.currentUser.isSuperAdmin || this.currentUser.is_super_admin;
+        if (!this.server && collection === 'notifications' && !isAdmin && (notification?.userId !== this.activeUserId || !before.has(id))) continue;
+        const key = `${collection}:${id}`;
+        const mutation: WorkspaceMutation = {
+          collection, id, operation: after.has(id) ? 'upsert' : 'delete', ...(after.has(id) ? { data: after.get(id)! } : {}),
+          mutationId: `mutation_${globalThis.crypto.randomUUID()}`,
+          expectedVersion: this.pending.get(key)?.expectedVersion ?? Math.max(this.versions[collection]?.[id] || 0, this.server ? 0 : syncManager.getRecordVersion(collection, id)),
+        };
+        if (this.server) this.pending.set(key, mutation);
+        else if (this.activeUserId) syncManager.enqueue('WORKSPACE_MUTATION', mutation as unknown as Record<string, unknown>);
       }
     }
+    this.baseline = snapshot;
+  }
+  public getPendingMutations(): WorkspaceMutation[] {
+    if (this.server) { this.captureMutations(); return JSON.parse(JSON.stringify([...this.pending.values()])); }
+    return syncManager.getWorkspaceMutations();
+  }
+  public setSessionUser(user: User | null): void {
+    if (this.server) { if (user) this.currentUser = user; return; }
+    if (this.activeUserId !== (user?.id || null)) {
+      this.activeUserId = user?.id || null; this.syncPromise = null; this.legacySnapshot = null;
+      this.hydrateSnapshot(this.initialSnapshot, user || DEFAULT_SUPER_ADMIN);
+      this.users = user ? [user] : []; this.brands = [];
+      this.activeBrandFilter = 'ALL'; this.calendarMode = 'BS'; this.comparisonMode = 'OFF'; this.salesMode = 'ALL';
+      syncManager.setUser(this.activeUserId);
+      if (user) this.loadState();
+      this.baseline = this.exportSnapshot();
+    }
+    if (user) {
+      this.currentUser = user;
+      const index = this.users.findIndex((entry) => entry.id === user.id);
+      if (index < 0) this.users.push(user); else this.users[index] = user;
+    }
+    window.dispatchEvent(new CustomEvent('bb-db-updated'));
+    if (user) void syncManager.forceSyncNow();
   }
 
   /**
@@ -307,163 +402,77 @@ export class DatabaseService {
    * Fetches latest remote records and merges them seamlessly with local cache.
    */
   public async syncWithSupabase(): Promise<{ success: boolean; syncedCount: number; message: string }> {
-    if (typeof window === 'undefined') {
-      return { success: false, syncedCount: 0, message: 'Server environment' };
-    }
-
+    if (this.server || !this.activeUserId) return { success: false, syncedCount: 0, message: 'Sign in to sync workspace data.' };
+    if (this.syncPromise) return this.syncPromise;
+    const owner = this.activeUserId;
+    const run = (async () => { await syncManager.triggerSync(); return this.pullWorkspace(owner); })(); this.syncPromise = run;
+    try { return await run; } finally { if (this.activeUserId === owner) this.syncPromise = null; }
+  }
+  private async pullWorkspace(owner: string): Promise<{ success: boolean; syncedCount: number; message: string }> {
     try {
-      let incomingCount = 0;
-      const response = await fetch('/api/sync', { cache: 'no-store', credentials: 'same-origin' });
+      const response = await fetch('/api/sync', { cache: 'no-store', credentials: 'same-origin', headers: { 'X-Workspace-User': owner } });
       const result = await response.json().catch(() => null);
-      if (!response.ok || !result?.success || !result.data) {
-        return {
-          success: false,
-          syncedCount: 0,
-          message: result?.error || 'Could not load workspace data.',
-        };
+      if (owner !== this.activeUserId || this.readSessionUser()?.id !== owner) return { success: false, syncedCount: 0, message: 'Account changed during sync.' };
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('bb_auth_user_session_v3'); this.setSessionUser(null);
+        window.location?.replace('/login');
+        return { success: false, syncedCount: 0, message: 'Sign in again. Pending work has been kept for its owner.' };
       }
-
-      const syncErrors: string[] = Array.isArray(result.errors) ? result.errors : [];
-      const rowsFrom = (table: string, key: string): any[] | null =>
-        syncErrors.includes(table) ? null : (Array.isArray(result.data[key]) ? result.data[key] : []);
-      const userRows = rowsFrom('users', 'users');
-      const brandRows = rowsFrom('brands', 'brands');
-      const distributorRows = rowsFrom('distributors', 'distributors');
-      const branchRows = rowsFrom('branches', 'branches');
-      const retailerRows = rowsFrom('retailers', 'retailers');
-      const productRows = rowsFrom('products', 'products');
-      const orderRows = rowsFrom('orders', 'orders');
-      const chequeRows = rowsFrom('cheques', 'cheques');
-
-      // Sync Users from Supabase (single source of truth for staff and admin accounts)
-      if (userRows) {
-        const rows = userRows as any[];
-        if (rows.length > 0) {
-          const mappedUsers: User[] = rows.map((row: any) => ({
-            id: row.id,
-            fullName: row.full_name || row.name || 'User',
-            email: row.email,
-            phone: row.phone,
-            role: row.role || 'SALES_OFFICER',
-            isSuperAdmin: !!row.is_super_admin || row.role === 'SUPER_ADMIN',
-            dutyStatus: row.duty_status || 'ONLINE',
-            active: row.is_active !== false && row.active !== false,
-            assignedBrands: row.assigned_brands || ['ALL'],
-            territory: row.territory || row.assigned_territory || 'Kathmandu Valley',
-            reportsToId: row.reports_to_id,
-            permissions: row.permissions || {},
-            customPermissions: row.custom_permissions || {},
-            calendarPreference: row.calendar_preference || 'BS',
-          }));
-          this.users = mappedUsers;
-          incomingCount += mappedUsers.length;
-        } else {
-          this.users = [this.currentUser];
-        }
-      }
-
-      // Merge Brands from Supabase
-      if (brandRows) {
-        this.brands = [];
-        brandRows.forEach((row: any) => {
-          const idx = this.brands.findIndex((b) => b.id === row.id || b.code === row.code);
-          const brand: Brand = {
-            id: row.id,
-            code: row.code,
-            name: row.name,
-            description: row.description || `${row.name} brand catalog`,
-            color: row.color || '#2563eb',
-            logoUrl: row.logo_url,
-            status: (row.is_active !== false && row.active !== false ? 'ACTIVE' : 'ARCHIVED') as any,
-            isActive: row.is_active !== false && row.active !== false,
-          };
-          if (idx >= 0) {
-            this.brands[idx] = { ...this.brands[idx], ...brand };
-          } else {
-            this.brands.push(brand);
+      if (!response.ok || !result?.success || !result.data || result.errors?.length) return { success: false, syncedCount: 0, message: result?.error || 'Workspace refresh failed. Your local changes are preserved.' };
+      const remote: WorkspaceSnapshot = {};
+      for (const collection of WORKSPACE_COLLECTIONS) remote[collection] = Array.isArray(result.data[collection]) ? result.data[collection] : [];
+      const configuration = new Set(['workspaceConfig', 'documentTypes', 'storeCategories', 'activityLogs', 'notifications', 'holidays', 'taskTemplates', 'promotions', 'seasonalPatterns']);
+      const remoteEmpty = WORKSPACE_COLLECTIONS.filter((collection) => !configuration.has(collection)).every((collection) => !remote[collection]?.length);
+      if (this.legacySnapshot && !localStorage.getItem(`bb_workspace_recovered:${owner}`)) {
+        const existing = new Set(syncManager.getWorkspaceMutations().map((mutation) => `${mutation.collection}:${mutation.id}`));
+        for (const collection of WORKSPACE_COLLECTIONS) {
+          if (collection === 'staffLiveLocations' || collection === 'activityLogs') continue;
+          for (const row of this.legacySnapshot[collection] || []) {
+            const admin = this.currentUser.isSuperAdmin || this.currentUser.is_super_admin;
+            if (collection === 'notifications' && !admin) continue;
+            if (!remoteEmpty || existing.has(`${collection}:${row.id}`)) continue;
+            syncManager.enqueue('WORKSPACE_MUTATION', { collection, id: row.id, operation: 'upsert', data: row, expectedVersion: 0, mutationId: `recovery_${globalThis.crypto.randomUUID()}` });
           }
-          incomingCount++;
-        });
+        }
+        syncManager.recoverLegacyQueue(this.legacySnapshot);
+        localStorage.setItem(`bb_workspace_recovered:${owner}`, 'true');
       }
-
-      // Sync Products from Supabase
-      if (productRows) {
-        this.products = productRows as any[];
-        incomingCount += productRows.length;
+      this.legacySnapshot = null;
+      const pending = syncManager.getWorkspaceMutations();
+      const merged = JSON.parse(JSON.stringify(remote)) as WorkspaceSnapshot;
+      const freshUsers: User[] = Array.isArray(result.data.users) ? result.data.users : this.users;
+      const freshUser = freshUsers.find((user) => user.id === owner) || this.currentUser;
+      const records = WORKSPACE_COLLECTIONS.flatMap(collection => (remote[collection] || []).map(row => ({ collection, id: row.id, data: row, created_by: row.createdById || owner, version: result.versions?.[collection]?.[row.id] || 0 })));
+      merged.staffLiveLocations = this.exportSnapshot().staffLiveLocations;
+      for (const mutation of pending) {
+        const rows = (merged[mutation.collection] || []).filter((row) => row.id !== mutation.id);
+        if (mutation.operation === 'upsert' && mutation.data && canReadWorkspaceRecord(freshUser, { collection: mutation.collection, id: mutation.id, data: mutation.data, created_by: mutation.data.createdById || owner, version: mutation.expectedVersion }, freshUsers, records)) rows.push(mutation.data);
+        merged[mutation.collection] = rows;
       }
-
-      // Sync Distributors from Supabase (single source of truth: 0 phantom stores)
-      if (distributorRows) {
-        this.distributors = distributorRows as any[];
-        incomingCount += distributorRows.length;
-      }
-
-      // Sync Branches from Supabase
-      if (branchRows) {
-        this.branches = branchRows as any[];
-        incomingCount += branchRows.length;
-      }
-
-      // Sync Retailers from Supabase
-      if (retailerRows) {
-        this.retailers = retailerRows as any[];
-        incomingCount += retailerRows.length;
-      }
-
-      // Sync Orders from Supabase
-      if (orderRows) {
-        this.orders = orderRows as any[];
-        incomingCount += orderRows.length;
-      }
-
-      // Sync Cheques from Supabase
-      if (chequeRows) {
-        this.cheques = chequeRows.map((row: any) => ({
-          ...row,
-          brandCodes: row.brand_codes || row.brandCodes || (row.brand_code ? [row.brand_code] : []),
-        })) as any[];
-        incomingCount += chequeRows.length;
-      }
-
-      this.repairDuplicateProductIds();
-      this.persistState();
-      return {
-        success: syncErrors.length === 0,
-        syncedCount: incomingCount,
-        message: syncErrors.length
-          ? `Loaded ${incomingCount} entities; failed to read ${syncErrors.join(', ')}.`
-          : `Loaded ${incomingCount} entities from Supabase.`,
-      };
-    } catch (err: any) {
-      console.warn('[DatabaseService] syncWithSupabase caught error:', err);
-      return {
-        success: false,
-        syncedCount: 0,
-        message: err?.message || 'Sync encountered a network exception.',
-      };
-    }
+      this.hydrateSnapshot(merged, freshUser, result.versions || {});
+      const savedSession = JSON.parse(localStorage.getItem('bb_auth_user_session_v3') || 'null');
+      if (savedSession?.user?.id === owner) localStorage.setItem('bb_auth_user_session_v3', JSON.stringify({ ...savedSession, user: freshUser }));
+      if (Array.isArray(result.data.users)) this.users = result.data.users;
+      if (!this.users.some((user) => user.id === this.currentUser.id)) this.users.push(this.currentUser);
+      if (Array.isArray(result.data.brands)) this.brands = result.data.brands;
+      this.writeCache(); window.dispatchEvent(new CustomEvent('bb-db-updated'));
+      return { success: true, syncedCount: WORKSPACE_COLLECTIONS.reduce((count, collection) => count + (remote[collection]?.length || 0), 0), message: pending.length ? `${pending.length} local changes remain pending.` : 'Workspace data refreshed.' };
+    } catch (error) { return { success: false, syncedCount: 0, message: error instanceof Error ? error.message : 'Workspace refresh failed.' }; }
   }
 
   private loadState() {
-    if (typeof window === 'undefined') return;
+    if (this.server || typeof window === 'undefined') return;
     try {
-      // Clear legacy storage keys if present
-      localStorage.removeItem('bb_command_center_db_state_v8');
-      localStorage.removeItem('bb_command_center_db_state_v7');
-      localStorage.removeItem('bb_command_center_db_state_v6');
-      localStorage.removeItem('bb_command_center_db_state_v5');
-      localStorage.removeItem('bb_command_center_db_state_v4');
-      localStorage.removeItem('bb_command_center_db_state_v3');
-      localStorage.removeItem('bb_command_center_db_state_v2');
-      localStorage.removeItem('bb_command_center_db_state');
-      localStorage.removeItem('bb_auth_user_session_v2');
-
-      localStorage.removeItem('bb_command_center_db_state_v13');
-      localStorage.removeItem('bb_command_center_db_state_v12');
-      localStorage.removeItem('bb_command_center_db_state_v11');
-      localStorage.removeItem('bb_command_center_db_state_v10');
-      localStorage.removeItem('bb_command_center_db_state_v9');
-      const stored = localStorage.getItem('bb_command_center_db_state_v14');
+      if (!this.activeUserId) return;
+      let stored = localStorage.getItem(this.cacheKey()!);
+      let legacy = false;
+      if (!stored) {
+        for (const oldKey of ['bb_command_center_db_state_v14', 'bb_command_center_db_state_v13', 'bb_command_center_db_state_v12', 'bb_command_center_db_state_v11', 'bb_command_center_db_state_v10', 'bb_command_center_db_state_v9', 'bb_command_center_db_state_v8', 'bb_command_center_db_state']) {
+          const old = localStorage.getItem(oldKey);
+          if (!old) continue;
+          try { if (JSON.parse(old).currentUser?.id === this.activeUserId) { stored = old; legacy = true; break; } } catch {}
+        }
+      }
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.users && parsed.users.length > 0) this.users = parsed.users;
@@ -491,7 +500,8 @@ export class DatabaseService {
         if (parsed.visits) this.visits = parsed.visits;
         if (parsed.notifications) this.notifications = parsed.notifications;
         if (parsed.activityLogs) this.activityLogs = parsed.activityLogs;
-        if (parsed.currentUser) this.currentUser = parsed.currentUser;
+        if (parsed.currentUser?.id === this.activeUserId) this.currentUser = this.readSessionUser() || parsed.currentUser;
+        if (parsed.versions) this.versions = parsed.versions;
         if (parsed.activeBrandFilter) this.activeBrandFilter = parsed.activeBrandFilter;
         if (parsed.calendarMode) this.calendarMode = parsed.calendarMode;
         if (parsed.brands && parsed.brands.length > 0) this.brands = parsed.brands;
@@ -513,104 +523,9 @@ export class DatabaseService {
         if (parsed.recurringSchedules) this.recurringSchedules = parsed.recurringSchedules;
       }
 
-      // STRICT: Sanitize and purge any phantom mock entities
-      const PHANTOM_IDS = new Set([
-        'officer_ravi', 'officer_pooja', 'officer_suman', 'user_officer_ravi',
-        'user_ops_admin', 'user_sales_officer', 'user_sita',
-        'brand_forya', 'brand_peesafe', 'brand_furr', 'brand_renee',
-        'dist_bbs', 'dist_bigmart', 'br_bbs_mjg', 'br_bigmart_baneshwor',
-        'ret_norvic', 'ret_saleways', 'ret_krishna', 'ret_civil_mall',
-        'ret_norvic_pharmacy', 'ret_saleways_kalimati', 'ret_krishna_chabahil', 'ret_civil_mall_cosmetics',
-        'beat_ravi_01', 'beat_2', 'beat_3', 'beat_4', 'beat_5', 'beat_6',
-        'prod_forya_ro_pch', 'prod_pee_safe_pantyliner', 'prod_furr_nose_strips', 'prod_ren_fab_5'
-      ]);
-
-      const DUMMY_EMAILS = new Set([
-        'ops@brandbucket.com',
-        'rohan@brandbucket.com',
-        'sita@brandbucket.com',
-      ]);
-
-      this.users = (this.users || []).filter(
-        (u) => !PHANTOM_IDS.has(u.id) && !DUMMY_EMAILS.has(u.email)
-      );
-      if (this.users.length === 0) {
-        this.users = [...DEFAULT_STAFF_USERS];
-      }
-      this.brands = (this.brands || []).filter((b) => !PHANTOM_IDS.has(b.id));
-      this.distributors = (this.distributors || []).filter((d) => !PHANTOM_IDS.has(d.id));
-      this.branches = (this.branches || []).filter((b) => !PHANTOM_IDS.has(b.id));
-      this.retailers = (this.retailers || []).filter((r) => !PHANTOM_IDS.has(r.id));
-      this.beatItems = (this.beatItems || []).filter(
-        (b) => !PHANTOM_IDS.has(b.id) && !PHANTOM_IDS.has(b.officerId) && !PHANTOM_IDS.has(b.entityId)
-      );
-      this.products = (this.products || []).filter((p) => !PHANTOM_IDS.has(p.id));
-      this.staffLiveLocations = (this.staffLiveLocations || []).filter((s) => !PHANTOM_IDS.has(s.officerId));
-
-      // Clean up and deduplicate brands by code
-      const seenBrandCodes = new Set<string>();
-      this.brands = (this.brands || []).filter((b) => {
-        const code = (b.code || '').trim().toUpperCase();
-        if (!code || seenBrandCodes.has(code)) return false;
-        seenBrandCodes.add(code);
-        return true;
-      });
-      let repairedIds = false;
-      const retailersByStoredId = new Map<string, Retailer[]>();
-      const seenRetailerIds = new Set<string>();
-      for (const retailer of this.retailers) {
-        const storedId = retailer.id || '';
-        const group = retailersByStoredId.get(storedId) || [];
-        if (!storedId || seenRetailerIds.has(storedId)) {
-          retailer.id = this.generateId('ret');
-          repairedIds = true;
-        }
-        seenRetailerIds.add(retailer.id);
-        group.push(retailer);
-        retailersByStoredId.set(storedId, group);
-      }
-
-      const normalizeReference = (value?: string) => (value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-      const reassignRetailerReference = (record: any) => {
-        if (!record?.entityId) return;
-        const candidates = retailersByStoredId.get(record.entityId);
-        if (!candidates || candidates.length < 2) return;
-        const name = normalizeReference(record.storeName);
-        const namedCandidates = candidates.filter((candidate) => normalizeReference(candidate.name) === name);
-        const address = normalizeReference(record.address);
-        const phone = normalizeReference(record.contactPhone).replace(/\D/g, '');
-        const exactCandidates = namedCandidates.filter((candidate) =>
-          normalizeReference(candidate.address) === address
-          && normalizeReference(candidate.contactPhone).replace(/\D/g, '') === phone
-        );
-        const match = exactCandidates.length === 1 ? exactCandidates[0] : namedCandidates.length === 1 ? namedCandidates[0] : null;
-        if (match && record.entityId !== match.id) {
-          record.entityId = match.id;
-          repairedIds = true;
-        }
-      };
-      this.beatItems.forEach(reassignRetailerReference);
-      this.visits.forEach(reassignRetailerReference);
-      this.stockCounts.forEach(reassignRetailerReference);
-      this.shelfPhotos.forEach(reassignRetailerReference);
-      this.callLogs.forEach(reassignRetailerReference);
-
-      const seenBeatIds = new Set<string>();
-      for (const beat of this.beatItems) {
-        if (!beat.id || seenBeatIds.has(beat.id)) {
-          beat.id = this.generateId('beat');
-          repairedIds = true;
-        }
-        seenBeatIds.add(beat.id);
-      }
-
-      repairedIds = this.repairDuplicateProductIds() || repairedIds;
-      repairedIds = this.repairDuplicateActivityLogIds() || repairedIds;
-
-      if (repairedIds) this.persistState();
-      if (typeof window !== 'undefined') {
-        this.syncTasksFromSupabase().catch(() => {});
-      }
+      this.baseline = this.exportSnapshot();
+      syncManager.setVersions(this.versions);
+      if (legacy) this.legacySnapshot = this.recoverableSnapshot(this.exportSnapshot());
     } catch (e) {
       console.warn('Failed to load state from localStorage', e);
     }
@@ -702,10 +617,17 @@ export class DatabaseService {
   }
 
   private persistState() {
-    if (typeof window === 'undefined') return;
+    this.captureMutations(); this.writeCache();
+    if (!this.server) window.dispatchEvent(new CustomEvent('bb-db-updated'));
+  }
+
+  private writeCache() {
+    if (this.server || !this.activeUserId || typeof window === 'undefined') return;
     try {
       const state = {
-        users: this.users,
+        ownerId: this.activeUserId,
+        versions: this.versions,
+        users: this.users.map((user) => { const safe = { ...user } as any; delete safe.password; delete safe.passwordHash; delete safe.password_hash; return safe; }),
         brands: this.brands,
         products: this.products,
         combos: this.combos,
@@ -731,7 +653,7 @@ export class DatabaseService {
         shelfPhotos: this.shelfPhotos,
         callLogs: this.callLogs,
         documents: this.documents,
-        currentUser: this.currentUser,
+        currentUser: (() => { const safe = { ...this.currentUser } as any; delete safe.password; delete safe.passwordHash; delete safe.password_hash; return safe; })(),
         activeBrandFilter: this.activeBrandFilter,
         calendarMode: this.calendarMode,
         staffLiveLocations: this.staffLiveLocations,
@@ -751,41 +673,18 @@ export class DatabaseService {
         requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn,
         recurringSchedules: this.recurringSchedules,
       };
-      localStorage.setItem('bb_command_center_db_state_v14', JSON.stringify(state));
-
-      // Dispatch local window event so all mounted React components re-render immediately
-      window.dispatchEvent(new CustomEvent('bb-db-updated'));
-
-      // Broadcast across all open browser tabs
-      if (typeof BroadcastChannel !== 'undefined') {
-        try {
-          const bc = new BroadcastChannel('bb_db_channel');
-          bc.postMessage({ type: 'SYNC_UPDATE', timestamp: Date.now() });
-          bc.close();
-        } catch {
-          // ignore
-        }
-      }
+      localStorage.setItem(this.cacheKey()!, JSON.stringify(state));
     } catch (e) {
       console.warn('Failed to persist state', e);
     }
   }
 
   public resetDatabase() {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem('bb_command_center_db_state_v14');
-    localStorage.removeItem('bb_command_center_db_state_v13');
-    localStorage.removeItem('bb_command_center_db_state_v12');
-    localStorage.removeItem('bb_command_center_db_state_v11');
-    localStorage.removeItem('bb_command_center_db_state_v8');
-    localStorage.removeItem('bb_command_center_db_state_v7');
-    localStorage.removeItem('bb_command_center_db_state_v6');
-    localStorage.removeItem('bb_command_center_db_state_v5');
-    localStorage.removeItem('bb_command_center_db_state_v4');
-    localStorage.removeItem('bb_command_center_db_state_v3');
-    localStorage.removeItem('bb_command_center_db_state_v2');
-    localStorage.removeItem('bb_command_center_db_state');
-    window.location.reload();
+    if (this.server || !this.activeUserId) return;
+    const key = this.cacheKey()!;
+    const saved = localStorage.getItem(key);
+    if (saved) localStorage.setItem(`${key}:backup:${Date.now()}`, saved);
+    localStorage.removeItem(key); window.location.reload();
   }
 
   // Brands Portfolio Management (Multi-Brand Distributor Engine)
@@ -880,6 +779,7 @@ export class DatabaseService {
       }
     }
 
+    if (!this.server && this.activeUserId) syncManager.enqueue('DUTY_STATUS', { officerId, status });
     this.persistState();
   }
 
@@ -891,6 +791,11 @@ export class DatabaseService {
   // Users, Staff Onboarding & Roles
   public getUsers(): User[] {
     return this.users;
+  }
+
+  public replaceUsers(users: User[]): void {
+    this.users = JSON.parse(JSON.stringify(users));
+    this.writeCache();
   }
 
   public getUserById(id: string): User | undefined {
@@ -931,7 +836,7 @@ export class DatabaseService {
     Object.assign(user, updates);
     if (this.currentUser.id === userId) {
       Object.assign(this.currentUser, updates);
-      if (typeof window !== 'undefined') {
+      if (!this.server && typeof window !== 'undefined') {
         const now = Date.now();
         const { password: _p, ...safeUser } = this.currentUser;
         const sessionData = {
@@ -958,7 +863,7 @@ export class DatabaseService {
   }
 
   public getCurrentUser(): User {
-    if (typeof window !== 'undefined') {
+    if (!this.server && typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem('bb_auth_user_session_v3');
         if (stored) {
@@ -988,20 +893,10 @@ export class DatabaseService {
   }
 
   public setCurrentUser(userId: string) {
-    const found = this.users.find((u) => u.id === userId);
-    if (found) {
-      this.currentUser = found;
-      if (typeof window !== 'undefined') {
-        const now = Date.now();
-        const { password: _p, ...safeUser } = found;
-        const sessionData = {
-          user: safeUser,
-          createdAt: now,
-          expiresAt: now + 24 * 60 * 60 * 1000,
-          sessionId: `sess_${now}_${Math.random().toString(36).slice(2, 9)}`,
-        };
-        localStorage.setItem('bb_auth_user_session_v3', JSON.stringify(sessionData));
-      }
+    const session = this.server ? null : this.readSessionUser();
+    const user = session?.id === userId ? session : this.users.find((entry) => entry.id === userId);
+    if (user) {
+      if (!this.server) this.setSessionUser(user); else this.currentUser = user;
       this.persistState();
     }
   }
@@ -1775,6 +1670,9 @@ export class DatabaseService {
     return this.documentTypes;
   }
 
+  public getAlertRules(): AlertRules { return { ...this.alertRules }; }
+  public setAlertRules(rules: AlertRules): void { this.alertRules = validateAlertRules(rules); this.persistState(); }
+
   public addDocumentType(name: string): DocumentTypeConfig {
     const newDocType: DocumentTypeConfig = {
       id: this.generateId('doc'),
@@ -1956,6 +1854,7 @@ export class DatabaseService {
     // 1. Mark officer on leave
     if (fromOfficer) {
       fromOfficer.dutyStatus = 'ON_LEAVE';
+      if (!this.server && this.activeUserId) syncManager.enqueue('DUTY_STATUS', { officerId: fromOfficerId, status: 'ON_LEAVE' });
     }
 
     let reassignedBeatsCount = 0;
@@ -2014,6 +1913,7 @@ export class DatabaseService {
     const officer = this.users.find((u) => u.id === officerId);
     if (officer) {
       officer.dutyStatus = 'ON_LEAVE';
+      if (!this.server && this.activeUserId) syncManager.enqueue('DUTY_STATUS', { officerId, status: 'ON_LEAVE' });
     }
     this.persistState();
   }
@@ -2074,7 +1974,7 @@ export class DatabaseService {
     };
 
     this.visits.unshift(visit);
-    syncManager.enqueue('STORE_CHECK_IN', visit as unknown as Record<string, unknown>);
+
 
     // Update real-time staff status
     this.updateStaffPing(beat.officerId, lat, lng, 'AT_STORE', beat.storeName);
@@ -2194,7 +2094,7 @@ export class DatabaseService {
         store: beat.storeName,
         reason,
       });
-      syncManager.enqueue('STORE_SKIPPED', { beatId, storeId: beat.entityId, storeName: beat.storeName, reason, notes } as unknown as Record<string, unknown>);
+
       this.persistState();
     }
   }
@@ -2219,6 +2119,11 @@ export class DatabaseService {
         isOnline: u?.dutyStatus !== 'OFFLINE',
       };
     });
+  }
+
+  public replaceStaffLiveLocations(locations: StaffLiveLocation[]): void {
+    this.staffLiveLocations = JSON.parse(JSON.stringify(locations));
+    this.persistState();
   }
 
   public updateStaffPing(
@@ -2290,7 +2195,7 @@ export class DatabaseService {
       createdAt: new Date().toISOString(),
     };
     this.shelfPhotos.unshift(item);
-    syncManager.enqueue('SHELF_PHOTOS_SAVED', item as unknown as Record<string, unknown>);
+
     this.logActivity('UPLOADED_SHELF_PHOTOS', 'STORE', item.entityId, {
       store: item.storeName,
       beforeCount: item.beforePhotoUrls.length,
@@ -2337,7 +2242,7 @@ export class DatabaseService {
       createdAt: new Date().toISOString(),
     };
     this.callLogs.unshift(item);
-    syncManager.enqueue('CALL_LOGGED', item as unknown as Record<string, unknown>);
+
     this.logActivity('LOGGED_CALL', 'STORE', item.entityId || '', {
       contact: item.contactName,
       outcome: item.outcome,
@@ -2372,7 +2277,7 @@ export class DatabaseService {
     };
 
     this.cheques.unshift(newCheque);
-    syncManager.enqueue('CHEQUE_COLLECTED', newCheque as unknown as Record<string, unknown>);
+
     this.logActivity('COLLECTED_CHEQUE', 'CHEQUE', newCheque.id, {
       chequeNumber: newCheque.chequeNumber,
       amount: newCheque.amount,
@@ -2468,7 +2373,7 @@ export class DatabaseService {
       createdAt: now.toISOString(),
     };
     this.documents.unshift(newDoc);
-    syncManager.enqueue('DOCUMENT_UPLOADED', newDoc as unknown as Record<string, unknown>);
+
     this.logActivity('DOCUMENT_UPLOADED', 'DOCUMENT', newDoc.id, {
       store: newDoc.storeName,
       documentType: newDoc.documentType,
@@ -2582,7 +2487,7 @@ export class DatabaseService {
       edits: [],
     };
     this.dispatches.unshift(newDispatch);
-    syncManager.enqueue('DISPATCH_LOGGED', newDispatch as unknown as Record<string, unknown>);
+
     this.persistState();
     return newDispatch;
   }
@@ -2626,7 +2531,7 @@ export class DatabaseService {
       createdAt: new Date().toISOString(),
     };
     this.stockCounts.unshift(newCount);
-    syncManager.enqueue('STOCK_COUNT', newCount as unknown as Record<string, unknown>);
+
     this.persistState();
     return newCount;
   }
@@ -2653,7 +2558,7 @@ export class DatabaseService {
     };
 
     this.orders.unshift(newOrder);
-    syncManager.enqueue('ORDER_CREATED', newOrder as unknown as Record<string, unknown>);
+
 
     // Update Customer 360 record
     let customer = this.customers.find((c) => c.phone === newOrder.customerPhone);
@@ -2782,7 +2687,7 @@ export class DatabaseService {
         console.error('Order subscriber error:', err);
       }
     });
-    if (typeof window !== 'undefined') {
+    if (!this.server && typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('BB_ORDER_REALTIME', { detail: event }));
     }
   }
@@ -2946,11 +2851,7 @@ export class DatabaseService {
     if (!ret) return null;
 
     ret.orderStatus = resolution;
-    syncManager.enqueue(
-      'RETURN_RESOLUTION_UPDATED',
-      { returnId, resolution, updatedBy: this.currentUser.fullName },
-      '/api/returns/resolution'
-    );
+
     this.persistState();
     return ret;
   }
@@ -3120,7 +3021,7 @@ export class DatabaseService {
     };
 
     this.feedbackEntries.unshift(newFb);
-    syncManager.enqueue('FEEDBACK_SUBMITTED', newFb as unknown as Record<string, unknown>);
+
 
     for (const catName of newFb.issueCategories) {
       const found = this.reviewCategories.find((c) => c.name === catName);
@@ -3201,11 +3102,6 @@ export class DatabaseService {
     entry.assignedTo = officerId;
     entry.assignedToName = assignedName;
 
-    syncManager.enqueue(
-      'FEEDBACK_ASSIGNED',
-      { feedbackId, officerId, officerName: assignedName, assignedBy: this.currentUser.fullName },
-      '/api/feedback/assign'
-    );
     this.persistState();
     return entry;
   }
@@ -3271,17 +3167,7 @@ export class DatabaseService {
 
   // Tasks
   public async syncTasksFromSupabase(): Promise<Task[]> {
-    try {
-      const supaTasks = await fetchTasksFromSupabase();
-      if (supaTasks && supaTasks.length > 0) {
-        const existingIds = new Set(supaTasks.map((t) => t.id));
-        const localOnly = this.tasks.filter((t) => !existingIds.has(t.id));
-        this.tasks = [...supaTasks, ...localOnly];
-        this.persistState();
-      }
-    } catch (e) {
-      console.warn('syncTasksFromSupabase error:', e);
-    }
+    if (!this.server) await this.syncWithSupabase();
     return this.tasks;
   }
 
@@ -3320,7 +3206,7 @@ export class DatabaseService {
     };
     this.tasks.unshift(newTask);
     this.persistState();
-    addTaskToSupabase(newTask).catch((err) => console.warn('addTaskToSupabase error:', err));
+
     return newTask;
   }
 
@@ -3333,7 +3219,7 @@ export class DatabaseService {
     if (task) {
       task.status = status;
       this.persistState();
-      updateTaskInSupabase(taskId, { status }).catch((err) => console.warn('updateTaskInSupabase error:', err));
+
     }
   }
 
@@ -3352,7 +3238,7 @@ export class DatabaseService {
     if (task) {
       Object.assign(task, updates);
       this.persistState();
-      updateTaskInSupabase(taskId, updates).catch((err) => console.warn('updateTaskInSupabase error:', err));
+
       return task;
     }
     return null;
@@ -3368,13 +3254,7 @@ export class DatabaseService {
     task.assignedTo = officerId;
     task.assignedToName = assignedName;
 
-    updateTaskInSupabase(taskId, { assignedTo: officerId, assignedToName: assignedName }).catch(() => {});
 
-    syncManager.enqueue(
-      'TASK_REASSIGNED',
-      { taskId, officerId, officerName: assignedName, reassignedBy: this.currentUser.fullName },
-      '/api/tasks/reassign'
-    );
     this.persistState();
     return task;
   }
@@ -3385,13 +3265,7 @@ export class DatabaseService {
 
     task.priority = priority;
 
-    updateTaskInSupabase(taskId, { priority }).catch(() => {});
 
-    syncManager.enqueue(
-      'TASK_PRIORITY_UPDATED',
-      { taskId, priority, updatedBy: this.currentUser.fullName },
-      '/api/tasks/priority'
-    );
     this.persistState();
     return task;
   }
@@ -3399,7 +3273,7 @@ export class DatabaseService {
   // Notifications
   public getNotifications(userId?: string): Notification[] {
     const uid = userId || this.currentUser.id;
-    return this.notifications.filter((n) => n.userId === uid || n.userId === 'user_devansh');
+    return this.notifications.filter((n) => n.userId === uid);
   }
 
   public markNotificationRead(id: string) {
@@ -3413,7 +3287,7 @@ export class DatabaseService {
   public markAllNotificationsRead(userId?: string) {
     const uid = userId || this.currentUser.id;
     this.notifications.forEach((n) => {
-      if (n.userId === uid || n.userId === 'user_devansh' || !userId) {
+      if (n.userId === uid) {
         n.read = true;
       }
     });
@@ -3444,17 +3318,17 @@ export class DatabaseService {
     }
 
     const officers = this.users.filter(
-      (u) => u.role === 'SALES_OFFICER' || (u.permissions && (u.permissions as any).beat_plans)
+      (u) => u.active !== false && (u.role === 'SALES_OFFICER' || (u.permissions && (u.permissions as any).beat_plans))
     );
-    const targetOfficers = officers.length > 0 ? officers : this.users;
+    const targetOfficers = officers;
 
     return targetOfficers.map((u) => {
-      const officerVisits = this.visits.filter((v) => v.officerId === u.id || v.officerName === u.fullName);
+      const officerVisits = this.visits.filter((v) => v.officerId === u.id);
       const officerBeatItems = this.beatItems.filter((b) => b.officerId === u.id);
-      const officerCalls = this.callLogs.filter((c) => c.officerId === u.id || c.officerName === u.fullName);
-      const officerCheques = this.cheques.filter((c) => c.officerId === u.id || c.officerName === u.fullName);
-      const officerPhotos = this.shelfPhotos.filter((p) => p.officerId === u.id || p.officerName === u.fullName);
-      const officerDocs = this.documents.filter((d) => d.officerId === u.id || d.officerName === u.fullName);
+      const officerCalls = this.callLogs.filter((c) => c.officerId === u.id);
+      const officerCheques = this.cheques.filter((c) => c.officerId === u.id);
+      const officerPhotos = this.shelfPhotos.filter((p) => p.officerId === u.id);
+      const officerDocs = this.documents.filter((d) => d.officerId === u.id);
       const officerStockCounts = this.stockCounts.filter((s) => s.officerId === u.id);
       const officerTasks = this.tasks.filter((t) => t.assignedTo === u.id && t.status !== 'COMPLETED');
 
@@ -3466,8 +3340,8 @@ export class DatabaseService {
         (c) => c.outcome === 'Order Received' || c.outcome === 'Payment Promised'
       ).length;
       const callRatio = officerCalls.length > 0 ? Math.round((productiveCalls / officerCalls.length) * 100) : 0;
-      const compliance =
-        visitedCount + skippedCount > 0 ? Math.round((visitedCount / (visitedCount + skippedCount)) * 100) : 0;
+      const compliance = officerBeatItems.length > 0
+        ? Math.round((officerBeatItems.filter((b) => b.status === 'VISITED').length / officerBeatItems.length) * 100) : 0;
 
       // Real visit duration from completed visits with timestamps
       let totalDurationMin = 0;
@@ -3719,7 +3593,7 @@ export class DatabaseService {
     const stocks = this.stockCounts.filter((s) => s.officerId === officerId);
     const docs = this.documents.filter((d) => d.officerId === officerId);
 
-    const compliance = officerBeats.length > 0 ? Math.round((visited.length / officerBeats.length) * 1000) / 10 : 100;
+    const compliance = officerBeats.length > 0 ? Math.round((visited.length / officerBeats.length) * 1000) / 10 : 0;
 
     const summary: FieldOfficerDailySummary = {
       id: this.generateId(`sum_${officerId}`),
@@ -4214,66 +4088,43 @@ export class DatabaseService {
 
   // Data Import Tool (Fix 39)
   public importData(
-    record: Omit<DataImportRecord, 'id' | 'importedAt'>,
-    entities: {
-      orders?: Order[];
-      returns?: ReturnEntry[];
-      retailers?: Retailer[];
-      distributors?: Distributor[];
-      branches?: Branch[];
-      products?: Product[];
-      dispatches?: Dispatch[];
-    }
+    record: Omit<DataImportRecord, 'id' | 'importedAt'> & { id?: string },
+    entities: { orders?: Order[]; returns?: ReturnEntry[]; dispatches?: Dispatch[] }
   ): { success: boolean; record: DataImportRecord } {
+    if (!this.server) throw new Error('Use the server-validated CSV importer to confirm a durable batch.');
+    const orders = entities.orders || [];
+    const returns = entities.returns || [];
+    const dispatches = entities.dispatches || [];
+    const count = orders.length + returns.length + dispatches.length;
+    if (!count || count > 50) throw new Error('A batch must contain 1–50 validated records.');
+    if ((record.sourceType === 'ORDERS' ? orders.length : record.sourceType === 'RETURNS' ? returns.length : record.sourceType === 'OFFLINE_SALES' ? dispatches.length : 0) !== count) throw new Error('The batch must contain only its selected record type.');
+    const orderNumbers = new Set(this.orders.map((order) => order.orderNumber.trim().toUpperCase()));
+    const dispatchIds = new Set(this.dispatches.map((dispatch) => dispatch.id));
+    const returnIds = new Set(this.returns.map((entry) => entry.id));
+    for (const order of orders) {
+      const key = order.orderNumber?.trim().toUpperCase();
+      if (!key || orderNumbers.has(key)) throw new Error('An order number already exists or is repeated in this batch.');
+      orderNumbers.add(key);
+    }
+    for (const dispatch of dispatches) {
+      if (!dispatch.id || dispatchIds.has(dispatch.id)) throw new Error('A dispatch ID already exists or is repeated in this batch.');
+      dispatchIds.add(dispatch.id);
+    }
+    for (const entry of returns) {
+      if (!entry.id || returnIds.has(entry.id)) throw new Error('A return ID already exists or is repeated in this batch.');
+      returnIds.add(entry.id);
+    }
+    const ids: NonNullable<DataImportRecord['importedRecordIds']> = [];
+    // Reuse ordinary submission side effects, including real Customer 360 aggregates.
+    for (const order of orders) ids.push({ collection: 'orders', id: this.addOrder(order).id });
+    for (const entry of returns) ids.push({ collection: 'returns', id: this.addReturn(entry).id });
+    for (const dispatch of dispatches) { this.dispatches.push(dispatch); ids.push({ collection: 'dispatches', id: dispatch.id }); }
     const importRecord: DataImportRecord = {
-      ...record,
-      id: this.generateId('imp'),
-      importedAt: new Date().toISOString(),
+      ...record, id: record.id || this.generateId('imp'), importedAt: new Date().toISOString(),
+      totalRows: count, importedCount: count, skippedCount: 0, skippedRows: [], importedRecordIds: ids,
     };
-
-    if (entities.orders && entities.orders.length > 0) {
-      // Deduplicate orders
-      const existingIds = new Set(this.orders.map((o) => o.orderNumber));
-      const freshOrders = entities.orders.filter((o) => !existingIds.has(o.orderNumber));
-      this.orders.push(...freshOrders);
-      importRecord.importedCount = freshOrders.length;
-      importRecord.skippedCount = entities.orders.length - freshOrders.length;
-    }
-
-    if (entities.returns && entities.returns.length > 0) {
-      this.returns.push(...entities.returns);
-      importRecord.importedCount = entities.returns.length;
-    }
-
-    if (entities.products && entities.products.length > 0) {
-      this.products.push(...entities.products);
-      importRecord.importedCount = entities.products.length;
-    }
-
-    if (entities.retailers && entities.retailers.length > 0) {
-      this.retailers.push(...entities.retailers);
-      importRecord.importedCount = entities.retailers.length;
-    }
-
-    if (entities.distributors && entities.distributors.length > 0) {
-      this.distributors.push(...entities.distributors);
-      importRecord.importedCount = entities.distributors.length;
-    }
-
-    if (entities.dispatches && entities.dispatches.length > 0) {
-      this.dispatches.push(...entities.dispatches);
-      importRecord.importedCount = entities.dispatches.length;
-    }
-
     this.importHistory.unshift(importRecord);
     this.persistState();
-
-    this.logActivity('Imported Batch Data', 'DATA_IMPORT', importRecord.id, {
-      sourceType: importRecord.sourceType,
-      fileName: importRecord.fileName,
-      count: importRecord.importedCount,
-    });
-
     return { success: true, record: importRecord };
   }
 
@@ -4281,14 +4132,9 @@ export class DatabaseService {
     return this.importHistory;
   }
 
-  public rollbackImport(importId: string): boolean {
-    const rec = this.importHistory.find((i) => i.id === importId);
-    if (!rec || rec.rolledBack) return false;
-
-    rec.rolledBack = true;
-    this.persistState();
-    this.logActivity('Rolled Back Data Import', 'DATA_IMPORT', importId, { fileName: rec.fileName });
-    return true;
+  public rollbackImport(_importId: string): boolean {
+    // Restoring a batch needs version-aware reversal of customer and record edits.
+    return false;
   }
 
   // Role-Based Data Filtering (Fix 26b)
@@ -4588,7 +4434,7 @@ export class DatabaseService {
   public createSharedAccessLink(
     data: Omit<SharedAccessLink, 'id' | 'token' | 'createdAt' | 'accessCount' | 'isActive'>
   ): SharedAccessLink {
-    const token = 'bb_' + Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+    const token = 'bb_' + btoa(String.fromCharCode(...globalThis.crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     const newLink: SharedAccessLink = {
       ...data,
       id: this.generateId('sh_link'),
@@ -4643,6 +4489,7 @@ export class DatabaseService {
     if (this.activityLogs.length > 200) {
       this.activityLogs.pop();
     }
+    this.persistState();
   }
 }
 

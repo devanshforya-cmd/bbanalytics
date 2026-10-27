@@ -15,14 +15,13 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
   const off1 = scorecards[0]?.officerName || 'Officer 1';
   const off2 = scorecards[1]?.officerName || 'Officer 2';
   const off3 = scorecards[2]?.officerName || 'Officer 3';
-  const rate1 = scorecards[0]?.beatCompliancePct || 0;
-  const rate2 = scorecards[1]?.beatCompliancePct || 0;
-  const rate3 = scorecards[2]?.beatCompliancePct || 0;
 
   const rawOrders = db.getOrders();
   const rawFailures = db.getDeliveryFailures();
   const rawFeedback = db.getFeedback().filter((f) => f.type === 'COMPLAINT');
   const now = new Date();
+  const weekEnd = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+  const beats = db.getBeatItems();
 
   // 1. Orders per day (last 30 days dynamically)
   const ordersPerDay = Array.from({ length: 30 }, (_, idx) => {
@@ -35,12 +34,17 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
       const orderDate = o.orderDateAd || (o.createdAt ? o.createdAt.split('T')[0] : '');
       return orderDate === dateStr;
     }).length;
-    return { day: idx + 1, count, date: label };
+    const previous = new Date(dateStr + 'T00:00:00Z');
+    if (comparisonMode === 'LAST_MONTH') previous.setUTCMonth(previous.getUTCMonth() - 1);
+    if (comparisonMode === 'SAME_MONTH_LAST_YEAR') previous.setUTCFullYear(previous.getUTCFullYear() - 1);
+    const previousDate = previous.toISOString().slice(0, 10);
+    const comparisonCount = rawOrders.filter(order => (order.orderDateAd || order.createdAt?.slice(0, 10)) === previousDate).length;
+    return { day: idx + 1, count, comparisonCount, date: label };
   });
 
   // 2. Delivery failure rate per week (last 8 weeks dynamically)
   const failureRatePerWeek = Array.from({ length: 8 }, (_, idx) => {
-    const weekStartMs = now.getTime() - (7 - idx) * 7 * 24 * 60 * 60 * 1000;
+    const weekStartMs = weekEnd - (8 - idx) * 7 * 24 * 60 * 60 * 1000;
     const weekEndMs = weekStartMs + 7 * 24 * 60 * 60 * 1000;
     const weekOrders = rawOrders.filter((o) => {
       const t = new Date(o.orderDateAd || o.createdAt).getTime();
@@ -56,7 +60,7 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
 
   // 3. Complaint volume per week (last 8 weeks dynamically)
   const complaintVolumePerWeek = Array.from({ length: 8 }, (_, idx) => {
-    const weekStartMs = now.getTime() - (7 - idx) * 7 * 24 * 60 * 60 * 1000;
+    const weekStartMs = weekEnd - (8 - idx) * 7 * 24 * 60 * 60 * 1000;
     const weekEndMs = weekStartMs + 7 * 24 * 60 * 60 * 1000;
     const count = rawFeedback.filter((f) => {
       const t = new Date(f.dateReceivedAd || f.createdAt).getTime();
@@ -65,15 +69,19 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
     return { week: `W${idx + 1}`, count };
   });
 
-  // 4. Beat compliance per week per officer (from actual scorecards)
+  // Each point uses the scheduled beats for that officer and week.
   const officersCompliance = Array.from({ length: 8 }, (_, idx) => {
-    return {
-      week: `W${idx + 1}`,
-      off1: rate1,
-      off2: rate2,
-      off3: rate3,
+    const start = weekEnd - (8 - idx) * 7 * 86400000;
+    const end = start + 7 * 86400000;
+    const rate = (officerId?: string) => {
+      const scheduled = beats.filter(beat => beat.officerId === officerId && Date.parse(beat.dateAd) >= start && Date.parse(beat.dateAd) < end);
+      return scheduled.length ? Math.round(scheduled.filter(beat => beat.status === 'VISITED').length / scheduled.length * 100) : 0;
     };
+    return { week: `W${idx + 1}`, off1: rate(scorecards[0]?.officerId), off2: rate(scorecards[1]?.officerId), off3: rate(scorecards[2]?.officerId) };
   });
+  const { off1: rate1, off2: rate2, off3: rate3 } = officersCompliance[7];
+  const orderScale = Math.max(1, ...ordersPerDay.flatMap(day => [day.count, comparisonMode !== 'OFF' && comparisonMode !== 'CUSTOM' ? day.comparisonCount : 0]));
+  const complaintScale = Math.max(1, ...complaintVolumePerWeek.map(week => week.count));
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
@@ -112,7 +120,7 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
 
               {/* Area fill */}
               {(() => {
-                const maxVal = 8;
+                const maxVal = orderScale;
                 const points = ordersPerDay.map((d, idx) => {
                   const x = (idx / 29) * 300;
                   const y = 110 - (d.count / maxVal) * 90;
@@ -124,10 +132,10 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
                 return (
                   <>
                     <path d={fPath} fill="#3b82f6" fillOpacity="0.1" />
-                    {comparisonMode !== 'OFF' && (() => {
+                    {comparisonMode !== 'OFF' && comparisonMode !== 'CUSTOM' && (() => {
                       const compPoints = ordersPerDay.map((d, idx) => {
                         const x = (idx / 29) * 300;
-                        const compCount = Math.max(1, d.count - 1 + ((idx % 3) - 1));
+                        const compCount = d.comparisonCount;
                         const y = 110 - (compCount / maxVal) * 90;
                         return `${x.toFixed(1)},${y.toFixed(1)}`;
                       });
@@ -248,13 +256,13 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
               <p className="text-[11px] text-slate-500">Weekly ticket volume from packaging & courier defects</p>
             </div>
             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
-              1 Active This Week
+              {complaintVolumePerWeek[7].count} Complaints This Week
             </span>
           </div>
 
           <div className="h-44 flex items-end justify-between gap-3 pt-6 pb-2 px-2">
             {complaintVolumePerWeek.map((c) => {
-              const heightPct = Math.round((c.count / 8) * 100);
+              const heightPct = Math.round((c.count / complaintScale) * 100);
               return (
                 <div key={c.week} className="flex-1 flex flex-col items-center gap-1 group">
                   <span className="text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">

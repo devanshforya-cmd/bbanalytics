@@ -184,11 +184,11 @@ export default function Header() {
             type="button"
             onClick={() => setShowSearchModal(true)}
             className="flex w-full items-center gap-2.5 px-3.5 py-1.5 rounded-xl border border-slate-200/90 bg-slate-50/70 hover:bg-white hover:border-blue-300 hover:shadow-xs text-slate-400 hover:text-slate-600 transition duration-150 shadow-2xs group cursor-pointer"
-            aria-label="Search customers, stores, products, cheques..."
+            aria-label="Search your workspace"
           >
             <Search className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition shrink-0" />
             <span className="text-xs text-slate-400 group-hover:text-slate-600 font-medium truncate">
-              Search customers, stores, products, cheques...
+              Search your workspace
             </span>
             <kbd className="ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold text-slate-400 bg-white border border-slate-200 rounded-md shadow-2xs shrink-0">
               <span className="text-xs">⌘</span>K

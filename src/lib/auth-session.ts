@@ -3,6 +3,12 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 export const AUTH_SESSION_COOKIE = 'bb_session';
 export const AUTH_SESSION_MAX_AGE_SECONDS = 24 * 60 * 60;
 
+export function secureSessionCookie(request: Request): boolean {
+  const url = new URL(request.url);
+  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  return url.protocol === 'https:' || process.env.NODE_ENV === 'production' && !loopback;
+}
+
 interface SessionClaims {
   sub: string;
   exp: number;
@@ -10,7 +16,7 @@ interface SessionClaims {
 
 export function getAuthSessionSecret(): string | null {
   const secret = process.env.AUTH_SESSION_SECRET;
-  return secret && Buffer.byteLength(secret) >= 32 ? secret : null;
+  return secret && Buffer.byteLength(secret) >= 32 && !/^(generate|replace|your[_-])/i.test(secret) ? secret : null;
 }
 
 export function createSessionToken(userId: string, secret: string, now = Date.now()): string {

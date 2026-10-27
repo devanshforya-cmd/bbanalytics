@@ -26,9 +26,10 @@ export default function PageGuard({
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const currentUser = getSessionUser() || db.getCurrentUser();
-    setUser(currentUser);
-    setIsReady(true);
+    const refresh = () => { setUser(getSessionUser()); setIsReady(true); };
+    refresh();
+    window.addEventListener('bb-db-updated', refresh);
+    return () => window.removeEventListener('bb-db-updated', refresh);
   }, []);
 
   const hasPermission = Boolean(

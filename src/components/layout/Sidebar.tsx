@@ -125,8 +125,10 @@ export default function Sidebar() {
   const [currentUser, setCurrentUser] = useState<User>(() => getSessionUser() || db.getCurrentUser());
 
   useEffect(() => {
-    const session = getSessionUser();
-    if (session) setCurrentUser(session);
+    const refresh = () => { const session = getSessionUser(); if (session) setCurrentUser(session); };
+    refresh();
+    window.addEventListener('bb-db-updated', refresh);
+    return () => window.removeEventListener('bb-db-updated', refresh);
   }, []);
 
   return (

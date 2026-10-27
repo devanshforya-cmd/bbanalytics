@@ -32,7 +32,7 @@ import { db } from '@/lib/db/db-service';
 import { recordGpsPing } from '@/lib/db/gps-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
-import { canPerform, getScope, isSuperAdmin } from '@/lib/permissions';
+import { canPerform, getScope, hasAccess, isSuperAdmin } from '@/lib/permissions';
 import { toast } from '@/components/common/Toast';
 
 // 58a. Modular Beat Plan Sub-components
@@ -268,7 +268,9 @@ export default function BeatPlanPage() {
     };
   }, []);
 
-  // Rule 5: 60-second real GPS ping in background when on-duty
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const activeStoreName = activeBeatId ? beatItems.find((beat) => beat.id === activeBeatId)?.storeName : undefined;
+  // Foreground GPS is best effort; browsers may pause background pages.
   useEffect(() => {
     if (officerDuty === 'OFFLINE' || officerDuty === 'ON_LEAVE') return;
 
@@ -278,9 +280,9 @@ export default function BeatPlanPage() {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
+          setGpsError(null);
           setCurrentGpsCoords({ lat: latitude, lng: longitude });
           const status = activeBeatId ? 'AT_STORE' : 'IN_TRANSIT';
-          const activeStore = activeBeatId ? beatItems.find((b) => b.id === activeBeatId)?.storeName : undefined;
 
           void recordGpsPing(
             currentUser.id,
@@ -288,11 +290,11 @@ export default function BeatPlanPage() {
             latitude,
             longitude,
             status,
-            activeStore
-          );
+            activeStoreName
+          ).then(saved => { if (!saved) setGpsError('Your location could not be saved. Check the connection and Sync status.'); });
         },
         (error) => {
-          console.warn('Geolocation ping info:', error.message);
+          setGpsError(error.code === 1 ? 'Location is blocked. Allow location for this site in your browser to send field updates.' : 'Location is temporarily unavailable. Keep the app open and retry your check-in.');
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
       );
@@ -301,7 +303,7 @@ export default function BeatPlanPage() {
     sendGpsPing();
     const interval = setInterval(sendGpsPing, 60000);
     return () => clearInterval(interval);
-  }, [officerDuty, currentUser.id, activeBeatId, beatItems]);
+  }, [officerDuty, currentUser.id, currentUser.fullName, activeBeatId, activeStoreName]);
 
   const handleToggleDuty = () => {
     const nextStatus: DutyStatus =
@@ -565,6 +567,7 @@ export default function BeatPlanPage() {
   return (
     <PageGuard feature="beat_plans">
       <div className="space-y-6 pb-36 sm:pb-12">
+        {gpsError && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{gpsError}</p>}
         <Breadcrumbs
           items={[
             { label: 'Offline Sales', href: '/offline-sales/stores' },
@@ -578,14 +581,14 @@ export default function BeatPlanPage() {
             <div className="flex items-center gap-2">
               <span className="text-base sm:text-lg font-black text-slate-900">
                 Namaste,{' '}
-                <Link
+                {hasAccess(currentUser, 'staff_scorecards') ? <Link
                   href={`/offline-sales/scorecard?officer=${encodeURIComponent(
                     currentUser.fullName
                   )}`}
                   className="hover:text-blue-600 hover:underline"
                 >
                   {currentUser.fullName}
-                </Link>
+                </Link> : <span>{currentUser.fullName}</span>}
                 !
               </span>
               <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-700">

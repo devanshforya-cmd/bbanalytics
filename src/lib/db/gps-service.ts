@@ -52,9 +52,11 @@ export async function recordGpsPing(
  * Fetch latest GPS pings from Supabase
  */
 export async function fetchLatestPingsFromSupabase(): Promise<{ locations: StaffLiveLocation[]; error?: string }> {
+  const owner = db.getCurrentUser().id;
   try {
     const response = await fetch('/api/gps/ping', { cache: 'no-store', credentials: 'same-origin' });
     const result = await response.json().catch(() => null);
+    if (db.getCurrentUser().id !== owner) return { locations: [] };
     if (!response.ok || !result?.success || !Array.isArray(result.data)) {
       return {
         locations: db.getStaffLiveLocations(),
@@ -62,31 +64,30 @@ export async function fetchLatestPingsFromSupabase(): Promise<{ locations: Staff
       };
     }
 
-    const data = result.data as GpsPingRecord[];
-    if (data.length > 0) {
-      // Group by officer_id to pick latest ping per officer
-      const latestByOfficer = new Map<string, GpsPingRecord>();
-      for (const row of data) {
-        if (!latestByOfficer.has(row.officer_id)) {
-          latestByOfficer.set(row.officer_id, row);
-        }
-      }
-
-      // Sync into db service
-      latestByOfficer.forEach((ping) => {
-        db.updateStaffPing(
-          ping.officer_id,
-          Number(ping.lat),
-          Number(ping.lng),
-          (ping.status as StaffLiveStatus) || 'IN_TRANSIT',
-          ping.current_store_name || undefined,
-          ping.battery_level ?? undefined,
-          ping.created_at
-        );
-      });
+    const latestByOfficer = new Map<string, GpsPingRecord>();
+    for (const row of result.data as GpsPingRecord[]) {
+      if (!latestByOfficer.has(row.officer_id)) latestByOfficer.set(row.officer_id, row);
     }
+    const locations: StaffLiveLocation[] = [...latestByOfficer.values()].map((ping) => {
+      const user = db.getUserById(ping.officer_id);
+      return {
+        officerId: ping.officer_id,
+        officerName: user?.fullName || ping.officer_name || 'Sales Officer',
+        currentLat: Number(ping.lat), currentLng: Number(ping.lng),
+        status: (ping.status as StaffLiveStatus) || 'IN_TRANSIT',
+        currentStoreName: ping.current_store_name || undefined,
+        batteryLevel: ping.battery_level ?? 0,
+        lastPingTimestamp: ping.created_at || '',
+        dutyStatus: user?.dutyStatus || 'OFFLINE',
+        isOnline: user?.dutyStatus !== 'OFFLINE',
+        todayDistanceKm: 0, todayRoute: [],
+      };
+    });
+    // An empty authorized result must also remove locations that are no longer visible.
+    db.replaceStaffLiveLocations(locations);
     return { locations: db.getStaffLiveLocations() };
   } catch {
+    if (db.getCurrentUser().id !== owner) return { locations: [] };
     return {
       locations: db.getStaffLiveLocations(),
       error: 'Live GPS service could not be reached. Showing this device’s cached locations.',

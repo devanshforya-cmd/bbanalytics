@@ -26,6 +26,10 @@ import DataImport from './components/DataImport';
 import SharedAccessSettings from './components/SharedAccessSettings';
 import FieldSalesSettings from './components/FieldSalesSettings';
 import FeatureFlagsSettings from './components/FeatureFlagsSettings';
+import GoogleWorkspaceSettings from './components/GoogleWorkspaceSettings';
+import { db } from '@/lib/db/db-service';
+import { getSessionUser } from '@/lib/auth';
+import { hasAccess, isSuperAdmin } from '@/lib/permissions';
 import { Compass, Sliders } from 'lucide-react';
 
 export type SettingsTab =
@@ -39,10 +43,13 @@ export type SettingsTab =
   | 'PROMOTIONS'
   | 'IMPORT'
   | 'SHARED_ACCESS'
-  | 'FEATURE_FLAGS';
+  | 'FEATURE_FLAGS'
+  | 'GOOGLE';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('STAFF');
+  const [user, setUser] = useState(() => getSessionUser() || db.getCurrentUser());
+  useEffect(() => { const refresh = () => setUser(getSessionUser() || db.getCurrentUser()); window.addEventListener('bb-db-updated', refresh); return () => window.removeEventListener('bb-db-updated', refresh); }, []);
 
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get('tab')?.trim().toLowerCase();
@@ -59,11 +66,13 @@ export default function SettingsPage() {
       import: 'IMPORT',
       'shared-access': 'SHARED_ACCESS',
       'feature-flags': 'FEATURE_FLAGS',
+      google: 'GOOGLE',
     };
     if (tab && tabByQuery[tab]) setActiveTab(tabByQuery[tab]);
   }, []);
 
   const tabs = [
+    { id: 'GOOGLE' as SettingsTab, label: 'Google Workspace', icon: Share2 },
     { id: 'STAFF' as SettingsTab, label: 'Staff & Roles', icon: Users },
     { id: 'FIELD_SALES' as SettingsTab, label: 'Field Sales & Beats', icon: Compass },
     { id: 'BRANDS' as SettingsTab, label: 'Brand Management', icon: Tag },
@@ -75,7 +84,14 @@ export default function SettingsPage() {
     { id: 'IMPORT' as SettingsTab, label: 'Data Import Tool', icon: FileSpreadsheet },
     { id: 'SHARED_ACCESS' as SettingsTab, label: 'Shared Access', icon: Share2 },
     { id: 'FEATURE_FLAGS' as SettingsTab, label: 'Feature Flags (A/B)', icon: Sliders },
-  ];
+  ].filter(tab => {
+    if (['GOOGLE', 'STAFF', 'RULES', 'IMPORT', 'SHARED_ACCESS', 'FEATURE_FLAGS'].includes(tab.id)) return isSuperAdmin(user);
+    if (tab.id === 'CHANNELS') return hasAccess(user, 'orderflow');
+    if (tab.id === 'FIELD_SALES') return hasAccess(user, 'beat_plans') || hasAccess(user, 'stores');
+    return true;
+  });
+  const activeTabAllowed = tabs.some(tab => tab.id === activeTab);
+  useEffect(() => { if (!activeTabAllowed) setActiveTab('BRANDS'); }, [activeTabAllowed]);
 
   return (
     <PageGuard feature="settings">
@@ -108,6 +124,7 @@ export default function SettingsPage() {
                     setActiveTab(tab.id);
                     const url = new URL(window.location.href);
                     const queryByTab: Record<SettingsTab, string> = {
+                      GOOGLE: 'google',
                       STAFF: 'staff',
                       FIELD_SALES: 'field-sales',
                       BRANDS: 'brands',
@@ -138,7 +155,8 @@ export default function SettingsPage() {
         </div>
 
         {/* Tab Content Panels */}
-        <div>
+        <div hidden={!activeTabAllowed}>
+          {activeTab === 'GOOGLE' && <GoogleWorkspaceSettings />}
           {activeTab === 'STAFF' && <StaffManagement />}
           {activeTab === 'FIELD_SALES' && <FieldSalesSettings />}
           {activeTab === 'BRANDS' && <BrandSettings />}

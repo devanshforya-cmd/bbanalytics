@@ -53,8 +53,8 @@ export default function FeatureFlagsSettings() {
         analyticsMap[f.name] = await getFlagAnalytics(f.name);
       }
       setAnalytics(analyticsMap);
-    } catch {
-      // Handled
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Feature flags could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -126,24 +126,20 @@ export default function FeatureFlagsSettings() {
     }
   };
 
+  const applyFlagChange = async (operation: () => Promise<unknown>, message: string) => {
+    try { await operation(); toast.success(message); await loadData(); }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'The flag change was not saved.'); }
+  };
   const handleToggleEnabled = async (f: FeatureFlag) => {
-    const newStatus = !f.isEnabled;
-    await updateFeatureFlag(f.id, { isEnabled: newStatus });
-    toast.info(`Flag "${f.name}" is now ${newStatus ? 'Enabled' : 'Disabled'}.`);
-    await loadData();
+    const enabled = !f.isEnabled;
+    await applyFlagChange(() => updateFeatureFlag(f.id, { isEnabled: enabled }), `Flag "${f.name}" is now ${enabled ? 'Enabled' : 'Disabled'}.`);
   };
-
-  const handleVariantChange = async (f: FeatureFlag, newVariant: 'A' | 'B') => {
-    await updateFeatureFlag(f.id, { variant: newVariant });
-    toast.success(`Variant for "${f.name}" set to ${newVariant}.`);
-    await loadData();
+  const handleVariantChange = async (f: FeatureFlag, next: 'A' | 'B') => {
+    await applyFlagChange(() => updateFeatureFlag(f.id, { variant: next }), `Variant for "${f.name}" set to ${next}.`);
   };
-
   const handleDelete = async (f: FeatureFlag) => {
     if (!window.confirm(`Delete feature flag "${f.name}" permanently?`)) return;
-    await deleteFeatureFlag(f.id);
-    toast.success(`Feature flag "${f.name}" deleted.`);
-    await loadData();
+    await applyFlagChange(() => deleteFeatureFlag(f.id), `Feature flag "${f.name}" deleted.`);
   };
 
   const toggleUserSelection = (userId: string) => {

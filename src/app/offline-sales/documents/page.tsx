@@ -1502,6 +1502,7 @@ export default function DocumentsPage() {
             {/* Document Photo Upload (5b) */}
             <div className="space-y-3">
               <CameraCapture
+                folder="document_handover"
                 label="Photograph Document Pages"
                 sublabel="Capture tax invoices, delivery challans, receipt vouchers, or stamped agreements"
                 maxFiles={8}

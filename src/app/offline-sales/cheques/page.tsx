@@ -830,6 +830,7 @@ function ChequesContent() {
 
             {/* Photo Capture */}
             <CameraCapture
+                folder="cheque_tracker"
               label="Photograph Cheque Leaf"
               sublabel="Capture front face of cheque showing cheque #, amount, and signature"
               maxFiles={1}

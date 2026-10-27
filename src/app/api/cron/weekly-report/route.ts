@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/db/db-service';
+import { openSystemWorkspace } from '@/lib/db/server-workspace';
+import { apiFailure } from '../../_workspace';
 import { requireCronAuth } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
@@ -8,6 +8,7 @@ export async function GET(request: Request) {
   const authError = requireCronAuth(request);
   if (authError) return authError;
   try {
+    const { db } = await openSystemWorkspace();
     const now = new Date();
     const periodStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const isInReportPeriod = (value?: string) => {
@@ -32,9 +33,9 @@ export async function GET(request: Request) {
     const periodFailures = failures.filter((f) => isInReportPeriod(f.dateAd || f.createdAt));
     const periodReturns = returns.filter((r) => isInReportPeriod(r.dateAd || r.createdAt));
     const totalOrders = periodOrders.length;
-    const foryaCount = periodOrders.filter((o) => o.brandCode === 'FORYA').length;
-    const peeSafeCount = periodOrders.filter((o) => o.brandCode === 'PEE_SAFE').length;
-    const reneeCount = periodOrders.filter((o) => o.brandCode === 'RENEE').length;
+    const brandCounts = new Map<string, number>();
+    for (const order of periodOrders) brandCounts.set(order.brandCode, (brandCounts.get(order.brandCode) || 0) + 1);
+    const brandSummary = escapeHtml([...brandCounts].map(([brand, count]) => `${brand}: ${count}`).join(', ') || 'No orders');
 
     const failureRate = totalOrders > 0 ? ((periodFailures.length / totalOrders) * 100).toFixed(1) : '0';
     const returnRate = totalOrders > 0 ? ((periodReturns.length / totalOrders) * 100).toFixed(1) : '0';
@@ -96,11 +97,11 @@ export async function GET(request: Request) {
     <div class="header">
       <div class="brand">Brand Bucket<span class="dot">.</span> Operations Command</div>
       <div style="font-size: 13px; color: #64748b; margin-top: 4px;">Operations Summary — ${reportPeriod}</div>
-      <div style="font-size: 12px; color: #b45309; font-weight: 600; margin-top: 4px;">Based on data currently available to this application instance.</div>
+      <div style="font-size: 12px; color: #b45309; font-weight: 600; margin-top: 4px;">Based on records saved in Supabase. Field and customer status show the current snapshot.</div>
     </div>
 
     <div class="section-title">📦 Orders Overview</div>
-    <div class="stat-row"><span>Orders in period:</span><span class="stat-val">${totalOrders} (Forya: ${foryaCount}, Pee Safe: ${peeSafeCount}, Renee: ${reneeCount})</span></div>
+    <div class="stat-row"><span>Orders in period:</span><span class="stat-val">${totalOrders} (${brandSummary})</span></div>
     <div class="stat-row"><span>Top Channel:</span><span class="stat-val">${topChannelText}</span></div>
     <div class="stat-row"><span>Top Product:</span><span class="stat-val">${topProdText}</span></div>
 
@@ -116,10 +117,10 @@ export async function GET(request: Request) {
     <div class="stat-row"><span>New Complaints:</span><span class="stat-val">${newComplaints.length}</span></div>
     <div class="stat-row"><span>Resolved:</span><span class="stat-val">${resolvedComplaints.length} | Still Open: ${openComplaints.length}</span></div>
 
-    <div class="section-title">🏪 Field Sales Performance</div>
+    <div class="section-title">🏪 Current Field Sales Status</div>
     <div class="stat-row"><span>Beat Compliance:</span><span class="stat-val">${scorecardText}</span></div>
-    <div class="stat-row"><span>Store Visits Completed:</span><span class="stat-val">${db.getBeatItems().filter(b => b.status === 'VISITED').length} visits across ${scorecards.length} officers</span></div>
-    <div class="stat-row"><span>Cheques Handled:</span><span class="stat-val">${cheques.filter(c => c.status === 'COLLECTED_IN_FIELD').length} Collected | ${cheques.filter(c => c.status === 'CASHED').length} Cashed | ${cheques.filter(c => c.status === 'DELAYED' || c.status === 'BOUNCED').length} Overdue/Delayed</span></div>
+    <div class="stat-row"><span>Store Visits Completed:</span><span class="stat-val">${db.getBeatItems().filter(b => b.status === 'VISITED' && isInReportPeriod(b.dateAd)).length} visits across ${scorecards.length} officers</span></div>
+    <div class="stat-row"><span>Current Cheque Status:</span><span class="stat-val">${cheques.filter(c => c.status === 'COLLECTED_IN_FIELD').length} Collected | ${cheques.filter(c => c.status === 'CASHED').length} Cashed | ${cheques.filter(c => c.status === 'DELAYED' || c.status === 'BOUNCED').length} Overdue/Delayed</span></div>
 
     <div class="section-title">👥 Customer Intelligence</div>
     <div class="stat-row"><span>Total Customers:</span><span class="stat-val">${customers.length} profiles</span></div>
@@ -142,7 +143,5 @@ export async function GET(request: Request) {
         'Content-Type': 'text/html; charset=utf-8',
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error?.message }, { status: 500 });
-  }
+  } catch (error) { return apiFailure(error, 'Scheduled operation failed.'); }
 }

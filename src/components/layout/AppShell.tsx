@@ -25,6 +25,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const checkSession = () => {
     const sessionUser = getSessionUser();
     if (!sessionUser) {
       setAuthorized(false);
@@ -36,7 +37,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }
       setAuthorized(true);
     }
+    };
+    checkSession();
+    window.addEventListener('bb-db-updated', checkSession);
+    return () => window.removeEventListener('bb-db-updated', checkSession);
   }, [pathname, isLoginPage, isSharedPage, router]);
+
+  useEffect(() => {
+    if (isLoginPage || isSharedPage) return;
+    const refresh = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine && getSessionUser()) void db.syncWithSupabase();
+    };
+    const interval = window.setInterval(refresh, 60000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { window.clearInterval(interval); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
+  }, [isLoginPage, isSharedPage]);
 
   if (isLoginPage || isSharedPage) {
     return (

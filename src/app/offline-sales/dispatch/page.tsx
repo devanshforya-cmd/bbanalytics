@@ -400,6 +400,7 @@ export default function DispatchPage() {
 
               {/* Delivery Challan Photo Evidence */}
               <CameraCapture
+                folder="dispatches"
                 label="Photograph Delivery Challan / Bilti Copy"
                 sublabel="Capture stamped challan signed by receiving bay"
                 maxFiles={1}

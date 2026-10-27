@@ -1,7 +1,7 @@
 /**
  * Image & Document Upload & Security Infrastructure for Brand Bucket Command Center
  * Fix 56e: File Upload Security
- * - 5MB file size limit
+ * - 4MB file size limit
  * - Allowed extension validation (.jpg, .jpeg, .png, .webp, .pdf)
  * - MIME magic bytes verification (real file content sniffing)
  * - EXIF stripping via Canvas to protect location/hardware privacy
@@ -17,7 +17,7 @@ export interface UploadResult {
   mimeType?: string;
 }
 
-export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB limit (Fix 56e)
+export const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024; // Keep multipart uploads below the hosting request limit.
 export const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
 
 /**
@@ -32,7 +32,7 @@ export async function validateFileSignature(file: File): Promise<{
   if (file.size > MAX_FILE_SIZE_BYTES) {
     return {
       valid: false,
-      error: `File exceeds maximum limit of 5MB (${(file.size / (1024 * 1024)).toFixed(1)}MB).`,
+      error: `File exceeds maximum limit of 4MB (${(file.size / (1024 * 1024)).toFixed(1)}MB).`,
     };
   }
 
@@ -201,27 +201,23 @@ export async function uploadImage(
   const isImage = (verification.detectedType || file.type).startsWith('image/');
   const processedFile = (compress && isImage) ? await stripExifAndCompress(file) : file;
 
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(processedFile);
-
-    reader.onload = () => {
-      const resultUrl = reader.result as string;
-      const uploadResult: UploadResult = {
-        url: resultUrl,
-        filename: `${folder}/${Date.now()}_${processedFile.name}`,
-        size: processedFile.size,
-        originalSize,
-        mimeType: verification.detectedType || file.type,
-      };
-
-      resolve(uploadResult);
-    };
-
-    reader.onerror = (err) => {
-      reject(new Error(`Failed to read file: ${err}`));
-    };
-  });
+  if (!['shelf_photos', 'document_handover', 'cheque_tracker', 'dispatches'].includes(folder)) {
+    throw new Error('Choose a supported upload feature.');
+  }
+  if (processedFile.size > MAX_FILE_SIZE_BYTES) throw new Error('File exceeds the 4MB upload limit.');
+  const form = new FormData();
+  form.set('file', processedFile);
+  form.set('feature', folder);
+  const response = await fetch('/api/drive/upload', { method: 'POST', body: form });
+  const result = await response.json();
+  if (!response.ok || !result.success || !result.viewUrl) throw new Error(result.error || 'Upload failed. Please retry.');
+  return {
+    url: result.viewUrl,
+    filename: result.fileName || processedFile.name,
+    size: processedFile.size,
+    originalSize,
+    mimeType: processedFile.type || verification.detectedType || file.type,
+  };
 }
 
 /**

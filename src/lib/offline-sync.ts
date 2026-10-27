@@ -1,9 +1,6 @@
-// Offline-First Synchronization Engine
-// Uses LocalStorage & IndexedDB fallbacks to queue operations when offline
-// Broadcasts sync state: 🟢 'SYNCED' | 🟡 'PENDING' | 🔴 'OFFLINE'
+import { WorkspaceCollection, WorkspaceMutation, WorkspaceSnapshot, WorkspaceVersions } from './db/workspace-types';
 
 export type SyncState = 'SYNCED' | 'PENDING' | 'OFFLINE';
-
 export interface QueuedSyncItem {
   id: string;
   type: string;
@@ -12,359 +9,280 @@ export interface QueuedSyncItem {
   timestamp: string;
   attempts: number;
   lastAttemptAt?: string;
+  lastError?: string;
+  conflictVersion?: number;
 }
-
-const STORAGE_KEY = 'bb_command_center_offline_queue';
-const LAST_SYNC_KEY = 'bb_last_sync_timestamp';
+const LEGACY_QUEUE_KEY = 'bb_command_center_offline_queue';
+const QUEUE_PREFIX = 'bb_workspace_queue_v1:';
 const SIMULATED_OFFLINE_KEY = 'bb_simulated_offline_mode';
+const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+const recordKey = (mutation: WorkspaceMutation) => `${mutation.collection}:${mutation.id}`;
 
-class OfflineSyncManager {
+export class OfflineSyncManager {
   private listeners: ((state: SyncState, pendingCount: number) => void)[] = [];
-  private isOnline: boolean = true;
-  private isSimulatedOffline: boolean = false;
+  private isOnline = true;
+  private isSimulatedOffline = false;
   private queue: QueuedSyncItem[] = [];
-  private lastSyncTime: string = 'Just now';
+  private userId: string | null = null;
+  private generation = 0;
+  private lastSyncTime = 'Never';
+  private syncing: Promise<number> | null = null;
+  private inFlight = new Set<string>();
+  private versions: WorkspaceVersions = {};
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private refreshWorkspace: (() => Promise<unknown>) | null = null;
+  private beforeSync: (() => Promise<unknown>) | null = null;
+  private storageError = '';
+  private refreshError = '';
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      this.isOnline = navigator.onLine;
-      try {
-        this.isSimulatedOffline = localStorage.getItem(SIMULATED_OFFLINE_KEY) === 'true';
-        this.lastSyncTime = localStorage.getItem(LAST_SYNC_KEY) || 'Today at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      } catch {
-        // ignore
+    if (typeof window === 'undefined') return;
+    this.isOnline = navigator.onLine;
+    try { this.isSimulatedOffline = localStorage.getItem(SIMULATED_OFFLINE_KEY) === 'true'; } catch {}
+    window.addEventListener('online', () => { this.isOnline = true; void this.triggerSync(); this.notify(); });
+    window.addEventListener('offline', () => { this.isOnline = false; this.notify(); });
+    window.addEventListener('storage', (event) => {
+      if (event.key === this.queueKey() && !this.syncing) { this.loadQueue(); this.notify(); }
+      if (event.key === 'bb_auth_user_session_v3') {
+        try { this.setUser(JSON.parse(event.newValue || 'null')?.user?.id || null); } catch { this.setUser(null); }
       }
-      this.loadQueue();
-
-      window.addEventListener('online', () => {
-        this.isOnline = true;
-        if (!this.isSimulatedOffline) {
-          this.triggerSync();
-        } else {
-          this.notify();
-        }
-      });
-
-      window.addEventListener('offline', () => {
-        this.isOnline = false;
-        this.notify();
-      });
-    }
+    });
   }
 
-  private loadQueue() {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const raw = JSON.parse(stored);
-        if (Array.isArray(raw)) {
-          // GPS pings are transient; business records stay queued until sync succeeds.
-          this.queue = raw.filter((item) => {
-            if (!item || typeof item !== 'object') return false;
-            if (item.type === 'GPS_PING') return false;
-            return true;
-          });
-          // If invalid or transient records were pruned, persist the remaining queue.
-          if (this.queue.length !== raw.length) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue));
-          }
-        }
-      }
-    } catch {
-      this.queue = [];
-    }
+  private queueKey() { return this.userId ? QUEUE_PREFIX + this.userId : null; }
+  private readStoredQueue(): QueuedSyncItem[] {
+    const key = this.queueKey();
+    if (!key || typeof localStorage === 'undefined') return [];
+    try { const rows = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(rows) ? rows : []; }
+    catch { this.storageError = 'The saved queue could not be read. Preserve this browser’s storage before recovery.'; return []; }
   }
-
+  private loadQueue() { this.queue = this.readStoredQueue(); }
   private saveQueue() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue));
-    } catch (e) {
-      console.error('Failed to save offline sync queue', e);
+    const key = this.queueKey();
+    if (key && typeof localStorage !== 'undefined') {
+      try { localStorage.setItem(key, JSON.stringify(this.queue)); this.storageError = ''; }
+      catch { this.storageError = 'Device storage is full. Keep this tab open and sync or download the pending changes.'; }
     }
     this.notify();
   }
-
-  public subscribe(callback: (state: SyncState, pendingCount: number) => void) {
-    this.listeners.push(callback);
-    callback(this.getCurrentState(), this.queue.length);
-    return () => {
-      this.listeners = this.listeners.filter((l) => l !== callback);
-    };
-  }
-
-  private notify() {
-    const state = this.getCurrentState();
-    const count = this.queue.length;
-    for (const listener of this.listeners) {
-      listener(state, count);
+  public setUser(userId: string | null) {
+    if (this.userId === userId) return;
+    this.generation++;
+    if (this.timer) clearTimeout(this.timer);
+    this.userId = userId;
+    this.queue = [];
+    this.versions = {};
+    this.inFlight = new Set();
+    this.syncing = null;
+    this.lastSyncTime = 'Never';
+    this.storageError = '';
+    this.refreshError = '';
+    if (userId) {
+      this.loadQueue();
+      try { this.lastSyncTime = localStorage.getItem(`bb_last_sync_timestamp:${userId}`) || 'Never'; } catch {}
     }
+    this.notify();
   }
-
+  public setRefreshHandler(handler: () => Promise<unknown>) { this.refreshWorkspace = handler; }
+  public setBeforeSyncHandler(handler: () => Promise<unknown>) { this.beforeSync = handler; }
+  public setVersions(versions: WorkspaceVersions) { this.versions = clone(versions); }
+  public getRecordVersion(collection: WorkspaceCollection, id: string) { return this.versions[collection]?.[id] || 0; }
+  public getWorkspaceMutations(): WorkspaceMutation[] {
+    return this.queue.filter((item) => item.type === 'WORKSPACE_MUTATION').map((item) => clone(item.payload as unknown as WorkspaceMutation));
+  }
+  public subscribe(callback: (state: SyncState, pendingCount: number) => void) {
+    this.listeners.push(callback); callback(this.getCurrentState(), this.queue.length);
+    return () => { this.listeners = this.listeners.filter((listener) => listener !== callback); };
+  }
+  private notify() { for (const listener of this.listeners) listener(this.getCurrentState(), this.queue.length); }
   public getCurrentState(): SyncState {
-    if (!this.isOnline || this.isSimulatedOffline) return 'OFFLINE';
-    if (this.queue.length > 0) return 'PENDING';
-    return 'SYNCED';
+    if (!this.userId || !this.isOnline || this.isSimulatedOffline) return 'OFFLINE';
+    return this.queue.length || this.storageError || this.refreshError ? 'PENDING' : 'SYNCED';
   }
-
-  public getPendingCount(): number {
-    return this.queue.length;
-  }
-
-  public getQueue(): QueuedSyncItem[] {
-    return [...this.queue];
-  }
-
-  public getQueueBreakdown(): { type: string; label: string; count: number }[] {
+  public getPendingCount() { return this.queue.length; }
+  public getQueue() { return clone(this.queue); }
+  public getErrors() { return [...(this.storageError ? [this.storageError] : []), ...(this.refreshError ? [this.refreshError] : []), ...this.queue.filter((item) => item.lastError).map((item) => item.lastError!)]; }
+  public getQueueBreakdown() {
     const counts: Record<string, number> = {};
     for (const item of this.queue) {
-      counts[item.type] = (counts[item.type] || 0) + 1;
+      const key = item.type === 'WORKSPACE_MUTATION' ? String(item.payload.collection) : item.type;
+      counts[key] = (counts[key] || 0) + 1;
     }
-
-    const typeLabels: Record<string, string> = {
-      STOCK_COUNT: 'Stock Counts',
-      STORE_CHECK_IN: 'Store Check-ins',
-      CHEQUE_COLLECTED: 'Cheques',
-      SHELF_PHOTOS_SAVED: 'Shelf Photos',
-      ORDER_CREATED: 'Orders',
-      CALL_LOGGED: 'Call Logs',
-      DOCUMENT_UPLOADED: 'Documents',
-      DISPATCH_LOGGED: 'Dispatches',
-      FEEDBACK_SUBMITTED: 'Feedback',
-      STORE_SKIPPED: 'Skip Reasons',
-    };
-
-    return Object.entries(counts).map(([type, count]) => ({
-      type,
-      label: typeLabels[type] || type.replace(/_/g, ' ').toLowerCase(),
-      count,
-    }));
+    return Object.entries(counts).map(([type, count]) => ({ type, label: type.replace(/([A-Z])/g, ' $1').replace(/_/g, ' '), count }));
   }
-
-  public getLastSyncTime(): string {
-    return this.lastSyncTime;
-  }
-
-  public isSimulated(): boolean {
-    return this.isSimulatedOffline;
-  }
-
-  public toggleSimulatedOffline(): boolean {
+  public getLastSyncTime() { return this.lastSyncTime; }
+  public isSimulated() { return this.isSimulatedOffline; }
+  public toggleSimulatedOffline() {
     this.isSimulatedOffline = !this.isSimulatedOffline;
-    try {
-      localStorage.setItem(SIMULATED_OFFLINE_KEY, String(this.isSimulatedOffline));
-    } catch {
-      // ignore
-    }
+    try { localStorage.setItem(SIMULATED_OFFLINE_KEY, String(this.isSimulatedOffline)); } catch {}
     this.notify();
+    if (!this.isSimulatedOffline) void this.triggerSync();
     return this.isSimulatedOffline;
   }
-
-  public getStorageUsage(): { usedKb: number; formatted: string; percent: number } {
-    if (typeof window === 'undefined') {
-      return { usedKb: 0, formatted: '0 KB / 5 MB used', percent: 0 };
-    }
-    try {
-      let totalBytes = 0;
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key) {
-          totalBytes += (key.length + (localStorage.getItem(key)?.length || 0)) * 2;
-        }
-      }
-      const usedKb = Math.max(12, Math.round(totalBytes / 1024));
-      const percent = Math.min(100, Math.max(1, Math.round((usedKb / 5120) * 100)));
-      return {
-        usedKb,
-        formatted: `${usedKb.toLocaleString()} KB / 5,120 KB used (${percent}%)`,
-        percent,
-      };
-    } catch {
-      return { usedKb: 148, formatted: '148 KB / 5,120 KB used (3%)', percent: 3 };
-    }
+  public getStorageUsage() {
+    let bytes = 0;
+    try { for (let i = 0; i < localStorage.length; i++) { const key = localStorage.key(i)!; bytes += (key.length + (localStorage.getItem(key)?.length || 0)) * 2; } } catch {}
+    const usedKb = Math.round(bytes / 1024);
+    return { usedKb, formatted: `${usedKb.toLocaleString()} KB / 5,120 KB used`, percent: Math.min(100, Math.round(usedKb / 5120 * 100)) };
   }
-
-  public enqueue(type: string, payload: Record<string, unknown>, endpoint: string = '/api/sync'): QueuedSyncItem {
-    const item: QueuedSyncItem = {
-      id: `sync_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      type,
-      endpoint,
-      payload,
-      timestamp: new Date().toISOString(),
-      attempts: 0,
-    };
-
-    // Do not persist ephemeral GPS pings into persistent offline queue
-    if (type !== 'GPS_PING') {
-      this.queue.push(item);
-      this.saveQueue();
+  public enqueue(type: string, payload: Record<string, unknown>, endpoint = '/api/sync'): QueuedSyncItem {
+    const item: QueuedSyncItem = { id: `sync_${Date.now()}_${Math.random().toString(36).slice(2)}`, type, payload: clone(payload), endpoint, timestamp: new Date().toISOString(), attempts: 0 };
+    if (!this.userId) { item.lastError = 'Sign in before saving workspace changes.'; return item; }
+    // Merge other tabs’ pending work before writing this tab’s new change.
+    const localIds = new Set(this.queue.map((entry) => entry.id));
+    this.queue.push(...this.readStoredQueue().filter((entry) => !localIds.has(entry.id)));
+    if (type === 'WORKSPACE_MUTATION') {
+      const incoming = item.payload as unknown as WorkspaceMutation;
+      const prior = this.queue.find((entry) => entry.type === type && recordKey(entry.payload as unknown as WorkspaceMutation) === recordKey(incoming) && !this.inFlight.has(entry.id));
+      if (prior) {
+        incoming.expectedVersion = (prior.payload as unknown as WorkspaceMutation).expectedVersion;
+        this.queue = this.queue.filter((entry) => entry.id !== prior.id);
+      }
     }
-
-    // Auto-sync only if online and NOT simulated offline
-    if (this.isOnline && !this.isSimulatedOffline) {
-      setTimeout(() => this.triggerSync(), 1200);
+    this.queue.push(item); this.saveQueue();
+    if (this.isOnline && !this.isSimulatedOffline && typeof window !== 'undefined') {
+      if (this.timer) clearTimeout(this.timer);
+      this.timer = setTimeout(() => { void this.triggerSync(); }, 1200);
     }
-
     return item;
   }
-
-  private isSyncing: boolean = false;
-
-  public async triggerSync(): Promise<number> {
-    if (!this.isOnline || this.isSimulatedOffline || this.queue.length === 0) {
-      this.notify();
-      return 0;
+  public recoverLegacyQueue(snapshot: WorkspaceSnapshot) {
+    if (!this.userId || typeof localStorage === 'undefined') return;
+    const marker = `bb_legacy_queue_recovered:${this.userId}`;
+    if (localStorage.getItem(marker)) return;
+    const mapping: Record<string, WorkspaceCollection> = {
+      ORDER_CREATED: 'orders', CHEQUE_COLLECTED: 'cheques', STOCK_COUNT: 'stockCounts', DISPATCH_LOGGED: 'dispatches',
+      STORE_CREATED: 'retailers', RETAILER_CREATED: 'retailers', DISTRIBUTOR_CREATED: 'distributors', BRANCH_CREATED: 'branches',
+      STORE_CHECK_IN: 'visits', STORE_SKIPPED: 'beatItems', SHELF_PHOTOS_SAVED: 'shelfPhotos', CALL_LOGGED: 'callLogs',
+      DOCUMENT_UPLOADED: 'documents', FEEDBACK_SUBMITTED: 'feedbackEntries', DELIVERY_FAILURE: 'deliveryFailures', RETURN_SUBMITTED: 'returns',
+      RETURN_RESOLUTION_UPDATED: 'returns', FEEDBACK_ASSIGNED: 'feedbackEntries', TASK_REASSIGNED: 'tasks', TASK_PRIORITY_UPDATED: 'tasks',
+    };
+    try {
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_QUEUE_KEY) || '[]');
+      if (!Array.isArray(legacy)) return;
+      for (const item of legacy) {
+        const payload = item?.payload || {};
+        const collection = mapping[item?.type];
+        const id = payload.id || payload.beatId || payload.feedbackId || payload.taskId || payload.returnId;
+        const row = collection && snapshot[collection]?.find((record) => record.id === id);
+        if (row) {
+          if (!this.getWorkspaceMutations().some((mutation) => mutation.collection === collection && mutation.id === row.id)) this.enqueue('WORKSPACE_MUTATION', { collection, id: row.id, operation: 'upsert', data: row, expectedVersion: this.getRecordVersion(collection, row.id), mutationId: `legacy_${item.id}` });
+        }
+        else {
+          // Unattributed payloads may belong to another account; keep their original backup private.
+          this.queue.push({ id: item.id || `legacy_${Date.now()}_${Math.random()}`, type: 'LEGACY_RECOVERY_REQUIRED', endpoint: '/api/sync', timestamp: item.timestamp || new Date().toISOString(), payload: { legacyId: item.id }, attempts: item.attempts || 0, lastError: `Legacy ${item.type || 'change'} could not be matched to this user’s cached records. Its original device backup is preserved for administrator recovery.` });
+        }
+      }
+      this.saveQueue(); localStorage.setItem(marker, 'true');
+    } catch { this.storageError = 'The legacy queue could not be read. Its original storage key has been preserved.'; this.notify(); }
+  }
+  public async triggerSync(ignoreBackoff = false): Promise<number> {
+    if (this.syncing) return this.syncing;
+    if (!this.userId || !this.isOnline || this.isSimulatedOffline) { this.notify(); return 0; }
+    const generation = this.generation;
+    const run = this.runSync(generation, ignoreBackoff);
+    this.syncing = run;
+    try { return await run; }
+    finally {
+      if (generation === this.generation) {
+        this.syncing = null; this.notify();
+        if (typeof window !== 'undefined' && this.queue.some((item) => !item.attempts && item.conflictVersion === undefined)) {
+          this.timer = setTimeout(() => { void this.triggerSync(); }, 1200);
+        }
+      }
     }
-
-    // Prevent concurrent sync runs
-    if (this.isSyncing) return 0;
-    this.isSyncing = true;
-    this.notify();
-
-    let syncedCount = 0;
-    const failedItems: QueuedSyncItem[] = [];
-
-    for (const item of [...this.queue]) {
-      // Stop syncing if we went offline mid-sync
-      if (!this.isOnline || this.isSimulatedOffline) {
-        failedItems.push(item);
-        continue;
+  }
+  private async runSync(generation: number, ignoreBackoff: boolean) {
+    let count = 0;
+    try { await this.beforeSync?.(); this.refreshError = ''; }
+    catch (error) { this.refreshError = error instanceof Error ? error.message : 'Workspace recovery could not be checked.'; this.notify(); return 0; }
+    if (generation !== this.generation) return 0;
+    const snapshot = clone(this.queue);
+    const failedRecords = new Set<string>();
+    for (const item of snapshot) {
+      if (generation !== this.generation || !this.isOnline || this.isSimulatedOffline) break;
+      const mutation = item.type === 'WORKSPACE_MUTATION' ? item.payload as unknown as WorkspaceMutation : null;
+      const key = mutation ? recordKey(mutation) : item.id;
+      if (failedRecords.has(key) || item.conflictVersion !== undefined) continue;
+      if (!ignoreBackoff && item.lastAttemptAt && Date.now() - Date.parse(item.lastAttemptAt) < Math.min(300000, 1000 * 2 ** Math.min(item.attempts, 8))) continue;
+      // An earlier reply may have rebased a later mutation in this snapshot.
+      const current = this.queue.find((entry) => entry.id === item.id);
+      if (!current) continue;
+      if (typeof window !== 'undefined') {
+        let owner: string | null = null;
+        try { owner = JSON.parse(localStorage.getItem('bb_auth_user_session_v3') || 'null')?.user?.id || null; } catch {}
+        if (owner !== this.userId) { this.setUser(owner); break; }
       }
-
-      const retryDelayMs = Math.min(5 * 60 * 1000, 1000 * 2 ** Math.min(item.attempts, 8));
-      if (item.lastAttemptAt && Date.now() - new Date(item.lastAttemptAt).getTime() < retryDelayMs) {
-        failedItems.push(item);
-        continue;
-      }
-
+      this.inFlight.add(item.id);
       try {
-        await this.processItem(item);
-        syncedCount++;
-      } catch (err) {
-        console.warn(`[OfflineSync] Failed to sync item ${item.id} (attempt ${item.attempts + 1}):`, err);
-        item.attempts = Math.min(item.attempts + 1, 30);
-        item.lastAttemptAt = new Date().toISOString();
-        failedItems.push(item);
-      }
+        if (item.type !== 'WORKSPACE_MUTATION' && item.type !== 'DUTY_STATUS') throw new Error(item.lastError || `Legacy ${item.type} needs manual recovery; download the pending backup.`);
+        const body = item.type === 'DUTY_STATUS' ? { type: item.type, ...current.payload } : current.payload;
+        const response = await fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Workspace-User': this.userId! }, credentials: 'same-origin', body: JSON.stringify(body) });
+        const result = await response.json().catch(() => null);
+        if (generation !== this.generation) break;
+        if (!response.ok || !result?.success) {
+          if (response.status === 409) {
+            current.conflictVersion = Number.isFinite(result?.currentVersion) ? result.currentVersion : -1;
+            throw new Error(`${mutation?.collection || 'Record'} ${mutation?.id || ''} changed on the server. Download your pending changes and review the conflict before retrying.`);
+          }
+          throw new Error(result?.error || `Save failed (${response.status}). Check your connection and access, then retry.`);
+        }
+        // Remove only the acknowledged item; changes enqueued while awaiting stay queued.
+        const latest = this.readStoredQueue();
+        const ids = new Set(this.queue.map((entry) => entry.id));
+        this.queue.push(...latest.filter((entry) => !ids.has(entry.id)));
+        this.queue = this.queue.filter((entry) => entry.id !== item.id);
+        if (mutation) {
+          const version = Number(result.version);
+          this.versions[mutation.collection] = { ...this.versions[mutation.collection], [mutation.id]: version };
+          for (const later of this.queue) {
+            if (later.type === 'WORKSPACE_MUTATION' && recordKey(later.payload as unknown as WorkspaceMutation) === key) (later.payload as unknown as WorkspaceMutation).expectedVersion = version;
+          }
+          if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('bb-workspace-mutation-synced', { detail: { collection: mutation.collection, id: mutation.id, version } }));
+        }
+        count++; this.saveQueue();
+      } catch (error) {
+        if (generation !== this.generation) break;
+        current.attempts = Math.min(current.attempts + 1, 30);
+        current.lastAttemptAt = new Date().toISOString();
+        current.lastError = error instanceof Error ? error.message : 'The change could not be saved. Retry or download the pending backup.';
+        failedRecords.add(key); this.saveQueue();
+      } finally { this.inFlight.delete(item.id); }
     }
-
-    // Replace queue with only failed items
-    this.queue = failedItems;
-    this.saveQueue();
-
-    if (syncedCount > 0) {
-      this.updateLastSync();
+    if (count && generation === this.generation) {
+      this.lastSyncTime = new Date().toLocaleString();
+      try { localStorage.setItem(`bb_last_sync_timestamp:${this.userId}`, this.lastSyncTime); } catch {}
+      this.notify();
     }
-
-    this.isSyncing = false;
-    this.notify();
-    return syncedCount;
+    return count;
   }
-
-  private async processItem(item: QueuedSyncItem): Promise<void> {
-    const { supabase } = await import('./db/supabase-client');
-    const payload = item.payload || {};
-    let result: any;
-
-    switch (item.type) {
-      case 'ORDER_CREATED':
-        result = await supabase.from('orders').upsert([payload]);
-        break;
-      case 'GPS_PING':
-        result = await supabase.from('gps_pings').insert([payload]);
-        break;
-      case 'CHEQUE_COLLECTED':
-        result = await supabase.from('cheques').upsert([payload]);
-        break;
-      case 'STOCK_COUNT':
-        result = await supabase.from('stock_counts').upsert([payload]);
-        break;
-      case 'DISPATCH_LOGGED':
-        result = await supabase.from('dispatches').upsert([payload]);
-        break;
-      case 'STORE_CREATED':
-      case 'RETAILER_CREATED':
-        result = await supabase.from('retailers').upsert([payload]);
-        break;
-      case 'DISTRIBUTOR_CREATED':
-        result = await supabase.from('distributors').upsert([payload]);
-        break;
-      case 'BRANCH_CREATED':
-        result = await supabase.from('branches').upsert([payload]);
-        break;
-      case 'DELIVERY_FAILURE':
-        result = await supabase.from('delivery_failures').upsert([payload]);
-        break;
-      case 'RETURN_SUBMITTED':
-        result = await supabase.from('returns').upsert([payload]);
-        break;
-      case 'DUTY_STATUS':
-        if (!payload.officerId) throw new Error('Missing officerId for duty status sync.');
-        result = await supabase
-          .from('users')
-          .update({ duty_status: payload.status })
-          .eq('id', payload.officerId);
-        break;
-      default:
-        throw new Error(`Unsupported offline sync type: ${item.type}`);
-    }
-
-    assertSyncSuccess(result, item.type);
-  }
-
   public async forceSyncNow(): Promise<number> {
-    // If simulated offline was active, resume online to allow user's explicit force sync
-    if (this.isSimulatedOffline) {
-      this.isSimulatedOffline = false;
-      try {
-        localStorage.setItem(SIMULATED_OFFLINE_KEY, 'false');
-      } catch {
-        // ignore
-      }
+    this.isSimulatedOffline = false;
+    try { localStorage.setItem(SIMULATED_OFFLINE_KEY, 'false'); } catch {}
+    const generation = this.generation;
+    const count = await this.triggerSync(true);
+    if (generation === this.generation && this.userId && this.isOnline) {
+      const result = await this.refreshWorkspace?.() as { success?: boolean; message?: string } | undefined;
+      this.refreshError = result?.success === false ? result.message || 'Workspace refresh failed. Retry when connected.' : '';
     }
-
-    // Trigger full db sync with Supabase in parallel
-    try {
-      const { db } = await import('./db/db-service');
-      await db.syncWithSupabase();
-    } catch (e) {
-      console.warn('[OfflineSync] db sync error during forceSyncNow:', e);
-    }
-
-    // If currently syncing, notify and return
-    if (this.isSyncing) {
-      this.notify();
-      return 0;
-    }
-
-    // Delegate to the real triggerSync which processes queued items
-    return this.triggerSync();
+    this.notify(); return count;
   }
-
-
-  private updateLastSync() {
-    const now = new Date();
-    const timeStr = 'Today at ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    this.lastSyncTime = timeStr;
-    try {
-      localStorage.setItem(LAST_SYNC_KEY, timeStr);
-    } catch {
-      // ignore
-    }
-    this.notify();
+  public retryConflict(itemId: string) {
+    const item = this.queue.find((entry) => entry.id === itemId);
+    if (!item || item.conflictVersion === undefined || item.conflictVersion < 0) return;
+    (item.payload as unknown as WorkspaceMutation).expectedVersion = item.conflictVersion;
+    (item.payload as unknown as WorkspaceMutation).mutationId = `retry_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    delete item.conflictVersion; delete item.lastError; delete item.lastAttemptAt; this.saveQueue();
   }
-
   public clearQueue() {
-    this.queue = [];
-    this.saveQueue();
+    if (this.inFlight.size) return;
+    if (this.userId && typeof localStorage !== 'undefined') localStorage.setItem(`bb_queue_backup:${this.userId}:${Date.now()}`, JSON.stringify(this.queue));
+    this.queue = []; this.saveQueue();
   }
 }
-
 export const syncManager = new OfflineSyncManager();
-
-export function assertSyncSuccess(result: { error?: { message?: string } | null }, operation: string): void {
-  if (result?.error) {
-    throw new Error(`${operation} failed: ${result.error.message || 'remote write rejected'}`);
-  }
+export function assertSyncSuccess(result: { error?: { message?: string } | null }, operation: string) {
+  if (result?.error) throw new Error(`${operation} failed: ${result.error.message || 'remote write rejected'}`);
 }
 
 import {
@@ -382,6 +300,13 @@ const CACHE_PREFIX = 'bb_offline_cache_';
 
 export class DataCache {
   private dbPromise: Promise<any> | null = null;
+
+  private scopedKey(key: string): string | null {
+    try {
+      const session = JSON.parse(localStorage.getItem('bb_auth_user_session_v3') || 'null');
+      return session?.user?.id && session.expiresAt > Date.now() ? `${session.user.id}:${key}` : null;
+    } catch { return null; }
+  }
 
   private async getDB() {
     if (typeof window === 'undefined') return null;
@@ -404,6 +329,9 @@ export class DataCache {
   }
 
   private async setItem<T>(key: string, value: T): Promise<void> {
+    const scoped = this.scopedKey(key);
+    if (!scoped) return;
+    key = scoped;
     try {
       const db = await this.getDB();
       if (db) {
@@ -423,6 +351,9 @@ export class DataCache {
   }
 
   private async getItem<T>(key: string): Promise<T | null> {
+    const scoped = this.scopedKey(key);
+    if (!scoped) return null;
+    key = scoped;
     try {
       const db = await this.getDB();
       if (db) {
@@ -501,14 +432,17 @@ export class DataCache {
 
   async getLastSyncTime(): Promise<Date | null> {
     if (typeof window === 'undefined') return null;
-    const val = localStorage.getItem(CACHE_SYNC_TIME_KEY);
+    const key = this.scopedKey(CACHE_SYNC_TIME_KEY);
+    const val = key ? localStorage.getItem(key) : null;
     return val ? new Date(val) : null;
   }
 
   async setLastSyncTime(date?: Date): Promise<void> {
     if (typeof window === 'undefined') return;
+    const key = this.scopedKey(CACHE_SYNC_TIME_KEY);
+    if (!key) return;
     const d = date || new Date();
-    localStorage.setItem(CACHE_SYNC_TIME_KEY, d.toISOString());
+    localStorage.setItem(key, d.toISOString());
   }
 
   async isCacheStale(maxAgeHours: number = 1): Promise<boolean> {
