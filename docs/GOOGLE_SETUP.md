@@ -2,6 +2,21 @@
 
 Supabase is the source of truth. Google Drive stores uploaded photos/documents; Google Sheets is a manually refreshed report copy. The application does not run scheduled Sheets exports. Existing browser-only scheduling preferences have no effect.
 
+## Exact setup for this deployment
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/) and create/select a BB Analytics project. Enable **Google Drive API** and **Google Sheets API** in APIs & Services → Library.
+2. In **Google Auth platform**, configure Branding and Audience. For an External app in Testing, add the Google account that will own the app's files as a test user. Add the file scope `https://www.googleapis.com/auth/drive.file` under Data Access.
+3. Open **Clients → Create client → Web application**. Add this exact authorized redirect URI:
+
+   `https://bbanalytics-three.vercel.app/api/integrations/google/callback`
+
+4. In [Vercel environment variables](https://vercel.com/bb-1830/bbanalytics/settings/environment-variables), set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` for Production. The redirect variable must be the exact URI above. Keep the secret server-only and out of chat/source control. Redeploy after adding the variables.
+5. Sign in to the live app as Super Admin. Open **Settings → Google Workspace → Connect Google**, choose the intended Google account and approve the requested file access. Then confirm the folder/workbook, upload one photo and export one report before relying on the integration.
+
+For local testing, register `http://127.0.0.1:3000/api/integrations/google/callback` separately and use that exact URI in the local environment. Sign in at `http://127.0.0.1:3000` so the session, origin and callback match. A production callback cannot be used from a preview or a different local hostname.
+
+Google's [credential creation guide](https://developers.google.com/workspace/guides/create-credentials) and [server OAuth guide](https://developers.google.com/identity/protocols/oauth2/web-server) describe the current console flow and exact redirect matching.
+
 ## Recommended: administrator OAuth
 
 1. In a Google Cloud project, enable **Google Drive API** and **Google Sheets API**. Configure the OAuth consent screen and create an OAuth client with application type **Web application**.
