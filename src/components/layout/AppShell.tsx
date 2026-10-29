@@ -6,7 +6,6 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
 import PWAInstallBanner from '@/components/common/PWAInstallBanner';
-import NotificationPermissionBanner from '@/components/common/NotificationPermissionBanner';
 import { ToastContainer } from '@/components/common/Toast';
 import OfflineBar from '@/components/common/OfflineBar';
 import { getSessionUser } from '@/lib/auth';
@@ -96,7 +95,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <MobileNav />
       </div>
       <PWAInstallBanner />
-      <NotificationPermissionBanner />
       <OfflineBar />
       <ToastContainer />
     </div>
