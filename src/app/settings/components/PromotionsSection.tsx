@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db/db-service';
 import { Promotion, BrandCode } from '@/lib/types';
+import { getTodayAd, getTodayBs, adToBs } from '@/lib/nepali-calendar';
 import {
   Tag,
   Plus,
@@ -23,10 +24,10 @@ export default function PromotionsSection() {
   const [brandCode, setBrandCode] = useState<BrandCode>('FORYA');
   const [offerType, setOfferType] = useState<Promotion['offerType']>('BUY_X_GET_Y');
   const [productNames, setProductNames] = useState('');
-  const [validFromBs, setValidFromBs] = useState('Bhadra 1, 2083');
-  const [validToBs, setValidToBs] = useState('Ashwin 30, 2083');
-  const [validFromAd, setValidFromAd] = useState('2026-08-17');
-  const [validToAd, setValidToAd] = useState('2026-10-16');
+  const [validFromBs, setValidFromBs] = useState(() => getTodayBs());
+  const [validToBs, setValidToBs] = useState(() => adToBs(new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]).formatted);
+  const [validFromAd, setValidFromAd] = useState(() => getTodayAd());
+  const [validToAd, setValidToAd] = useState(() => new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
   const [applicableStoreTypes, setApplicableStoreTypes] = useState<'ALL' | 'GT' | 'MT' | 'SPECIFIC'>('ALL');
   const [description, setDescription] = useState('');
 

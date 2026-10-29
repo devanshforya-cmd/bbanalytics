@@ -1,58 +1,49 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-guard';
-import { db } from '@/lib/db/db-service';
+import { requireFeatureAccess } from '@/lib/auth-guard';
+import { openServerWorkspace } from '@/lib/db/server-workspace';
+import { getTodayBs } from '@/lib/nepali-calendar';
+import { dateAd, allowedValue, ApiInputError, apiFailure, assertBrand, readBody, requiredText, visibleFeedback } from '../_workspace';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY']);
+  const auth = await requireFeatureAccess(request, 'reviews', 'VIEW');
   if (auth.response) return auth.response;
-
-  const { user } = auth;
-  let feedback = db.getFeedback();
-
-  if (user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
-    feedback = feedback.filter((f) => user.assignedBrands!.includes(f.brandCode as any));
-  }
-
-  return NextResponse.json({ success: true, count: feedback.length, data: feedback });
+  try {
+    const { db } = await openServerWorkspace(auth.user);
+    const feedback = visibleFeedback(db, auth.user);
+    return NextResponse.json({ success: true, count: feedback.length, data: feedback });
+  } catch (error) { return apiFailure(error, 'Failed to load feedback.'); }
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY']);
+  const auth = await requireFeatureAccess(request, 'reviews', 'CREATE');
   if (auth.response) return auth.response;
-
   try {
-    const body = await request.json();
-    if (!body.customerName || !body.fullText || !body.brandCode) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required feedback fields: customerName, fullText, brandCode.' },
-        { status: 400 }
-      );
+    const body = await readBody(request);
+    const customerName = requiredText(body.customerName, 'customerName');
+    const fullText = requiredText(body.fullText, 'fullText');
+    const { db, commit } = await openServerWorkspace(auth.user);
+    const brandCode = assertBrand(db, auth.user, body.brandCode);
+    const product = body.productId ? db.getProducts().find(product => product.id === body.productId && product.brandCode === brandCode) : undefined;
+    if (body.productId && !product) throw new ApiInputError('The product does not belong to the selected brand.');
+    for (const field of ['screenshotUrls', 'issueCategories']) {
+      if (body[field] !== undefined && (!Array.isArray(body[field]) || body[field].some((value: unknown) => typeof value !== 'string'))) throw new ApiInputError(`${field} must be a list of strings.`);
     }
-
-    const created = db.addFeedback({
-      customerName: body.customerName,
-      customerPhone: body.customerPhone || '9800000000',
-      brandCode: body.brandCode,
-      productId: body.productId || 'prod_general',
-      productName: body.productName || 'General Product',
-      type: body.type || 'FEEDBACK',
-      channel: body.channel || 'WhatsApp',
-      dateReceivedAd: body.dateReceivedAd || new Date().toISOString().split('T')[0],
-      dateReceivedBs: body.dateReceivedBs || '2083-05-27',
-      fullText: body.fullText,
-      screenshotUrls: body.screenshotUrls || [],
-      issueCategories: body.issueCategories || [],
-      sentiment: body.sentiment || 'NEUTRAL',
-      hasScreenshot: Boolean(body.screenshotUrls?.length),
-      usedInDesign: false,
-      postedOnWebsite: false,
-      priority: body.priority || 'MEDIUM',
-      complaintStatus: body.complaintStatus || 'OPEN',
-    });
+    const feedback = {
+      customerName, customerPhone: typeof body.customerPhone === 'string' ? body.customerPhone : '', brandCode,
+      productId: product?.id || '', productName: product?.name || '',
+      type: allowedValue(body.type, ['REVIEW', 'FEEDBACK', 'COMPLAINT'] as const, 'FEEDBACK', 'type'),
+      channel: typeof body.channel === 'string' ? body.channel : '',
+      dateReceivedAd: dateAd(body.dateReceivedAd, 'dateReceivedAd', new Date().toISOString().slice(0, 10)), dateReceivedBs: body.dateReceivedBs || getTodayBs(),
+      fullText, screenshotUrls: body.screenshotUrls || [], issueCategories: body.issueCategories || [],
+      sentiment: allowedValue(body.sentiment, ['POSITIVE', 'NEUTRAL', 'NEGATIVE'] as const, 'NEUTRAL', 'sentiment'),
+      hasScreenshot: Boolean(body.screenshotUrls?.length), usedInDesign: false, postedOnWebsite: false,
+      priority: allowedValue(body.priority, ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const, 'MEDIUM', 'priority'),
+      complaintStatus: 'OPEN' as const, createdById: auth.user.id,
+    };
+    const created = db.addFeedback(feedback);
+    await commit();
     return NextResponse.json({ success: true, data: created }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error?.message || 'Failed to submit feedback' }, { status: 500 });
-  }
+  } catch (error) { return apiFailure(error, 'Failed to submit feedback.'); }
 }

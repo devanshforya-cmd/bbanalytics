@@ -1,73 +1,48 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-guard';
-import { db } from '@/lib/db/db-service';
-import { getScope } from '@/lib/permissions';
+import { requireFeatureAccess } from '@/lib/auth-guard';
+import { openServerWorkspace } from '@/lib/db/server-workspace';
+import { getTodayBs } from '@/lib/nepali-calendar';
+import { dateAd, allowedValue, ApiInputError, apiFailure, readBody, requiredText, scopeOfficerIds } from '../_workspace';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const auth = await requireAuth(request);
+  const auth = await requireFeatureAccess(request, 'tasks', 'VIEW');
   if (auth.response) return auth.response;
-
-  const { user } = auth;
-  let tasks = db.getTasks();
-
-  const isOfficer =
-    !user.isSuperAdmin &&
-    !user.is_super_admin &&
-    (user.role === 'SALES_OFFICER' || getScope(user, 'tasks') === 'OWN');
-
-  if (isOfficer) {
-    const uName = (user.fullName || '').toLowerCase();
-    const uFirst = uName.split(' ')[0] || '';
-    tasks = tasks.filter(
-      (t) =>
-        t.assignedTo === user.id ||
-        (t.assignedToName &&
-          (t.assignedToName.toLowerCase() === uName ||
-            (uFirst.length > 2 && t.assignedToName.toLowerCase().includes(uFirst))))
-    );
-  }
-
-  return NextResponse.json({ success: true, count: tasks.length, data: tasks });
+  try {
+    const { db } = await openServerWorkspace(auth.user);
+    const ids = scopeOfficerIds(db, auth.user, 'tasks');
+    const tasks = db.getTasks().filter(task => ids === null || ids.has(task.assignedTo));
+    return NextResponse.json({ success: true, count: tasks.length, data: tasks });
+  } catch (error) { return apiFailure(error, 'Failed to load tasks.'); }
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAuth(request);
+  const auth = await requireFeatureAccess(request, 'tasks', 'CREATE');
   if (auth.response) return auth.response;
-
   try {
-    const body = await request.json();
-    if (!body.title) {
-      return NextResponse.json(
-        { success: false, error: 'Task title is required.' },
-        { status: 400 }
-      );
-    }
-
-    const allUsers = db.getUsers();
-    const assignedUser = allUsers.find((u) => u.id === body.assignedTo) || auth.user;
-
-    const newTask = db.addTask({
-      title: body.title,
-      description: body.description || '',
-      assignedTo: assignedUser.id,
-      assignedToName: assignedUser.fullName || body.assignedToName || 'Assigned Officer',
-      createdBy: auth.user.fullName || 'HQ Admin',
-      priority: body.priority || 'MEDIUM',
-      dueDateBs: body.dueDateBs || '2083-05-28',
-      dueDateAd: body.dueDateAd || new Date().toISOString().split('T')[0],
-      relatedTo: body.relatedTo || 'Store visit',
-      relatedEntityType: body.relatedEntityType || 'STORE',
-      status: body.status || 'PENDING',
-      autoCreated: !!body.autoCreated,
-    });
-
-    return NextResponse.json({ success: true, data: newTask }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to create task' },
-      { status: 500 }
-    );
-  }
+    const body = await readBody(request);
+    const title = requiredText(body.title, 'title');
+    const assignedTo = requiredText(body.assignedTo, 'assignedTo');
+    const { db, commit } = await openServerWorkspace(auth.user);
+    const assignedUser = db.getUsers().find(user => user.id === assignedTo && user.active !== false && user.is_active !== false);
+    if (!assignedUser) throw new ApiInputError('The selected assignee does not exist or is inactive.');
+    const ids = scopeOfficerIds(db, auth.user, 'tasks');
+    if (ids !== null && !ids.has(assignedTo)) throw new ApiInputError('Not found.', 404);
+    const task = {
+      title, description: typeof body.description === 'string' ? body.description : '',
+      assignedTo: assignedUser.id, assignedToName: assignedUser.fullName,
+      createdBy: auth.user.fullName, createdById: auth.user.id,
+      priority: allowedValue(body.priority, ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const, 'MEDIUM', 'priority'),
+      dueDateBs: body.dueDateBs || getTodayBs(), dueDateAd: dateAd(body.dueDateAd, 'dueDateAd', new Date().toISOString().slice(0, 10)),
+      relatedTo: typeof body.relatedTo === 'string' ? body.relatedTo : undefined,
+      relatedId: typeof body.relatedId === 'string' ? body.relatedId : undefined,
+      relatedEntityType: body.relatedEntityType === undefined ? undefined : allowedValue(body.relatedEntityType, ['STORE', 'CHEQUE', 'COMPLAINT', 'CALL'] as const, 'STORE', 'relatedEntityType'),
+      status: allowedValue(body.status, ['OPEN', 'PENDING', 'IN_PROGRESS', 'COMPLETED', 'OVERDUE'] as const, 'PENDING', 'status'),
+      autoCreated: false,
+    };
+    const created = db.addTask(task);
+    await commit();
+    return NextResponse.json({ success: true, data: created }, { status: 201 });
+  } catch (error) { return apiFailure(error, 'Failed to create task.'); }
 }

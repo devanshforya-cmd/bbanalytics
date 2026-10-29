@@ -3,41 +3,19 @@
  * Provides offline caching for static assets, app shell, and background sync integration.
  */
 
-const CACHE_NAME = 'bb-command-center-v2';
-const STATIC_ASSETS = [
-  '/',
-  '/dashboard',
-  '/offline-sales/beat-plan',
-  '/products',
-  '/customers',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-];
-
+const CACHE_NAME = 'bb-command-center-v6-recovery';
 // Install: Precache core app shell & static routes
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .then(() => self.skipWaiting())
-  );
+  self.skipWaiting();
 });
 
-// Activate: Clean up old cache versions and claim clients
+// Activate: Clean up all old cache versions and claim clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
       .then((keys) => {
-        return Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key))
-        );
+        return Promise.all(keys.filter((key) => key.startsWith('bb-command-center-') && key !== CACHE_NAME).map((key) => caches.delete(key)));
       })
       .then(() => self.clients.claim())
   );
@@ -57,6 +35,15 @@ self.addEventListener('fetch', (event) => {
   if (!url.protocol.startsWith('http')) {
     return;
   }
+
+  // In local development, bypass cache completely so all code updates are immediate
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '0.0.0.0') {
+    return;
+  }
+
+  // Private API responses, account-specific RSC payloads, and other origins
+  // must always go to the network; their data is never stored in the shell cache.
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/') || request.headers.has('RSC')) return;
 
   // Cache-First for static assets (Next.js chunks, fonts, icons, CSS)
   if (
@@ -111,30 +98,14 @@ self.addEventListener('fetch', (event) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          // Fallback to cached dashboard or root
-          const fallback = await caches.match('/dashboard');
-          return fallback || caches.match('/');
+          return new Response('<!doctype html><html lang="en"><meta name="viewport" content="width=device-width"><title>Offline</title><body><h1>You are offline</h1><p>Reconnect to load this page. Your pending changes are saved on this device.</p></body></html>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
         })
     );
     return;
   }
 
-  // Default Stale-While-Revalidate
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const networkFetch = fetch(request)
-        .then((resp) => {
-          if (resp && resp.status === 200) {
-            const copy = resp.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          }
-          return resp;
-        })
-        .catch(() => cached);
+  // Other GET requests use normal browser/network semantics.
 
-      return cached || networkFetch;
-    })
-  );
 });
 
 // Background Sync Event: Trigger offline sync queue when connection restored

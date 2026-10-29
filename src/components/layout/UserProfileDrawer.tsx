@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useCalendarPreference } from '@/lib/hooks/useCalendarPreference';
-import { getScope, isSuperAdmin } from '@/lib/permissions';
+import { getScope, hasAccess, isSuperAdmin } from '@/lib/permissions';
 
 interface UserProfileDrawerProps {
   isOpen: boolean;
@@ -101,7 +101,7 @@ export default function UserProfileDrawer({
     setDutyStatus(newStatus);
     db.setOfficerDutyStatus(currentUser.id, newStatus);
     db.setCurrentUser(currentUser.id);
-    setStatusFeedback(`Duty status updated to ${DUTY_STATUS_CONFIG[newStatus].label}`);
+    setStatusFeedback(`Duty status queued: ${DUTY_STATUS_CONFIG[newStatus].label}. Check Sync status for confirmation.`);
     setTimeout(() => setStatusFeedback(null), 3000);
     if (onUserUpdate) onUserUpdate();
   };
@@ -115,6 +115,16 @@ export default function UserProfileDrawer({
   if (!isOpen) return null;
 
   const isOfficer = getScope(currentUser, 'beat_plans') === 'OWN';
+  const today = new Date().toISOString().split('T')[0];
+  const todayBeats = isOfficer ? db.getTodayBeat(currentUser.id).filter((beat) => beat.dateAd === today) : [];
+  const todayOrderAmount = isOfficer
+    ? db.getSecondaryOrders({ officerId: currentUser.id })
+        .filter((order) => order.orderDateAd === today)
+        .reduce((total, order) => total + order.totalAmount, 0)
+    : 0;
+  const todayChequeCount = isOfficer
+    ? db.getCheques().filter((cheque) => cheque.officerId === currentUser.id && cheque.receivedDateAd === today).length
+    : 0;
   const dutyConfig = DUTY_STATUS_CONFIG[dutyStatus] || DUTY_STATUS_CONFIG.ONLINE;
   const DutyIcon = dutyConfig.icon;
 
@@ -151,8 +161,9 @@ export default function UserProfileDrawer({
               <div className="flex items-start gap-4">
                 <div className="relative">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-lg font-black text-white shadow">
-                    {currentUser.fullName
+                    {(currentUser?.fullName || 'User')
                       .split(' ')
+                      .filter(Boolean)
                       .map((n) => n[0])
                       .join('')
                       .slice(0, 2)
@@ -301,7 +312,7 @@ export default function UserProfileDrawer({
             </div>
 
             {/* Field Performance Snapshot for Officers */}
-            {isOfficer && (
+            {isOfficer && hasAccess(currentUser, 'staff_scorecards') && (
               <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -318,15 +329,17 @@ export default function UserProfileDrawer({
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="rounded-lg bg-white p-2.5 border border-slate-200/80 shadow-xs">
-                    <div className="text-base font-black text-slate-900">8 / 12</div>
+                    <div className="text-base font-black text-slate-900">
+                      {todayBeats.filter((beat) => beat.status === 'VISITED').length} / {todayBeats.length}
+                    </div>
                     <div className="text-[10px] font-semibold text-slate-500">Stores Visited</div>
                   </div>
                   <div className="rounded-lg bg-white p-2.5 border border-slate-200/80 shadow-xs">
-                    <div className="text-base font-black text-emerald-600">Rs 48.5K</div>
+                    <div className="text-base font-black text-emerald-600">Rs {todayOrderAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
                     <div className="text-[10px] font-semibold text-slate-500">Orders Booked</div>
                   </div>
                   <div className="rounded-lg bg-white p-2.5 border border-slate-200/80 shadow-xs">
-                    <div className="text-base font-black text-blue-600">2</div>
+                    <div className="text-base font-black text-blue-600">{todayChequeCount}</div>
                     <div className="text-[10px] font-semibold text-slate-500">Cheques Picked</div>
                   </div>
                 </div>
@@ -340,7 +353,7 @@ export default function UserProfileDrawer({
                   <CalendarDays className="h-4 w-4 text-blue-600" />
                   <span className="text-xs font-bold text-slate-900">Default Calendar</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-medium">Persists across devices</span>
+                <span className="text-[10px] text-slate-400 font-medium">Saved on this device</span>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 {(['BS', 'AD', 'BOTH'] as const).map((pref) => (
@@ -361,7 +374,7 @@ export default function UserProfileDrawer({
             </div>
 
             {/* Simulate Persona (Tester switch) */}
-            <div className="space-y-2">
+            {process.env.NODE_ENV === 'development' && isSuperAdmin(currentUser) && <div className="space-y-2">
               <button
                 type="button"
                 onClick={() => setShowRoleSwitcher(!showRoleSwitcher)}
@@ -411,7 +424,7 @@ export default function UserProfileDrawer({
                   ))}
                 </div>
               )}
-            </div>
+            </div>}
 
             {/* System Settings Shortcut */}
             <Link

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { db } from '@/lib/db/db-service';
 import { Dispatch, DispatchItem, BrandCode } from '@/lib/types';
-import { formatDualDate, getTodayAd, getTodayBs } from '@/lib/nepali-calendar';
+import { formatDualDate, getTodayAd, getTodayBs, adToBs } from '@/lib/nepali-calendar';
 import CameraCapture from '@/components/common/CameraCapture';
 import { toast } from '@/components/common/Toast';
 import {
@@ -40,7 +40,7 @@ export default function DispatchPage() {
   const [dispatchPhotoUrl, setDispatchPhotoUrl] = useState('');
   const [lightboxChallanUrl, setLightboxChallanUrl] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<{ productId: string; quantity: number }[]>([
-    { productId: products[0]?.id || '', quantity: 30 },
+    { productId: products[0]?.id || '', quantity: 1 },
   ]);
 
   // Edit History Modal
@@ -96,7 +96,7 @@ export default function DispatchPage() {
         dispatchDateBs: formatDualDate(dispatchDateAd).split(' (')[0],
         items,
         notes: dispatchNotes,
-        documentUrl: dispatchPhotoUrl || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=60',
+        documentUrl: dispatchPhotoUrl || undefined,
       });
 
       setDispatches([...db.getDispatches()]);
@@ -400,6 +400,7 @@ export default function DispatchPage() {
 
               {/* Delivery Challan Photo Evidence */}
               <CameraCapture
+                folder="dispatches"
                 label="Photograph Delivery Challan / Bilti Copy"
                 sublabel="Capture stamped challan signed by receiving bay"
                 maxFiles={1}
@@ -445,11 +446,11 @@ export default function DispatchPage() {
           { label: 'Total Volume', value: `${totalUnits} units, ${selectedItems.length} product(s)` },
           { label: 'Dispatch Date', value: formatDualDate(dispatchDateAd).split(' (')[0] },
           { label: 'Payment Terms', value: '15-day credit terms' },
-          { label: 'Payment Due Date', value: 'Ashwin 12, 2083' },
+          { label: 'Payment Due Date', value: adToBs(new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]).formatted },
         ]}
         consequences={[
           `Add ${totalUnits} units to ${selectedStore?.name || 'Distributor'} inventory ledger`,
-          'Create automated payment follow-up reminder for Ashwin 12, 2083',
+          `Create automated payment follow-up reminder for ${adToBs(new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]).formatted}`,
           'Notify assigned field territory officer of scheduled handover',
         ]}
         onConfirm={handleConfirmDispatch}

@@ -43,34 +43,6 @@ import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
 import { useSubmitGuard } from '@/hooks/useSubmitGuard';
 
-const SAMPLE_CHAT_1 = `[11:32 AM, 9/8/2026] Sita Gurung: Namaste! I want to order 2 bottles of Forya hair serum.
-[11:33 AM, 9/8/2026] Brand Bucket: Namaste Sita ji! Yes sure. Please send your delivery address and phone number.
-[11:35 AM, 9/8/2026] Sita Gurung: My phone is 9847890123. Delivery address is Lakeside, Pokhara near Hallanchowk. Payment will be COD via Pathao. Total is Rs 2400.`;
-
-const SAMPLE_CHAT_2 = `[2:15 PM, 9/8/2026] Anjali Shrestha: Hello, do you have Pee Safe toilet seat spray and 2 packs of face razor?
-[2:16 PM, 9/8/2026] Brand Bucket: Yes available! Total will be NPR 1,300 with delivery.
-[2:18 PM, 9/8/2026] Anjali Shrestha: Great! Please send to Baneshwor, Kathmandu. Phone 9813456789. I already paid via eSewa.`;
-
-const SAMPLE_CHAT_3 = `[4:40 PM, 9/8/2026] Aayush Khatiwada: Hi, I saw your TikTok for Renee madness lipstick! Can I order 1 piece?
-[4:42 PM, 9/8/2026] Brand Bucket: Hello Aayush! Yes, Renee Madness pH Gloss Black Lipstick is in stock for NPR 950. Where should we send it?
-[4:45 PM, 9/8/2026] Aayush Khatiwada: Send it to Pulchowk, Lalitpur near Labim Mall. Phone is 9803456789. COD please.`;
-
-const SAMPLE_BATCH_CHAT = `[10:15 AM, 9/11/2026] Binod Karki: Hi I want the hairfall rescue kit and 2 peach roll on please. Total 3378.
-Phone: 9851012345, deliver to New Baneshwor near Eyeplex Mall, Kathmandu. COD.
-
----
-[11:00 AM, 9/11/2026] Smriti Shrestha: Send 1 daily care essentials kit to Thamel Kathmandu.
-Phone: 9841234567. Paid via eSewa 620.
-
----
-Name: Priya Thapa
-Phone: 9841122334
-Address: Jhamsikhel, Lalitpur
-Product: 2 Peach Roll-On and 1 Body Wash
-Total: Rs. 1950
-Payment: COD
-Platform: Instagram`;
-
 export interface ExtractionHistoryItem {
   id: string;
   timestamp: string;
@@ -84,31 +56,6 @@ export interface ExtractionHistoryItem {
   rawText?: string;
 }
 
-const INITIAL_HISTORY: ExtractionHistoryItem[] = [
-  {
-    id: 'eh_1',
-    timestamp: 'Today, 11:32 AM',
-    customerName: 'Sita Gurung',
-    customerPhone: '+977-9847890123',
-    brandCode: 'FORYA',
-    productSummary: 'Forya Nourishing Hair Serum 100ml (2)',
-    totalAmount: 2400,
-    status: 'PUSHED',
-    orderNumber: 'BB-WA-8921',
-  },
-  {
-    id: 'eh_2',
-    timestamp: 'Today, 10:15 AM',
-    customerName: 'Anjali Shrestha',
-    customerPhone: '+977-9813456789',
-    brandCode: 'PEE_SAFE',
-    productSummary: 'Pee Safe Toilet Spray (1), FURR Face Razor (2)',
-    totalAmount: 1300,
-    status: 'PUSHED',
-    orderNumber: 'BB-WA-8919',
-  },
-];
-
 const BRAND_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   FORYA: { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
   PEE_SAFE: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
@@ -119,7 +66,7 @@ const BRAND_COLORS: Record<string, { bg: string; text: string; border: string }>
 
 export default function ExtractorPage() {
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
-  const [chatText, setChatText] = useState(SAMPLE_CHAT_1);
+  const [chatText, setChatText] = useState('');
   const [extractedOrders, setExtractedOrders] = useState<ExtractedOrderResult[]>([]);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
 
@@ -144,14 +91,29 @@ export default function ExtractorPage() {
 
   // Extraction History
   const currentUser = db.getCurrentUser();
-  const [history, setHistory] = useState<ExtractionHistoryItem[]>(INITIAL_HISTORY);
+  const [history, setHistory] = useState<ExtractionHistoryItem[]>([]);
 
   useEffect(() => {
     setInfluencers(db.getInfluencers());
     setActiveCatalogProducts(db.getProducts().filter((p) => p.active !== false));
     try {
       const saved = localStorage.getItem('bb_wa_extraction_history_v2');
-      if (saved) setHistory(JSON.parse(saved));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter(
+            (item: ExtractionHistoryItem) =>
+              item.id !== 'eh_1' &&
+              item.id !== 'eh_2' &&
+              !item.customerName?.includes('Sita Gurung') &&
+              !item.customerName?.includes('Anjali Shrestha')
+          );
+          setHistory(clean);
+          if (clean.length !== parsed.length) {
+            localStorage.setItem('bb_wa_extraction_history_v2', JSON.stringify(clean));
+          }
+        }
+      }
     } catch {
       // ignore
     }
@@ -515,35 +477,6 @@ export default function ExtractorPage() {
                 Reads products, combos, keywords, and prices directly from catalog. Adapts automatically to catalog updates with zero code changes.
               </p>
             </div>
-
-            {/* Quick Sample Presets */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs font-semibold text-slate-500 mr-1">Presets:</span>
-              <button
-                onClick={() => setChatText(SAMPLE_CHAT_1)}
-                className="rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-100 transition"
-              >
-                Forya Serum
-              </button>
-              <button
-                onClick={() => setChatText(SAMPLE_CHAT_2)}
-                className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition"
-              >
-                Pee Safe
-              </button>
-              <button
-                onClick={() => setChatText(SAMPLE_CHAT_3)}
-                className="rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700 hover:bg-purple-100 transition"
-              >
-                Renee Lipstick
-              </button>
-              <button
-                onClick={() => setChatText(SAMPLE_BATCH_CHAT)}
-                className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition shadow-xs"
-              >
-                ⚡ Multi-Order Batch (3 Orders)
-              </button>
-            </div>
           </div>
 
           {/* Catalog Synced Status Bar (Fix 67g, 72e) */}
@@ -556,8 +489,10 @@ export default function ExtractorPage() {
             </div>
             <div className="flex items-center gap-2 text-slate-500">
               <Clock className="w-3.5 h-3.5" />
-              <span>Last catalog update: {catalogStatus.lastUpdatedText}</span>
-              <span className="text-emerald-600 font-medium">({catalogStatus.newProductsCount} new items ready)</span>
+              <span>Status: {catalogStatus.lastUpdatedText}</span>
+              {catalogStatus.newProductsCount > 0 && (
+                <span className="text-emerald-600 font-medium">({catalogStatus.newProductsCount} new items ready)</span>
+              )}
             </div>
           </div>
         </div>
@@ -1088,58 +1023,78 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
 
         {/* Extraction History Table (9d) */}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-3">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-slate-500" />
-            Recent Extraction Trail
-          </h2>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
-                <tr>
-                  <th className="py-2.5 px-3">Time</th>
-                  <th className="py-2.5 px-3">Customer</th>
-                  <th className="py-2.5 px-3">Brand</th>
-                  <th className="py-2.5 px-3">Products</th>
-                  <th className="py-2.5 px-3">Amount</th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-3">Order #</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {history.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/50">
-                    <td className="py-2.5 px-3 text-slate-400">{item.timestamp}</td>
-                    <td className="py-2.5 px-3 font-semibold text-slate-800">
-                      {item.customerName}
-                      <span className="block text-[10px] text-slate-400 font-normal">{item.customerPhone}</span>
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                        {item.brandCode}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 max-w-xs truncate text-slate-700">{item.productSummary}</td>
-                    <td className="py-2.5 px-3 font-bold text-slate-900">₹{item.totalAmount.toLocaleString()}</td>
-                    <td className="py-2.5 px-3">
-                      {item.status === 'PUSHED' ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                          <Check className="w-3 h-3" /> PUSHED
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-slate-500 font-bold text-[10px] bg-slate-100 px-2 py-0.5 rounded-full">
-                          DISCARDED
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3 font-mono font-bold text-blue-600">
-                      {item.orderNumber || '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-slate-500" />
+              Recent Extraction Trail
+            </h2>
+            {history.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setHistory([]);
+                  localStorage.removeItem('bb_wa_extraction_history_v2');
+                }}
+                className="text-[11px] text-slate-400 hover:text-rose-600 font-semibold"
+              >
+                Clear History
+              </button>
+            )}
           </div>
+
+          {history.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-400">
+              No recent extractions yet. Paste customer WhatsApp/social media chats above to extract orders.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-600">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
+                  <tr>
+                    <th className="py-2.5 px-3">Time</th>
+                    <th className="py-2.5 px-3">Customer</th>
+                    <th className="py-2.5 px-3">Brand</th>
+                    <th className="py-2.5 px-3">Products</th>
+                    <th className="py-2.5 px-3">Amount</th>
+                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3">Order #</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {history.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/50">
+                      <td className="py-2.5 px-3 text-slate-400">{item.timestamp}</td>
+                      <td className="py-2.5 px-3 font-semibold text-slate-800">
+                        {item.customerName}
+                        <span className="block text-[10px] text-slate-400 font-normal">{item.customerPhone}</span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                          {item.brandCode}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 max-w-xs truncate text-slate-700">{item.productSummary}</td>
+                      <td className="py-2.5 px-3 font-bold text-slate-900">₹{item.totalAmount.toLocaleString()}</td>
+                      <td className="py-2.5 px-3">
+                        {item.status === 'PUSHED' ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            <Check className="w-3 h-3" /> PUSHED
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-slate-500 font-bold text-[10px] bg-slate-100 px-2 py-0.5 rounded-full">
+                            DISCARDED
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 font-mono font-bold text-blue-600">
+                        {item.orderNumber || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Confirmation Modal */}

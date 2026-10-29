@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ChevronRight, Home } from 'lucide-react';
+import { getRedirectPathForUser, getSessionUser } from '@/lib/auth';
 
 export interface BreadcrumbItem {
   label: string;
@@ -20,7 +21,7 @@ export default function Breadcrumbs({ items, className = '' }: BreadcrumbsProps)
       <ol className="flex flex-wrap items-center gap-1.5">
         <li>
           <Link
-            href="/dashboard"
+            href={getRedirectPathForUser(getSessionUser())}
             className="flex items-center gap-1 text-slate-400 hover:text-slate-700 transition-colors"
           >
             <Home className="h-3.5 w-3.5" />

@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db/db-service';
+import { openSystemWorkspace } from '@/lib/db/server-workspace';
+import { apiFailure } from '../../_workspace';
+import { requireCronAuth } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const authError = requireCronAuth(request);
+  if (authError) return authError;
   try {
+    const { db } = await openSystemWorkspace();
     const cheques = db.getCheques();
     const feedback = db.getFeedback();
     const customers = db.getCustomers();
-    const beatItems = db.getTodayBeat();
     const tasks = db.getTasks();
 
     const redAlerts: string[] = [];
@@ -37,7 +41,7 @@ export async function GET(request: Request) {
 
     // 4. Cheque overdue 3+ days
     const overdue3d = cheques.filter(
-      (c) => c.status === 'DELAYED' && c.notes && c.notes.includes('3 days')
+      (c) => c.status === 'DELAYED' && Number.isFinite(Date.parse(c.newExpectedDate || c.cashDateAd)) && Date.parse(c.newExpectedDate || c.cashDateAd) <= Date.now() - 3 * 24 * 60 * 60 * 1000
     );
     if (overdue3d.length > 0) {
       redAlerts.push(`${overdue3d.length} cheque(s) overdue 3+ days (Admin escalation).`);
@@ -52,12 +56,13 @@ export async function GET(request: Request) {
 
     // 2. Officers with 5+ tasks
     const taskCountByUser: Record<string, number> = {};
-    tasks.filter((t) => t.status === 'OPEN').forEach((t) => {
-      taskCountByUser[t.assignedToName] = (taskCountByUser[t.assignedToName] || 0) + 1;
+    const userNames = new Map(db.getUsers().map(user => [user.id, user.fullName]));
+    tasks.filter((t) => ['OPEN', 'PENDING', 'IN_PROGRESS', 'OVERDUE'].includes(t.status)).forEach((t) => {
+      taskCountByUser[t.assignedTo] = (taskCountByUser[t.assignedTo] || 0) + 1;
     });
-    Object.entries(taskCountByUser).forEach(([name, count]) => {
+    Object.entries(taskCountByUser).forEach(([userId, count]) => {
       if (count >= 5) {
-        amberAlerts.push(`${name} has ${count} pending operational tasks.`);
+        amberAlerts.push(`${userNames.get(userId) || userId} has ${count} pending operational tasks.`);
       }
     });
 
@@ -72,7 +77,5 @@ export async function GET(request: Request) {
         amberAlerts,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error?.message || 'Failed to evaluate alerts' }, { status: 500 });
-  }
+  } catch (error) { return apiFailure(error, 'Scheduled operation failed.'); }
 }

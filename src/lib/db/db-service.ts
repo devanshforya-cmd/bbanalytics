@@ -1,7 +1,15 @@
-import { SUPER_ADMIN_TEMPLATE, getScope } from '../permissions';
-import { fetchTasksFromSupabase, addTask as addTaskToSupabase, updateTaskInSupabase } from './analytics-service';
+import {
+  SUPER_ADMIN_TEMPLATE,
+  MANAGER_TEMPLATE,
+  FIELD_SALES_OFFICER_TEMPLATE,
+  OFFICE_STAFF_TEMPLATE,
+  getScope,
+} from '../permissions';
+import { WORKSPACE_COLLECTIONS, WorkspaceCollection, WorkspaceMutation, WorkspaceSnapshot, WorkspaceVersions } from './workspace-types';
+import { canReadWorkspaceRecord, canWriteWorkspaceRecord, StoredWorkspaceRecord } from './workspace-policy';
+import { DEFAULT_ALERT_RULES, validateAlertRules, type AlertRules } from '../alert-rules';
 
-const DEFAULT_SUPER_ADMIN: User = {
+export const DEFAULT_SUPER_ADMIN: User = {
   id: 'user_devansh',
   fullName: 'Devansh Agarwal',
   email: 'devansh@brandbucket.com',
@@ -23,6 +31,79 @@ const DEFAULT_SUPER_ADMIN: User = {
   },
   customPermissions: SUPER_ADMIN_TEMPLATE,
 };
+
+export const DEFAULT_OPS_ADMIN: User = {
+  id: 'user_ops_admin',
+  fullName: 'Operations Manager',
+  email: 'ops@brandbucket.com',
+  phone: '+977-9801112233',
+  role: 'ADMIN',
+  isSuperAdmin: false,
+  dutyStatus: 'ONLINE',
+  active: true,
+  assignedBrands: ['ALL'],
+  territory: 'ALL',
+  permissions: {
+    canViewAnalytics: true,
+    canExportSheets: true,
+    canManageDispatches: true,
+    canManageCheques: true,
+    canApproveSkips: true,
+    canManageStaff: false,
+    canConfigureSettings: false,
+  },
+  customPermissions: MANAGER_TEMPLATE,
+};
+
+export const DEFAULT_SALES_OFFICER: User = {
+  id: 'user_rohan',
+  fullName: 'Rohan Shrestha',
+  email: 'rohan@brandbucket.com',
+  phone: '+977-9841234567',
+  role: 'SALES_OFFICER',
+  isSuperAdmin: false,
+  dutyStatus: 'ONLINE',
+  active: true,
+  assignedBrands: ['ALL'],
+  territory: 'Kathmandu Central',
+  permissions: {
+    canViewAnalytics: false,
+    canExportSheets: false,
+    canManageDispatches: false,
+    canManageCheques: true,
+    canApproveSkips: false,
+    canManageStaff: false,
+    canConfigureSettings: false,
+  },
+  customPermissions: FIELD_SALES_OFFICER_TEMPLATE,
+};
+
+export const DEFAULT_MARKETING_LEAD: User = {
+  id: 'user_sita',
+  fullName: 'Sita Gurung',
+  email: 'sita@brandbucket.com',
+  phone: '+977-9851122334',
+  role: 'OFFICE_STAFF',
+  isSuperAdmin: false,
+  dutyStatus: 'ONLINE',
+  active: true,
+  assignedBrands: ['ALL'],
+  territory: 'Kathmandu Valley',
+  permissions: {
+    canViewAnalytics: true,
+    canExportSheets: false,
+    canManageDispatches: false,
+    canManageCheques: false,
+    canApproveSkips: false,
+    canManageStaff: false,
+    canConfigureSettings: false,
+  },
+  customPermissions: OFFICE_STAFF_TEMPLATE,
+};
+
+export const DEFAULT_STAFF_USERS: User[] = [
+  DEFAULT_SUPER_ADMIN,
+];
 
 const DEFAULT_BRANDS: Brand[] = [];
 
@@ -105,7 +186,7 @@ export interface OrderRealtimeEvent {
 }
 
 export class DatabaseService {
-  private users: User[] = [DEFAULT_SUPER_ADMIN];
+  private users: User[] = [...DEFAULT_STAFF_USERS];
   private currentUser: User = DEFAULT_SUPER_ADMIN;
   private brands: Brand[] = DEFAULT_BRANDS;
   private products: Product[] = [];
@@ -167,49 +248,142 @@ export class DatabaseService {
   ];
 
   private requireStorePhotoAtCheckIn: boolean = false;
+  private alertRules: AlertRules = { ...DEFAULT_ALERT_RULES };
   private recurringSchedules: RecurringScheduleEntry[] = [];
 
   private activeBrandFilter: BrandCode = 'ALL';
   private calendarMode: 'BS' | 'AD' = 'BS';
 
-  constructor() {
+  private readonly server: boolean;
+  private activeUserId: string | null = null;
+  private baseline: WorkspaceSnapshot = {};
+  private versions: WorkspaceVersions = {};
+  private pending = new Map<string, WorkspaceMutation>();
+  private initialSnapshot: WorkspaceSnapshot = {};
+  private legacySnapshot: WorkspaceSnapshot | null = null;
+  private syncPromise: Promise<{ success: boolean; syncedCount: number; message: string }> | null = null;
+
+  constructor(options: { server?: boolean } = {}) {
+    this.server = options.server === true || typeof window === 'undefined';
+    this.initialSnapshot = this.exportSnapshot();
+    this.baseline = this.exportSnapshot();
+    if (this.server) return;
+    const sessionUser = this.readSessionUser();
+    this.activeUserId = sessionUser?.id || null;
+    if (sessionUser) { this.currentUser = sessionUser; this.users = [sessionUser]; }
+    syncManager.setUser(this.activeUserId);
+    syncManager.setRefreshHandler(() => this.syncWithSupabase());
+    syncManager.setBeforeSyncHandler(async () => {
+      if (this.activeUserId && this.legacySnapshot) {
+        const result = await this.pullWorkspace(this.activeUserId);
+        if (!result.success) throw new Error(result.message);
+      }
+    });
     this.loadState();
-    this.ensureBaselineSeeds();
+    this.baseline = this.exportSnapshot();
+    setTimeout(() => { if (this.activeUserId) void syncManager.forceSyncNow(); }, 1000);
+    window.addEventListener('online', () => { if (this.activeUserId) void syncManager.forceSyncNow(); });
+    window.addEventListener('storage', (event) => {
+      if (event.key === this.cacheKey()) {
+        this.loadState(); this.baseline = this.exportSnapshot();
+        window.dispatchEvent(new CustomEvent('bb-db-updated'));
+      }
+      if (event.key === 'bb_auth_user_session_v3') this.setSessionUser(this.readSessionUser());
+    });
+    window.addEventListener('bb-workspace-mutation-synced', (event) => {
+      const { collection, id, version } = (event as CustomEvent).detail;
+      this.versions[collection as WorkspaceCollection] = { ...this.versions[collection as WorkspaceCollection], [id]: version };
+      this.writeCache();
+    });
+  }
 
-    if (typeof window !== 'undefined') {
-      // Trigger background sync with Supabase after mount
-      setTimeout(() => {
-        this.syncWithSupabase().catch((e) => console.warn('[DatabaseService] Initial sync error:', e));
-      }, 1000);
+  private readSessionUser(): User | null {
+    try {
+      const session = JSON.parse(localStorage.getItem('bb_auth_user_session_v3') || 'null');
+      return session?.user?.id && session.expiresAt > Date.now() ? session.user as User : null;
+    } catch { return null; }
+  }
+  private cacheKey() { return this.activeUserId ? `bb_workspace_cache_v1:${this.activeUserId}` : null; }
 
-      // Listen for browser coming back online
-      window.addEventListener('online', () => {
-        this.syncWithSupabase().catch((e) => console.warn('[DatabaseService] Online sync error:', e));
-      });
+  private recoverableSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapshot {
+    const records: StoredWorkspaceRecord[] = WORKSPACE_COLLECTIONS.flatMap((collection) => (snapshot[collection] || []).map((data) => ({ collection, id: data.id, data, created_by: this.currentUser.id, version: 0 })));
+    const result: WorkspaceSnapshot = {};
+    for (const collection of WORKSPACE_COLLECTIONS) result[collection] = records.filter((row) => row.collection === collection
+      && canWriteWorkspaceRecord(this.currentUser, row, 'CREATE', this.users, records)
+      && (collection !== 'sharedAccessLinks' || /^bb_[A-Za-z0-9_-]{43,128}$/.test(row.data.token || ''))).map((row) => row.data);
+    return result;
+  }
 
-      // Listen for cross-tab storage changes
-      window.addEventListener('storage', (e) => {
-        if (e.key === 'bb_command_center_db_state_v12') {
-          this.loadState();
-          window.dispatchEvent(new CustomEvent('bb-db-updated'));
-        }
-      });
+  public exportSnapshot(): WorkspaceSnapshot {
+    const snapshot: WorkspaceSnapshot = {};
+    for (const collection of WORKSPACE_COLLECTIONS) {
+      if (collection === 'workspaceConfig') snapshot[collection] = [{ id: 'workspace', requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn, alertRules: this.alertRules }];
+      else snapshot[collection] = ((this as any)[collection] || []).map((row: any) => JSON.parse(JSON.stringify({ ...row, id: row.id || (collection === 'staffLiveLocations' ? row.officerId : undefined) })));
+    }
+    return snapshot;
+  }
 
-      // Listen for BroadcastChannel updates from other tabs
-      if (typeof BroadcastChannel !== 'undefined') {
-        try {
-          const bc = new BroadcastChannel('bb_db_channel');
-          bc.onmessage = (msg) => {
-            if (msg.data?.type === 'SYNC_UPDATE') {
-              this.loadState();
-              window.dispatchEvent(new CustomEvent('bb-db-updated'));
-            }
-          };
-        } catch {
-          // ignore
-        }
+  public hydrateSnapshot(snapshot: WorkspaceSnapshot, user?: User, versions: WorkspaceVersions = {}): void {
+    for (const collection of WORKSPACE_COLLECTIONS) {
+      if (collection === 'workspaceConfig') {
+        const config = snapshot.workspaceConfig?.find((row) => row.id === 'workspace');
+        this.requireStorePhotoAtCheckIn = config?.requireStorePhotoAtCheckIn === true;
+        this.alertRules = config?.alertRules ? validateAlertRules(config.alertRules) : { ...DEFAULT_ALERT_RULES };
+      }
+      else (this as any)[collection] = JSON.parse(JSON.stringify(snapshot[collection] || []));
+    }
+    if (user) this.currentUser = user;
+    this.versions = JSON.parse(JSON.stringify(versions)); this.pending.clear();
+    this.baseline = this.exportSnapshot();
+    if (!this.server) syncManager.setVersions(this.versions);
+  }
+
+  private captureMutations() {
+    const snapshot = this.exportSnapshot();
+    for (const collection of WORKSPACE_COLLECTIONS) {
+      // GPS and audit records have dedicated server writers.
+      if (collection === 'staffLiveLocations' || collection === 'activityLogs') continue;
+      const before = new Map((this.baseline[collection] || []).map((row) => [row.id, row]));
+      const after = new Map((snapshot[collection] || []).map((row) => [row.id, row]));
+      for (const id of new Set([...before.keys(), ...after.keys()])) {
+        if (!id || JSON.stringify(before.get(id)) === JSON.stringify(after.get(id))) continue;
+        const notification = after.get(id) || before.get(id);
+        const isAdmin = this.currentUser.isSuperAdmin || this.currentUser.is_super_admin;
+        if (!this.server && collection === 'notifications' && !isAdmin && (notification?.userId !== this.activeUserId || !before.has(id))) continue;
+        const key = `${collection}:${id}`;
+        const mutation: WorkspaceMutation = {
+          collection, id, operation: after.has(id) ? 'upsert' : 'delete', ...(after.has(id) ? { data: after.get(id)! } : {}),
+          mutationId: `mutation_${globalThis.crypto.randomUUID()}`,
+          expectedVersion: this.pending.get(key)?.expectedVersion ?? Math.max(this.versions[collection]?.[id] || 0, this.server ? 0 : syncManager.getRecordVersion(collection, id)),
+        };
+        if (this.server) this.pending.set(key, mutation);
+        else if (this.activeUserId) syncManager.enqueue('WORKSPACE_MUTATION', mutation as unknown as Record<string, unknown>);
       }
     }
+    this.baseline = snapshot;
+  }
+  public getPendingMutations(): WorkspaceMutation[] {
+    if (this.server) { this.captureMutations(); return JSON.parse(JSON.stringify([...this.pending.values()])); }
+    return syncManager.getWorkspaceMutations();
+  }
+  public setSessionUser(user: User | null): void {
+    if (this.server) { if (user) this.currentUser = user; return; }
+    if (this.activeUserId !== (user?.id || null)) {
+      this.activeUserId = user?.id || null; this.syncPromise = null; this.legacySnapshot = null;
+      this.hydrateSnapshot(this.initialSnapshot, user || DEFAULT_SUPER_ADMIN);
+      this.users = user ? [user] : []; this.brands = [];
+      this.activeBrandFilter = 'ALL'; this.calendarMode = 'BS'; this.comparisonMode = 'OFF'; this.salesMode = 'ALL';
+      syncManager.setUser(this.activeUserId);
+      if (user) this.loadState();
+      this.baseline = this.exportSnapshot();
+    }
+    if (user) {
+      this.currentUser = user;
+      const index = this.users.findIndex((entry) => entry.id === user.id);
+      if (index < 0) this.users.push(user); else this.users[index] = user;
+    }
+    window.dispatchEvent(new CustomEvent('bb-db-updated'));
+    if (user) void syncManager.forceSyncNow();
   }
 
   /**
@@ -217,48 +391,10 @@ export class DatabaseService {
    * Prevents blank screens, missing map markers, and uninitialized states.
    */
   public ensureBaselineSeeds() {
-    // 1. Brands Baseline
-    if (!this.brands || this.brands.length === 0) {
-      this.brands = [
-        {
-          id: 'brand_forya',
-          code: 'FORYA',
-          name: 'Forya Organics',
-          description: 'Natural skincare and body wellness solutions',
-          color: '#0d9488',
-          status: 'ACTIVE',
-          isActive: true,
-        },
-        {
-          id: 'brand_peesafe',
-          code: 'PEE_SAFE',
-          name: 'Pee Safe Nepal',
-          description: 'Intimate hygiene and personal wellness',
-          color: '#2563eb',
-          status: 'ACTIVE',
-          isActive: true,
-        },
-        {
-          id: 'brand_furr',
-          code: 'FURR',
-          name: 'FURR by Pee Safe',
-          description: 'Daily grooming and skincare essentials',
-          color: '#7c3aed',
-          status: 'ACTIVE',
-          isActive: true,
-        },
-        {
-          id: 'brand_renee',
-          code: 'RENEE',
-          name: 'Renee Cosmetics',
-          description: 'Premium color cosmetics and beauty range',
-          color: '#db2777',
-          status: 'ACTIVE',
-          isActive: true,
-        },
-      ];
+    // Clean slate: brands and staff are configured by the administrator in Settings
+    if (!this.brands) {
+      this.brands = [];
     }
-
   }
 
   /**
@@ -266,150 +402,77 @@ export class DatabaseService {
    * Fetches latest remote records and merges them seamlessly with local cache.
    */
   public async syncWithSupabase(): Promise<{ success: boolean; syncedCount: number; message: string }> {
-    if (typeof window === 'undefined') {
-      return { success: false, syncedCount: 0, message: 'Server environment' };
-    }
-
+    if (this.server || !this.activeUserId) return { success: false, syncedCount: 0, message: 'Sign in to sync workspace data.' };
+    if (this.syncPromise) return this.syncPromise;
+    const owner = this.activeUserId;
+    const run = (async () => { await syncManager.triggerSync(); return this.pullWorkspace(owner); })(); this.syncPromise = run;
+    try { return await run; } finally { if (this.activeUserId === owner) this.syncPromise = null; }
+  }
+  private async pullWorkspace(owner: string): Promise<{ success: boolean; syncedCount: number; message: string }> {
     try {
-      const { supabase } = await import('./supabase-client');
-      let incomingCount = 0;
-
-      // 1. Fetch tables in parallel
-      const [uRes, bRes, dRes, brRes, rRes, pRes, oRes, cRes] = await Promise.allSettled([
-        supabase.from('users').select('*'),
-        supabase.from('brands').select('*'),
-        supabase.from('distributors').select('*'),
-        supabase.from('branches').select('*'),
-        supabase.from('retailers').select('*'),
-        supabase.from('products').select('*'),
-        supabase.from('orders').select('*').limit(200),
-        supabase.from('cheques').select('*').limit(100),
-      ]);
-
-      // Sync Users from Supabase (single source of truth for staff and admin accounts)
-      if (uRes.status === 'fulfilled' && uRes.value.data) {
-        const rows = uRes.value.data as any[];
-        if (rows.length > 0) {
-          const mappedUsers: User[] = rows.map((row: any) => ({
-            id: row.id,
-            fullName: row.full_name || row.name || 'User',
-            email: row.email,
-            phone: row.phone,
-            role: row.role || 'SALES_OFFICER',
-            isSuperAdmin: !!row.is_super_admin,
-            dutyStatus: row.duty_status || 'ONLINE',
-            active: row.is_active !== false,
-            assignedBrands: row.assigned_brands || ['ALL'],
-            territory: row.territory || row.assigned_territory || 'Kathmandu Valley',
-            reportsToId: row.reports_to_id,
-            permissions: row.permissions || {},
-            customPermissions: row.custom_permissions || {},
-            calendarPreference: row.calendar_preference || 'BS',
-          }));
-          this.users = mappedUsers;
-          incomingCount += mappedUsers.length;
-        }
+      const response = await fetch('/api/sync', { cache: 'no-store', credentials: 'same-origin', headers: { 'X-Workspace-User': owner } });
+      const result = await response.json().catch(() => null);
+      if (owner !== this.activeUserId || this.readSessionUser()?.id !== owner) return { success: false, syncedCount: 0, message: 'Account changed during sync.' };
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('bb_auth_user_session_v3'); this.setSessionUser(null);
+        window.location?.replace('/login');
+        return { success: false, syncedCount: 0, message: 'Sign in again. Pending work has been kept for its owner.' };
       }
-
-      // Merge Brands from Supabase
-      if (bRes.status === 'fulfilled' && bRes.value.data && bRes.value.data.length > 0) {
-        bRes.value.data.forEach((row: any) => {
-          const idx = this.brands.findIndex((b) => b.id === row.id || b.code === row.code);
-          const brand: Brand = {
-            id: row.id,
-            code: row.code,
-            name: row.name,
-            description: row.description || `${row.name} brand catalog`,
-            color: row.color || '#2563eb',
-            logoUrl: row.logo_url,
-            status: (row.is_active !== false ? 'ACTIVE' : 'ARCHIVED') as any,
-            isActive: row.is_active !== false,
-          };
-          if (idx >= 0) {
-            this.brands[idx] = { ...this.brands[idx], ...brand };
-          } else {
-            this.brands.push(brand);
+      if (!response.ok || !result?.success || !result.data || result.errors?.length) return { success: false, syncedCount: 0, message: result?.error || 'Workspace refresh failed. Your local changes are preserved.' };
+      const remote: WorkspaceSnapshot = {};
+      for (const collection of WORKSPACE_COLLECTIONS) remote[collection] = Array.isArray(result.data[collection]) ? result.data[collection] : [];
+      const configuration = new Set(['workspaceConfig', 'documentTypes', 'storeCategories', 'activityLogs', 'notifications', 'holidays', 'taskTemplates', 'promotions', 'seasonalPatterns']);
+      const remoteEmpty = WORKSPACE_COLLECTIONS.filter((collection) => !configuration.has(collection)).every((collection) => !remote[collection]?.length);
+      if (this.legacySnapshot && !localStorage.getItem(`bb_workspace_recovered:${owner}`)) {
+        const existing = new Set(syncManager.getWorkspaceMutations().map((mutation) => `${mutation.collection}:${mutation.id}`));
+        for (const collection of WORKSPACE_COLLECTIONS) {
+          if (collection === 'staffLiveLocations' || collection === 'activityLogs') continue;
+          for (const row of this.legacySnapshot[collection] || []) {
+            const admin = this.currentUser.isSuperAdmin || this.currentUser.is_super_admin;
+            if (collection === 'notifications' && !admin) continue;
+            if (!remoteEmpty || existing.has(`${collection}:${row.id}`)) continue;
+            syncManager.enqueue('WORKSPACE_MUTATION', { collection, id: row.id, operation: 'upsert', data: row, expectedVersion: 0, mutationId: `recovery_${globalThis.crypto.randomUUID()}` });
           }
-          incomingCount++;
-        });
+        }
+        syncManager.recoverLegacyQueue(this.legacySnapshot);
+        localStorage.setItem(`bb_workspace_recovered:${owner}`, 'true');
       }
-
-      // Sync Products from Supabase
-      if (pRes.status === 'fulfilled') {
-        const pData = (pRes.value.data as any[]) || [];
-        this.products = pData;
-        incomingCount += pData.length;
+      this.legacySnapshot = null;
+      const pending = syncManager.getWorkspaceMutations();
+      const merged = JSON.parse(JSON.stringify(remote)) as WorkspaceSnapshot;
+      const freshUsers: User[] = Array.isArray(result.data.users) ? result.data.users : this.users;
+      const freshUser = freshUsers.find((user) => user.id === owner) || this.currentUser;
+      const records = WORKSPACE_COLLECTIONS.flatMap(collection => (remote[collection] || []).map(row => ({ collection, id: row.id, data: row, created_by: row.createdById || owner, version: result.versions?.[collection]?.[row.id] || 0 })));
+      merged.staffLiveLocations = this.exportSnapshot().staffLiveLocations;
+      for (const mutation of pending) {
+        const rows = (merged[mutation.collection] || []).filter((row) => row.id !== mutation.id);
+        if (mutation.operation === 'upsert' && mutation.data && canReadWorkspaceRecord(freshUser, { collection: mutation.collection, id: mutation.id, data: mutation.data, created_by: mutation.data.createdById || owner, version: mutation.expectedVersion }, freshUsers, records)) rows.push(mutation.data);
+        merged[mutation.collection] = rows;
       }
-
-      // Sync Distributors from Supabase (single source of truth: 0 phantom stores)
-      if (dRes.status === 'fulfilled') {
-        const dData = (dRes.value.data as any[]) || [];
-        this.distributors = dData;
-        incomingCount += dData.length;
-      }
-
-      // Sync Branches from Supabase
-      if (brRes.status === 'fulfilled') {
-        const brData = (brRes.value.data as any[]) || [];
-        this.branches = brData;
-        incomingCount += brData.length;
-      }
-
-      // Sync Retailers from Supabase
-      if (rRes.status === 'fulfilled') {
-        const rData = (rRes.value.data as any[]) || [];
-        this.retailers = rData;
-        incomingCount += rData.length;
-      }
-
-      // Sync Orders from Supabase
-      if (oRes.status === 'fulfilled') {
-        const oData = (oRes.value.data as any[]) || [];
-        this.orders = oData;
-        incomingCount += oData.length;
-      }
-
-      // Sync Cheques from Supabase
-      if (cRes.status === 'fulfilled') {
-        const cData = (cRes.value.data as any[]) || [];
-        this.cheques = cData;
-        incomingCount += cData.length;
-      }
-
-      this.persistState();
-      return {
-        success: true,
-        syncedCount: incomingCount,
-        message: `Successfully synchronized ${incomingCount} entities with Supabase cloud.`,
-      };
-    } catch (err: any) {
-      console.warn('[DatabaseService] syncWithSupabase caught error:', err);
-      return {
-        success: false,
-        syncedCount: 0,
-        message: err?.message || 'Sync encountered a network exception.',
-      };
-    }
+      this.hydrateSnapshot(merged, freshUser, result.versions || {});
+      const savedSession = JSON.parse(localStorage.getItem('bb_auth_user_session_v3') || 'null');
+      if (savedSession?.user?.id === owner) localStorage.setItem('bb_auth_user_session_v3', JSON.stringify({ ...savedSession, user: freshUser }));
+      if (Array.isArray(result.data.users)) this.users = result.data.users;
+      if (!this.users.some((user) => user.id === this.currentUser.id)) this.users.push(this.currentUser);
+      if (Array.isArray(result.data.brands)) this.brands = result.data.brands;
+      this.writeCache(); window.dispatchEvent(new CustomEvent('bb-db-updated'));
+      return { success: true, syncedCount: WORKSPACE_COLLECTIONS.reduce((count, collection) => count + (remote[collection]?.length || 0), 0), message: pending.length ? `${pending.length} local changes remain pending.` : 'Workspace data refreshed.' };
+    } catch (error) { return { success: false, syncedCount: 0, message: error instanceof Error ? error.message : 'Workspace refresh failed.' }; }
   }
 
   private loadState() {
-    if (typeof window === 'undefined') return;
+    if (this.server || typeof window === 'undefined') return;
     try {
-      // Clear legacy storage keys if present
-      localStorage.removeItem('bb_command_center_db_state_v8');
-      localStorage.removeItem('bb_command_center_db_state_v7');
-      localStorage.removeItem('bb_command_center_db_state_v6');
-      localStorage.removeItem('bb_command_center_db_state_v5');
-      localStorage.removeItem('bb_command_center_db_state_v4');
-      localStorage.removeItem('bb_command_center_db_state_v3');
-      localStorage.removeItem('bb_command_center_db_state_v2');
-      localStorage.removeItem('bb_command_center_db_state');
-      localStorage.removeItem('bb_auth_user_session_v2');
-
-      localStorage.removeItem('bb_command_center_db_state_v11');
-      localStorage.removeItem('bb_command_center_db_state_v10');
-      localStorage.removeItem('bb_command_center_db_state_v9');
-      const stored = localStorage.getItem('bb_command_center_db_state_v12');
+      if (!this.activeUserId) return;
+      let stored = localStorage.getItem(this.cacheKey()!);
+      let legacy = false;
+      if (!stored) {
+        for (const oldKey of ['bb_command_center_db_state_v14', 'bb_command_center_db_state_v13', 'bb_command_center_db_state_v12', 'bb_command_center_db_state_v11', 'bb_command_center_db_state_v10', 'bb_command_center_db_state_v9', 'bb_command_center_db_state_v8', 'bb_command_center_db_state']) {
+          const old = localStorage.getItem(oldKey);
+          if (!old) continue;
+          try { if (JSON.parse(old).currentUser?.id === this.activeUserId) { stored = old; legacy = true; break; } } catch {}
+        }
+      }
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.users && parsed.users.length > 0) this.users = parsed.users;
@@ -437,7 +500,8 @@ export class DatabaseService {
         if (parsed.visits) this.visits = parsed.visits;
         if (parsed.notifications) this.notifications = parsed.notifications;
         if (parsed.activityLogs) this.activityLogs = parsed.activityLogs;
-        if (parsed.currentUser) this.currentUser = parsed.currentUser;
+        if (parsed.currentUser?.id === this.activeUserId) this.currentUser = this.readSessionUser() || parsed.currentUser;
+        if (parsed.versions) this.versions = parsed.versions;
         if (parsed.activeBrandFilter) this.activeBrandFilter = parsed.activeBrandFilter;
         if (parsed.calendarMode) this.calendarMode = parsed.calendarMode;
         if (parsed.brands && parsed.brands.length > 0) this.brands = parsed.brands;
@@ -459,46 +523,111 @@ export class DatabaseService {
         if (parsed.recurringSchedules) this.recurringSchedules = parsed.recurringSchedules;
       }
 
-      // STRICT: Sanitize and purge any phantom mock entities
-      const PHANTOM_IDS = new Set([
-        'officer_ravi', 'officer_pooja', 'officer_suman', 'user_officer_ravi',
-        'dist_bbs', 'dist_bigmart', 'br_bbs_mjg', 'br_bigmart_baneshwor',
-        'ret_norvic', 'ret_saleways', 'ret_krishna', 'ret_civil_mall',
-        'ret_norvic_pharmacy', 'ret_saleways_kalimati', 'ret_krishna_chabahil', 'ret_civil_mall_cosmetics',
-        'beat_ravi_01', 'beat_2', 'beat_3', 'beat_4', 'beat_5', 'beat_6',
-        'prod_forya_ro_pch', 'prod_pee_safe_pantyliner', 'prod_furr_nose_strips', 'prod_ren_fab_5'
-      ]);
-
-      this.users = (this.users || []).filter((u) => !PHANTOM_IDS.has(u.id));
-      if (this.users.length === 0) {
-        this.users = [DEFAULT_SUPER_ADMIN];
-      }
-      this.distributors = (this.distributors || []).filter((d) => !PHANTOM_IDS.has(d.id));
-      this.branches = (this.branches || []).filter((b) => !PHANTOM_IDS.has(b.id));
-      this.retailers = (this.retailers || []).filter((r) => !PHANTOM_IDS.has(r.id));
-      this.beatItems = (this.beatItems || []).filter(
-        (b) => !PHANTOM_IDS.has(b.id) && !PHANTOM_IDS.has(b.officerId) && !PHANTOM_IDS.has(b.entityId)
-      );
-      this.products = (this.products || []).filter((p) => !PHANTOM_IDS.has(p.id));
-      this.staffLiveLocations = (this.staffLiveLocations || []).filter((s) => !PHANTOM_IDS.has(s.officerId));
-      if (typeof window !== 'undefined') {
-        this.syncTasksFromSupabase().catch(() => {});
-      }
+      this.baseline = this.exportSnapshot();
+      syncManager.setVersions(this.versions);
+      if (legacy) this.legacySnapshot = this.recoverableSnapshot(this.exportSnapshot());
     } catch (e) {
       console.warn('Failed to load state from localStorage', e);
     }
   }
 
+  private repairDuplicateProductIds(): boolean {
+    let repaired = false;
+    const normalize = (value?: string) => (value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const repairs: Array<{ oldId: string; productId: string; name: string; brandCode: string }> = [];
+    const seen = new Set<string>();
+
+    for (const product of this.products || []) {
+      const oldId = product.id || '';
+      if (!oldId || seen.has(oldId)) {
+        const identity = normalize(product.sku || `${product.brandCode}_${product.name}`).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'legacy';
+        const baseId = `${oldId || 'product'}_${identity}`;
+        let productId = baseId;
+        let suffix = 2;
+        while (seen.has(productId)) productId = `${baseId}_${suffix++}`;
+        product.id = productId;
+        repairs.push({
+          oldId,
+          productId,
+          name: normalize(product.name),
+          brandCode: String(product.brandCode || '').toUpperCase(),
+        });
+        repaired = true;
+      }
+      seen.add(product.id);
+    }
+
+    const reassignReference = (record: any) => {
+      if (!record || typeof record.productId !== 'string' || !record.productId) return;
+      const candidates = repairs.filter((candidate) => candidate.oldId === record.productId);
+      if (!candidates.length) return;
+      const name = normalize(record.productName);
+      const named = candidates.filter((candidate) => candidate.name === name && name);
+      const brand = String(record.brandCode || '').toUpperCase();
+      const branded = brand ? named.filter((candidate) => candidate.brandCode === brand) : [];
+      const match = branded.length === 1 ? branded[0] : named.length === 1 ? named[0] : null;
+      if (match) {
+        record.productId = match.productId;
+        repaired = true;
+      }
+    };
+    const repairReferenceTree = (value: any) => {
+      if (Array.isArray(value)) {
+        value.forEach(repairReferenceTree);
+      } else if (value && typeof value === 'object') {
+        reassignReference(value);
+        Object.values(value).forEach(repairReferenceTree);
+      }
+    };
+
+    [this.orders, this.secondaryOrders, this.dispatches, this.stockCounts, this.returns, this.feedbackEntries, this.products, this.combos]
+      .forEach(repairReferenceTree);
+    (this.promotions || []).forEach((promotion) => {
+      if (!Array.isArray(promotion.productIds)) return;
+      promotion.productIds.forEach((productId, index) => {
+        const reference = { productId, productName: promotion.productNames?.[index], brandCode: promotion.brandCode };
+        reassignReference(reference);
+        promotion.productIds[index] = reference.productId;
+      });
+    });
+
+    return repaired;
+  }
+
+  private repairDuplicateActivityLogIds(): boolean {
+    let repaired = false;
+    const seen = new Set<string>();
+    for (const log of this.activityLogs || []) {
+      if (!log.id || seen.has(log.id)) {
+        let id = this.generateId('act');
+        while (seen.has(id)) id = this.generateId('act');
+        log.id = id;
+        repaired = true;
+      }
+      seen.add(log.id);
+    }
+    return repaired;
+  }
+
   private generateId(prefix: string): string {
-    const rand = Math.random().toString(36).substring(2, 8);
-    return `${prefix}_${Date.now()}_${rand}`;
+    const suffix = typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : `${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    return `${prefix}_${suffix}`;
   }
 
   private persistState() {
-    if (typeof window === 'undefined') return;
+    this.captureMutations(); this.writeCache();
+    if (!this.server) window.dispatchEvent(new CustomEvent('bb-db-updated'));
+  }
+
+  private writeCache() {
+    if (this.server || !this.activeUserId || typeof window === 'undefined') return;
     try {
       const state = {
-        users: this.users,
+        ownerId: this.activeUserId,
+        versions: this.versions,
+        users: this.users.map((user) => { const safe = { ...user } as any; delete safe.password; delete safe.passwordHash; delete safe.password_hash; return safe; }),
         brands: this.brands,
         products: this.products,
         combos: this.combos,
@@ -524,7 +653,7 @@ export class DatabaseService {
         shelfPhotos: this.shelfPhotos,
         callLogs: this.callLogs,
         documents: this.documents,
-        currentUser: this.currentUser,
+        currentUser: (() => { const safe = { ...this.currentUser } as any; delete safe.password; delete safe.passwordHash; delete safe.password_hash; return safe; })(),
         activeBrandFilter: this.activeBrandFilter,
         calendarMode: this.calendarMode,
         staffLiveLocations: this.staffLiveLocations,
@@ -544,53 +673,52 @@ export class DatabaseService {
         requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn,
         recurringSchedules: this.recurringSchedules,
       };
-      localStorage.setItem('bb_command_center_db_state_v12', JSON.stringify(state));
-
-      // Dispatch local window event so all mounted React components re-render immediately
-      window.dispatchEvent(new CustomEvent('bb-db-updated'));
-
-      // Broadcast across all open browser tabs
-      if (typeof BroadcastChannel !== 'undefined') {
-        try {
-          const bc = new BroadcastChannel('bb_db_channel');
-          bc.postMessage({ type: 'SYNC_UPDATE', timestamp: Date.now() });
-          bc.close();
-        } catch {
-          // ignore
-        }
-      }
+      localStorage.setItem(this.cacheKey()!, JSON.stringify(state));
     } catch (e) {
       console.warn('Failed to persist state', e);
     }
   }
 
   public resetDatabase() {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem('bb_command_center_db_state_v12');
-    localStorage.removeItem('bb_command_center_db_state_v11');
-    localStorage.removeItem('bb_command_center_db_state_v8');
-    localStorage.removeItem('bb_command_center_db_state_v7');
-    localStorage.removeItem('bb_command_center_db_state_v6');
-    localStorage.removeItem('bb_command_center_db_state_v5');
-    localStorage.removeItem('bb_command_center_db_state_v4');
-    localStorage.removeItem('bb_command_center_db_state_v3');
-    localStorage.removeItem('bb_command_center_db_state_v2');
-    localStorage.removeItem('bb_command_center_db_state');
-    window.location.reload();
+    if (this.server || !this.activeUserId) return;
+    const key = this.cacheKey()!;
+    const saved = localStorage.getItem(key);
+    if (saved) localStorage.setItem(`${key}:backup:${Date.now()}`, saved);
+    localStorage.removeItem(key); window.location.reload();
   }
 
   // Brands Portfolio Management (Multi-Brand Distributor Engine)
   public getBrands(status?: 'ACTIVE' | 'ALL'): Brand[] {
+    const seen = new Set<string>();
+    const unique = this.brands.filter((b) => {
+      const code = (b.code || '').trim().toUpperCase();
+      if (!code || seen.has(code)) return false;
+      seen.add(code);
+      return true;
+    });
     if (status === 'ACTIVE') {
-      return this.brands.filter(
+      return unique.filter(
         (b) => b.status === 'ACTIVE' && b.isActive !== false && (b as any).is_active !== false
       );
     }
-    return this.brands;
+    return unique;
+  }
+
+  public replaceBrands(brands: Brand[]): void {
+    this.brands = brands.map((brand) => ({ ...brand }));
+    this.persistState();
   }
 
   public addBrand(brand: Brand): Brand {
-    this.brands.push(brand);
+    const normCode = (brand.code || '').trim().toUpperCase();
+    const existingIndex = this.brands.findIndex(
+      (b) => b.id === brand.id || (b.code || '').trim().toUpperCase() === normCode
+    );
+    if (existingIndex >= 0) {
+      this.brands[existingIndex] = { ...this.brands[existingIndex], ...brand };
+    } else {
+      this.brands.push(brand);
+    }
     this.persistState();
     return brand;
   }
@@ -651,6 +779,7 @@ export class DatabaseService {
       }
     }
 
+    if (!this.server && this.activeUserId) syncManager.enqueue('DUTY_STATUS', { officerId, status });
     this.persistState();
   }
 
@@ -664,6 +793,11 @@ export class DatabaseService {
     return this.users;
   }
 
+  public replaceUsers(users: User[]): void {
+    this.users = JSON.parse(JSON.stringify(users));
+    this.writeCache();
+  }
+
   public getUserById(id: string): User | undefined {
     return this.users.find((u) => u.id === id);
   }
@@ -675,7 +809,7 @@ export class DatabaseService {
   public addNewUser(user: Omit<User, 'id'> & { id?: string }): User {
     const newUser: User = {
       ...user,
-      id: user.id || `user_${Date.now()}`,
+      id: user.id || `user_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       active: user.active !== false,
     };
     this.users.push(newUser);
@@ -702,7 +836,7 @@ export class DatabaseService {
     Object.assign(user, updates);
     if (this.currentUser.id === userId) {
       Object.assign(this.currentUser, updates);
-      if (typeof window !== 'undefined') {
+      if (!this.server && typeof window !== 'undefined') {
         const now = Date.now();
         const { password: _p, ...safeUser } = this.currentUser;
         const sessionData = {
@@ -718,8 +852,18 @@ export class DatabaseService {
     return user;
   }
 
+  public deleteUser(userId: string): boolean {
+    const idx = this.users.findIndex((u) => u.id === userId);
+    if (idx !== -1) {
+      this.users.splice(idx, 1);
+      this.persistState();
+      return true;
+    }
+    return false;
+  }
+
   public getCurrentUser(): User {
-    if (typeof window !== 'undefined') {
+    if (!this.server && typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem('bb_auth_user_session_v3');
         if (stored) {
@@ -749,20 +893,10 @@ export class DatabaseService {
   }
 
   public setCurrentUser(userId: string) {
-    const found = this.users.find((u) => u.id === userId);
-    if (found) {
-      this.currentUser = found;
-      if (typeof window !== 'undefined') {
-        const now = Date.now();
-        const { password: _p, ...safeUser } = found;
-        const sessionData = {
-          user: safeUser,
-          createdAt: now,
-          expiresAt: now + 24 * 60 * 60 * 1000,
-          sessionId: `sess_${now}_${Math.random().toString(36).slice(2, 9)}`,
-        };
-        localStorage.setItem('bb_auth_user_session_v3', JSON.stringify(sessionData));
-      }
+    const session = this.server ? null : this.readSessionUser();
+    const user = session?.id === userId ? session : this.users.find((entry) => entry.id === userId);
+    if (user) {
+      if (!this.server) this.setSessionUser(user); else this.currentUser = user;
       this.persistState();
     }
   }
@@ -797,7 +931,7 @@ export class DatabaseService {
   public addProduct(product: Omit<Product, 'id'>): Product {
     const newProduct: Product = {
       ...product,
-      id: `prod_${product.brandCode.toLowerCase()}_${Date.now()}`,
+      id: this.generateId(`prod_${product.brandCode.toLowerCase()}`),
       active: product.active ?? true,
     };
     this.products.unshift(newProduct);
@@ -905,7 +1039,7 @@ export class DatabaseService {
     const orderNumber = `SO-${dateStr}-${rand}`;
     const newOrder: SecondaryOrder = {
       ...order,
-      id: `sec_ord_${Date.now()}`,
+      id: this.generateId('sec_ord'),
       orderNumber,
       createdAt: new Date().toISOString(),
     };
@@ -953,7 +1087,7 @@ export class DatabaseService {
   public recordFacingAudit(audit: Omit<FacingAudit, 'id' | 'createdAt'>): FacingAudit {
     const newAudit: FacingAudit = {
       ...audit,
-      id: `fa_${Date.now()}`,
+      id: this.generateId('fa'),
       createdAt: new Date().toISOString(),
     };
     this.facingAudits.unshift(newAudit);
@@ -975,7 +1109,7 @@ export class DatabaseService {
   ): Distributor {
     const newDist: Distributor = {
       ...dist,
-      id: `dist_${Date.now()}`,
+      id: this.generateId('dist'),
       contacts: dist.contacts || [],
     };
     this.distributors.unshift(newDist);
@@ -996,7 +1130,7 @@ export class DatabaseService {
   ): Branch {
     const newBranch: Branch = {
       ...branch,
-      id: `br_${Date.now()}`,
+      id: this.generateId('br'),
       contacts: branch.contacts || [],
     };
     this.branches.unshift(newBranch);
@@ -1014,7 +1148,7 @@ export class DatabaseService {
   ): Retailer {
     const newRetailer: Retailer = {
       ...ret,
-      id: `ret_${Date.now()}`,
+      id: this.generateId('ret'),
       contacts: ret.contacts || [],
     };
     this.retailers.unshift(newRetailer);
@@ -1022,7 +1156,7 @@ export class DatabaseService {
     // Also add to today's beat if assigned to current officer
     if (this.currentUser.id === newRetailer.assignedOfficerId) {
       this.beatItems.push({
-        id: `beat_${Date.now()}`,
+        id: this.generateId('beat'),
         officerId: newRetailer.assignedOfficerId,
         dateAd: new Date().toISOString().split('T')[0],
         dateBs: getTodayBs(),
@@ -1302,7 +1436,7 @@ export class DatabaseService {
   ): VendorContact {
     const newContact: VendorContact = {
       ...contact,
-      id: `cnt_${Date.now()}`,
+      id: this.generateId('cnt'),
       storeId: entityType !== 'BRANCH' ? entityId : undefined,
       branchId: entityType === 'BRANCH' ? entityId : undefined,
       addedById: this.currentUser.id,
@@ -1536,9 +1670,12 @@ export class DatabaseService {
     return this.documentTypes;
   }
 
+  public getAlertRules(): AlertRules { return { ...this.alertRules }; }
+  public setAlertRules(rules: AlertRules): void { this.alertRules = validateAlertRules(rules); this.persistState(); }
+
   public addDocumentType(name: string): DocumentTypeConfig {
     const newDocType: DocumentTypeConfig = {
-      id: `doc_${Date.now()}`,
+      id: this.generateId('doc'),
       name: name.trim(),
       isActive: true,
       createdAt: new Date().toISOString(),
@@ -1563,7 +1700,7 @@ export class DatabaseService {
 
   public addStoreCategory(name: string): StoreCategoryConfig {
     const newCat: StoreCategoryConfig = {
-      id: `cat_${Date.now()}`,
+      id: this.generateId('cat'),
       name: name.trim(),
       isActive: true,
       createdAt: new Date().toISOString(),
@@ -1625,7 +1762,7 @@ export class DatabaseService {
     const storeName = store ? store.name : storeId;
     const isDist = store && store.type === 'DISTRIBUTOR';
     const newBeat: BeatItem = {
-      id: `beat_override_${Date.now()}`,
+      id: this.generateId('beat_override'),
       officerId,
       dateAd,
       dateBs: getTodayBs(),
@@ -1652,6 +1789,109 @@ export class DatabaseService {
     return newBeat;
   }
 
+  public createAndAssignBeatRoute(params: {
+    officerId: string;
+    dateAd: string;
+    storeIds: string[];
+    priority?: 'HIGH' | 'MEDIUM' | 'ROUTINE';
+    managerNotes?: string;
+  }): BeatItem[] {
+    const { officerId, dateAd, storeIds, priority = 'HIGH', managerNotes } = params;
+    const newItems: BeatItem[] = [];
+    const dateBs = getTodayBs();
+
+    for (let i = 0; i < storeIds.length; i++) {
+      const storeId = storeIds[i];
+      const store = this.getUnifiedStoreById(storeId);
+      const isDist = store && store.type === 'DISTRIBUTOR';
+      const item: BeatItem = {
+        id: this.generateId(`beat_${i + 1}`),
+        officerId,
+        dateAd,
+        dateBs,
+        sequence: this.beatItems.length + i + 1,
+        entityType: isDist ? 'BRANCH' : 'RETAILER',
+        entityId: store ? store.id : storeId,
+        storeName: store ? store.name : storeId,
+        storeType: store?.subType || 'Store',
+        address: store?.address || 'Kathmandu Valley',
+        lat: store?.coordinates?.lat || 27.7172,
+        lng: store?.coordinates?.lng || 85.324,
+        contactName: store?.primaryContactName || 'Store Manager',
+        contactPhone: store?.primaryContactPhone || '+977-9800000000',
+        contacts: store?.contacts || [],
+        lastVisitDaysAgo: 0,
+        pendingTasks: [],
+        status: 'PENDING',
+        priority,
+        managerNotes,
+      };
+      newItems.push(item);
+      this.beatItems.unshift(item);
+    }
+
+    this.logActivity('BEAT_ROUTE_ASSIGNED', 'BEAT', officerId, {
+      officerId,
+      storeCount: storeIds.length,
+      dateAd,
+    });
+
+    this.persistState();
+    return newItems;
+  }
+
+  public reassignOfficerBeatsAndTasks(params: {
+    fromOfficerId: string;
+    toOfficerId: string;
+    leaveStartDateAd: string;
+    leaveEndDateAd: string;
+    reason?: string;
+  }): { reassignedBeatsCount: number; reassignedTasksCount: number } {
+    const { fromOfficerId, toOfficerId, leaveStartDateAd, leaveEndDateAd, reason } = params;
+    const fromOfficer = this.users.find((u) => u.id === fromOfficerId);
+    const toOfficer = this.users.find((u) => u.id === toOfficerId);
+
+    // 1. Mark officer on leave
+    if (fromOfficer) {
+      fromOfficer.dutyStatus = 'ON_LEAVE';
+      if (!this.server && this.activeUserId) syncManager.enqueue('DUTY_STATUS', { officerId: fromOfficerId, status: 'ON_LEAVE' });
+    }
+
+    let reassignedBeatsCount = 0;
+    let reassignedTasksCount = 0;
+
+    // 2. Reassign pending beat items
+    this.beatItems.forEach((b) => {
+      if (b.officerId === fromOfficerId && b.status === 'PENDING') {
+        b.officerId = toOfficerId;
+        b.managerNotes = `${b.managerNotes ? b.managerNotes + ' • ' : ''}Covering for ${fromOfficer?.fullName || 'Relieved Staff'} (${reason || 'On Leave'})`;
+        reassignedBeatsCount++;
+      }
+    });
+
+    // 3. Reassign pending tasks
+    this.tasks.forEach((t) => {
+      if (t.assignedTo === fromOfficerId && t.status !== 'COMPLETED') {
+        t.assignedTo = toOfficerId;
+        t.assignedToName = toOfficer?.fullName || 'Covering Staff';
+        t.description = `${t.description ? t.description + ' ' : ''}[Covering for ${fromOfficer?.fullName || 'Staff'}: ${reason || 'Leave'}]`;
+        reassignedTasksCount++;
+      }
+    });
+
+    this.logActivity('STAFF_LEAVE_REASSIGNED', 'USER', fromOfficerId, {
+      fromOfficer: fromOfficer?.fullName,
+      toOfficer: toOfficer?.fullName,
+      leaveStartDateAd,
+      leaveEndDateAd,
+      reassignedBeatsCount,
+      reassignedTasksCount,
+    });
+
+    this.persistState();
+    return { reassignedBeatsCount, reassignedTasksCount };
+  }
+
   public setOfficerLeave(
     officerId: string,
     startDateAd: string,
@@ -1659,23 +1899,22 @@ export class DatabaseService {
     coveringOfficerId?: string,
     storeIdsToReassign: string[] = []
   ): void {
-    // 1. Mark officer on leave
+    if (coveringOfficerId) {
+      this.reassignOfficerBeatsAndTasks({
+        fromOfficerId: officerId,
+        toOfficerId: coveringOfficerId,
+        leaveStartDateAd: startDateAd,
+        leaveEndDateAd: endDateAd,
+        reason: 'Officer Leave Coverage',
+      });
+      return;
+    }
+
     const officer = this.users.find((u) => u.id === officerId);
     if (officer) {
       officer.dutyStatus = 'ON_LEAVE';
+      if (!this.server && this.activeUserId) syncManager.enqueue('DUTY_STATUS', { officerId, status: 'ON_LEAVE' });
     }
-
-    // 2. Reassign requested beats
-    if (coveringOfficerId && storeIdsToReassign.length > 0) {
-      const coveringOfficer = this.users.find((u) => u.id === coveringOfficerId);
-      this.beatItems.forEach((b) => {
-        if (b.officerId === officerId && storeIdsToReassign.includes(b.entityId)) {
-          b.officerId = coveringOfficerId;
-          b.managerNotes = `${b.managerNotes ? b.managerNotes + ' • ' : ''}Covering for ${officer?.fullName || 'Officer'}`;
-        }
-      });
-    }
-
     this.persistState();
   }
 
@@ -1718,7 +1957,7 @@ export class DatabaseService {
     beat.checkInDistanceM = dist || 0;
 
     const visit: Visit = {
-      id: `vis_${Date.now()}`,
+      id: this.generateId('vis'),
       officerId: beat.officerId,
       officerName: this.currentUser.fullName,
       entityType: beat.entityType,
@@ -1735,7 +1974,7 @@ export class DatabaseService {
     };
 
     this.visits.unshift(visit);
-    syncManager.enqueue('STORE_CHECK_IN', visit as unknown as Record<string, unknown>);
+
 
     // Update real-time staff status
     this.updateStaffPing(beat.officerId, lat, lng, 'AT_STORE', beat.storeName);
@@ -1855,38 +2094,36 @@ export class DatabaseService {
         store: beat.storeName,
         reason,
       });
-      syncManager.enqueue('STORE_SKIPPED', { beatId, storeId: beat.entityId, storeName: beat.storeName, reason, notes } as unknown as Record<string, unknown>);
+
       this.persistState();
     }
   }
 
   // Real-Time Staff Tracking (PRD v2.2)
   public getStaffLiveLocations(): StaffLiveLocation[] {
-    // Only field sales officers and non-superadmin operational staff should be tracked on the field map
+    // Only genuine field sales officers should be tracked on the field force GPS radar
     const fieldStaffUsers = this.users.filter(
-      (u) => u.active !== false && !u.isSuperAdmin && !u.is_super_admin && u.role !== 'SUPER_ADMIN'
+      (u) => u.active !== false && u.role === 'SALES_OFFICER'
     );
-    const validUserIds = new Set(fieldStaffUsers.map((u) => u.id));
-    const validLocs = (this.staffLiveLocations || []).filter((s) => validUserIds.has(s.officerId));
+    const validOfficerIds = new Set(fieldStaffUsers.map((u) => u.id));
+    // Purge any non-sales-officer entries from memory
+    this.staffLiveLocations = (this.staffLiveLocations || []).filter((s) => validOfficerIds.has(s.officerId));
 
-    for (const u of fieldStaffUsers) {
-      if (!validLocs.some((s) => s.officerId === u.id)) {
-        validLocs.push({
-          officerId: u.id,
-          officerName: u.fullName,
-          currentLat: 27.700769,
-          currentLng: 85.31514,
-          lastPingTimestamp: new Date().toISOString(),
-          status: 'IN_TRANSIT',
-          batteryLevel: 98,
-          isOnline: u.dutyStatus !== 'OFFLINE',
-          dutyStatus: u.dutyStatus || 'ONLINE',
-          todayDistanceKm: 0,
-          todayRoute: [],
-        });
-      }
-    }
-    return validLocs;
+    // Return only active field officers who have recorded live locations
+    return this.staffLiveLocations.map((loc) => {
+      const u = fieldStaffUsers.find((user) => user.id === loc.officerId);
+      return {
+        ...loc,
+        officerName: u ? u.fullName : loc.officerName,
+        dutyStatus: u?.dutyStatus || loc.dutyStatus || 'ONLINE',
+        isOnline: u?.dutyStatus !== 'OFFLINE',
+      };
+    });
+  }
+
+  public replaceStaffLiveLocations(locations: StaffLiveLocation[]): void {
+    this.staffLiveLocations = JSON.parse(JSON.stringify(locations));
+    this.persistState();
   }
 
   public updateStaffPing(
@@ -1895,7 +2132,8 @@ export class DatabaseService {
     lng: number,
     status: StaffLiveLocation['status'],
     storeName?: string,
-    batteryLevel?: number
+    batteryLevel?: number,
+    pingTimestamp?: string
   ) {
     let staff = this.staffLiveLocations.find((s) => s.officerId === officerId);
     if (!staff) {
@@ -1905,7 +2143,7 @@ export class DatabaseService {
         officerName: user?.fullName || 'Sales Officer',
         currentLat: lat,
         currentLng: lng,
-        lastPingTimestamp: new Date().toISOString(),
+        lastPingTimestamp: pingTimestamp || new Date().toISOString(),
         status,
         batteryLevel: batteryLevel ?? 100,
         isOnline: true,
@@ -1921,7 +2159,7 @@ export class DatabaseService {
       }
       staff.currentLat = lat;
       staff.currentLng = lng;
-      staff.lastPingTimestamp = new Date().toISOString();
+      staff.lastPingTimestamp = pingTimestamp || new Date().toISOString();
       staff.status = status;
       if (batteryLevel !== undefined) {
         staff.batteryLevel = batteryLevel;
@@ -1951,13 +2189,13 @@ export class DatabaseService {
   public recordShelfPhotos(photos: Omit<ShelfPhoto, 'id' | 'createdAt' | 'officerId' | 'officerName'>): ShelfPhoto {
     const item: ShelfPhoto = {
       ...photos,
-      id: `sp_${Date.now()}`,
+      id: this.generateId('sp'),
       officerId: this.currentUser.id,
       officerName: this.currentUser.fullName,
       createdAt: new Date().toISOString(),
     };
     this.shelfPhotos.unshift(item);
-    syncManager.enqueue('SHELF_PHOTOS_SAVED', item as unknown as Record<string, unknown>);
+
     this.logActivity('UPLOADED_SHELF_PHOTOS', 'STORE', item.entityId, {
       store: item.storeName,
       beforeCount: item.beforePhotoUrls.length,
@@ -1998,13 +2236,13 @@ export class DatabaseService {
   public recordCall(call: Omit<CallLog, 'id' | 'createdAt' | 'officerId' | 'officerName'>): CallLog {
     const item: CallLog = {
       ...call,
-      id: `call_${Date.now()}`,
+      id: this.generateId('call'),
       officerId: this.currentUser.id,
       officerName: this.currentUser.fullName,
       createdAt: new Date().toISOString(),
     };
     this.callLogs.unshift(item);
-    syncManager.enqueue('CALL_LOGGED', item as unknown as Record<string, unknown>);
+
     this.logActivity('LOGGED_CALL', 'STORE', item.entityId || '', {
       contact: item.contactName,
       outcome: item.outcome,
@@ -2022,13 +2260,13 @@ export class DatabaseService {
     const now = new Date().toISOString();
     const newCheque: Cheque = {
       ...cheque,
-      id: `chq_${Date.now()}`,
+      id: this.generateId('chq'),
       officerId: this.currentUser.id,
       officerName: this.currentUser.fullName,
       status: 'COLLECTED_IN_FIELD',
       history: [
         {
-          id: `chqh_${Date.now()}`,
+          id: this.generateId('chqh'),
           newStatus: 'COLLECTED_IN_FIELD',
           changedBy: this.currentUser.fullName,
           notes: 'Cheque collected in field',
@@ -2039,7 +2277,7 @@ export class DatabaseService {
     };
 
     this.cheques.unshift(newCheque);
-    syncManager.enqueue('CHEQUE_COLLECTED', newCheque as unknown as Record<string, unknown>);
+
     this.logActivity('COLLECTED_CHEQUE', 'CHEQUE', newCheque.id, {
       chequeNumber: newCheque.chequeNumber,
       amount: newCheque.amount,
@@ -2079,7 +2317,7 @@ export class DatabaseService {
     }
 
     cheque.history.unshift({
-      id: `chqh_${Date.now()}`,
+      id: this.generateId('chqh'),
       previousStatus: oldStatus,
       newStatus,
       changedBy: this.currentUser.fullName,
@@ -2117,13 +2355,13 @@ export class DatabaseService {
 
     const newDoc: HandoverDocument = {
       ...doc,
-      id: `doc_${Date.now()}`,
+      id: this.generateId('doc'),
       officerId,
       officerName,
       currentHolder: doc.currentHolder || `${officerName} (Field)`,
       timeline: doc.timeline && doc.timeline.length > 0 ? doc.timeline : [
         {
-          id: `ce_${Date.now()}`,
+          id: this.generateId('ce'),
           action: 'COLLECTED',
           actorName: officerName,
           locationOrFolder: doc.storeName,
@@ -2135,7 +2373,7 @@ export class DatabaseService {
       createdAt: now.toISOString(),
     };
     this.documents.unshift(newDoc);
-    syncManager.enqueue('DOCUMENT_UPLOADED', newDoc as unknown as Record<string, unknown>);
+
     this.logActivity('DOCUMENT_UPLOADED', 'DOCUMENT', newDoc.id, {
       store: newDoc.storeName,
       documentType: newDoc.documentType,
@@ -2172,7 +2410,7 @@ export class DatabaseService {
       doc.handoverDate = now.toISOString().split('T')[0];
       doc.currentHolder = recipient;
       doc.timeline.push({
-        id: `ce_${Date.now()}`,
+        id: this.generateId('ce'),
         action: 'HANDED_OVER',
         actorName: this.currentUser.fullName,
         recipientName: recipient,
@@ -2191,7 +2429,7 @@ export class DatabaseService {
       doc.filedLocation = folder;
       doc.currentHolder = `Central Archive (${folder})`;
       doc.timeline.push({
-        id: `ce_${Date.now()}`,
+        id: this.generateId('ce'),
         action: 'FILED',
         actorName: this.currentUser.fullName,
         locationOrFolder: folder,
@@ -2207,7 +2445,7 @@ export class DatabaseService {
     } else if (newStatus === 'MISSING') {
       doc.currentHolder = 'MISSING / UNACCOUNTED';
       doc.timeline.push({
-        id: `ce_${Date.now()}`,
+        id: this.generateId('ce'),
         action: 'MISSING',
         actorName: this.currentUser.fullName,
         locationOrFolder: 'Field Custody Discrepancy',
@@ -2243,13 +2481,13 @@ export class DatabaseService {
   public addDispatch(dispatch: Omit<Dispatch, 'id' | 'createdAt' | 'createdBy'>): Dispatch {
     const newDispatch: Dispatch = {
       ...dispatch,
-      id: `disp_${Date.now()}`,
+      id: this.generateId('disp'),
       createdBy: this.currentUser.fullName,
       createdAt: new Date().toISOString(),
       edits: [],
     };
     this.dispatches.unshift(newDispatch);
-    syncManager.enqueue('DISPATCH_LOGGED', newDispatch as unknown as Record<string, unknown>);
+
     this.persistState();
     return newDispatch;
   }
@@ -2265,7 +2503,7 @@ export class DatabaseService {
 
     if (!disp.edits) disp.edits = [];
     disp.edits.push({
-      id: `de_${Date.now()}`,
+      id: this.generateId('de'),
       dispatchId,
       productId,
       productName: item.productName,
@@ -2287,13 +2525,13 @@ export class DatabaseService {
   public recordStockCount(count: Omit<StockCount, 'id' | 'createdAt' | 'officerId' | 'officerName'>): StockCount {
     const newCount: StockCount = {
       ...count,
-      id: `sc_${Date.now()}`,
+      id: this.generateId('sc'),
       officerId: this.currentUser.id,
       officerName: this.currentUser.fullName,
       createdAt: new Date().toISOString(),
     };
     this.stockCounts.unshift(newCount);
-    syncManager.enqueue('STOCK_COUNT', newCount as unknown as Record<string, unknown>);
+
     this.persistState();
     return newCount;
   }
@@ -2315,12 +2553,12 @@ export class DatabaseService {
   public addOrder(order: Omit<Order, 'id' | 'createdAt'>): Order {
     const newOrder: Order = {
       ...order,
-      id: `ord_${Date.now()}`,
+      id: this.generateId('ord'),
       createdAt: new Date().toISOString(),
     };
 
     this.orders.unshift(newOrder);
-    syncManager.enqueue('ORDER_CREATED', newOrder as unknown as Record<string, unknown>);
+
 
     // Update Customer 360 record
     let customer = this.customers.find((c) => c.phone === newOrder.customerPhone);
@@ -2339,7 +2577,7 @@ export class DatabaseService {
       customer = updatedCustomer;
     } else {
       const newCust: Customer = {
-        id: `cust_${Date.now()}`,
+        id: this.generateId('cust'),
         phone: newOrder.customerPhone,
         name: newOrder.customerName,
         city: newOrder.district,
@@ -2449,7 +2687,7 @@ export class DatabaseService {
         console.error('Order subscriber error:', err);
       }
     });
-    if (typeof window !== 'undefined') {
+    if (!this.server && typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('BB_ORDER_REALTIME', { detail: event }));
     }
   }
@@ -2457,14 +2695,14 @@ export class DatabaseService {
   public getLastCatalogUpdate() {
     const activeProds = this.products.filter((p) => p.active !== false);
     const activeCombos = this.combos.filter((c) => c.active !== false && c.isActive !== false);
-    const activeBrands = this.brands.filter((b) => b.status !== 'ARCHIVED');
+    const activeBrands = this.getBrands('ACTIVE');
     return {
       activeProductsCount: activeProds.length,
       activeCombosCount: activeCombos.length,
       activeBrandsCount: activeBrands.length,
-      lastUpdatedText: '2 hours ago',
-      newProductsCount: 1,
-      newCombosCount: 1,
+      lastUpdatedText: 'Live & Synced',
+      newProductsCount: 0,
+      newCombosCount: 0,
     };
   }
 
@@ -2494,7 +2732,7 @@ export class DatabaseService {
   public addDeliveryFailure(failure: Omit<DeliveryFailure, 'id' | 'createdAt'>): DeliveryFailure {
     const newDf: DeliveryFailure = {
       ...failure,
-      id: `df_${Date.now()}`,
+      id: this.generateId('df'),
       createdAt: new Date().toISOString(),
     };
     this.deliveryFailures.unshift(newDf);
@@ -2579,7 +2817,7 @@ export class DatabaseService {
   public addReturn(ret: Omit<ReturnEntry, 'id' | 'createdAt'>): ReturnEntry {
     const newRet: ReturnEntry = {
       ...ret,
-      id: `ret_item_${Date.now()}`,
+      id: this.generateId('ret_item'),
       createdAt: new Date().toISOString(),
     };
     this.returns.unshift(newRet);
@@ -2613,11 +2851,7 @@ export class DatabaseService {
     if (!ret) return null;
 
     ret.orderStatus = resolution;
-    syncManager.enqueue(
-      'RETURN_RESOLUTION_UPDATED',
-      { returnId, resolution, updatedBy: this.currentUser.fullName },
-      '/api/returns/resolution'
-    );
+
     this.persistState();
     return ret;
   }
@@ -2642,7 +2876,7 @@ export class DatabaseService {
     }
 
     const newCat: ReviewCategory = {
-      id: `cat_${Date.now()}`,
+      id: this.generateId('cat'),
       name: trimmed,
       tickCount: 1,
       isArchived: false,
@@ -2773,10 +3007,10 @@ export class DatabaseService {
     const now = new Date().toISOString();
     const newFb: FeedbackEntry = {
       ...fb,
-      id: `fb_${Date.now()}`,
+      id: this.generateId('fb'),
       history: fb.type === 'COMPLAINT' ? [
         {
-          id: `fsh_${Date.now()}`,
+          id: this.generateId('fsh'),
           newStatus: 'OPEN',
           changedBy: this.currentUser.fullName,
           notes: 'Complaint registered',
@@ -2787,7 +3021,7 @@ export class DatabaseService {
     };
 
     this.feedbackEntries.unshift(newFb);
-    syncManager.enqueue('FEEDBACK_SUBMITTED', newFb as unknown as Record<string, unknown>);
+
 
     for (const catName of newFb.issueCategories) {
       const found = this.reviewCategories.find((c) => c.name === catName);
@@ -2825,7 +3059,7 @@ export class DatabaseService {
 
     if (!entry.history) entry.history = [];
     entry.history.unshift({
-      id: `fsh_${Date.now()}`,
+      id: this.generateId('fsh'),
       previousStatus: oldStatus,
       newStatus,
       changedBy: this.currentUser.fullName,
@@ -2844,7 +3078,7 @@ export class DatabaseService {
     if (notes) entry.resolutionNotes = notes;
     if (!entry.history) entry.history = [];
     entry.history.unshift({
-      id: `fsh_${Date.now()}`,
+      id: this.generateId('fsh'),
       previousStatus: entry.complaintStatus,
       newStatus: entry.complaintStatus || 'OPEN',
       changedBy: this.currentUser.fullName,
@@ -2868,11 +3102,6 @@ export class DatabaseService {
     entry.assignedTo = officerId;
     entry.assignedToName = assignedName;
 
-    syncManager.enqueue(
-      'FEEDBACK_ASSIGNED',
-      { feedbackId, officerId, officerName: assignedName, assignedBy: this.currentUser.fullName },
-      '/api/feedback/assign'
-    );
     this.persistState();
     return entry;
   }
@@ -2938,17 +3167,7 @@ export class DatabaseService {
 
   // Tasks
   public async syncTasksFromSupabase(): Promise<Task[]> {
-    try {
-      const supaTasks = await fetchTasksFromSupabase();
-      if (supaTasks && supaTasks.length > 0) {
-        const existingIds = new Set(supaTasks.map((t) => t.id));
-        const localOnly = this.tasks.filter((t) => !existingIds.has(t.id));
-        this.tasks = [...supaTasks, ...localOnly];
-        this.persistState();
-      }
-    } catch (e) {
-      console.warn('syncTasksFromSupabase error:', e);
-    }
+    if (!this.server) await this.syncWithSupabase();
     return this.tasks;
   }
 
@@ -2982,12 +3201,12 @@ export class DatabaseService {
   public addTask(task: Omit<Task, 'id' | 'createdAt'>): Task {
     const newTask: Task = {
       ...task,
-      id: `task_${Date.now()}`,
+      id: this.generateId('task'),
       createdAt: new Date().toISOString(),
     };
     this.tasks.unshift(newTask);
     this.persistState();
-    addTaskToSupabase(newTask).catch((err) => console.warn('addTaskToSupabase error:', err));
+
     return newTask;
   }
 
@@ -3000,8 +3219,18 @@ export class DatabaseService {
     if (task) {
       task.status = status;
       this.persistState();
-      updateTaskInSupabase(taskId, { status }).catch((err) => console.warn('updateTaskInSupabase error:', err));
+
     }
+  }
+
+  public deleteTask(taskId: string): boolean {
+    const idx = this.tasks.findIndex((t) => t.id === taskId);
+    if (idx !== -1) {
+      this.tasks.splice(idx, 1);
+      this.persistState();
+      return true;
+    }
+    return false;
   }
 
   public updateTask(taskId: string, updates: Partial<Task>): Task | null {
@@ -3009,7 +3238,7 @@ export class DatabaseService {
     if (task) {
       Object.assign(task, updates);
       this.persistState();
-      updateTaskInSupabase(taskId, updates).catch((err) => console.warn('updateTaskInSupabase error:', err));
+
       return task;
     }
     return null;
@@ -3025,13 +3254,7 @@ export class DatabaseService {
     task.assignedTo = officerId;
     task.assignedToName = assignedName;
 
-    updateTaskInSupabase(taskId, { assignedTo: officerId, assignedToName: assignedName }).catch(() => {});
 
-    syncManager.enqueue(
-      'TASK_REASSIGNED',
-      { taskId, officerId, officerName: assignedName, reassignedBy: this.currentUser.fullName },
-      '/api/tasks/reassign'
-    );
     this.persistState();
     return task;
   }
@@ -3042,13 +3265,7 @@ export class DatabaseService {
 
     task.priority = priority;
 
-    updateTaskInSupabase(taskId, { priority }).catch(() => {});
 
-    syncManager.enqueue(
-      'TASK_PRIORITY_UPDATED',
-      { taskId, priority, updatedBy: this.currentUser.fullName },
-      '/api/tasks/priority'
-    );
     this.persistState();
     return task;
   }
@@ -3056,7 +3273,7 @@ export class DatabaseService {
   // Notifications
   public getNotifications(userId?: string): Notification[] {
     const uid = userId || this.currentUser.id;
-    return this.notifications.filter((n) => n.userId === uid || n.userId === 'user_devansh');
+    return this.notifications.filter((n) => n.userId === uid);
   }
 
   public markNotificationRead(id: string) {
@@ -3070,7 +3287,7 @@ export class DatabaseService {
   public markAllNotificationsRead(userId?: string) {
     const uid = userId || this.currentUser.id;
     this.notifications.forEach((n) => {
-      if (n.userId === uid || n.userId === 'user_devansh' || !userId) {
+      if (n.userId === uid) {
         n.read = true;
       }
     });
@@ -3096,7 +3313,88 @@ export class DatabaseService {
 
   // Scorecards
   public getScorecards(): OfficerScorecard[] {
-    return this.scorecards;
+    if (this.scorecards && this.scorecards.length > 0) {
+      return this.scorecards;
+    }
+
+    const officers = this.users.filter(
+      (u) => u.active !== false && (u.role === 'SALES_OFFICER' || (u.permissions && (u.permissions as any).beat_plans))
+    );
+    const targetOfficers = officers;
+
+    return targetOfficers.map((u) => {
+      const officerVisits = this.visits.filter((v) => v.officerId === u.id);
+      const officerBeatItems = this.beatItems.filter((b) => b.officerId === u.id);
+      const officerCalls = this.callLogs.filter((c) => c.officerId === u.id);
+      const officerCheques = this.cheques.filter((c) => c.officerId === u.id);
+      const officerPhotos = this.shelfPhotos.filter((p) => p.officerId === u.id);
+      const officerDocs = this.documents.filter((d) => d.officerId === u.id);
+      const officerStockCounts = this.stockCounts.filter((s) => s.officerId === u.id);
+      const officerTasks = this.tasks.filter((t) => t.assignedTo === u.id && t.status !== 'COMPLETED');
+
+      const visitedCount =
+        officerVisits.length ||
+        officerBeatItems.filter((b) => b.status === 'VISITED').length;
+      const skippedCount = officerBeatItems.filter((b) => b.status === 'SKIPPED').length;
+      const productiveCalls = officerCalls.filter(
+        (c) => c.outcome === 'Order Received' || c.outcome === 'Payment Promised'
+      ).length;
+      const callRatio = officerCalls.length > 0 ? Math.round((productiveCalls / officerCalls.length) * 100) : 0;
+      const compliance = officerBeatItems.length > 0
+        ? Math.round((officerBeatItems.filter((b) => b.status === 'VISITED').length / officerBeatItems.length) * 100) : 0;
+
+      // Real visit duration from completed visits with timestamps
+      let totalDurationMin = 0;
+      let durationCount = 0;
+      for (const v of officerVisits) {
+        if (v.checkInTime && v.checkOutTime) {
+          const diffMs = new Date(v.checkOutTime).getTime() - new Date(v.checkInTime).getTime();
+          const mins = Math.round(diffMs / 60000);
+          if (mins > 0 && mins < 480) {
+            totalDurationMin += mins;
+            durationCount++;
+          }
+        }
+      }
+      const avgDuration = durationCount > 0 ? Math.round(totalDurationMin / durationCount) : 0;
+
+      // Real cheque handover gap from deposited cheques
+      let totalHandoverDays = 0;
+      let handoverCount = 0;
+      for (const c of officerCheques) {
+        if (c.receivedDateAd && c.handoverTimestamp) {
+          const diffMs = new Date(c.handoverTimestamp).getTime() - new Date(c.receivedDateAd).getTime();
+          const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
+          if (days >= 0) {
+            totalHandoverDays += days;
+            handoverCount++;
+          }
+        }
+      }
+      const avgHandover = handoverCount > 0 ? Math.round(totalHandoverDays / handoverCount) : 0;
+
+      return {
+        officerId: u.id,
+        officerName: u.fullName || 'Sales Officer',
+        area: u.territory || 'Kathmandu Valley',
+        storesVisited: visitedCount,
+        beatCompliancePct: compliance,
+        storesSkipped: skippedCount,
+        skipReasonsBreakdown: {},
+        avgVisitDurationMinutes: avgDuration,
+        callsMade: officerCalls.length,
+        productiveCalls,
+        callToOrderRatioPct: callRatio,
+        ordersCollected: productiveCalls,
+        chequesCollected: officerCheques.length,
+        chequesOverdue: officerCheques.filter((c) => c.status === 'DELAYED' || c.status === 'BOUNCED').length,
+        avgChequeHandoverDays: avgHandover,
+        shelfPhotosTaken: officerPhotos.length,
+        documentsCollected: officerDocs.length,
+        stockCountsDone: officerStockCounts.length,
+        pendingTasks: officerTasks.length,
+      };
+    });
   }
 
   // Activity Logs
@@ -3295,10 +3593,10 @@ export class DatabaseService {
     const stocks = this.stockCounts.filter((s) => s.officerId === officerId);
     const docs = this.documents.filter((d) => d.officerId === officerId);
 
-    const compliance = officerBeats.length > 0 ? Math.round((visited.length / officerBeats.length) * 1000) / 10 : 100;
+    const compliance = officerBeats.length > 0 ? Math.round((visited.length / officerBeats.length) * 1000) / 10 : 0;
 
     const summary: FieldOfficerDailySummary = {
-      id: `sum_${officerId}_${Date.now()}`,
+      id: this.generateId(`sum_${officerId}`),
       officerId,
       officerName: officer.fullName,
       dateAd: new Date().toISOString().split('T')[0],
@@ -3489,7 +3787,8 @@ export class DatabaseService {
 
     const orderTier = (bucket: BeatItem[]) => {
       const remaining = [...bucket];
-      while (remaining.length > 0) {
+      let safetyLimit = remaining.length * 2 + 5;
+      while (remaining.length > 0 && safetyLimit-- > 0) {
         // Find closest
         let closestIdx = 0;
         let minDist = Infinity;
@@ -3789,60 +4088,43 @@ export class DatabaseService {
 
   // Data Import Tool (Fix 39)
   public importData(
-    record: Omit<DataImportRecord, 'id' | 'importedAt'>,
-    entities: {
-      orders?: Order[];
-      returns?: ReturnEntry[];
-      retailers?: Retailer[];
-      distributors?: Distributor[];
-      branches?: Branch[];
-      products?: Product[];
-    }
+    record: Omit<DataImportRecord, 'id' | 'importedAt'> & { id?: string },
+    entities: { orders?: Order[]; returns?: ReturnEntry[]; dispatches?: Dispatch[] }
   ): { success: boolean; record: DataImportRecord } {
+    if (!this.server) throw new Error('Use the server-validated CSV importer to confirm a durable batch.');
+    const orders = entities.orders || [];
+    const returns = entities.returns || [];
+    const dispatches = entities.dispatches || [];
+    const count = orders.length + returns.length + dispatches.length;
+    if (!count || count > 50) throw new Error('A batch must contain 1–50 validated records.');
+    if ((record.sourceType === 'ORDERS' ? orders.length : record.sourceType === 'RETURNS' ? returns.length : record.sourceType === 'OFFLINE_SALES' ? dispatches.length : 0) !== count) throw new Error('The batch must contain only its selected record type.');
+    const orderNumbers = new Set(this.orders.map((order) => order.orderNumber.trim().toUpperCase()));
+    const dispatchIds = new Set(this.dispatches.map((dispatch) => dispatch.id));
+    const returnIds = new Set(this.returns.map((entry) => entry.id));
+    for (const order of orders) {
+      const key = order.orderNumber?.trim().toUpperCase();
+      if (!key || orderNumbers.has(key)) throw new Error('An order number already exists or is repeated in this batch.');
+      orderNumbers.add(key);
+    }
+    for (const dispatch of dispatches) {
+      if (!dispatch.id || dispatchIds.has(dispatch.id)) throw new Error('A dispatch ID already exists or is repeated in this batch.');
+      dispatchIds.add(dispatch.id);
+    }
+    for (const entry of returns) {
+      if (!entry.id || returnIds.has(entry.id)) throw new Error('A return ID already exists or is repeated in this batch.');
+      returnIds.add(entry.id);
+    }
+    const ids: NonNullable<DataImportRecord['importedRecordIds']> = [];
+    // Reuse ordinary submission side effects, including real Customer 360 aggregates.
+    for (const order of orders) ids.push({ collection: 'orders', id: this.addOrder(order).id });
+    for (const entry of returns) ids.push({ collection: 'returns', id: this.addReturn(entry).id });
+    for (const dispatch of dispatches) { this.dispatches.push(dispatch); ids.push({ collection: 'dispatches', id: dispatch.id }); }
     const importRecord: DataImportRecord = {
-      ...record,
-      id: this.generateId('imp'),
-      importedAt: new Date().toISOString(),
+      ...record, id: record.id || this.generateId('imp'), importedAt: new Date().toISOString(),
+      totalRows: count, importedCount: count, skippedCount: 0, skippedRows: [], importedRecordIds: ids,
     };
-
-    if (entities.orders && entities.orders.length > 0) {
-      // Deduplicate orders
-      const existingIds = new Set(this.orders.map((o) => o.orderNumber));
-      const freshOrders = entities.orders.filter((o) => !existingIds.has(o.orderNumber));
-      this.orders.push(...freshOrders);
-      importRecord.importedCount = freshOrders.length;
-      importRecord.skippedCount = entities.orders.length - freshOrders.length;
-    }
-
-    if (entities.returns && entities.returns.length > 0) {
-      this.returns.push(...entities.returns);
-      importRecord.importedCount = entities.returns.length;
-    }
-
-    if (entities.products && entities.products.length > 0) {
-      this.products.push(...entities.products);
-      importRecord.importedCount = entities.products.length;
-    }
-
-    if (entities.retailers && entities.retailers.length > 0) {
-      this.retailers.push(...entities.retailers);
-      importRecord.importedCount = entities.retailers.length;
-    }
-
-    if (entities.distributors && entities.distributors.length > 0) {
-      this.distributors.push(...entities.distributors);
-      importRecord.importedCount = entities.distributors.length;
-    }
-
     this.importHistory.unshift(importRecord);
     this.persistState();
-
-    this.logActivity('Imported Batch Data', 'DATA_IMPORT', importRecord.id, {
-      sourceType: importRecord.sourceType,
-      fileName: importRecord.fileName,
-      count: importRecord.importedCount,
-    });
-
     return { success: true, record: importRecord };
   }
 
@@ -3850,14 +4132,9 @@ export class DatabaseService {
     return this.importHistory;
   }
 
-  public rollbackImport(importId: string): boolean {
-    const rec = this.importHistory.find((i) => i.id === importId);
-    if (!rec || rec.rolledBack) return false;
-
-    rec.rolledBack = true;
-    this.persistState();
-    this.logActivity('Rolled Back Data Import', 'DATA_IMPORT', importId, { fileName: rec.fileName });
-    return true;
+  public rollbackImport(_importId: string): boolean {
+    // Restoring a batch needs version-aware reversal of customer and record edits.
+    return false;
   }
 
   // Role-Based Data Filtering (Fix 26b)
@@ -4157,7 +4434,7 @@ export class DatabaseService {
   public createSharedAccessLink(
     data: Omit<SharedAccessLink, 'id' | 'token' | 'createdAt' | 'accessCount' | 'isActive'>
   ): SharedAccessLink {
-    const token = 'bb_' + Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+    const token = 'bb_' + btoa(String.fromCharCode(...globalThis.crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     const newLink: SharedAccessLink = {
       ...data,
       id: this.generateId('sh_link'),
@@ -4196,8 +4473,10 @@ export class DatabaseService {
   }
 
   private logActivity(action: string, entityType: string, entityId: string, details?: Record<string, unknown>) {
+    let id = this.generateId('act');
+    while (this.activityLogs.some((existing) => existing.id === id)) id = this.generateId('act');
     const log: ActivityLog = {
-      id: `act_${Date.now()}`,
+      id,
       userName: this.currentUser.fullName,
       userRole: (this.currentUser.role as any) || 'STAFF',
       action,
@@ -4210,6 +4489,7 @@ export class DatabaseService {
     if (this.activityLogs.length > 200) {
       this.activityLogs.pop();
     }
+    this.persistState();
   }
 }
 

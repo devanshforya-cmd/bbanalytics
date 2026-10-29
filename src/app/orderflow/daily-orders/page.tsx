@@ -47,8 +47,11 @@ export default function DailyOrdersPage() {
   const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<string>>(new Set());
   const [recentlyInsertedIds, setRecentlyInsertedIds] = useState<Set<string>>(new Set());
 
-  // Viewer simulation & presence
-  const [viewerCount] = useState<number>(2);
+  // Active online staff presence
+  const onlineStaffCount = useMemo(() => {
+    const online = db.getUsers().filter((u) => u.dutyStatus === 'ONLINE').length;
+    return Math.max(1, online);
+  }, []);
   const [connectionStatus, setConnectionStatus] = useState<'CONNECTED' | 'RECONNECTING' | 'OFFLINE'>('CONNECTED');
 
   // Editing order modal state
@@ -317,9 +320,9 @@ export default function DailyOrdersPage() {
                 </h1>
                 {/* Live indicator badge */}
                 {isToday ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200 animate-pulse">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    LIVE · {viewerCount} Viewers
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    LIVE · {onlineStaffCount} Online
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">

@@ -91,6 +91,9 @@ export function splitMessageBlocks(rawText: string): string[] {
   let m: RegExpExecArray | null;
   while ((m = headerRegex.exec(text)) !== null) {
     matches.push(m);
+    if (m.index === headerRegex.lastIndex) {
+      headerRegex.lastIndex++;
+    }
   }
 
   if (matches.length <= 1) {
@@ -107,6 +110,8 @@ export function splitMessageBlocks(rawText: string): string[] {
 
   return blocks.length > 0 ? blocks : [text];
 }
+
+export const splitRawChatIntoBlocks = splitMessageBlocks;
 
 /**
  * Dynamic catalog-driven extraction engine.

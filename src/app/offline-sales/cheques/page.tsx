@@ -152,11 +152,15 @@ function ChequesContent() {
       return;
     }
 
+    const matchedStore = db.getStores().find(
+      (s) => s.name.toLowerCase() === newStoreName.trim().toLowerCase()
+    );
+
     guardedSubmit(async () => {
       db.addCheque({
-        entityType: 'BRANCH',
-        entityId: 'br_bb_maharaj',
-        storeName: newStoreName,
+        entityType: (matchedStore?.entityType as any) || 'RETAILER',
+        entityId: matchedStore?.id || `store_${Date.now()}`,
+        storeName: newStoreName.trim(),
         chequeNumber: newChequeNumber.trim(),
         amount: parseFloat(newAmount),
         bankName: newBank,
@@ -164,9 +168,7 @@ function ChequesContent() {
         receivedDateBs: getTodayBs(),
         cashDateAd: newCashDate,
         cashDateBs: newCashDate ? formatBsDateOnly(newCashDate) : getTodayBs(),
-        photoUrl:
-          newChequePhoto ||
-          'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=60',
+        photoUrl: newChequePhoto || '',
         status: 'COLLECTED_IN_FIELD',
         notes: 'Collected directly during visit.',
       });
@@ -828,6 +830,7 @@ function ChequesContent() {
 
             {/* Photo Capture */}
             <CameraCapture
+                folder="cheque_tracker"
               label="Photograph Cheque Leaf"
               sublabel="Capture front face of cheque showing cheque #, amount, and signature"
               maxFiles={1}

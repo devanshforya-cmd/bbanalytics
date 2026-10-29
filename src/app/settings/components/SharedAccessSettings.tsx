@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db/db-service';
+import { syncManager } from '@/lib/offline-sync';
 import { SharedAccessLink, SharedAccessAllowedPage, BrandCode } from '@/lib/types';
 import {
   Link2,
@@ -24,6 +25,12 @@ export default function SharedAccessSettings() {
   const [links, setLinks] = useState<SharedAccessLink[]>(db.getSharedAccessLinks());
   const [showModal, setShowModal] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [pendingIds, setPendingIds] = useState<string[]>([]);
+  useEffect(() => syncManager.subscribe(() => {
+    setPendingIds(syncManager.getWorkspaceMutations().filter((mutation) => mutation.collection === 'sharedAccessLinks').map((mutation) => mutation.id));
+    setLinks([...db.getSharedAccessLinks()]);
+  }), []);
 
   // Form State
   const [name, setName] = useState('');
@@ -39,28 +46,41 @@ export default function SharedAccessSettings() {
   const [createdLinkUrl, setCreatedLinkUrl] = useState<string | null>(null);
 
   const reloadLinks = () => {
-    setLinks(db.getSharedAccessLinks());
+    setLinks([...db.getSharedAccessLinks()]);
   };
 
-  const handleCopy = (token: string, id: string) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const fullUrl = `${origin}/shared/${token}`;
-    navigator.clipboard.writeText(fullUrl);
-    setCopiedId(id);
-    toast.success('Shared access link copied to clipboard!');
-    setTimeout(() => setCopiedId(null), 2500);
-  };
-
-  const handleDeactivate = (id: string) => {
-    if (confirm('Are you sure you want to revoke this shared link? Anyone with the URL will immediately lose access.')) {
-      db.deactivateSharedAccessLink(id);
-      reloadLinks();
-      toast.info('Shared access link revoked');
+  const ensureSaved = async (id: string) => {
+    await syncManager.forceSyncNow();
+    if (syncManager.getWorkspaceMutations().some((mutation) => mutation.collection === 'sharedAccessLinks' && mutation.id === id)) {
+      throw new Error('This link change is still pending on this device. Synchronize successfully before sharing or claiming revocation.');
     }
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCopy = async (token: string, id: string) => {
+    setSaving(true);
+    try {
+      await ensureSaved(id);
+      await navigator.clipboard.writeText(`${window.location.origin}/shared/${token}`);
+      setCopiedId(id); toast.success('Shared access link copied to clipboard!');
+      setTimeout(() => setCopiedId(null), 2500);
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'The link could not be copied.'); }
+    finally { setSaving(false); }
+  };
+
+  const handleDeactivate = async (id: string) => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      db.deactivateSharedAccessLink(id); reloadLinks();
+      await ensureSaved(id);
+      toast.info('Shared access link revoked');
+    } catch { toast.error('Revocation is pending. The existing URL remains active until synchronization succeeds.'); }
+    finally { setSaving(false); reloadLinks(); }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     if (!name.trim()) {
       toast.error('Please specify a link name (e.g. Agency name)');
       return;
@@ -80,6 +100,7 @@ export default function SharedAccessSettings() {
     const brandFilter: BrandCode[] = brandScope === 'ALL' ? ['FORYA', 'PEESAFE', 'RENEE'] : brandScope;
     const currentUser = db.getCurrentUser();
 
+    setSaving(true);
     const newLink = db.createSharedAccessLink({
       name: name.trim(),
       brandScope,
@@ -100,9 +121,12 @@ export default function SharedAccessSettings() {
     });
 
     reloadLinks();
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    setCreatedLinkUrl(`${origin}/shared/${newLink.token}`);
-    toast.success('Secure shared link generated!');
+    try {
+      await ensureSaved(newLink.id);
+      setCreatedLinkUrl(`${window.location.origin}/shared/${newLink.token}`);
+      toast.success('Secure shared link saved!');
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'This link is pending synchronization.'); }
+    finally { setSaving(false); reloadLinks(); }
   };
 
   const resetForm = () => {
@@ -191,6 +215,7 @@ export default function SharedAccessSettings() {
                 {links.map((link) => {
                   const isExpired = link.expiresAt && new Date(link.expiresAt) < new Date();
                   const isLive = link.isActive && !isExpired;
+                  const isPending = pendingIds.includes(link.id);
 
                   return (
                     <tr key={link.id} className="hover:bg-slate-50/60 transition-colors">
@@ -267,7 +292,9 @@ export default function SharedAccessSettings() {
                       </td>
 
                       <td className="py-3 px-4">
-                        {isLive ? (
+                        {isPending ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-1 text-amber-800">Pending synchronization</span>
+                        ) : isLive ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
                             Active
@@ -286,6 +313,7 @@ export default function SharedAccessSettings() {
                       <td className="py-3 px-4 text-right space-x-2">
                         <button
                           onClick={() => handleCopy(link.token, link.id)}
+                          disabled={saving}
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition"
                           title="Copy Link URL"
                         >
@@ -311,6 +339,7 @@ export default function SharedAccessSettings() {
                         {link.isActive && (
                           <button
                             onClick={() => handleDeactivate(link.id)}
+                            disabled={saving}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition"
                             title="Revoke access"
                           >
@@ -528,9 +557,10 @@ export default function SharedAccessSettings() {
                   </button>
                   <button
                     type="submit"
+                    disabled={saving}
                     className="px-5 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold shadow"
                   >
-                    Generate Secure Link
+                    {saving ? 'Saving...' : 'Generate Secure Link'}
                   </button>
                 </div>
               </form>

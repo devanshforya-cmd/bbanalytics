@@ -43,25 +43,6 @@ import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
 import { getScope } from '@/lib/permissions';
 
-const SAMPLE_DOC_IMAGES = [
-  {
-    label: 'Delivery Challan',
-    url: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200&auto=format&fit=crop&q=80',
-  },
-  {
-    label: 'Purchase Order',
-    url: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=1200&auto=format&fit=crop&q=80',
-  },
-  {
-    label: 'Tax Invoice',
-    url: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=1200&auto=format&fit=crop&q=80',
-  },
-  {
-    label: 'Stock Audit Sheet',
-    url: 'https://images.unsplash.com/photo-1568234928966-359c35dd8327?w=1200&auto=format&fit=crop&q=80',
-  },
-];
-
 export default function DocumentsPage() {
   const [currentUser] = useState(() => db.getCurrentUser());
   const isSalesOfficer = getScope(currentUser, 'document_handover') === 'OWN';
@@ -365,7 +346,7 @@ export default function DocumentsPage() {
     setFormStoreSearch('');
     setFormRefNumber('');
     setFormNotes('');
-    setFormPhotoUrls([SAMPLE_DOC_IMAGES[0].url]);
+    setFormPhotoUrls([]);
   };
 
   const handleRemovePhoto = (index: number) => {
@@ -440,7 +421,7 @@ export default function DocumentsPage() {
               setFormStoreSearch('');
               setFormRefNumber('');
               setFormNotes('');
-              setFormPhotoUrls([SAMPLE_DOC_IMAGES[0].url]);
+              setFormPhotoUrls([]);
               setShowUploadModal(true);
             }}
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
@@ -635,7 +616,7 @@ export default function DocumentsPage() {
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
               <option value="ALL">All Time</option>
-              <option value="TODAY">Today (Bhadra 26, 2083)</option>
+              <option value="TODAY">Today</option>
               <option value="LAST_7_DAYS">Last 7 Days</option>
               <option value="LAST_30_DAYS">Last 30 Days</option>
             </select>
@@ -1518,9 +1499,10 @@ export default function DocumentsPage() {
               </div>
             )}
 
-            {/* Document Photo Upload & Quick Sample Selector (5b) */}
+            {/* Document Photo Upload (5b) */}
             <div className="space-y-3">
               <CameraCapture
+                folder="document_handover"
                 label="Photograph Document Pages"
                 sublabel="Capture tax invoices, delivery challans, receipt vouchers, or stamped agreements"
                 maxFiles={8}
@@ -1530,53 +1512,6 @@ export default function DocumentsPage() {
                   setFormPhotoUrls((prev) => [...prev, ...results.map((r) => r.url)]);
                 }}
               />
-
-              {/* Quick Sample Selector */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 space-y-2">
-                <span className="text-[10px] font-semibold uppercase text-slate-500 block">
-                  Or Quick Select Preset Sample Document Photo:
-                </span>
-                <div className="grid grid-cols-4 gap-2">
-                  {SAMPLE_DOC_IMAGES.map((sample) => {
-                    const isSelected = formPhotoUrls.includes(sample.url);
-                    return (
-                      <button
-                        key={sample.label}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            if (formPhotoUrls.length > 1) {
-                              setFormPhotoUrls(formPhotoUrls.filter((u) => u !== sample.url));
-                            }
-                          } else {
-                            setFormPhotoUrls([...formPhotoUrls, sample.url]);
-                          }
-                        }}
-                        className={`relative rounded-lg border p-1 text-center transition-all ${
-                          isSelected
-                            ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300'
-                            : 'border-slate-200 bg-white hover:border-slate-300'
-                        }`}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={sample.url}
-                          alt={sample.label}
-                          className="h-12 w-full object-cover rounded"
-                        />
-                        <span className="text-[9px] font-medium text-slate-700 block mt-1 truncate">
-                          {sample.label}
-                        </span>
-                        {isSelected && (
-                          <div className="absolute top-1 right-1 rounded-full bg-blue-600 text-white p-0.5">
-                            <Check className="h-2 w-2" />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
 
             {/* Notes */}

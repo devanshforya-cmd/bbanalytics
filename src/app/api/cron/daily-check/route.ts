@@ -1,34 +1,29 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db/db-service';
+import { openSystemWorkspace } from '@/lib/db/server-workspace';
+import { apiFailure } from '../../_workspace';
+import { requireCronAuth } from '@/lib/cron-auth';
+import { createHash } from 'node:crypto';
+import { supabaseAdmin } from '@/lib/db/supabase-server';
+import { isSuperAdmin } from '@/lib/permissions';
+import { thresholdAlerts } from '@/lib/alert-rules';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * 56i & 57g. Combined Daily Vercel Cron Endpoint
  * - Smart Alerts (Cheque overdue, bounced, karma drop, urgent complaints)
- * - Friday Weekly Email Report trigger
- * - Complete Database JSON Backup Snapshot
+ * - Reports the scheduled report/backup work that is not yet wired to storage/email
  * Protected by CRON_SECRET Bearer token
  */
 export async function GET(request: Request) {
-  // 1. Verify CRON_SECRET authorization
-  const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (cronSecret) {
-    if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Invalid CRON_SECRET.' },
-        { status: 401 }
-      );
-    }
-  }
+  const authError = requireCronAuth(request);
+  if (authError) return authError;
 
   const url = new URL(request.url);
-  const forceBackup = url.searchParams.get('backup') === 'true';
   const forceReport = url.searchParams.get('report') === 'true';
 
   try {
+    const { db } = await openSystemWorkspace();
     const now = new Date();
     const isFriday = now.getDay() === 5; // 5 = Friday
 
@@ -38,7 +33,6 @@ export async function GET(request: Request) {
     const cheques = db.getCheques();
     const feedback = db.getFeedback();
     const customers = db.getCustomers();
-    const tasks = db.getTasks();
 
     const redAlerts: string[] = [];
     const amberAlerts: string[] = [];
@@ -68,57 +62,30 @@ export async function GET(request: Request) {
     if (delayed.length > 0) {
       amberAlerts.push(`${delayed.length} cheque(s) delayed or pending bank clearance.`);
     }
+    amberAlerts.push(...thresholdAlerts({ cheques, stores: [...db.getRetailers(), ...db.getBranches()], visits: db.getVisits(), orders: db.getOrders(), deliveryFailures: db.getDeliveryFailures() }, db.getAlertRules(), now.getTime()));
+    const administrators = db.getUsers().filter(user => user.active !== false && isSuperAdmin(user));
+    const actor = administrators[0];
+    const notifications = administrators.flatMap(user => [...redAlerts.map(message => ({ message, priority: 'URGENT' })), ...amberAlerts.map(message => ({ message, priority: 'MEDIUM' }))].map(alert => {
+      const id = `daily_alert_${createHash('sha256').update(`${now.toISOString().slice(0, 10)}:${user.id}:${alert.message}`).digest('hex')}`;
+      return { collection: 'notifications', id, created_by: actor.id, version: 1, last_mutation_id: id, data: { id, userId: user.id, title: 'Daily operations alert', ...alert, read: false, entityType: 'systemAlerts', createdAt: now.toISOString() } };
+    }));
+    if (notifications.length) {
+      const { error } = await supabaseAdmin.from('workspace_records').upsert(notifications, { onConflict: 'collection,id', ignoreDuplicates: true });
+      if (error) return NextResponse.json({ success: false, error: 'Daily alerts could not be saved.' }, { status: 503 });
+    }
 
     // --------------------------------------------------------------------------
     // B. WEEKLY REPORT EVALUATION (FRIDAYS OR FORCED)
     // --------------------------------------------------------------------------
     let weeklyReportStatus = 'Skipped (Runs only on Fridays)';
     if (isFriday || forceReport) {
-      // In production, triggers Resend email dispatch
-      const resendApiKey = process.env.RESEND_API_KEY;
-      if (resendApiKey) {
-        weeklyReportStatus = 'Dispatched via Resend API';
-      } else {
-        weeklyReportStatus = 'Generated (Resend API key not configured, logged to console)';
-      }
+      weeklyReportStatus = 'Not sent (email dispatch is not implemented)';
     }
-
-    // --------------------------------------------------------------------------
-    // C. DATABASE JSON BACKUP SNAPSHOT (Fix 56i)
-    // --------------------------------------------------------------------------
-    const backupSnapshot = {
-      timestamp: now.toISOString(),
-      metadata: {
-        system: 'Brand Bucket Command Center',
-        environment: process.env.NODE_ENV || 'production',
-      },
-      counts: {
-        orders: db.getOrders().length,
-        cheques: cheques.length,
-        feedback: feedback.length,
-        customers: customers.length,
-        tasks: tasks.length,
-        stores: db.getStores().length,
-        dispatches: db.getDispatches().length,
-        returns: db.getReturns().length,
-      },
-      tables: {
-        orders: db.getOrders(),
-        cheques,
-        feedback,
-        customers,
-        tasks,
-        stores: db.getStores(),
-        dispatches: db.getDispatches(),
-        returns: db.getReturns(),
-        products: db.getProducts(),
-      },
-    };
 
     return NextResponse.json({
       success: true,
       timestamp: now.toISOString(),
-      cronJob: 'Daily Health, Alerts & Backup',
+      cronJob: 'Daily health and in-app alerts',
       alerts: {
         redCount: redAlerts.length,
         amberCount: amberAlerts.length,
@@ -127,15 +94,9 @@ export async function GET(request: Request) {
       },
       weeklyReport: weeklyReportStatus,
       backup: {
-        status: 'Completed',
-        tableCounts: backupSnapshot.counts,
-        dataSizeEstimateBytes: JSON.stringify(backupSnapshot).length,
+        status: 'Not saved (backup storage is not implemented)',
       },
+      dataSource: 'Supabase workspace records',
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Daily cron execution failed.' },
-      { status: 500 }
-    );
-  }
+  } catch (error) { return apiFailure(error, 'Scheduled operation failed.'); }
 }

@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
 import { Customer, Product, Order, Cheque, Retailer, Branch } from '@/lib/types';
+import { getSessionUser } from '@/lib/auth';
+import { canAccessBrand, getAssignedBrandCodes, getScope, hasAccess } from '@/lib/permissions';
 import {
   Search,
   X,
@@ -45,6 +47,7 @@ interface FlatResultItem {
 }
 
 export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
+  const currentUser = getSessionUser() || db.getCurrentUser();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -71,17 +74,27 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
   useEffect(() => {
     if (!isOpen) return;
-    setCustomers(db.getCustomers());
+    const assigned = getAssignedBrandCodes(currentUser);
+    const hasBrandRestriction = !assigned.includes('ALL');
+    setCustomers(hasAccess(currentUser, 'customers')
+      ? db.getCustomers().filter((customer) =>
+        !hasBrandRestriction || (customer.brandsPurchased || []).some((code) => canAccessBrand(currentUser, code))
+      )
+      : []);
 
     // Unified stores from Retailers and Branches
-    const retailers: StoreItem[] = db.getRetailers().map((r) => ({
+    const retailers: StoreItem[] = (hasAccess(currentUser, 'stores') ? db.getRetailers() : [])
+      .filter((r) => !hasBrandRestriction || ((r as any).brandsStocked || []).some((code: string) => canAccessBrand(currentUser, code)))
+      .map((r) => ({
       id: r.id,
       name: r.name,
       type: r.type || 'Retailer',
       location: r.area || r.city || 'Kathmandu',
       officerName: r.assignedOfficerName || 'Assigned Officer',
     }));
-    const branches: StoreItem[] = db.getBranches().map((b) => ({
+    const branches: StoreItem[] = (hasAccess(currentUser, 'distributors') ? db.getBranches() : [])
+      .filter((b) => !hasBrandRestriction || (b.brandsAvailable || []).some((code) => canAccessBrand(currentUser, code)))
+      .map((b) => ({
       id: b.id,
       name: b.name,
       type: 'Branch',
@@ -90,10 +103,19 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
     }));
     setStores([...retailers, ...branches]);
 
-    setProducts(db.getProducts());
-    setOrders(db.getOrders());
-    setCheques(db.getCheques());
-  }, [isOpen]);
+    setProducts(hasAccess(currentUser, 'products')
+      ? db.getProducts().filter((p) => canAccessBrand(currentUser, p.brandCode))
+      : []);
+    setOrders(hasAccess(currentUser, 'orderflow')
+      ? db.getOrders().filter((o) => canAccessBrand(currentUser, o.brandCode))
+      : []);
+    setCheques(hasAccess(currentUser, 'cheque_tracker')
+      ? db.getCheques().filter((c) =>
+        (!hasBrandRestriction || (c.brandCodes || []).some((code) => canAccessBrand(currentUser, code))) &&
+        (getScope(currentUser, 'cheque_tracker') !== 'OWN' || c.officerId === currentUser.id)
+      )
+      : []);
+  }, [currentUser, isOpen]);
 
   // Filtered categorized results
   const categorizedResults = useMemo(() => {
@@ -329,7 +351,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            placeholder="Search customers, stores, products, cheques..."
+            placeholder="Search your workspace"
             className="w-full text-sm sm:text-base font-medium text-slate-900 placeholder-slate-400 bg-transparent outline-none"
           />
           {query.length > 0 && (
@@ -360,7 +382,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
               </div>
               <p className="text-sm font-semibold text-slate-800">Global Command Palette</p>
               <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                Type at least <span className="font-semibold text-blue-600">3 characters</span> to search across customers, stores, products, orders, and cheques.
+                Search records available to your account. Type at least <span className="font-semibold text-blue-600">3 characters</span>.
               </p>
 
               {/* Quick Jump Shortcuts */}
@@ -369,7 +391,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                   Quick Directory Navigation
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
+                  {hasAccess(currentUser, 'customers') && <button
                     type="button"
                     onClick={() => {
                       onClose();
@@ -382,9 +404,9 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     </div>
                     <span>Customer 360 Hub</span>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400 ml-auto shrink-0" />
-                  </button>
+                  </button>}
 
-                  <button
+                  {hasAccess(currentUser, 'stores') && <button
                     type="button"
                     onClick={() => {
                       onClose();
@@ -397,9 +419,9 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     </div>
                     <span>Store Directory</span>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400 ml-auto shrink-0" />
-                  </button>
+                  </button>}
 
-                  <button
+                  {hasAccess(currentUser, 'products') && <button
                     type="button"
                     onClick={() => {
                       onClose();
@@ -412,9 +434,9 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     </div>
                     <span>Products & Catalog</span>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400 ml-auto shrink-0" />
-                  </button>
+                  </button>}
 
-                  <button
+                  {hasAccess(currentUser, 'cheque_tracker') && <button
                     type="button"
                     onClick={() => {
                       onClose();
@@ -427,7 +449,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     </div>
                     <span>Cheque Custody & Deposit</span>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400 ml-auto shrink-0" />
-                  </button>
+                  </button>}
                 </div>
               </div>
             </div>
@@ -435,14 +457,13 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
             <div className="p-10 text-center text-slate-400">
               <Search className="w-8 h-8 mx-auto text-slate-300 mb-2" />
               <p className="text-sm font-semibold text-slate-700">No matching records found</p>
-              <p className="text-xs text-slate-400 mt-1">
-                No customers, stores, products, orders, or cheques matched &ldquo;{query}&rdquo;.
-              </p>
+              <p className="text-xs text-slate-400 mt-1">No accessible records matched &ldquo;{query}&rdquo;.</p>
             </div>
           ) : (
             <div className="py-2">
               {/* Category 1: CUSTOMERS */}
               <CategorySection
+                allowed={hasAccess(currentUser, 'customers')}
                 title="CUSTOMERS"
                 count={categorizedResults.customers.length}
                 emptyText="No matching customers"
@@ -475,6 +496,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
               {/* Category 2: STORES */}
               <CategorySection
+                allowed={hasAccess(currentUser, 'stores') || hasAccess(currentUser, 'distributors')}
                 title="STORES"
                 count={categorizedResults.stores.length}
                 emptyText="No matching stores"
@@ -499,6 +521,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
               {/* Category 3: PRODUCTS */}
               <CategorySection
+                allowed={hasAccess(currentUser, 'products')}
                 title="PRODUCTS"
                 count={categorizedResults.products.length}
                 emptyText="No matching products"
@@ -525,6 +548,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
               {/* Category 4: ORDERS */}
               <CategorySection
+                allowed={hasAccess(currentUser, 'orderflow')}
                 title="ORDERS"
                 count={categorizedResults.orders.length}
                 emptyText="No matching orders"
@@ -559,6 +583,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
               {/* Category 5: CHEQUES */}
               <CategorySection
+                allowed={hasAccess(currentUser, 'cheque_tracker')}
                 title="CHEQUES"
                 count={categorizedResults.cheques.length}
                 emptyText="No matching cheques"
@@ -622,16 +647,19 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 }
 
 function CategorySection({
+  allowed = true,
   title,
   count,
   emptyText,
   children,
 }: {
+  allowed?: boolean;
   title: string;
   count: number;
   emptyText: string;
   children: React.ReactNode;
 }) {
+  if (!allowed) return null;
   return (
     <div className="mb-2">
       <div className="flex items-center justify-between px-4 py-1.5 bg-slate-50/80 border-y border-slate-100">

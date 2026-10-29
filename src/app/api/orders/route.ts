@@ -1,69 +1,59 @@
+import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-guard';
-import { db } from '@/lib/db/db-service';
+import { requireFeatureAccess } from '@/lib/auth-guard';
+import { openServerWorkspace } from '@/lib/db/server-workspace';
+import { getTodayBs } from '@/lib/nepali-calendar';
+import { dateAd, allowedValue, ApiInputError, apiFailure, assertBrand, positiveNumber, readBody, requiredText, visibleOrders } from '../_workspace';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY', 'VIEWER']);
+  const auth = await requireFeatureAccess(request, 'orderflow', 'VIEW');
   if (auth.response) return auth.response;
-
-  const { user } = auth;
-  let orders = db.getOrders();
-
-  if (user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
-    orders = orders.filter((o) => user.assignedBrands!.includes(o.brandCode as any));
-  }
-
-  return NextResponse.json({ success: true, count: orders.length, data: orders });
+  try {
+    const { db } = await openServerWorkspace(auth.user);
+    const orders = visibleOrders(db, auth.user);
+    return NextResponse.json({ success: true, count: orders.length, data: orders });
+  } catch (error) { return apiFailure(error, 'Failed to load orders.'); }
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAuth(request, ['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'DATA_ENTRY']);
+  const auth = await requireFeatureAccess(request, 'orderflow', 'CREATE');
   if (auth.response) return auth.response;
-
   try {
-    const body = await request.json();
-    if (!body.customerName || !body.customerPhone) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required order fields: customerName, customerPhone.' },
-        { status: 400 }
-      );
-    }
-
-    const items = body.items || [
-      {
-        productId: body.productId || 'prod_default',
-        productName: body.productName || 'Default Item',
-        quantity: Number(body.quantity) || 1,
-        unitPrice: Number(body.unitPrice) || 500,
-        subtotal: (Number(body.quantity) || 1) * (Number(body.unitPrice) || 500),
-      },
-    ];
-    const totalAmount = items.reduce((acc: number, item: any) => acc + (item.subtotal || 0), 0);
-
-    const created = db.addOrder({
-      orderNumber: body.orderNumber || `ORD-${Date.now().toString().slice(-6)}`,
-      brandCode: body.brandCode || 'FORYA',
-      customerName: body.customerName,
-      customerPhone: body.customerPhone,
-      platform: body.platform || 'WhatsApp',
-      orderDateAd: body.orderDateAd || new Date().toISOString().split('T')[0],
-      orderDateBs: body.orderDateBs || '2083-05-27',
-      province: body.province || 'Bagmati',
-      district: body.district || 'Kathmandu',
-      address: body.address || 'Kathmandu Valley',
-      deliveryMethod: body.deliveryMethod || 'Standard Delivery',
-      paymentTerms: body.paymentTerms || 'COD',
-      orderType: body.orderType || 'NEW',
-      items,
-      totalAmount,
-      status: body.status || 'PENDING',
-      source: body.source || 'MANUAL',
-      notes: body.remarks || body.notes || '',
+    const body = await readBody(request);
+    const customerName = requiredText(body.customerName, 'customerName');
+    const customerPhone = requiredText(body.customerPhone, 'customerPhone');
+    if (!Array.isArray(body.items) || body.items.length === 0) throw new ApiInputError('A non-empty items list is required.');
+    const { db, commit } = await openServerWorkspace(auth.user);
+    const brandCode = assertBrand(db, auth.user, body.brandCode);
+    const items = body.items.map((item: any) => {
+      const product = db.getProducts().find(product => product.id === item?.productId && product.brandCode === brandCode);
+      if (!product) throw new ApiInputError('Each item must reference a product in the selected brand.');
+      const quantity = positiveNumber(item.quantity, 'quantity', true);
+      const unitPrice = positiveNumber(item.unitPrice, 'unitPrice');
+      const totalPrice = quantity * unitPrice;
+      if (!Number.isFinite(totalPrice)) throw new ApiInputError('Item total is too large.');
+      return { productId: product.id, productName: product.name, brandCode: product.brandCode, quantity, unitPrice, totalPrice };
     });
+    const order = {
+      orderNumber: typeof body.orderNumber === 'string' && body.orderNumber.trim() ? body.orderNumber.trim().toUpperCase() : `ORD-${randomUUID()}`.toUpperCase(),
+      brandCode, customerName, customerPhone,
+      platform: allowedValue(body.platform, ['Instagram', 'Messenger', 'WhatsApp', 'Website', 'TikTok', 'Walk-in', 'Pathao Bazaar', 'Phone Call', 'Field Order', 'YouTube', 'Facebook', 'Other'] as const, 'Other', 'platform'),
+      orderDateAd: dateAd(body.orderDateAd, 'orderDateAd', new Date().toISOString().slice(0, 10)),
+      orderDateBs: body.orderDateBs || getTodayBs(),
+      province: requiredText(body.province, 'province'), district: requiredText(body.district, 'district'), address: requiredText(body.address, 'address'),
+      deliveryMethod: allowedValue(body.deliveryMethod, ['Standard', 'Pathao', 'InDrive', 'Yango', 'Pick-up'] as const, 'Standard', 'deliveryMethod'),
+      paymentTerms: allowedValue(body.paymentTerms, ['COD', 'Prepaid', 'Credit 15 days', 'Credit 30 days', 'Advance'] as const, 'COD', 'paymentTerms'),
+      orderType: allowedValue(body.orderType, ['NEW', 'REPEAT'] as const, 'NEW', 'orderType'),
+      items, totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
+      status: allowedValue(body.status, ['PENDING', 'DISPATCHED', 'DELIVERED', 'FAILED', 'CANCELLED', 'RETURNED', 'EXCHANGED'] as const, 'PENDING', 'status'),
+      source: 'MANUAL' as const, notes: typeof body.notes === 'string' ? body.notes : typeof body.remarks === 'string' ? body.remarks : '',
+      createdById: auth.user.id,
+    };
+    if (!Number.isFinite(order.totalAmount)) throw new ApiInputError('Order total is too large.');
+    const created = db.addOrder(order);
+    await commit();
     return NextResponse.json({ success: true, data: created }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error?.message || 'Failed to create order' }, { status: 500 });
-  }
+  } catch (error) { return apiFailure(error, 'Failed to create order.'); }
 }

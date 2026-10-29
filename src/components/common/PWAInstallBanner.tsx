@@ -24,6 +24,18 @@ export default function PWAInstallBanner() {
 
     if (isRunningStandalone) return;
 
+    // In local development, unregister any stale service workers to ensure live code updates are always served fresh
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister();
+          }
+        });
+      }
+      return;
+    }
+
     // 2. Register Service Worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker

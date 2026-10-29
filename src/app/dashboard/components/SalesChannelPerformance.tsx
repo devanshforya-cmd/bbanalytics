@@ -40,7 +40,7 @@ export default function SalesChannelPerformance({
 
     const deliveredCount = chOrders.filter((o) => o.status === 'DELIVERED').length;
     const deliverySuccessRate =
-      orderCount > 0 ? ((deliveredCount / orderCount) * 100).toFixed(1) : '100.0';
+      orderCount > 0 ? ((deliveredCount / orderCount) * 100).toFixed(1) : '—';
 
     const chReturns = returns.filter((r) => r.platform === ch);
     const returnRate =
@@ -171,7 +171,7 @@ export default function SalesChannelPerformance({
                   <td className="p-2.5 text-right font-bold text-slate-900">{c.orders}</td>
                   <td className="p-2.5 text-right text-slate-600">{c.pctOfTotal}%</td>
                   <td className="p-2.5 text-right font-semibold text-emerald-600">
-                    {c.deliverySuccessRate}%
+                    {c.deliverySuccessRate}{c.orders > 0 ? '%' : ''}
                   </td>
                   <td className="p-2.5 text-right font-semibold text-amber-700">
                     {c.returnRate}%

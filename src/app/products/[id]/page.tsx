@@ -489,7 +489,7 @@ export default function Product360Page() {
                       );
                     })}
                   </div>
-                  <span className="text-[10px] text-slate-400 font-mono">{f.dateReceivedBs || '2083-05-23'}</span>
+                  <span className="text-[10px] text-slate-400 font-mono">{f.dateReceivedBs || f.dateReceivedAd || ''}</span>
                 </div>
                 <p className="text-slate-700 font-medium line-clamp-2">
                   &ldquo;{f.fullText}&rdquo;

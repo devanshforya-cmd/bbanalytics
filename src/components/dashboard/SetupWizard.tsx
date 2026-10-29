@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { db } from '@/lib/db/db-service';
-import { addBrand as apiAddBrand } from '@/lib/db/brands-service';
+import { addBrand as apiAddBrand, isBrandStorageLocalPreview } from '@/lib/db/brands-service';
 import { toast } from '@/components/common/Toast';
 import { BrandCode } from '@/lib/types';
 import {
@@ -66,7 +66,8 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
     const cleanCode = (newBrandCode || newBrandName)
       .trim()
       .toUpperCase()
-      .replace(/[^A-Z0-9_]+/g, '_');
+      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
     if (configuredBrands.some((b) => b.code === cleanCode)) {
       toast.error('Brand code already added');
       return;
@@ -112,6 +113,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
   const handleFinalizeSetup = async () => {
     try {
       // 1. Save Brands
+      const persistedBrandIds = new Map<string, string>();
       for (const b of configuredBrands) {
         const brandObj = {
           id: `brand_${b.code.toLowerCase()}`,
@@ -124,16 +126,18 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
           isActive: true,
           status: 'ACTIVE' as const,
         };
-        db.addBrand(brandObj);
-        await apiAddBrand(brandObj).catch(() => {});
+        const savedBrand = await apiAddBrand(brandObj);
+        persistedBrandIds.set(savedBrand.code, savedBrand.id);
       }
 
       // 2. Save Products if any
       productsToAdd.forEach((p, idx) => {
+        const brandId = persistedBrandIds.get(p.brandCode);
+        if (!brandId) throw new Error(`Save the ${p.brandCode} brand before adding its products.`);
         db.addProduct({
           name: p.name,
           brandCode: p.brandCode as BrandCode,
-          brandId: `brand_${p.brandCode.toLowerCase()}`,
+          brandId,
           unitPrice: Math.round(p.mrp * 0.75),
           thresholdQty: 5,
           keywords: [p.name, p.brandCode],
@@ -179,7 +183,9 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
       });
 
       localStorage.setItem('bb_setup_wizard_completed', 'true');
-      toast.success('Workspace successfully configured with your custom setup!');
+      toast.success(isBrandStorageLocalPreview()
+        ? 'Preview setup saved in this browser only. Connect Supabase to share it.'
+        : 'Workspace successfully configured with your custom setup!');
       onComplete();
     } catch (e: any) {
       toast.error('Setup failed: ' + (e?.message || 'Unknown error'));

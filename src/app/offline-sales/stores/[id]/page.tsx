@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
+import { getTodayBs } from '@/lib/nepali-calendar';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toast } from '@/components/common/Toast';
 import {
@@ -187,7 +188,7 @@ export default function StoreDetailPage() {
       contactName: store.primaryContactName,
       contactPhone: store.primaryContactPhone,
       orderDateAd: new Date().toISOString().split('T')[0],
-      orderDateBs: 'Bhadra 26, 2083',
+      orderDateBs: getTodayBs(),
       items: top3.map((b) => ({
         productId: b.productId,
         productName: b.name,
@@ -1023,20 +1024,24 @@ export default function StoreDetailPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {shelfPhotos.map((p) => {
-                const img = p.afterPhotoUrls?.[0] || p.beforePhotoUrls?.[0] || 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800';
+                const img = p.afterPhotoUrls?.[0] || p.beforePhotoUrls?.[0];
                 return (
                   <div
                     key={p.id}
-                    onClick={() => setLightboxPhoto(img)}
+                    onClick={() => img && setLightboxPhoto(img)}
                     className="group relative rounded-xl border border-slate-200 overflow-hidden bg-slate-100 cursor-pointer shadow-sm hover:shadow-md transition-all"
                   >
-                    <div className="h-44 w-full overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={img}
-                        alt="Shelf"
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+                    <div className="h-44 w-full overflow-hidden flex items-center justify-center bg-slate-100">
+                      {img ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={img}
+                          alt="Shelf"
+                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <Camera className="w-8 h-8 text-slate-400" />
+                      )}
                     </div>
                     <div className="p-3 bg-white text-xs space-y-1">
                       <div className="flex items-center justify-between">

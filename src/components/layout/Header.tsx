@@ -12,6 +12,8 @@ import SyncStatusDropdown from './SyncStatusDropdown';
 import NotificationHistoryModal from '@/components/common/NotificationHistoryModal';
 import GlobalSearchModal from '@/components/common/GlobalSearchModal';
 import { getSessionUser } from '@/lib/auth';
+import { getTodayBs } from '@/lib/nepali-calendar';
+import { useExperiment } from '@/hooks/useExperiment';
 import {
   Menu,
   Bell,
@@ -28,10 +30,13 @@ import {
   Clock,
   ArrowRight,
   Sparkles,
+  Calendar,
 } from 'lucide-react';
 
 export default function Header() {
   const router = useRouter();
+  const { variant: navVariant } = useExperiment('premium-nav-style');
+  const [todayBs, setTodayBs] = useState(() => getTodayBs());
   const [currentUser, setCurrentUser] = useState<User>(() => getSessionUser() || db.getCurrentUser());
   const [brandFilter, setBrandFilter] = useState<BrandCode>(db.getActiveBrandFilter());
   const [syncState, setSyncState] = useState<SyncState>('SYNCED');
@@ -142,17 +147,24 @@ export default function Header() {
   const unreadNotifs = notifications.filter((n) => !n.read);
   const displayedNotifs = notifTab === 'UNREAD' ? unreadNotifs : notifications;
   const duty = currentUser.dutyStatus || 'ONLINE';
+  const isGlassVariant = navVariant === 'glass_premium';
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-3 sm:px-6 shadow-2xs backdrop-blur-md">
+      <header
+        className={`sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b px-3 sm:px-6 transition-all duration-200 ${
+          isGlassVariant
+            ? 'border-slate-200/70 bg-white/85 shadow-[0_4px_25px_-5px_rgba(0,0,0,0.04)] backdrop-blur-xl'
+            : 'border-slate-200 bg-white/95 shadow-2xs backdrop-blur-md'
+        }`}
+      >
         {/* Left: Hamburger (mobile/tablet) + Clean Brand Dropdown */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Hamburger Menu Trigger for <lg (touch target >= 44px on mobile) */}
           <button
             type="button"
             onClick={() => setShowMobileNavDrawer(true)}
-            className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 transition lg:hidden shadow-2xs"
+            className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 transition lg:hidden shadow-2xs"
             aria-label="Open navigation menu"
           >
             <Menu className="h-5 w-5" />
@@ -171,26 +183,32 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setShowSearchModal(true)}
-            className="flex w-full items-center gap-2.5 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 text-slate-400 hover:text-slate-600 transition shadow-2xs group cursor-pointer"
-            aria-label="Search customers, stores, products, cheques..."
+            className="flex w-full items-center gap-2.5 px-3.5 py-1.5 rounded-xl border border-slate-200/90 bg-slate-50/70 hover:bg-white hover:border-blue-300 hover:shadow-xs text-slate-400 hover:text-slate-600 transition duration-150 shadow-2xs group cursor-pointer"
+            aria-label="Search your workspace"
           >
             <Search className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition shrink-0" />
-            <span className="text-xs text-slate-400 group-hover:text-slate-600 font-normal truncate">
-              Search customers, stores, products, cheques...
+            <span className="text-xs text-slate-400 group-hover:text-slate-600 font-medium truncate">
+              Search your workspace
             </span>
-            <kbd className="ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 bg-white border border-slate-200 rounded shadow-2xs shrink-0">
+            <kbd className="ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold text-slate-400 bg-white border border-slate-200 rounded-md shadow-2xs shrink-0">
               <span className="text-xs">⌘</span>K
             </kbd>
           </button>
         </div>
 
-        {/* Right: Offline Sync Pill, Notification Center, Profile Drawer Button */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        {/* Right: Offline Sync Pill, Date Badge, Notification Center, Profile Drawer Button */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Dual Calendar Date Badge */}
+          <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 bg-slate-50/70 text-xs font-bold text-slate-700 shadow-2xs">
+            <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span>{todayBs}</span>
+          </div>
+
           {/* Mobile Search Button (<sm) */}
           <button
             type="button"
             onClick={() => setShowSearchModal(true)}
-            className="flex h-11 w-11 sm:hidden items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-2xs"
+            className="flex h-11 w-11 sm:hidden items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-2xs"
             aria-label="Open search"
           >
             <Search className="h-4 w-4" />
@@ -356,7 +374,7 @@ export default function Header() {
             aria-label="Open user profile and duty settings"
           >
             <div className="relative flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 font-black text-[11px] text-white">
-              {currentUser.fullName.charAt(0)}
+              {currentUser?.fullName?.charAt(0) || 'U'}
               {/* Duty indicator dot */}
               <span
                 className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white ${
@@ -373,7 +391,7 @@ export default function Header() {
 
             <div className="text-left hidden sm:block">
               <div className="font-bold leading-none truncate max-w-[100px]">
-                {currentUser.fullName.split(' ')[0]}
+                {(currentUser?.fullName || 'User').split(' ')[0]}
               </div>
               <div className="text-[10px] text-slate-500 font-medium leading-tight mt-0.5">
                 {duty === 'ONLINE' ? 'Online' : duty.replace('_', ' ')}

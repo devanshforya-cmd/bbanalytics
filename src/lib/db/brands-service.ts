@@ -1,103 +1,114 @@
-import { supabase } from './supabase-client';
-import { supabaseAdmin } from './supabase-server';
 import { Brand } from '../types';
 import { db } from './db-service';
 
 let inMemoryBrands: Brand[] = [];
+let hasLoadedRemoteBrands = false;
+let brandStorageIsLocalPreview = false;
 
-export async function fetchBrandsFromSupabase(): Promise<Brand[]> {
+export function isBrandStorageLocalPreview(): boolean {
+  return brandStorageIsLocalPreview;
+}
+
+async function requestBrands(method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>) {
+  const response = await fetch('/api/brands', {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.success) {
+    if (payload?.localPreviewOnly === true) {
+      brandStorageIsLocalPreview = true;
+      return payload;
+    }
+    throw new Error(payload?.error || `Brand request failed (${response.status}).`);
+  }
+  brandStorageIsLocalPreview = false;
+  return payload;
+}
+
+export async function fetchBrandsFromSupabase(options: { requireRemote?: boolean } = {}): Promise<Brand[]> {
   try {
-    const client = typeof window === 'undefined' ? supabaseAdmin : supabase;
-    const { data, error } = await client
-      .from('brands')
-      .select('*')
-      .order('name', { ascending: true });
-
-    if (error) {
-      console.warn('Supabase fetchBrands error:', error.message);
+    const response = await fetch('/api/brands', { cache: 'no-store', credentials: 'same-origin' });
+    const payload = await response.json().catch(() => null);
+    if (payload?.localPreviewOnly === true) {
+      brandStorageIsLocalPreview = true;
+      hasLoadedRemoteBrands = false;
+      return db.getBrands('ALL');
+    }
+    if (response.ok && payload?.success && Array.isArray(payload.data)) {
+      brandStorageIsLocalPreview = false;
+      inMemoryBrands = payload.data as Brand[];
+      hasLoadedRemoteBrands = true;
+      db.replaceBrands(inMemoryBrands);
       return inMemoryBrands;
     }
-    if (data) {
-      inMemoryBrands = data.map((b) => ({
-        id: b.id,
-        code: b.code,
-        name: b.name,
-        color: b.color || '#3b82f6',
-        description: b.description || '',
-        logoUrl: b.logo_url,
-        isActive: b.is_active !== false,
-        status: b.is_active !== false ? 'ACTIVE' : 'ARCHIVED',
-      }));
+    if (options.requireRemote) {
+      throw new Error(payload?.error || `Brand list request failed (${response.status}).`);
+    }
+    if ([401, 403, 404].includes(response.status)) {
+      inMemoryBrands = [];
+      hasLoadedRemoteBrands = true;
+      return [];
     }
   } catch (err) {
-    console.warn('Supabase fetchBrands error:', err);
+    if (options.requireRemote) throw err;
+    console.warn('Brand API unavailable; using this device\'s saved brand list.', err);
   }
-  return inMemoryBrands;
+  return db.getBrands('ALL');
 }
 
 export function getBrands(status?: 'ACTIVE' | 'ALL'): Brand[] {
+  const source = hasLoadedRemoteBrands ? inMemoryBrands : db.getBrands(status);
   if (status === 'ACTIVE') {
-    return inMemoryBrands.filter((b) => b.isActive !== false && b.status !== 'ARCHIVED');
+    return source.filter((b) => b.isActive !== false && b.status !== 'ARCHIVED');
   }
-  return inMemoryBrands;
+  return source;
 }
 
 export function getBrandByCode(code: string): Brand | undefined {
-  return inMemoryBrands.find((b) => b.code.toUpperCase() === code.toUpperCase());
+  return getBrands('ALL').find((b) => b.code.toUpperCase() === code.toUpperCase());
 }
 
 export function getBrandById(id: string): Brand | undefined {
-  return inMemoryBrands.find((b) => b.id === id);
+  return getBrands('ALL').find((b) => b.id === id);
 }
 
 export async function addBrand(brand: Brand): Promise<Brand> {
-  const existingIdx = inMemoryBrands.findIndex(
-    (b) => b.id === brand.id || b.code.toUpperCase() === brand.code.toUpperCase()
-  );
-  if (existingIdx >= 0) {
-    inMemoryBrands[existingIdx] = brand;
-  } else {
-    inMemoryBrands.push(brand);
-  }
-
-  try {
-    const client = typeof window === 'undefined' ? supabaseAdmin : supabase;
-    await client.from('brands').upsert({
-      id: brand.id,
-      code: brand.code.toUpperCase(),
-      name: brand.name,
-      color: brand.color,
-      description: brand.description || '',
-      logo_url: brand.logoUrl || null,
-      is_active: brand.isActive !== false,
-      updated_at: new Date().toISOString(),
+  const payload = await requestBrands('POST', brand as unknown as Record<string, unknown>);
+  if (payload.localPreviewOnly) {
+    hasLoadedRemoteBrands = false;
+    const savedLocally = db.addBrand({
+      ...brand,
+      id: brand.id || `local_brand_${brand.code.toLowerCase()}`,
+      code: brand.code.trim().toUpperCase() as Brand['code'],
     });
-  } catch (e) {
-    console.warn('Supabase addBrand error:', e);
+    inMemoryBrands = db.getBrands('ALL');
+    return savedLocally;
   }
-  return brand;
+  const saved = payload.data as Brand;
+  hasLoadedRemoteBrands = true;
+  inMemoryBrands = [...inMemoryBrands.filter((entry) => entry.id !== saved.id && entry.code !== saved.code), saved];
+  db.addBrand(saved);
+  return saved;
 }
 
 export async function updateBrand(id: string, updates: Partial<Brand>): Promise<Brand | undefined> {
-  const brand = inMemoryBrands.find((b) => b.id === id || b.code === id);
-  if (brand) {
-    Object.assign(brand, updates);
-    try {
-      const client = typeof window === 'undefined' ? supabaseAdmin : supabase;
-      const dbUpdates: Record<string, any> = { updated_at: new Date().toISOString() };
-      if (updates.name !== undefined) dbUpdates.name = updates.name;
-      if (updates.code !== undefined) dbUpdates.code = updates.code.toUpperCase();
-      if (updates.color !== undefined) dbUpdates.color = updates.color;
-      if (updates.description !== undefined) dbUpdates.description = updates.description;
-      if (updates.logoUrl !== undefined) dbUpdates.logo_url = updates.logoUrl;
-      if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
-
-      await client.from('brands').update(dbUpdates).eq('id', brand.id);
-    } catch (e) {
-      console.warn('Supabase updateBrand error:', e);
-    }
+  const payload = await requestBrands('PATCH', { id, ...updates });
+  if (payload.localPreviewOnly) {
+    const existing = db.getBrands('ALL').find((brand) => brand.id === id);
+    if (!existing) return undefined;
+    hasLoadedRemoteBrands = false;
+    const savedLocally = db.addBrand({ ...existing, ...updates, id });
+    inMemoryBrands = db.getBrands('ALL');
+    return savedLocally;
   }
-  return brand;
+  const saved = payload.data as Brand;
+  hasLoadedRemoteBrands = true;
+  inMemoryBrands = [...inMemoryBrands.filter((entry) => entry.id !== saved.id), saved];
+  db.addBrand(saved);
+  return saved;
 }
 
 export async function deactivateBrand(id: string): Promise<Brand | undefined> {
@@ -120,36 +131,21 @@ export async function canDeleteBrand(brandCode: string): Promise<{
   };
 }> {
   const code = brandCode.toUpperCase();
-  const client = typeof window === 'undefined' ? supabaseAdmin : supabase;
-
   try {
-    const [ordersRes, productsRes, stockRes, feedbackRes, returnsRes] = await Promise.all([
-      client.from('orders').select('id', { count: 'exact', head: true }).eq('brand_code', code),
-      client.from('products').select('id', { count: 'exact', head: true }).eq('brand_code', code),
-      client.from('stock_counts').select('id', { count: 'exact', head: true }).eq('brand_code', code),
-      client.from('feedback').select('id', { count: 'exact', head: true }).eq('brand_code', code),
-      client.from('returns').select('id', { count: 'exact', head: true }).eq('brand_code', code),
-    ]);
-
-    const counts = {
-      orders: ordersRes.count || 0,
-      products: productsRes.count || 0,
-      stockCounts: stockRes.count || 0,
-      feedback: feedbackRes.count || 0,
-      returns: returnsRes.count || 0,
-    };
-
-    const total = Object.values(counts).reduce((a, b) => a + b, 0);
-
-    if (total > 0) {
+    const response = await fetch(`/api/brands?checkDelete=${encodeURIComponent(code)}`, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+    });
+    const payload = await response.json().catch(() => null);
+    if (response.ok && payload?.success && payload.counts) {
+      const counts = payload.counts;
       return {
-        canDelete: false,
-        reason: `Cannot delete — this brand has ${counts.orders} orders, ${counts.products} products, ${counts.stockCounts} stock counts, ${counts.feedback} feedback entries, and ${counts.returns} returns. Deactivate instead.`,
+        canDelete: Boolean(payload.canDelete),
+        reason: payload.canDelete ? undefined : `Cannot delete — this brand has ${counts.orders} orders, ${counts.products} products, ${counts.stockCounts} stock counts, ${counts.feedback} feedback entries, and ${counts.returns} returns. Deactivate instead.`,
         counts,
       };
     }
-
-    return { canDelete: true, counts };
+    throw new Error(payload?.error || 'Could not verify linked brand data.');
   } catch {
     // Local db fallback check
     const counts = {
@@ -177,21 +173,14 @@ export async function deleteBrand(id: string, brandCode: string): Promise<{ succ
   if (!check.canDelete) {
     return { success: false, error: check.reason };
   }
-
-  inMemoryBrands = inMemoryBrands.filter((b) => b.id !== id && b.code.toUpperCase() !== brandCode.toUpperCase());
-  db.deleteBrand(id);
-
   try {
-    const client = typeof window === 'undefined' ? supabaseAdmin : supabase;
-    const { error } = await client.from('brands').delete().eq('id', id);
-    if (error) {
-      console.warn('Supabase deleteBrand error:', error.message);
-    }
-  } catch (e: any) {
-    console.warn('Supabase deleteBrand error:', e);
+    await requestBrands('DELETE', { id, code: brandCode });
+    inMemoryBrands = inMemoryBrands.filter((b) => b.id !== id && b.code.toUpperCase() !== brandCode.toUpperCase());
+    db.deleteBrand(id);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error?.message || 'Brand could not be deleted.' };
   }
-
-  return { success: true };
 }
 
 export function getBrandEntityCounts(brandCode: string): { products: number; orders: number; stores: number } {

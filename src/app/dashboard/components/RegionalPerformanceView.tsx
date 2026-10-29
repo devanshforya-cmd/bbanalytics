@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { MapPin, ChevronDown, ChevronUp, Globe } from 'lucide-react';
 import { Order, ReturnEntry, DeliveryFailure, FeedbackEntry } from '@/lib/types';
+import { averageDeliveryTime, isInsideValley, topRegionalComplaint } from '@/lib/dashboard-metrics';
 
 interface RegionalPerformanceViewProps {
   orders: Order[];
@@ -30,8 +31,8 @@ export default function RegionalPerformanceView({
   const [isProvinceExpanded, setIsProvinceExpanded] = useState(false);
 
   // Inside vs Outside Valley
-  const insideOrders = orders.filter((o) => o.province.includes('Bagmati'));
-  const outsideOrders = orders.filter((o) => !o.province.includes('Bagmati'));
+  const insideOrders = orders.filter(isInsideValley);
+  const outsideOrders = orders.filter((o) => !isInsideValley(o));
 
   const insideFailures = deliveryFailures.filter((f) => f.valley === 'Inside');
   const outsideFailures = deliveryFailures.filter((f) => f.valley === 'Outside');
@@ -113,14 +114,14 @@ export default function RegionalPerformanceView({
             </tr>
             <tr className="hover:bg-slate-50">
               <td className="p-3 font-semibold text-slate-800">Avg Delivery Time</td>
-              <td className="p-3 text-center font-bold text-emerald-600">Same Day / 24 hrs</td>
-              <td className="p-3 text-center font-bold text-slate-700">3 — 5 Days</td>
+              <td className="p-3 text-center font-bold text-emerald-600">{averageDeliveryTime(insideOrders)}</td>
+              <td className="p-3 text-center font-bold text-slate-700">{averageDeliveryTime(outsideOrders)}</td>
             </tr>
             <tr className="hover:bg-slate-50">
               <td className="p-3 font-semibold text-slate-800">Top Complaint</td>
-              <td className="p-3 text-center text-slate-600">Wrong product shade</td>
+              <td className="p-3 text-center text-slate-600">{topRegionalComplaint(feedback, insideOrders)}</td>
               <td className="p-3 text-center text-rose-700 font-medium">
-                Leaking in transit / packaging
+                {topRegionalComplaint(feedback, outsideOrders)}
               </td>
             </tr>
           </tbody>
@@ -155,12 +156,13 @@ export default function RegionalPerformanceView({
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 {NEPAL_PROVINCES.map((prov) => {
-                  const pOrders = orders.filter((o) => o.province.includes(prov.key)).length;
+                  const provinceOrders = orders.filter((o) => String(o.province || '').includes(prov.key));
+                  const pOrders = provinceOrders.length;
                   const pFailures = deliveryFailures.filter((f) =>
                     orders.some((o) => o.orderNumber === f.orderNumber && o.province.includes(prov.key))
                   ).length;
                   const pReturns = returns.filter((r) =>
-                    r.remarks?.includes(prov.key) || (prov.key === 'Gandaki' && r.valley === 'Outside')
+                    provinceOrders.some((o) => o.id === r.orderId || !!r.orderNumber && o.orderNumber === r.orderNumber)
                   ).length;
 
                   return (
@@ -170,10 +172,10 @@ export default function RegionalPerformanceView({
                       <td className="p-2.5 text-right font-medium text-slate-600">{pFailures}</td>
                       <td className="p-2.5 text-right font-medium text-slate-600">{pReturns}</td>
                       <td className="p-2.5 text-slate-600">
-                        {prov.key === 'Bagmati' ? '24 Hours' : '3 — 4 Days'}
+                        {averageDeliveryTime(provinceOrders)}
                       </td>
                       <td className="p-2.5 text-slate-500">
-                        {prov.key === 'Bagmati' ? 'Wrong Shade' : 'Transit leakage'}
+                        {topRegionalComplaint(feedback, provinceOrders)}
                       </td>
                     </tr>
                   );

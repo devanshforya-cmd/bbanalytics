@@ -13,8 +13,9 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
-import { supabase } from '@/lib/db/supabase-client';
-import { hasAccess, isSuperAdmin } from '@/lib/permissions';
+import { fetchBrandsFromSupabase } from '@/lib/db/brands-service';
+import { getSessionUser } from '@/lib/auth';
+import { canAccessBrand, hasAccess, isSuperAdmin } from '@/lib/permissions';
 
 interface BrandDropdownProps {
   currentBrand: BrandCode;
@@ -32,39 +33,30 @@ export default function BrandDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function load() {
+      const user = getSessionUser() || db.getCurrentUser();
+      setCurrentUser(user);
+      const visible = (items: Brand[]) => items.filter((brand) => canAccessBrand(user, brand.code));
       try {
-        const { data, error } = await supabase
-          .from('brands')
-          .select('*')
-          .eq('is_active', true)
-          .order('name');
-        if (!error && Array.isArray(data)) {
-          const activeOnly = data
-            .filter((b) => b.is_active !== false)
-            .map((b) => ({
-              id: b.id,
-              code: b.code,
-              name: b.name,
-              color: b.color || '#3b82f6',
-              description: b.description || '',
-              isActive: true,
-              status: 'ACTIVE' as const,
-            }));
-          setBrands(activeOnly);
-        } else {
-          setBrands(db.getBrands('ACTIVE'));
-        }
+        const loaded = await fetchBrandsFromSupabase();
+        setBrands(visible(loaded.filter((brand) => brand.isActive !== false && brand.status !== 'ARCHIVED')));
       } catch {
-        setBrands(db.getBrands('ACTIVE'));
-      }
+        setBrands(visible(db.getBrands('ACTIVE')));
+      } finally { setLoading(false); }
     }
     load();
-    setCurrentUser(db.getCurrentUser());
+
+    const handleDbUpdate = () => {
+      const user = getSessionUser() || db.getCurrentUser();
+      setBrands(db.getBrands('ACTIVE').filter((brand) => canAccessBrand(user, brand.code)));
+    };
+    window.addEventListener('bb-db-updated', handleDbUpdate);
+    return () => window.removeEventListener('bb-db-updated', handleDbUpdate);
   }, []);
 
   // Auto-reset if currently selected brand was deactivated or deleted
@@ -134,7 +126,12 @@ export default function BrandDropdown({
   const canOnboardBrand =
     isSuperAdmin(currentUser) || hasAccess(currentUser, 'settings');
 
+  if (loading && brands.length === 0) return <span role="status" className={`px-3 py-1.5 text-xs text-slate-500 ${className}`}>Loading brands…</span>;
+
   if (brands.length === 0) {
+    if (!canOnboardBrand) {
+      return <span className={`px-3 py-1.5 text-[11px] font-medium text-slate-500 ${className}`}>No brands assigned</span>;
+    }
     return (
       <Link
         href="/settings?tab=brands"

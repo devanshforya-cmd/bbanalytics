@@ -2,9 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import { User } from '@/lib/types';
-import { getSessionUser } from '@/lib/auth';
+import { getRedirectPathForUser, getSessionUser } from '@/lib/auth';
 import { db } from '@/lib/db/db-service';
 import { FeatureKey, hasAccess, isSuperAdmin } from '@/lib/permissions';
 
@@ -27,10 +26,21 @@ export default function PageGuard({
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const currentUser = getSessionUser() || db.getCurrentUser();
-    setUser(currentUser);
-    setIsReady(true);
+    const refresh = () => { setUser(getSessionUser()); setIsReady(true); };
+    refresh();
+    window.addEventListener('bb-db-updated', refresh);
+    return () => window.removeEventListener('bb-db-updated', refresh);
   }, []);
+
+  const hasPermission = Boolean(
+    user && (isSuperAdmin(user) || !feature || hasAccess(user, feature))
+  );
+
+  useEffect(() => {
+    if (isReady && !hasPermission) {
+      router.replace(redirectTo || getRedirectPathForUser(user));
+    }
+  }, [hasPermission, isReady, redirectTo, router, user]);
 
   if (!isReady) {
     return (
@@ -40,43 +50,8 @@ export default function PageGuard({
     );
   }
 
-  // Super admin always has access
-  const superAdmin = isSuperAdmin(user);
-
-  let hasPermission = false;
-  if (superAdmin) {
-    hasPermission = true;
-  } else if (user) {
-    if (feature) {
-      hasPermission = hasAccess(user, feature);
-    } else {
-      hasPermission = true;
-    }
-  }
-
   if (!hasPermission) {
-    const targetRoute = redirectTo || '/dashboard';
-
-    return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-        <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mb-4 shadow-sm">
-          <ShieldAlert className="w-8 h-8" />
-        </div>
-        <h2 className="text-xl font-bold text-slate-900 mb-1">Access Restricted</h2>
-        <p className="text-sm text-slate-500 max-w-md mb-6 leading-relaxed">
-          {fallbackMessage ||
-            `Your account (${user?.fullName || 'Guest'}) does not have permission to access this module. Access is managed through permission profiles.`}
-        </p>
-        <button
-          type="button"
-          onClick={() => router.replace(targetRoute)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Return to Dashboard</span>
-        </button>
-      </div>
-    );
+    return null;
   }
 
   return <>{children}</>;

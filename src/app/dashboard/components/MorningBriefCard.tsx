@@ -20,21 +20,20 @@ import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
 import { getTodayBs } from '@/lib/nepali-calendar';
 import { User } from '@/lib/types';
-import { getScope, hasAccess, isSuperAdmin } from '@/lib/permissions';
+import { getScope, hasAccess } from '@/lib/permissions';
 
 export default function MorningBriefCard() {
   const [user, setUser] = useState<User | null>(null);
   const [visible, setVisible] = useState(false);
   const [briefData, setBriefData] = useState<any>(null);
+  const hasBriefDataAccess = (activeUser: User) =>
+    ['beat_plans', 'orderflow', 'reviews', 'cheque_tracker'].some((feature) => hasAccess(activeUser, feature));
 
   useEffect(() => {
     const sessionUser = getSessionUser() || db.getCurrentUser();
     setUser(sessionUser);
 
-    // Only users with access to dashboard or beat plans see the morning brief
-    if (!isSuperAdmin(sessionUser) && !hasAccess(sessionUser, 'dashboard') && !hasAccess(sessionUser, 'beat_plans')) {
-      return;
-    }
+    if (!hasBriefDataAccess(sessionUser)) return;
 
     const todayStr = new Date().toISOString().split('T')[0];
     const storageKey = `bb_last_brief_dismissed_${sessionUser.id}_${todayStr}`;
@@ -56,11 +55,16 @@ export default function MorningBriefCard() {
     setVisible(false);
   };
 
-  if (!visible || !user || !briefData) return null;
+  if (!visible || !user || !briefData || !hasBriefDataAccess(user)) return null;
 
   const todayBs = getTodayBs();
   const todayAd = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const isOfficer = getScope(user, 'beat_plans') === 'OWN';
+  const canSeeBeatPlans = hasAccess(user, 'beat_plans');
+  const canSeeOrders = hasAccess(user, 'orderflow');
+  const canSeeReviews = hasAccess(user, 'reviews');
+  const canSeeCheques = hasAccess(user, 'cheque_tracker');
+  const isOfficer = canSeeBeatPlans && getScope(user, 'beat_plans') === 'OWN';
+  const hasAttentionData = canSeeCheques || canSeeBeatPlans || hasAccess(user, 'settings');
 
   return (
     <div className="mb-6 rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-5 sm:p-6 shadow-md shadow-amber-500/5 relative animate-fade-in">
@@ -72,7 +76,7 @@ export default function MorningBriefCard() {
           </div>
           <div>
             <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-              <span>Good Morning, {user.fullName.split(' ')[0]}</span>
+              <span>Good Morning, {(user?.fullName || 'Colleague').split(' ')[0]}</span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold border border-amber-200">
                 Daily Operations Brief
               </span>
@@ -106,74 +110,74 @@ export default function MorningBriefCard() {
 
           {isOfficer ? (
             <div className="text-xs text-slate-700 space-y-2">
-              <p className="leading-relaxed">
-                Great effort yesterday! You visited <strong className="font-semibold text-slate-900">{briefData.yesterdaySummary.storeVisits}</strong> scheduled stores on your beat.
-              </p>
+                {canSeeBeatPlans && <p className="leading-relaxed">
+                  Great effort yesterday! You visited <strong className="font-semibold text-slate-900">{briefData.yesterdaySummary.storeVisits}</strong> scheduled stores on your beat.
+                </p>}
               <div className="flex flex-wrap gap-2 pt-1">
-                <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-medium text-xs">
+                  {canSeeBeatPlans && <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-medium text-xs">
                   {briefData.yesterdaySummary.compliancePct}% Compliance
-                </span>
-                <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 font-medium text-xs">
+                  </span>}
+                  {canSeeCheques && <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 font-medium text-xs">
                   {briefData.yesterdaySummary.chequesCollected} Cheques collected
-                </span>
+                  </span>}
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center gap-2 text-slate-700 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              {canSeeOrders && <div className="flex items-center gap-2 text-slate-700 p-2 rounded-xl bg-slate-50 border border-slate-100">
                 <Package className="w-4 h-4 text-blue-600 shrink-0" />
                 <span className="truncate">
                   Orders: <strong>{briefData.yesterdaySummary.totalOrders}</strong>
                 </span>
-              </div>
+              </div>}
 
-              <div className="flex items-center gap-2 text-slate-700 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              {canSeeOrders && <div className="flex items-center gap-2 text-slate-700 p-2 rounded-xl bg-slate-50 border border-slate-100">
                 <Truck className="w-4 h-4 text-rose-500 shrink-0" />
                 <span className="truncate">
                   Failures: <strong>{briefData.yesterdaySummary.deliveryFailures}</strong>
                 </span>
-              </div>
+              </div>}
 
-              <div className="flex items-center gap-2 text-slate-700 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              {canSeeReviews && <div className="flex items-center gap-2 text-slate-700 p-2 rounded-xl bg-slate-50 border border-slate-100">
                 <RotateCcw className="w-4 h-4 text-amber-500 shrink-0" />
                 <span className="truncate">
                   Returns: <strong>{briefData.yesterdaySummary.returnsCount}</strong>
                 </span>
-              </div>
+              </div>}
 
-              <div className="flex items-center gap-2 text-slate-700 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              {canSeeReviews && <div className="flex items-center gap-2 text-slate-700 p-2 rounded-xl bg-slate-50 border border-slate-100">
                 <MessageSquare className="w-4 h-4 text-purple-500 shrink-0" />
                 <span className="truncate">
                   Complaints: <strong>{briefData.yesterdaySummary.complaintsCount}</strong>
                 </span>
-              </div>
+              </div>}
 
-              <div className="flex items-center gap-2 text-slate-700 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              {canSeeBeatPlans && <div className="flex items-center gap-2 text-slate-700 p-2 rounded-xl bg-slate-50 border border-slate-100">
                 <Compass className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span className="truncate">
                   Beat: <strong>{briefData.yesterdaySummary.storeVisits}</strong> ({briefData.yesterdaySummary.compliancePct}%)
                 </span>
-              </div>
+              </div>}
 
-              <div className="flex items-center gap-2 text-slate-700 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              {canSeeCheques && <div className="flex items-center gap-2 text-slate-700 p-2 rounded-xl bg-slate-50 border border-slate-100">
                 <CreditCard className="w-4 h-4 text-indigo-600 shrink-0" />
                 <span className="truncate">
                   Cheques: <strong>{briefData.yesterdaySummary.chequesCollected}</strong>
                 </span>
-              </div>
+              </div>}
             </div>
           )}
         </div>
 
         {/* Today's Attention Required */}
-        <div className="space-y-3 bg-white/70 p-4 rounded-2xl border border-amber-100">
+        {hasAttentionData && <div className="space-y-3 bg-white/70 p-4 rounded-2xl border border-amber-100">
           <div className="text-[11px] font-bold uppercase tracking-wider text-rose-600 flex items-center gap-1.5">
             <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
             <span>Today&apos;s Action Priorities</span>
           </div>
 
           <div className="space-y-2 text-xs">
-            {briefData.todayAttention.overdueCheques.length > 0 && (
+            {canSeeCheques && briefData.todayAttention.overdueCheques.length > 0 && (
               <div className="flex items-start gap-2 text-rose-800 bg-rose-50 p-2 rounded-xl border border-rose-200">
                 <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 mt-1.5" />
                 <span>
@@ -184,14 +188,14 @@ export default function MorningBriefCard() {
               </div>
             )}
 
-            <div className="flex items-start gap-2 text-amber-800 bg-amber-50 p-2 rounded-xl border border-amber-200">
+            {canSeeBeatPlans && <div className="flex items-start gap-2 text-amber-800 bg-amber-50 p-2 rounded-xl border border-amber-200">
               <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 mt-1.5" />
               <span>
                 <strong>Beat Plan Active:</strong> {briefData.todayAttention.todayBeatCount} stores queued for check-in today across Kathmandu Valley.
               </span>
-            </div>
+            </div>}
 
-            {briefData.todayAttention.upcomingHoliday && (
+            {(canSeeBeatPlans || hasAccess(user, 'settings')) && briefData.todayAttention.upcomingHoliday && (
               <div className="flex items-start gap-2 text-blue-800 bg-blue-50 p-2 rounded-xl border border-blue-200">
                 <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
                 <span>
@@ -200,7 +204,7 @@ export default function MorningBriefCard() {
               </div>
             )}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* Action Buttons Footer */}

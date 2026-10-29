@@ -41,6 +41,7 @@ export interface BsDate {
   month: number; // 1-12
   day: number;
   monthName: string;
+  formatted: string;
 }
 
 export function adToBs(date: Date | string): BsDate {
@@ -57,9 +58,10 @@ export function adToBs(date: Date | string): BsDate {
   let curDay = REF_BS_DAY;
 
   if (diffDays >= 0) {
-    while (diffDays > 0) {
+    let safetyCounter = 50000;
+    while (diffDays > 0 && safetyCounter-- > 0) {
       const daysInCurrentMonth = (BS_MONTH_DAYS[curYear] && BS_MONTH_DAYS[curYear][curMonth - 1]) || 30;
-      const daysLeftInMonth = daysInCurrentMonth - curDay + 1;
+      const daysLeftInMonth = Math.max(1, daysInCurrentMonth - curDay + 1);
       
       if (diffDays >= daysLeftInMonth) {
         diffDays -= daysLeftInMonth;
@@ -75,7 +77,8 @@ export function adToBs(date: Date | string): BsDate {
       }
     }
   } else {
-    while (diffDays < 0) {
+    let safetyCounter = 50000;
+    while (diffDays < 0 && safetyCounter-- > 0) {
       curDay--;
       if (curDay < 1) {
         curMonth--;
@@ -95,6 +98,7 @@ export function adToBs(date: Date | string): BsDate {
     month: curMonth,
     day: curDay,
     monthName: monthObj.en,
+    formatted: `${monthObj.en} ${curDay}, ${curYear}`,
   };
 }
 
@@ -211,7 +215,8 @@ export function matchesDateCriteria(
       const m = parseInt(isoMatch[2], 10);
       const d = parseInt(isoMatch[3], 10);
       dateObj = bsToAd(y, m, d);
-      bsObj = { year: y, month: m, day: d, monthName: NEPALI_MONTHS[m - 1]?.en || '' };
+      const mName = NEPALI_MONTHS[m - 1]?.en || '';
+      bsObj = { year: y, month: m, day: d, monthName: mName, formatted: `${mName} ${d}, ${y}` };
       cleanDateAd = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
     } else {
       const textMatch = dateBs.match(/([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/);
@@ -222,7 +227,7 @@ export function matchesDateCriteria(
         const foundM = NEPALI_MONTHS.find((m) => m.en.toLowerCase() === mName.toLowerCase());
         if (foundM) {
           dateObj = bsToAd(y, foundM.index, d);
-          bsObj = { year: y, month: foundM.index, day: d, monthName: foundM.en };
+          bsObj = { year: y, month: foundM.index, day: d, monthName: foundM.en, formatted: `${foundM.en} ${d}, ${y}` };
           cleanDateAd = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
         }
       }

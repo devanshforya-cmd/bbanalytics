@@ -151,7 +151,7 @@ export default function ReturnsPage() {
     return d.toISOString().split('T')[0];
   }, []);
   const [orderProcessedDateAd, setOrderProcessedDateAd] = useState(defaultOrderDate);
-  const [orderProcessedDateBs, setOrderProcessedDateBs] = useState('Bhadra 21, 2083');
+  const [orderProcessedDateBs, setOrderProcessedDateBs] = useState(() => adToBs(defaultOrderDate).formatted);
 
   const [platform, setPlatform] = useState<OrderPlatform>('Instagram');
   const [reasonCategory, setReasonCategory] = useState<ReturnReason>('Damage');
@@ -249,9 +249,7 @@ export default function ReturnsPage() {
       valley,
       issueCategories: selectedIssueCategories,
       remarks,
-      evidenceUrl:
-        evidencePreview ||
-        'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=60',
+      evidenceUrl: evidencePreview || undefined,
     });
 
     // 2. Auto-update customer in Customer 360 (-3 Karma points for actual return)

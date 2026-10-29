@@ -2,19 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db/db-service';
-import { fetchLatestPingsFromSupabase } from '@/lib/db/gps-service';
+import { fetchLatestPingsFromSupabase, recordGpsPing } from '@/lib/db/gps-service';
+import { getSessionUser } from '@/lib/auth';
+import { canPerform, getScope, hasAccess } from '@/lib/permissions';
 import { StaffLiveLocation, StaffLiveStatus, BeatItem, DutyStatus } from '@/lib/types';
 import InteractiveMap from '@/components/common/InteractiveMap';
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
 import {
   Navigation,
-  BatteryCharging,
-  BatteryMedium,
-  BatteryLow,
-  Wifi,
   MapPin,
-  Clock,
   Phone,
   MessageSquare,
   Activity,
@@ -75,22 +72,54 @@ export default function LiveStaffTrackingPage() {
   const [beatItems, setBeatItems] = useState<BeatItem[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [gpsError, setGpsError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filterDuty, setFilterDuty] = useState<'ALL' | 'ACTIVE' | 'OFFLINE'>('ALL');
+  const currentUser = getSessionUser() || db.getCurrentUser();
+  const canEditGps = canPerform(currentUser, 'gps_tracking', 'EDIT');
 
   const reloadLocations = async () => {
     setIsRefreshing(true);
     try {
-      await fetchLatestPingsFromSupabase();
-    } catch {
-      // ignore
+      const result = await fetchLatestPingsFromSupabase();
+      setGpsError(result.error || null);
+    } catch (error) {
+      setGpsError(error instanceof Error ? error.message : 'Live GPS service is unavailable.');
     }
-    const locs = db.getStaffLiveLocations();
+    const user = getSessionUser() || db.getCurrentUser();
+    const users = db.getUsers();
+    const allowedOfficerIds = new Set<string>();
+    const scope = getScope(user, 'gps_tracking');
+    if (scope === 'ALL') {
+      users.forEach((staff) => allowedOfficerIds.add(staff.id));
+    } else if (scope === 'OWN') {
+      allowedOfficerIds.add(user.id);
+    } else {
+      const pendingIds = [user.id];
+      while (pendingIds.length) {
+        const managerId = pendingIds.pop()!;
+        users.forEach((staff) => {
+          if ((staff.reportsToId || (staff as any).reports_to_id) === managerId && !allowedOfficerIds.has(staff.id)) {
+            allowedOfficerIds.add(staff.id);
+            pendingIds.push(staff.id);
+          }
+        });
+      }
+      allowedOfficerIds.add(user.id);
+    }
+    const locs = db.getStaffLiveLocations().filter((location) => allowedOfficerIds.has(location.officerId));
     // enrich with latest duty status from db
-    const enriched = locs.map((l) => ({
-      ...l,
-      dutyStatus: db.getOfficerDutyStatus(l.officerId) || l.dutyStatus || 'ONLINE',
-    }));
+    const enriched = locs.map((l) => {
+      const reportedDuty = db.getOfficerDutyStatus(l.officerId) || l.dutyStatus || 'ONLINE';
+      const pingAgeMs = Date.now() - Date.parse(l.lastPingTimestamp);
+      const pingIsFresh = Number.isFinite(pingAgeMs) && pingAgeMs <= 120_000;
+      const dutyStatus = pingIsFresh ? reportedDuty : 'OFFLINE';
+      return {
+        ...l,
+        dutyStatus,
+        isOnline: pingIsFresh && reportedDuty !== 'OFFLINE' && reportedDuty !== 'ON_LEAVE',
+      };
+    });
     setLocations(enriched);
     setBeatItems(db.getBeatItems());
     if (!selectedStaffId && enriched.length > 0) {
@@ -105,10 +134,13 @@ export default function LiveStaffTrackingPage() {
         (pos) => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
-          const user = db.getCurrentUser();
-          db.updateStaffPing(user.id, lat, lng, 'IN_TRANSIT', undefined, 100);
-          reloadLocations();
-          triggerToast(`Live GPS pinned at ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+          const user = getSessionUser() || db.getCurrentUser();
+          void recordGpsPing(user.id, user.fullName, lat, lng, 'IN_TRANSIT').then((saved) => {
+            triggerToast(saved
+              ? 'GPS position saved to the shared live feed.'
+              : 'GPS position is only on this device; shared GPS storage is unavailable.');
+          });
+          void reloadLocations();
         },
         (err) => {
           triggerToast(`GPS access: ${err.message}`);
@@ -142,7 +174,20 @@ export default function LiveStaffTrackingPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleDutyChange = (officerId: string, newDuty: DutyStatus) => {
+  const handleDutyChange = async (officerId: string, newDuty: DutyStatus) => {
+    const user = getSessionUser() || db.getCurrentUser();
+    if (!canPerform(user, 'gps_tracking', 'EDIT')) return;
+    const response = await fetch('/api/gps/ping', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ officerId, dutyStatus: newDuty }),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.success) {
+      triggerToast(result?.error || 'Could not update officer duty status.');
+      return;
+    }
     db.setOfficerDutyStatus(officerId, newDuty);
     const officer = locations.find((l) => l.officerId === officerId);
     reloadLocations();
@@ -223,7 +268,7 @@ export default function LiveStaffTrackingPage() {
             </button>
           </div>
 
-          <button
+          {hasAccess(currentUser, 'beat_plans') && <button
             type="button"
             onClick={handlePingMyGps}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
@@ -231,7 +276,7 @@ export default function LiveStaffTrackingPage() {
           >
             <Navigation className="w-3.5 h-3.5" />
             <span>Ping My GPS</span>
-          </button>
+          </button>}
 
           <button
             type="button"
@@ -243,6 +288,12 @@ export default function LiveStaffTrackingPage() {
           </button>
         </div>
       </div>
+
+      {gpsError && (
+        <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+          <strong>Live GPS is unavailable.</strong> {gpsError} Map positions may be cached on this device; they are not confirmed as shared live data.
+        </div>
+      )}
 
       {filteredLocations.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-xs">
@@ -284,10 +335,13 @@ export default function LiveStaffTrackingPage() {
                         : 'bg-blue-100 text-blue-700 border-blue-200'
                     }`}
                   >
-                    {loc.officerName
+                    {(loc.officerName || 'Field Officer')
                       .split(' ')
+                      .filter(Boolean)
                       .map((n) => n[0])
-                      .join('')}
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase()}
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 text-sm">{loc.officerName}</h3>
@@ -305,14 +359,7 @@ export default function LiveStaffTrackingPage() {
                         {dutyBadge.label}
                       </span>
                       <span>•</span>
-                      <span className="flex items-center gap-1">
-                        {loc.batteryLevel > 50 ? (
-                          <BatteryCharging className="w-3.5 h-3.5 text-emerald-600" />
-                        ) : (
-                          <BatteryLow className="w-3.5 h-3.5 text-amber-600" />
-                        )}
-                        {loc.batteryLevel}%
-                      </span>
+                      <span>Battery not reported</span>
                     </div>
                   </div>
                 </div>
@@ -340,7 +387,7 @@ export default function LiveStaffTrackingPage() {
                       {loc.currentStoreName || 'Retail Outlet'}
                     </span>
                     <span className="text-slate-500 font-normal">
-                      ⏱ {loc.timeAtCurrentStoreMinutes || 15}m dwell
+                      ⏱ {loc.timeAtCurrentStoreMinutes ? `${loc.timeAtCurrentStoreMinutes}m dwell` : 'Just arrived'}
                     </span>
                   </div>
                 ) : (
@@ -362,27 +409,37 @@ export default function LiveStaffTrackingPage() {
               {/* Admin Duty Override & Quick Actions */}
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
-                  <a
-                    href="tel:+9779841234567"
-                    className="p-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors"
-                    title="Direct Call"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Phone className="w-3.5 h-3.5" />
-                  </a>
-                  <a
-                    href="https://wa.me/9779841234567"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-1.5 rounded-lg border border-slate-200 text-teal-700 hover:bg-teal-50 transition-colors"
-                    title="WhatsApp Message"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                  </a>
+                  {(() => {
+                    const officerUser = db.getUsers().find((u) => u.id === loc.officerId);
+                    const rawPhone = officerUser?.phone || '';
+                    const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+                    if (!cleanPhone) return null;
+                    return (
+                      <>
+                        <a
+                          href={`tel:${cleanPhone}`}
+                          className="p-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors"
+                          title={`Call ${loc.officerName}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                        </a>
+                        <a
+                          href={`https://wa.me/${cleanPhone}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 rounded-lg border border-slate-200 text-teal-700 hover:bg-teal-50 transition-colors"
+                          title={`WhatsApp ${loc.officerName}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </a>
+                      </>
+                    );
+                  })()}
 
                   {/* 1-Click Toggle Offline / Online */}
-                  <button
+                  {canEditGps && <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -395,7 +452,7 @@ export default function LiveStaffTrackingPage() {
                     }`}
                   >
                     {isOffline ? 'Set Online' : 'Mark Offline'}
-                  </button>
+                  </button>}
                 </div>
 
                 <button
@@ -471,9 +528,9 @@ export default function LiveStaffTrackingPage() {
               </div>
               <div className="flex items-center gap-4">
                 <span>Stops Today: <strong className="text-white">{selectedStaff.todayRoute.length}</strong></span>
-                <span>Battery: <strong className="text-white">{selectedStaff.batteryLevel}%</strong></span>
-                <span>Speed: <strong className="text-white">{selectedStaff.dutyStatus === 'OFFLINE' ? '0 km/h' : '~18 km/h'}</strong></span>
-                <span>Accuracy: <strong className="text-emerald-400">&plusmn;8m</strong></span>
+                <span>Battery: <strong className="text-white">Not reported</strong></span>
+                <span>Speed: <strong className="text-white">Not collected</strong></span>
+                <span>Accuracy: <strong className="text-white">Not collected</strong></span>
               </div>
             </div>
           </div>

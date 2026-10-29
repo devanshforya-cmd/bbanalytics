@@ -276,7 +276,7 @@ export default function CheckInFlow({
           {/* Action Grid */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
             <div className="text-xs text-slate-500 font-medium">
-              Complete mandatory store actions before checking out:
+              Record the actions relevant to this visit before checking out.
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

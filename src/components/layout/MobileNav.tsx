@@ -54,8 +54,10 @@ export default function MobileNav() {
   const [showFabDrawer, setShowFabDrawer] = useState(false);
 
   useEffect(() => {
-    const session = getSessionUser();
-    if (session) setCurrentUser(session);
+    const refresh = () => { const session = getSessionUser(); if (session) setCurrentUser(session); };
+    refresh();
+    window.addEventListener('bb-db-updated', refresh);
+    return () => window.removeEventListener('bb-db-updated', refresh);
   }, [pathname]);
 
   const visibleBottomTabs = CANDIDATE_BOTTOM_TABS.filter((t) => hasAccess(currentUser, t.permKey)).slice(0, 5);
@@ -212,7 +214,7 @@ export default function MobileNav() {
 
       {/* Primary Mobile Bottom Navigation Bar (Dynamic from user permissions) */}
       <nav
-        className="fixed bottom-0 left-0 z-40 h-16 w-full items-center border-t border-slate-200 bg-white/95 backdrop-blur-md px-1 shadow-lg lg:hidden grid"
+        className="mobile-bottom-nav fixed bottom-0 left-0 z-40 w-full items-center border-t border-slate-200 bg-white/95 backdrop-blur-md px-1 shadow-lg lg:hidden grid"
         style={{ gridTemplateColumns: `repeat(${Math.max(1, visibleBottomTabs.length)}, minmax(0, 1fr))` }}
       >
         {visibleBottomTabs.map((tab) => {

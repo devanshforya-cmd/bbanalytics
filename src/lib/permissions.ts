@@ -1,5 +1,4 @@
 // Brand Bucket Command Center — Granular Custom Permission System (Section 1)
-import { supabase } from './db/supabase-client';
 
 export type FeatureKey =
   | 'beat_plans'
@@ -207,6 +206,8 @@ export interface UserWithPermissions {
   custom_permissions?: Record<string, any>;
   reports_to_id?: string | null;
   reportsToId?: string | null;
+  assignedBrands?: string[];
+  assigned_brands?: string[];
 }
 
 /**
@@ -215,6 +216,20 @@ export interface UserWithPermissions {
 export function isSuperAdmin(user?: UserWithPermissions | null): boolean {
   if (!user) return false;
   return Boolean(user.is_super_admin || user.isSuperAdmin);
+}
+
+/** Missing assignments retain legacy all-brand access; an explicit empty list means no brands. */
+export function getAssignedBrandCodes(user?: UserWithPermissions | null): string[] {
+  if (!user) return [];
+  if (isSuperAdmin(user)) return ['ALL'];
+  const assignments = user.assignedBrands ?? user.assigned_brands;
+  if (!Array.isArray(assignments)) return ['ALL'];
+  return assignments.map((code) => String(code).trim().toUpperCase()).filter(Boolean);
+}
+
+export function canAccessBrand(user: UserWithPermissions | null | undefined, brandCode: string): boolean {
+  const assigned = getAssignedBrandCodes(user);
+  return assigned.includes('ALL') || assigned.includes(String(brandCode).trim().toUpperCase());
 }
 
 export function getEffectivePermission(
@@ -345,23 +360,13 @@ export async function getTeamMemberIds(userId: string, allUsers?: any[]): Promis
     return result;
   }
 
+  if (typeof window === 'undefined') return [];
   try {
-    const { data } = await supabase
-      .from('users')
-      .select('id')
-      .eq('reports_to_id', userId)
-      .eq('is_active', true);
-
-    const directReports = data?.map((u: any) => u.id) || [];
-    const nestedReports = await Promise.all(
-      directReports.map((id: string) => getTeamMemberIds(id))
-    );
-
-    return [...directReports, ...nestedReports.flat()];
-  } catch (err) {
-    console.warn('getTeamMemberIds error:', err);
-    return [];
-  }
+    const response = await fetch('/api/sync', { credentials: 'same-origin', cache: 'no-store' });
+    const payload = await response.json();
+    if (!response.ok || !Array.isArray(payload?.data?.users)) return [];
+    return getTeamMemberIds(userId, payload.data.users);
+  } catch { return []; }
 }
 
 /**

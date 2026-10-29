@@ -572,6 +572,7 @@ export interface Cheque {
   id: string;
   entityType: 'BRANCH' | 'RETAILER';
   entityId: string;
+  brandCodes?: BrandCode[];
   storeName: string;
   officerId: string;
   officerName: string;
@@ -1133,6 +1134,9 @@ export interface DataImportRecord {
   skippedCount: number;
   skippedRows: { rowNumber: number; data: Record<string, unknown>; reason: string }[];
   rolledBack?: boolean;
+  persistence?: 'CONFIRMED';
+  requestHash?: string;
+  importedRecordIds?: { collection: 'orders' | 'returns' | 'dispatches'; id: string }[];
 }
 
 // Influencer & Marketing Tracking Types (Fix 60 & 61)

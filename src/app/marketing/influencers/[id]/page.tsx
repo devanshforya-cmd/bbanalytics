@@ -631,7 +631,7 @@ export default function InfluencerDetailPage() {
                       {cnt.notes && (
                         <>
                           <span>&bull;</span>
-                          <span className="italic text-slate-600">"{cnt.notes}"</span>
+                          <span className="italic text-slate-600">&ldquo;{cnt.notes}&rdquo;</span>
                         </>
                       )}
                     </div>
@@ -745,7 +745,7 @@ export default function InfluencerDetailPage() {
                     <p className="whitespace-pre-line">{managerNotes}</p>
                   ) : (
                     <p className="text-slate-400 italic">
-                      No notes recorded yet. Click "Edit Notes" to write assessment feedback.
+                      No notes recorded yet. Click &quot;Edit Notes&quot; to write assessment feedback.
                     </p>
                   )}
                 </div>
