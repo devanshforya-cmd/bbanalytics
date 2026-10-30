@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db, OrderRealtimeEvent } from '@/lib/db/db-service';
+import { useOrderOptions } from '@/hooks/useOrderOptions';
+import { activeOrderOptionNames } from '@/lib/order-options';
 import { getBrands } from '@/lib/db/brands-service';
 import { Order, BrandCode, OrderItem } from '@/lib/types';
 import {
@@ -38,6 +40,7 @@ import {
 } from 'lucide-react';
 
 export default function DailyOrdersPage() {
+  const orderOptions = useOrderOptions();
   const [selectedDateAd, setSelectedDateAd] = useState<string>(getTodayAd());
   const [brandFilter, setBrandFilter] = useState<BrandCode>('ALL');
   const [activeTab, setActiveTab] = useState<'ORDERS' | 'BREAKDOWN'>('ORDERS');
@@ -811,10 +814,7 @@ export default function DailyOrdersPage() {
                       onChange={(e) => setEditDeliveryMethod(e.target.value)}
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs"
                     >
-                      <option value="Pathao">Pathao</option>
-                      <option value="InDrive">InDrive</option>
-                      <option value="Standard">Standard</option>
-                      <option value="In-house Rider">In-house Rider</option>
+                      {activeOrderOptionNames(orderOptions, 'deliveryMethods', editDeliveryMethod).map(method => <option key={method} value={method}>{method}</option>)}
                     </select>
                   </div>
                 </div>

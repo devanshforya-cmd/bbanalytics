@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from './request-origin';
 import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { getScope, hasAccess, canPerform, type UserWithPermissions } from './permissions';
 
@@ -67,5 +68,5 @@ export function detectGoogleUploadType(bytes: Uint8Array, name: string): string 
 }
 
 export function isSameOriginGoogleMutation(request: Request): boolean {
-  return request.headers.get('origin') === new URL(request.url).origin;
+  return isSameOriginRequest(request);
 }

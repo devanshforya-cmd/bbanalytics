@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from '@/lib/request-origin';
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { requireFeatureAccess } from '@/lib/auth-guard';
@@ -21,8 +22,7 @@ async function save(request: Request, creating: boolean) {
   const auth = await requireFeatureAccess(request, 'settings', creating ? 'CREATE' : 'EDIT');
   if (auth.response) return auth.response;
   if (!isSuperAdmin(auth.user)) return failure('Only the Super Admin can manage staff accounts.', 403);
-  const origin = request.headers.get('origin');
-  if (origin && origin !== new URL(request.url).origin) return failure('Invalid request origin.', 403);
+  if (!isSameOriginRequest(request, true)) return failure('Invalid request origin.', 403);
   try {
     const body = await request.json();
     if (!body || typeof body !== 'object' || Array.isArray(body)) return failure('Invalid staff request.');

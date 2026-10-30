@@ -25,6 +25,7 @@ import {
 import Link from 'next/link';
 import { useCalendarPreference } from '@/lib/hooks/useCalendarPreference';
 import { getScope, hasAccess, isSuperAdmin } from '@/lib/permissions';
+import PushSettings from '@/components/common/PushSettings';
 
 interface UserProfileDrawerProps {
   isOpen: boolean;
@@ -346,6 +347,7 @@ export default function UserProfileDrawer({
               </div>
             )}
 
+            <PushSettings key={currentUser.id} userId={currentUser.id} />
             {/* Fix 64: Calendar Preference Selector */}
             <div className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-2.5">
               <div className="flex items-center justify-between">

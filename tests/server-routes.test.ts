@@ -104,11 +104,22 @@ import * as calendar from '../src/lib/nepali-calendar.ts';
 import * as routeHelpers from '../src/app/api/_workspace.ts';
 import * as sharedProjection from '../src/app/api/shared/[token]/projection.ts';
 import * as crypto from 'node:crypto';
+import * as gpsValidation from '../src/lib/gps-validation.ts';
+function loadGpsServer(storage: unknown) {
+  const source = readFileSync(new URL('../src/lib/gps-server.ts', import.meta.url), 'utf8');
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
+  const routeModule = { exports: {} };
+  new Function('require', 'module', 'exports', compiled)((name: string) => {
+    if (name === './db/supabase-server') return { supabaseAdmin: storage };
+    throw new Error(`Unexpected GPS dependency: ${name}`);
+  }, routeModule, routeModule.exports);
+  return routeModule.exports;
+}
 
 function loadHandlerRoute(route: string, workspace: Record<string, unknown>, storage?: Record<string, unknown>, authUser: User = user) {
   const source = readFileSync(new URL(`../src/app/api/${route}/route.ts`, import.meta.url), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true } }).outputText;
-  const module = { exports: {} as Record<string, (...args: any[]) => Promise<Response>> };
+  const routeModule = { exports: {} as Record<string, (...args: any[]) => Promise<Response>> };
   const dependencies: Record<string, unknown> = {
     'next/server': nextServer,
     'node:crypto': crypto,
@@ -118,6 +129,8 @@ function loadHandlerRoute(route: string, workspace: Record<string, unknown>, sto
       readSharedAccessLink: async (token: string) => (workspace.db as any).getSharedAccessByToken(token), recordSharedAccess: async () => {} },
     '@/lib/db/supabase-server': { supabaseAdmin: storage },
     '@/lib/permissions': permissions,
+    '@/lib/gps-validation': gpsValidation,
+    '@/lib/gps-server': loadGpsServer(storage),
     '@/lib/nepali-calendar': calendar,
     '../_workspace': routeHelpers,
     '../../_workspace': routeHelpers,
@@ -126,13 +139,35 @@ function loadHandlerRoute(route: string, workspace: Record<string, unknown>, sto
     if (!(name in dependencies)) throw new Error(`Unexpected route dependency: ${name}`);
     return dependencies[name];
   };
-  new Function('require', 'module', 'exports', compiled)(requireDependency, module, module.exports);
-  return module.exports;
+  new Function('require', 'module', 'exports', compiled)(requireDependency, routeModule, routeModule.exports);
+  return routeModule.exports;
 }
 
 function taskRequest(body: Record<string, unknown>) {
   return new Request('https://example.test/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 }
+
+test('GPS save retries concurrent insert/update races and refuses acknowledgement after exhausted retries', async () => {
+  let reads = 0;
+  let inserts = 0;
+  let updates = 0;
+  const previousAt = '2026-10-29T10:00:00.000Z';
+  const fix = { lat: 27.7, lng: 85.3, capturedAt: '2026-10-29T10:01:00.000Z' };
+  const storage = { from: () => ({
+    select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: ++reads === 1 ? null : { created_at: previousAt }, error: null }) }) }),
+    insert: () => ({ select: async () => { inserts++; return { data: null, error: { code: '23505' } }; } }),
+    update: () => ({ eq: () => ({ eq: () => ({ select: async () => { updates++; return { data: updates === 1 ? [] : [{ id: 'ping', created_at: fix.capturedAt }], error: null }; } }) }) }),
+  }) };
+  const gps = loadGpsServer(storage) as { saveTrustedGps: (...args: any[]) => Promise<{ saved: boolean }> };
+  assert.equal((await gps.saveTrustedGps(user, fix, 'IN_TRANSIT')).saved, true);
+  assert.equal(reads, 3); assert.equal(inserts, 1); assert.equal(updates, 2);
+  const alwaysRacing = { from: () => ({
+    select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { created_at: previousAt }, error: null }) }) }),
+    update: () => ({ eq: () => ({ eq: () => ({ select: async () => ({ data: [], error: null }) }) }) }),
+  }) };
+  const retryGps = loadGpsServer(alwaysRacing) as typeof gps;
+  await assert.rejects(retryGps.saveTrustedGps(user, fix, 'IN_TRANSIT'), { status: 503 });
+});
 
 test('task POST rejects nonexistent, inactive and out-of-scope assignees without substituting the caller', async () => {
   let writes = 0;
@@ -235,18 +270,23 @@ test('GPS POST writes only the authenticated officer, rejects null coordinates a
     const saved: Record<string, any>[] = [];
     const storage = { from: (table: string) => {
       assert.equal(table, 'gps_pings');
-      return { upsert: (row: Record<string, any>, options: Record<string, unknown>) => {
-        saved.push(row);
-        assert.deepEqual(options, { onConflict: 'officer_id' });
-        return { select: () => ({ single: async () => ({ data: { id: 'ping-id', created_at: row.created_at }, error: null }) }) };
-      } };
+      return {
+        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }),
+        insert: (row: Record<string, any>) => {
+          saved.push(row);
+          return { select: async () => ({ data: [{ id: 'ping-id', created_at: row.created_at }], error: null }) };
+        },
+      };
     } };
     const route = loadHandlerRoute('gps/ping', {}, storage, { ...user, isSuperAdmin: true });
     const request = (body: Record<string, unknown>) => new Request('https://example.test/api/gps/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const invalid = await route.POST(request({ lat: null, lng: 85.3 }));
     assert.equal(invalid.status, 400);
     assert.equal(saved.length, 0);
-    const valid = await route.POST(request({ officerId: 'spoofed-other-user', officer_name: 'Forged name', lat: 27.7, lng: 85.3, batteryLevel: 0 }));
+    const changedAccount = await route.POST(request({ officerId: 'spoofed-other-user', lat: 27.7, lng: 85.3 }));
+    assert.equal(changedAccount.status, 409);
+    assert.equal(saved.length, 0);
+    const valid = await route.POST(request({ officerId: user.id, officer_name: 'Forged name', lat: 27.7, lng: 85.3, batteryLevel: 0 }));
     assert.equal(valid.status, 200);
     assert.equal(saved[0].officer_id, user.id);
     assert.equal(saved[0].officer_name, user.fullName);

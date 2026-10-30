@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { requireFeatureAccess } from '@/lib/auth-guard';
 import { openServerWorkspace } from '@/lib/db/server-workspace';
 import { getTodayBs } from '@/lib/nepali-calendar';
+import { activeOrderOptionNames } from '@/lib/order-options';
 import { dateAd, allowedValue, ApiInputError, apiFailure, assertBrand, positiveNumber, readBody, requiredText, visibleOrders } from '../_workspace';
 
 export const dynamic = 'force-dynamic';
@@ -39,11 +40,11 @@ export async function POST(request: Request) {
     const order = {
       orderNumber: typeof body.orderNumber === 'string' && body.orderNumber.trim() ? body.orderNumber.trim().toUpperCase() : `ORD-${randomUUID()}`.toUpperCase(),
       brandCode, customerName, customerPhone,
-      platform: allowedValue(body.platform, ['Instagram', 'Messenger', 'WhatsApp', 'Website', 'TikTok', 'Walk-in', 'Pathao Bazaar', 'Phone Call', 'Field Order', 'YouTube', 'Facebook', 'Other'] as const, 'Other', 'platform'),
+      platform: allowedValue(body.platform, activeOrderOptionNames(db.getOrderOptions(), 'channels'), activeOrderOptionNames(db.getOrderOptions(), 'channels')[0], 'platform'),
       orderDateAd: dateAd(body.orderDateAd, 'orderDateAd', new Date().toISOString().slice(0, 10)),
       orderDateBs: body.orderDateBs || getTodayBs(),
       province: requiredText(body.province, 'province'), district: requiredText(body.district, 'district'), address: requiredText(body.address, 'address'),
-      deliveryMethod: allowedValue(body.deliveryMethod, ['Standard', 'Pathao', 'InDrive', 'Yango', 'Pick-up'] as const, 'Standard', 'deliveryMethod'),
+      deliveryMethod: allowedValue(body.deliveryMethod, activeOrderOptionNames(db.getOrderOptions(), 'deliveryMethods'), activeOrderOptionNames(db.getOrderOptions(), 'deliveryMethods')[0], 'deliveryMethod'),
       paymentTerms: allowedValue(body.paymentTerms, ['COD', 'Prepaid', 'Credit 15 days', 'Credit 30 days', 'Advance'] as const, 'COD', 'paymentTerms'),
       orderType: allowedValue(body.orderType, ['NEW', 'REPEAT'] as const, 'NEW', 'orderType'),
       items, totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),

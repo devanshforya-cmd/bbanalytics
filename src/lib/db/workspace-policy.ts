@@ -34,7 +34,7 @@ const GLOBAL_CATALOG = new Set<WorkspaceCollection>([
 
 export function collectionFeatures(collection: WorkspaceCollection, read = false): FeatureKey[] {
   if (read && (collection === 'products' || collection === 'combos')) return ['products', 'beat_plans', 'orderflow', 'dispatches'];
-  if (read && ['documentTypes', 'storeCategories', 'workspaceConfig', 'promotions'].includes(collection)) return ['settings', 'beat_plans', 'stores', 'document_handover'];
+  if (read && ['documentTypes', 'storeCategories', 'workspaceConfig', 'promotions'].includes(collection)) return ['settings', 'beat_plans', 'stores', 'document_handover', 'orderflow'];
   if (read && collection === 'holidays') return ['settings', 'beat_plans', 'tasks'];
   if (read && collection === 'stockCounts') return ['beat_plans', 'dispatches'];
   if (read && (collection === 'retailers' || collection === 'branches')) return ['stores', 'beat_plans', 'cheque_tracker', 'shelf_photos', 'call_tracker', 'document_handover', 'dispatches'];

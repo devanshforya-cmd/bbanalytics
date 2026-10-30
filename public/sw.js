@@ -3,7 +3,7 @@
  * Provides offline caching for static assets, app shell, and background sync integration.
  */
 
-const CACHE_NAME = 'bb-command-center-v6-recovery';
+const CACHE_NAME = 'bb-command-center-v7-field-push';
 // Install: Precache core app shell & static routes
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -145,30 +145,34 @@ self.addEventListener('push', (event) => {
   }
 
   const options = {
-    body: data.body,
+    body: typeof data.body === 'string' ? data.body.slice(0, 300) : 'Open the app to review your work alerts.',
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     tag: data.tag || 'bb-alert', // prevents duplicate notifications
-    data: { url: data.url || '/dashboard' }, // where to navigate on click
-    actions: data.actions || [],
+    data: { url: typeof data.url === 'string' && data.url.startsWith('/') && !data.url.startsWith('//') && !/[\\\r\n]/.test(data.url) ? data.url : '/' },
   };
 
-  event.waitUntil(self.registration.showNotification(data.title || 'Brand Bucket Alert', options));
+  event.waitUntil(Promise.all([
+    self.registration.showNotification(typeof data.title === 'string' ? data.title.slice(0, 100) : 'BB Analytics', options),
+    self.clients.matchAll({ type: 'window' }).then(windows => windows.forEach(client => client.postMessage({ type: 'PUSH_RECEIVED' }))),
+  ]));
 });
 
 // Fix 32b: Notification Click Handler
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || '/dashboard';
+  const raw = event.notification.data?.url;
+  const path = typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//') && !/[\\\r\n]/.test(raw) ? raw : '/';
+  const targetUrl = new URL(path, self.location.origin).href;
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
+    self.clients.matchAll({ type: 'window' }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes(targetUrl) && 'focus' in client) {
+        if (client.url === targetUrl && 'focus' in client) {
           return client.focus();
         }
       }
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
       }
     })
   );

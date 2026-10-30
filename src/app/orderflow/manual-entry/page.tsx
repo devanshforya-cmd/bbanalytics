@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
+import { useOrderOptions } from '@/hooks/useOrderOptions';
+import { activeOrderOptionNames, assertActiveOrderOption } from '@/lib/order-options';
 import { BrandCode, OrderPlatform, DeliveryMethod, InfluencerPlatformType } from '@/lib/types';
 import {
   getTodayAd,
@@ -54,26 +56,6 @@ const NEPAL_PROVINCES = [
   'Sudurpashchim Province',
 ];
 
-const PLATFORM_OPTIONS: OrderPlatform[] = [
-  'Instagram',
-  'Messenger',
-  'WhatsApp',
-  'Website',
-  'TikTok',
-  'Walk-in',
-  'Pathao Bazaar',
-  'Phone Call',
-  'Field Order',
-];
-
-const DELIVERY_METHODS: DeliveryMethod[] = [
-  'Standard',
-  'Pathao',
-  'InDrive',
-  'Yango',
-  'Pick-up',
-];
-
 interface OrderItemRow {
   productId: string;
   quantity: number;
@@ -81,6 +63,9 @@ interface OrderItemRow {
 }
 
 export default function ManualOrderEntryPage() {
+  const options = useOrderOptions();
+  const platformOptions = activeOrderOptionNames(options, 'channels');
+  const deliveryMethods = activeOrderOptionNames(options, 'deliveryMethods');
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const [currentUser] = useState(() => db.getCurrentUser());
   const assignedBrands = currentUser.assignedBrands || [];
@@ -104,13 +89,19 @@ export default function ManualOrderEntryPage() {
   const [orderDateAd, setOrderDateAd] = useState(getTodayAd());
   const [orderDateBs, setOrderDateBs] = useState(getTodayBs());
 
-  const [platform, setPlatform] = useState<OrderPlatform>('Instagram');
+  const [platform, setPlatform] = useState<OrderPlatform>(() => platformOptions.includes('Instagram') ? 'Instagram' : platformOptions[0]);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [province, setProvince] = useState('Bagmati Province');
   const [district, setDistrict] = useState('Kathmandu');
   const [address, setAddress] = useState('');
-  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('Pathao');
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>(() => deliveryMethods.includes('Pathao') ? 'Pathao' : deliveryMethods[0]);
+  useEffect(() => {
+    const channels = activeOrderOptionNames(options, 'channels');
+    const methods = activeOrderOptionNames(options, 'deliveryMethods');
+    if (!channels.includes(platform)) setPlatform(channels[0]);
+    if (!methods.includes(deliveryMethod)) setDeliveryMethod(methods[0]);
+  }, [options, platform, deliveryMethod]);
   const [paymentTerms, setPaymentTerms] = useState<'COD' | 'Prepaid'>('COD');
   const [remarks, setRemarks] = useState('');
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
@@ -391,6 +382,10 @@ export default function ManualOrderEntryPage() {
 
   // Step 2: Confirm & Save Order (10c)
   const handleConfirmAndSave = () => {
+    try {
+      assertActiveOrderOption(db.getOrderOptions(), 'channels', isMarketing ? influencerPlatform : platform);
+      assertActiveOrderOption(db.getOrderOptions(), 'deliveryMethods', deliveryMethod);
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Choose an active channel and delivery method.'); return; }
     guardedSubmit(async () => {
       const items = orderItems.map((item) => {
         const p = products.find((prod) => prod.id === item.productId);
@@ -809,7 +804,7 @@ export default function ManualOrderEntryPage() {
                   onChange={(e) => setPlatform(e.target.value as OrderPlatform)}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-semibold text-slate-900 focus:border-blue-500"
                 >
-                  {PLATFORM_OPTIONS.map((p) => (
+                  {platformOptions.map((p) => (
                     <option key={p} value={p}>
                       {p}
                     </option>
@@ -1097,7 +1092,7 @@ export default function ManualOrderEntryPage() {
                   onChange={(e) => setDeliveryMethod(e.target.value as DeliveryMethod)}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-semibold text-slate-900 focus:border-blue-500"
                 >
-                  {DELIVERY_METHODS.map((m) => (
+                  {deliveryMethods.map((m) => (
                     <option key={m} value={m}>
                       {m}
                     </option>

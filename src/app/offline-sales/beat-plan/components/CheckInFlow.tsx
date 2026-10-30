@@ -23,6 +23,8 @@ interface CheckInFlowProps {
   showStoreActionDashboard: boolean;
   targetBeat: BeatItem | null;
   calculatedDistance: number;
+  gpsReady: boolean;
+  gpsMessage: string;
   overrideReason: string;
   setOverrideReason: (r: string) => void;
   completedActions: Set<string>;
@@ -36,6 +38,7 @@ export default function CheckInFlow({
   showCheckInModal,
   showStoreActionDashboard,
   targetBeat,
+  calculatedDistance, gpsReady, gpsMessage, overrideReason, setOverrideReason,
   completedActions,
   onConfirmArrival,
   onDismissCheckIn,
@@ -93,10 +96,9 @@ export default function CheckInFlow({
     }
   };
 
-  // 1. Silent Check-in Modal (Section 5 & 10)
-  // No distance or GPS drift warnings shown to field officer.
+  // Check-in only records a genuine device position.
   if (showCheckInModal) {
-    const canCheckIn = !photoRequired || Boolean(photoUrl);
+    const canCheckIn = gpsReady && (!photoRequired || Boolean(photoUrl)) && (calculatedDistance <= 150 || Boolean(overrideReason.trim()));
 
     return (
       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4">
@@ -129,6 +131,8 @@ export default function CheckInFlow({
               </div>
             </div>
 
+            <div role="status" className={`rounded-xl p-3 text-xs ${gpsReady ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'}`}>{gpsMessage}{gpsReady ? ` · ${calculatedDistance} m from store` : ' Check-in needs a fresh fix with accuracy within 200 m.'}</div>
+            {gpsReady && calculatedDistance > 150 && <label className="block text-xs font-semibold text-slate-700">You are more than 150 m from the store. Explain this check-in.<textarea value={overrideReason} onChange={event => setOverrideReason(event.target.value)} className="mt-1 block w-full rounded-xl border p-2" required maxLength={500} /></label>}
             {/* Section 10: Mandatory Entrance Photo if configured */}
             {photoRequired && (
               <div className="space-y-2">

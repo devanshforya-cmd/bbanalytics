@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from '@/lib/request-origin';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-guard';
 import { readWorkspaceContext, visibleWorkspace, saveWorkspaceMutation, WorkspaceError } from '@/lib/db/server-workspace';
@@ -28,8 +29,7 @@ export async function POST(request: Request) {
   const auth = await requireAuth(request);
   if (auth.response) return auth.response;
   if (request.headers.has('x-workspace-user') && request.headers.get('x-workspace-user') !== auth.user.id) return NextResponse.json({ success: false, error: 'The signed-in account changed. Pending work has been kept on this device.' }, { status: 409 });
-  const origin = request.headers.get('origin');
-  if (origin && origin !== new URL(request.url).origin) return NextResponse.json({ success: false, error: 'Invalid request origin.' }, { status: 403 });
+  if (!isSameOriginRequest(request, true)) return NextResponse.json({ success: false, error: 'Invalid request origin.' }, { status: 403 });
   try {
     const body = await request.json();
     if (body.type === 'DUTY_STATUS') {

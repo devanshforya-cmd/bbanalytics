@@ -3,6 +3,8 @@ import { requireAuth, requireFeatureAccess } from '@/lib/auth-guard';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 import { openServerWorkspace } from '@/lib/db/server-workspace';
 import { hasAccess } from '@/lib/permissions';
+import { freshGpsFix } from '@/lib/gps-validation';
+import { saveTrustedGps } from '@/lib/gps-server';
 import type { DutyStatus, StaffLiveStatus } from '@/lib/types';
 import { ApiInputError, apiFailure, readBody, scopeOfficerIds } from '../../_workspace';
 
@@ -18,18 +20,15 @@ export async function POST(request: Request) {
   try {
     const body = await readBody(request);
     const { lat, lng } = body;
+    if (body.officerId !== undefined && body.officerId !== auth.user.id) throw new ApiInputError('Account changed. Obtain a fresh device location.', 409);
     if (typeof lat !== 'number' || typeof lng !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) throw new ApiInputError('A valid latitude and longitude are required.');
     const allowedStatuses: StaffLiveStatus[] = ['IN_TRANSIT', 'AT_STORE', 'IDLE', 'DAY_ENDED'];
     if (body.status !== undefined && !allowedStatuses.includes(body.status)) throw new ApiInputError('Invalid live status.');
     if (body.batteryLevel != null && (typeof body.batteryLevel !== 'number' || !Number.isFinite(body.batteryLevel) || body.batteryLevel < 0 || body.batteryLevel > 100)) throw new ApiInputError('Battery level must be between 0 and 100.');
-    // One durable current row per officer avoids losing quieter officers behind a recent-history limit.
-    const { data, error } = await supabaseAdmin.from('gps_pings').upsert({
-      officer_id: auth.user.id, officer_name: auth.user.fullName, lat, lng,
-      status: body.status || 'IN_TRANSIT', current_store_name: typeof body.currentStoreName === 'string' ? body.currentStoreName.slice(0, 160) : null,
-      battery_level: body.batteryLevel ?? null, created_at: new Date().toISOString(),
-    }, { onConflict: 'officer_id' }).select('id, created_at').single();
-    if (error) return NextResponse.json({ success: false, error: 'GPS ping could not be saved.' }, { status: 503 });
-    return NextResponse.json({ success: true, data });
+    const capturedAt = body.capturedAt === undefined ? new Date().toISOString() : body.capturedAt;
+    if (typeof capturedAt !== 'string' || !freshGpsFix({ lat, lng, capturedAt })) throw new ApiInputError('A fresh device GPS fix is required.');
+    const result = await saveTrustedGps(auth.user, { lat, lng, capturedAt }, body.status || 'IN_TRANSIT', typeof body.currentStoreName === 'string' ? body.currentStoreName : undefined, body.batteryLevel);
+    return NextResponse.json({ success: true, data: result });
   } catch (error) { return apiFailure(error, 'GPS ping could not be saved.'); }
 }
 
