@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
+import { useOrderOptions } from '@/hooks/useOrderOptions';
+import { activeOrderOptionNames, assertActiveOrderOption } from '@/lib/order-options';
 import {
   extractOrdersDynamically,
   ExtractedOrderResult,
@@ -65,6 +67,10 @@ const BRAND_COLORS: Record<string, { bg: string; text: string; border: string }>
 };
 
 export default function ExtractorPage() {
+  const orderOptions = useOrderOptions();
+  const channels = activeOrderOptionNames(orderOptions, 'channels');
+  const deliveryMethods = activeOrderOptionNames(orderOptions, 'deliveryMethods');
+  const sourceChannel = channels.includes('WhatsApp') ? 'WhatsApp' : channels[0];
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const [chatText, setChatText] = useState('');
   const [extractedOrders, setExtractedOrders] = useState<ExtractedOrderResult[]>([]);
@@ -318,6 +324,12 @@ export default function ExtractorPage() {
   const executePushOrders = (ordersToPush: ExtractedOrderResult[]) => {
     if (ordersToPush.length === 0) return;
 
+    try {
+      for (const order of ordersToPush) {
+        assertActiveOrderOption(db.getOrderOptions(), 'channels', order.salesChannel || sourceChannel);
+        assertActiveOrderOption(db.getOrderOptions(), 'deliveryMethods', order.deliveryMethod.value || deliveryMethods[0]);
+      }
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Choose an active channel and delivery method.'); return; }
     guardedSubmit(async () => {
       const pushedOrderNumbers: string[] = [];
       const newHistoryItems: ExtractionHistoryItem[] = [];
@@ -339,13 +351,13 @@ export default function ExtractorPage() {
           brandCode: orderBrand,
           orderDateAd: ord.orderDateAd.value || getTodayAd(),
           orderDateBs: ord.orderDateBs.value || getTodayBs(),
-          platform: 'WhatsApp',
+          platform: ord.salesChannel || sourceChannel,
           customerName: custName,
           customerPhone: custPhone,
           province: orderCity.toLowerCase().includes('pokhara') ? 'Gandaki Province' : 'Bagmati Province',
           district: orderCity,
           address: orderAddress,
-          deliveryMethod: (ord.deliveryMethod.value as any) || 'Pathao',
+          deliveryMethod: ord.deliveryMethod.value || deliveryMethods[0],
           paymentTerms: ord.isMarketing ? 'Advance' : ((ord.paymentTerms.value as any) || 'COD'),
           orderType: 'NEW',
           totalAmount: amount,
@@ -955,8 +967,12 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           <span className="font-semibold text-slate-800">{ord.paymentTerms.value}</span>
                         </div>
                         <div>
-                          <span className="text-slate-400">Logistics: </span>
-                          <span className="font-semibold text-slate-800">{ord.deliveryMethod.value}</span>
+                          <label className="text-slate-500" htmlFor={`channel_${ord.id}`}>Sales channel</label>
+                          <select id={`channel_${ord.id}`} value={ord.salesChannel || sourceChannel} onChange={event => handleUpdateOrderField(ord.id, 'salesChannel', event.target.value)} className="ml-2 rounded-lg border border-slate-200 p-1 text-slate-800">{channels.map(channel => <option key={channel} value={channel}>{channel}</option>)}</select>
+                        </div>
+                        <div>
+                          <label className="text-slate-500" htmlFor={`delivery_${ord.id}`}>Logistics</label>
+                          <select id={`delivery_${ord.id}`} value={ord.deliveryMethod.value || deliveryMethods[0]} onChange={event => handleUpdateOrderField(ord.id, 'deliveryMethod', event.target.value)} className="ml-2 rounded-lg border border-slate-200 p-1 text-slate-800">{activeOrderOptionNames(orderOptions, 'deliveryMethods', ord.deliveryMethod.value).map(method => <option key={method} value={method}>{method}{deliveryMethods.includes(method) ? '' : ' (archived — choose another)'}</option>)}</select>
                         </div>
                       </div>
 

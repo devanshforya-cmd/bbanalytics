@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { Order, ReturnEntry, FeedbackEntry } from '@/lib/types';
+import { useOrderOptions } from '@/hooks/useOrderOptions';
+import { activeOrderOptionNames } from '@/lib/order-options';
 import { Share2, Filter, ArrowUpRight } from 'lucide-react';
 
 interface SalesChannelPerformanceProps {
@@ -12,18 +14,6 @@ interface SalesChannelPerformanceProps {
   onSelectChannel: (channel: string) => void;
 }
 
-const ALL_CHANNELS = [
-  'Instagram',
-  'WhatsApp',
-  'Messenger',
-  'TikTok',
-  'Website',
-  'Walk-in',
-  'Phone Call',
-  'Pathao Bazaar',
-  'Field Order',
-];
-
 export default function SalesChannelPerformance({
   orders,
   returns,
@@ -31,9 +21,11 @@ export default function SalesChannelPerformance({
   selectedChannel,
   onSelectChannel,
 }: SalesChannelPerformanceProps) {
+  const options = useOrderOptions();
+  const channels = [...new Set([...activeOrderOptionNames(options, 'channels'), ...orders.map(order => order.platform), ...returns.map(entry => entry.platform)])];
   const totalOrders = orders.length;
 
-  const channelData = ALL_CHANNELS.map((ch) => {
+  const channelData = channels.map((ch) => {
     const chOrders = orders.filter((o) => o.platform === ch);
     const orderCount = chOrders.length;
     const pctOfTotal = totalOrders > 0 ? ((orderCount / totalOrders) * 100).toFixed(1) : '0.0';

@@ -1,5 +1,6 @@
 import { adToBs, BS_MONTH_DAYS } from './nepali-calendar';
 import { normalizePhoneNumber } from './auth-utils';
+import { defaultOrderOptions, activeOrderOptionNames, type OrderOptions } from './order-options';
 import type { Brand, Product, Order, ReturnEntry, Dispatch, Distributor, Branch, Customer } from './types';
 
 export type CsvImportType = 'ORDERS' | 'RETURNS' | 'OFFLINE_SALES';
@@ -12,7 +13,7 @@ export class ImportValidationError extends Error { readonly status = 400; }
 export interface ImportCatalog {
   brands: Brand[]; products: Product[]; orders: Order[]; returns: ReturnEntry[];
   dispatches: Dispatch[]; distributors: Distributor[]; branches: Branch[];
-  customers: Customer[];
+  customers: Customer[]; orderOptions?: OrderOptions;
 }
 export interface CsvImportInput { sourceType: CsvImportType; brandCode: string; fileName: string; batchId: string; csv: string }
 export interface ValidatedImport {
@@ -61,7 +62,6 @@ const date = (row: Record<string, string>) => {
   return { ad: value, bs: bs.formatted };
 };
 const exact = <T extends { id: string }>(rows: T[], id: string, label: string): T => { const matches = rows.filter((row) => row.id === id); if (matches.length !== 1) throw new ImportValidationError(`${label} "${id}" must match exactly one existing record ID.`); return matches[0]; };
-const platforms = ['Instagram', 'Messenger', 'WhatsApp', 'Website', 'TikTok', 'Walk-in', 'Pathao Bazaar', 'Phone Call', 'Field Order', 'YouTube', 'Facebook', 'Other'] as const;
 const terms = ['COD', 'Prepaid', 'Credit 15 days', 'Credit 30 days', 'Advance'] as const;
 
 export function validateCsvImport(input: CsvImportInput, catalog: ImportCatalog, actorName: string): ValidatedImport {
@@ -94,7 +94,7 @@ export function validateCsvImport(input: CsvImportInput, catalog: ImportCatalog,
         const order: Order = { id: `ord_import_${input.batchId}_${index + 1}`, orderNumber: reference, brandCode: input.brandCode,
           orderDateAd: day.ad, orderDateBs: day.bs, customerName: required(row, 'Customer Name'), customerPhone,
           province: required(row, 'Province'), district: required(row, 'District'), address: required(row, 'Address'),
-          platform: choice(row, 'Platform', platforms), deliveryMethod: choice(row, 'Delivery Method', ['Standard', 'Pathao', 'InDrive', 'Yango', 'Pick-up'] as const),
+          platform: choice(row, 'Platform', activeOrderOptionNames(catalog.orderOptions || defaultOrderOptions(), 'channels')), deliveryMethod: choice(row, 'Delivery Method', activeOrderOptionNames(catalog.orderOptions || defaultOrderOptions(), 'deliveryMethods')),
           paymentTerms: choice(row, 'Payment Terms', terms), orderType: choice(row, 'Order Type', ['NEW', 'REPEAT'] as const),
           status: choice(row, 'Status', ['PENDING', 'DISPATCHED', 'DELIVERED', 'FAILED', 'CANCELLED', 'RETURNED', 'EXCHANGED'] as const), source: 'MANUAL',
           items: [{ productId: product.id, productName: product.name, brandCode: product.brandCode, quantity, unitPrice, totalPrice: totalAmount }], totalAmount, notes: row.Notes, createdAt: now };

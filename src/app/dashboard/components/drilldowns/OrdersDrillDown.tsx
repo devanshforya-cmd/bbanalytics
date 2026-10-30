@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Search } from 'lucide-react';
 import { Order, ReturnEntry, BrandCode, Brand } from '@/lib/types';
+import { useOrderOptions } from '@/hooks/useOrderOptions';
+import { activeOrderOptionNames } from '@/lib/order-options';
 import { db } from '@/lib/db/db-service';
 import DrillDownShell from './DrillDownShell';
 import EmptyState from '../EmptyState';
@@ -376,14 +378,15 @@ function OrdersByProductTab({ orders }: { orders: Order[] }) {
 }
 
 function OrdersByChannelTab({ orders, returns }: { orders: Order[]; returns: ReturnEntry[] }) {
-  const channels = ['Instagram', 'WhatsApp', 'Messenger', 'TikTok', 'Website', 'Walk-in', 'Phone Call', 'Pathao Bazaar'];
+  const options = useOrderOptions();
+  const channels = [...new Set([...activeOrderOptionNames(options, 'channels'), ...orders.map(order => order.platform), ...returns.map(entry => entry.platform)])];
   const channelStats = channels.map((ch) => {
     const chOrders = orders.filter((o) => o.platform === ch);
     const delivered = chOrders.filter((o) => o.status === 'DELIVERED').length;
     const chReturns = returns.filter((r) => r.platform === ch).length;
 
     const deliverySuccessRate =
-      chOrders.length > 0 ? ((delivered / chOrders.length) * 100).toFixed(1) : '100.0';
+      chOrders.length > 0 ? ((delivered / chOrders.length) * 100).toFixed(1) : '—';
     const returnRate =
       chOrders.length > 0 ? ((chReturns / chOrders.length) * 100).toFixed(1) : '0.0';
 
@@ -436,7 +439,7 @@ function OrdersByChannelTab({ orders, returns }: { orders: Order[]; returns: Ret
                   {totalOrders > 0 ? ((c.orders / totalOrders) * 100).toFixed(1) : 0}%
                 </td>
                 <td className="p-2.5 text-right font-semibold text-emerald-600">
-                  {c.deliverySuccessRate}%
+                  {c.orders ? `${c.deliverySuccessRate}%` : '—'}
                 </td>
                 <td className="p-2.5 text-right font-semibold text-rose-600">{c.returnRate}%</td>
               </tr>

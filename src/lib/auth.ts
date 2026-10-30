@@ -88,11 +88,27 @@ export function getSessionUser(): User | null {
 
 export function logout(): void {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem(SESSION_KEY);
-  db.setSessionUser(null);
-  void fetch('/api/auth/logout', { method: 'POST', keepalive: true })
-    .catch(() => undefined)
-    .finally(() => window.location.replace('/login'));
+  void (async () => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 8000);
+    try {
+      // Finish the cookie logout before exposing the next sign-in screen.
+      await fetch('/api/auth/logout', { method: 'POST', signal: controller.signal });
+    } catch { /* Clear local access even if the server is unreachable. */ }
+    finally { window.clearTimeout(timeout); }
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration('/sw.js');
+        const subscription = await registration?.pushManager?.getSubscription();
+        if (subscription) {
+          await subscription.unsubscribe();
+        }
+      }
+    } catch { /* Session logout still completes when the browser push service is unavailable. */ }
+    localStorage.removeItem(SESSION_KEY);
+    db.setSessionUser(null);
+    window.location.replace('/login');
+  })();
 }
 
 export function getRedirectPathForUser(user: any): string {

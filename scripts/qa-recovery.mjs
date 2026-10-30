@@ -2,7 +2,7 @@
 // Creates uniquely named fixtures and removes only those fixtures in finally.
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
-import { createHmac, randomBytes, randomUUID } from 'node:crypto';
+import { createHmac, createHash, createECDH, randomBytes, randomUUID } from 'node:crypto';
 
 const env = Object.fromEntries((await readFile(new URL('../.env.local', import.meta.url), 'utf8')).split(/\r?\n/).filter(line => line.includes('=') && !line.trim().startsWith('#')).map(line => {
   const i = line.indexOf('='); return [line.slice(0, i).trim(), line.slice(i + 1).trim().replace(/^(['"])(.*)\1$/, '$2')];
@@ -22,7 +22,7 @@ let adminId;
 let adminCookie;
 const mark = message => { checks.push(message); console.log(`PASS ${message}`); };
 async function api(path, { cookie, method = 'GET', body, headers = {}, status = 200 } = {}) {
-  const response = await fetch(base + path, { method, headers: { ...(cookie ? { Cookie: cookie } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const response = await fetch(base + path, { method, headers: { ...(method !== 'GET' ? { Origin: base } : {}), ...(cookie ? { Cookie: cookie } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
   const data = await response.json();
   assert.equal(response.status, status, `${method} ${path}: ${response.status}: ${data.error || JSON.stringify(data)}`);
   return { data, response };
@@ -104,11 +104,53 @@ try {
   assert(tasks.some(row => row.id === task.data.data.id && row.assignedTo === officerId));
   await api('/api/tasks', { cookie: officer.cookie, method: 'POST', status: 400, body: { title: 'Bad assignee', assignedTo: 'missing_staff' } });
   mark('Task creation persists and reaches the actual assigned officer');
-  await api('/api/gps/ping', { cookie: officer.cookie, method: 'POST', body: { officerId: adminId, lat: 27.7, lng: 85.3, status: 'AT_STORE', batteryLevel: 0 } });
+  await api('/api/gps/ping', { cookie: officer.cookie, method: 'POST', status: 409, body: { officerId: adminId, lat: 27.7, lng: 85.3, status: 'AT_STORE', batteryLevel: 0 } });
   await api('/api/gps/ping', { cookie: officer.cookie, method: 'POST', body: { lat: 27.71, lng: 85.31, status: 'IN_TRANSIT' } });
   const positions = (await api('/api/gps/ping', { cookie: adminCookie })).data.data.filter(row => row.officer_id === officerId);
   assert.equal(positions.length, 1); assert.equal(positions[0].lat, 27.71);
   mark('GPS writes are bound to the signed-in officer and update one current position');
+  await service(`users?id=eq.${officerId}`, { method: 'PATCH', body: JSON.stringify({ duty_status: 'ONLINE' }) });
+  const nativeDevice = (await api('/api/gps/devices', { cookie: officer.cookie, method: 'POST' })).data;
+  assert(nativeDevice.identifier.startsWith(officerId + '.'));
+  const pairing = await service(`system_settings?key=eq.gps_device_v1_${officerId}&select=value`);
+  assert(!JSON.stringify(pairing).includes(nativeDevice.identifier));
+  const nativePing = async (identifier, { timestamp = Date.now() + 1000, lat = 27.72, status = 200 } = {}) => {
+    const response = await fetch(`${base}/api/gps/native`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ id: identifier, lat: String(lat), lon: '85.32', timestamp: String(timestamp), accuracy: '10', batt: '73' }) });
+    assert.equal(response.status, status, 'Native GPS response: ' + await response.text());
+  };
+  await nativePing(nativeDevice.identifier);
+  const nativePositions = (await api('/api/gps/ping', { cookie: adminCookie })).data.data.filter(row => row.officer_id === officerId);
+  assert.equal(nativePositions.length, 1); assert.equal(nativePositions[0].lat, 27.72); assert.equal(nativePositions[0].battery_level, 73);
+  await nativePing(nativeDevice.identifier, { lat: 27.1, timestamp: Date.now() - 3600000 });
+  const retained = (await api('/api/gps/ping', { cookie: adminCookie })).data.data.find(row => row.officer_id === officerId);
+  assert.equal(retained.lat, 27.72, 'Old buffered GPS must not overwrite the newer fix');
+  await nativePing(nativeDevice.identifier + 'wrong', { status: 401 });
+  const replacedDevice = (await api('/api/gps/devices', { cookie: officer.cookie, method: 'POST' })).data;
+  await nativePing(nativeDevice.identifier, { status: 401 });
+  await service(`users?id=eq.${officerId}`, { method: 'PATCH', body: JSON.stringify({ duty_status: 'OFFLINE' }) });
+  await nativePing(replacedDevice.identifier, { lat: 27.5 });
+  const paused = (await api('/api/gps/ping', { cookie: adminCookie })).data.data.find(row => row.officer_id === officerId);
+  assert.equal(paused.lat, 27.72, 'Off-duty native GPS must not be recorded');
+  await api('/api/gps/devices', { cookie: officer.cookie, method: 'DELETE' });
+  await nativePing(replacedDevice.identifier, { status: 401 });
+  await service(`users?id=eq.${officerId}`, { method: 'PATCH', body: JSON.stringify({ duty_status: 'ONLINE' }) });
+  mark('Native GPS pairing, private hashed identifiers, real HTTP upload, stale-fix protection, rotation, off-duty stop and revocation');
+
+  await api('/api/push/subscription', { status: 401 });
+  const pushStatus = (await api('/api/push/subscription', { cookie: officer.cookie })).data;
+  assert.equal(pushStatus.configured, true); assert(pushStatus.publicKey); assert(!JSON.stringify(pushStatus).includes(env.VAPID_PRIVATE_KEY));
+  const pushKey = createECDH('prime256v1'); pushKey.generateKeys();
+  const subscription = { endpoint: `https://fcm.googleapis.com/fcm/send/${tag}`, keys: { p256dh: pushKey.getPublicKey().toString('base64url'), auth: randomBytes(16).toString('base64url') } };
+  await api('/api/push/subscription', { cookie: officer.cookie, method: 'POST', body: { ...subscription, endpoint: 'https://127.0.0.1/private' }, status: 400 });
+  await api('/api/push/subscription', { cookie: officer.cookie, method: 'POST', body: subscription, headers: { Origin: 'https://outside.example' }, status: 403 });
+  await api('/api/push/subscription', { cookie: officer.cookie, method: 'POST', body: subscription });
+  const subscriptionId = createHash('sha256').update(subscription.endpoint).digest('hex');
+  assert((await api('/api/push/subscription', { cookie: officer.cookie })).data.deviceIds.includes(subscriptionId));
+  await api('/api/push/subscription', { cookie: adminCookie, method: 'POST', body: subscription, status: 409 });
+  await api('/api/push/subscription', { cookie: officer.cookie, method: 'DELETE', body: { endpoint: subscription.endpoint } });
+  assert(!(await api('/api/push/subscription', { cookie: officer.cookie })).data.deviceIds.includes(subscriptionId));
+  mark('Push configuration, private-key secrecy, authenticated device binding, SSRF/CSRF rejection and subscription removal (no provider send)');
+
   const order = await api('/api/orders', { cookie: adminCookie, method: 'POST', status: 201, body: { customerName: 'QA Customer', customerPhone, brandCode, province: 'Bagmati', district: 'Kathmandu', address: 'QA address', items: [{ productId: product.id, quantity: 2, unitPrice: 100 }] } });
   fixtureIds.add(order.data.data.id);
   const orderView = (await api('/api/sync', { cookie: adminCookie })).data.data;
@@ -194,6 +236,8 @@ try {
       }
     }
     await service(`gps_pings?officer_id=eq.${officerId}`, { method: 'DELETE' });
+    await service(`system_settings?key=eq.gps_device_v1_${officerId}`, { method: 'DELETE' });
+    await service(`push_subscriptions?user_id=eq.${officerId}`, { method: 'DELETE' });
     if (officerCreated && process.env.QA_KEEP_OFFICER !== '1') await service(`users?id=eq.${officerId}`, { method: 'DELETE' });
     for (const brand of createdBrands) await service(`brands?id=eq.${encodeURIComponent(brand.id)}`, { method: 'DELETE' });
     console.log('QA business fixtures cleaned up.');

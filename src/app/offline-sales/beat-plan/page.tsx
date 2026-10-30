@@ -30,6 +30,7 @@ import {
 } from '@/lib/types';
 import { db } from '@/lib/db/db-service';
 import { recordGpsPing } from '@/lib/db/gps-service';
+import { freshGpsFix, geolocationMessage, type GpsFix } from '@/lib/gps-validation';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
 import { canPerform, getScope, hasAccess, isSuperAdmin } from '@/lib/permissions';
@@ -59,9 +60,9 @@ export default function BeatPlanPage() {
   const [completedActions, setCompletedActions] = useState<Set<string>>(new Set());
   const [activeCheckInTime, setActiveCheckInTime] = useState<string>('');
   const [targetBeat, setTargetBeat] = useState<BeatItem | null>(null);
-  const [calculatedDistance, setCalculatedDistance] = useState<number>(0);
-  const [currentGpsCoords, setCurrentGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [currentGpsCoords, setCurrentGpsCoords] = useState<GpsFix | null>(null);
   const [overrideReason, setOverrideReason] = useState('');
+  const calculatedDistance = currentGpsCoords && targetBeat ? Math.round(db.calculateDistance(currentGpsCoords.lat, currentGpsCoords.lng, targetBeat.lat, targetBeat.lng)) : 0;
 
   // Slide-up Form States
   const [activeActionModal, setActiveActionModal] = useState<
@@ -169,13 +170,13 @@ export default function BeatPlanPage() {
       return;
     }
     const today = new Date().toISOString().split('T')[0];
-    db.addOneTimeBeatOverride(
+    try { db.addOneTimeBeatOverride(
       overrideOfficerId,
       overrideStoreId,
       today,
       overridePriority,
       overrideNote || undefined
-    );
+    ); } catch (error) { toast.error(error instanceof Error ? error.message : 'Beat stop could not be assigned.'); return; }
     setShowOverrideModal(false);
     setOverrideNote('');
     reloadBeatData();
@@ -189,13 +190,13 @@ export default function BeatPlanPage() {
       return;
     }
     const targetUser = db.getUsers().find((u) => u.id === routeOfficerId);
-    db.createAndAssignBeatRoute({
+    try { db.createAndAssignBeatRoute({
       officerId: routeOfficerId,
       dateAd: routeDate,
       storeIds: Array.from(selectedStoreIds),
       priority: routePriority,
       managerNotes: routeNotes || undefined,
-    });
+    }); } catch (error) { toast.error(error instanceof Error ? error.message : 'Beat route could not be assigned.'); return; }
     setShowAssignRouteModal(false);
     setSelectedStoreIds(new Set());
     setRouteNotes('');
@@ -269,41 +270,14 @@ export default function BeatPlanPage() {
   }, []);
 
   const [gpsError, setGpsError] = useState<string | null>(null);
-  const activeStoreName = activeBeatId ? beatItems.find((beat) => beat.id === activeBeatId)?.storeName : undefined;
-  // Foreground GPS is best effort; browsers may pause background pages.
   useEffect(() => {
-    if (officerDuty === 'OFFLINE' || officerDuty === 'ON_LEAVE') return;
-
-    const sendGpsPing = () => {
-      if (typeof window === 'undefined' || !navigator.geolocation) return;
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setGpsError(null);
-          setCurrentGpsCoords({ lat: latitude, lng: longitude });
-          const status = activeBeatId ? 'AT_STORE' : 'IN_TRANSIT';
-
-          void recordGpsPing(
-            currentUser.id,
-            currentUser.fullName,
-            latitude,
-            longitude,
-            status,
-            activeStoreName
-          ).then(saved => { if (!saved) setGpsError('Your location could not be saved. Check the connection and Sync status.'); });
-        },
-        (error) => {
-          setGpsError(error.code === 1 ? 'Location is blocked. Allow location for this site in your browser to send field updates.' : 'Location is temporarily unavailable. Keep the app open and retry your check-in.');
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
-      );
+    const receive = (event: Event) => {
+      const fix = (event as CustomEvent<GpsFix & { userId: string }>).detail;
+      if (fix?.userId === currentUser.id && freshGpsFix(fix)) { setCurrentGpsCoords(fix); setGpsError(null); }
     };
-
-    sendGpsPing();
-    const interval = setInterval(sendGpsPing, 60000);
-    return () => clearInterval(interval);
-  }, [officerDuty, currentUser.id, currentUser.fullName, activeBeatId, activeStoreName]);
+    window.addEventListener('bb-gps-fix', receive);
+    return () => window.removeEventListener('bb-gps-fix', receive);
+  }, [currentUser.id]);
 
   const handleToggleDuty = () => {
     const nextStatus: DutyStatus =
@@ -324,34 +298,36 @@ export default function BeatPlanPage() {
   const handleOpenCheckIn = (beat: BeatItem) => {
     setTargetBeat(beat);
     setShowCheckInModal(true);
+    setCurrentGpsCoords(null); setGpsError('Finding a fresh device location…'); setOverrideReason('');
 
     if (typeof window !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
-          setCurrentGpsCoords({ lat, lng });
-          const dist = Math.round(db.calculateDistance(lat, lng, beat.lat, beat.lng));
-          setCalculatedDistance(dist);
+          setCurrentGpsCoords({ lat, lng, capturedAt: new Date(position.timestamp).toISOString(), accuracy: position.coords.accuracy });
+          setGpsError(null);
         },
         (error) => {
-          console.warn('Geolocation check-in info:', error.message);
-          setCalculatedDistance(0);
+          setGpsError(geolocationMessage(error.code));
+          setCurrentGpsCoords(null);
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     } else {
-      setCalculatedDistance(0);
+      setGpsError('This browser does not support device GPS.');
     }
   };
 
   const handleConfirmArrival = (photoUrl?: string) => {
     if (!targetBeat) return;
+    if (!freshGpsFix(currentGpsCoords)) { toast.error('A fresh device GPS fix is required. Retry check-in after allowing location.'); return; }
+    if (currentGpsCoords.accuracy !== undefined && currentGpsCoords.accuracy > 200) { toast.error('GPS accuracy is too low for check-in. Move outdoors and retry.'); return; }
+    if (calculatedDistance > 150 && !overrideReason.trim()) { toast.error('Enter why you are checking in away from the store.'); return; }
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setActiveCheckInTime(timeStr);
 
-    const lat = currentGpsCoords?.lat ?? targetBeat.lat;
-    const lng = currentGpsCoords?.lng ?? targetBeat.lng;
+    const { lat, lng } = currentGpsCoords;
 
     db.checkInBeat(
       targetBeat.id,
@@ -369,7 +345,8 @@ export default function BeatPlanPage() {
       lat,
       lng,
       'AT_STORE',
-      targetBeat.storeName
+      targetBeat.storeName,
+      undefined, currentGpsCoords.capturedAt, currentGpsCoords.accuracy
     );
 
     setBeatItems(db.getTodayBeat());
@@ -522,8 +499,8 @@ export default function BeatPlanPage() {
     db.checkOutBeat(
       targetBeat.id,
       undefined,
-      currentGpsCoords?.lat ?? targetBeat.lat,
-      currentGpsCoords?.lng ?? targetBeat.lng
+      freshGpsFix(currentGpsCoords) ? currentGpsCoords.lat : undefined,
+      freshGpsFix(currentGpsCoords) ? currentGpsCoords.lng : undefined
     );
     const completedBeat = db.getTodayBeat(currentUser.id).find((beat) => beat.id === targetBeat.id) || targetBeat;
     setTargetBeat(completedBeat);
@@ -796,6 +773,8 @@ export default function BeatPlanPage() {
           showStoreActionDashboard={showStoreActionDashboard}
           targetBeat={targetBeat}
           calculatedDistance={calculatedDistance}
+          gpsReady={freshGpsFix(currentGpsCoords) && (currentGpsCoords.accuracy === undefined || currentGpsCoords.accuracy <= 200)}
+          gpsMessage={gpsError || (currentGpsCoords ? `GPS accuracy ±${Math.round(currentGpsCoords.accuracy || 0)} m` : 'Waiting for location.')}
           overrideReason={overrideReason}
           setOverrideReason={setOverrideReason}
           completedActions={completedActions}

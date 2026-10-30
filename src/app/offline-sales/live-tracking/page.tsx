@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db/db-service';
 import { fetchLatestPingsFromSupabase, recordGpsPing } from '@/lib/db/gps-service';
 import { getSessionUser } from '@/lib/auth';
+import { geolocationMessage } from '@/lib/gps-validation';
 import { canPerform, getScope, hasAccess } from '@/lib/permissions';
 import { StaffLiveLocation, StaffLiveStatus, BeatItem, DutyStatus } from '@/lib/types';
 import InteractiveMap from '@/components/common/InteractiveMap';
@@ -129,21 +130,23 @@ export default function LiveStaffTrackingPage() {
   };
 
   const handlePingMyGps = () => {
+    const owner = db.getCurrentUser().id;
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
           const user = getSessionUser() || db.getCurrentUser();
-          void recordGpsPing(user.id, user.fullName, lat, lng, 'IN_TRANSIT').then((saved) => {
+          if (user.id !== owner) return;
+          void recordGpsPing(user.id, user.fullName, lat, lng, 'IN_TRANSIT', undefined, undefined, new Date(pos.timestamp).toISOString(), pos.coords.accuracy).then(async (saved) => {
             triggerToast(saved
               ? 'GPS position saved to the shared live feed.'
-              : 'GPS position is only on this device; shared GPS storage is unavailable.');
+              : 'GPS position is pending on this device; shared GPS storage is unavailable.');
+            await reloadLocations();
           });
-          void reloadLocations();
         },
         (err) => {
-          triggerToast(`GPS access: ${err.message}`);
+          triggerToast(geolocationMessage(err.code));
         },
         { enableHighAccuracy: true, timeout: 8000 }
       );
@@ -476,7 +479,7 @@ export default function LiveStaffTrackingPage() {
       {/* Detailed Live View & Route Breadcrumbs */}
       {selectedStaff && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Simulated GPS Visualizer Map */}
+          {/* Current confirmed field positions */}
           <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
               <div className="flex items-center gap-2">
@@ -522,7 +525,7 @@ export default function LiveStaffTrackingPage() {
                 />
                 <span>
                   {selectedStaff.dutyStatus === 'OFFLINE'
-                    ? 'GPS Feed Suspended (Officer Offline)'
+                    ? 'No recent GPS fix — last known position'
                     : 'Live GPS Feed: Active'}
                 </span>
               </div>

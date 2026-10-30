@@ -1,3 +1,4 @@
+import { validGpsCoordinates } from '../gps-validation';
 import {
   SUPER_ADMIN_TEMPLATE,
   MANAGER_TEMPLATE,
@@ -8,6 +9,7 @@ import {
 import { WORKSPACE_COLLECTIONS, WorkspaceCollection, WorkspaceMutation, WorkspaceSnapshot, WorkspaceVersions } from './workspace-types';
 import { canReadWorkspaceRecord, canWriteWorkspaceRecord, StoredWorkspaceRecord } from './workspace-policy';
 import { DEFAULT_ALERT_RULES, validateAlertRules, type AlertRules } from '../alert-rules';
+import { defaultOrderOptions, validateOrderOptions, assertActiveOrderOption, type OrderOptions } from '../order-options';
 
 export const DEFAULT_SUPER_ADMIN: User = {
   id: 'user_devansh',
@@ -249,6 +251,7 @@ export class DatabaseService {
 
   private requireStorePhotoAtCheckIn: boolean = false;
   private alertRules: AlertRules = { ...DEFAULT_ALERT_RULES };
+  private orderOptions: OrderOptions | null = null;
   private recurringSchedules: RecurringScheduleEntry[] = [];
 
   private activeBrandFilter: BrandCode = 'ALL';
@@ -317,7 +320,7 @@ export class DatabaseService {
   public exportSnapshot(): WorkspaceSnapshot {
     const snapshot: WorkspaceSnapshot = {};
     for (const collection of WORKSPACE_COLLECTIONS) {
-      if (collection === 'workspaceConfig') snapshot[collection] = [{ id: 'workspace', requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn, alertRules: this.alertRules }];
+      if (collection === 'workspaceConfig') snapshot[collection] = [{ id: 'workspace', requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn, alertRules: this.alertRules, ...(this.orderOptions ? { orderOptions: this.orderOptions } : {}) }];
       else snapshot[collection] = ((this as any)[collection] || []).map((row: any) => JSON.parse(JSON.stringify({ ...row, id: row.id || (collection === 'staffLiveLocations' ? row.officerId : undefined) })));
     }
     return snapshot;
@@ -328,6 +331,7 @@ export class DatabaseService {
       if (collection === 'workspaceConfig') {
         const config = snapshot.workspaceConfig?.find((row) => row.id === 'workspace');
         this.requireStorePhotoAtCheckIn = config?.requireStorePhotoAtCheckIn === true;
+        this.orderOptions = config?.orderOptions ? validateOrderOptions(config.orderOptions) : null;
         this.alertRules = config?.alertRules ? validateAlertRules(config.alertRules) : { ...DEFAULT_ALERT_RULES };
       }
       else (this as any)[collection] = JSON.parse(JSON.stringify(snapshot[collection] || []));
@@ -1254,7 +1258,7 @@ export class DatabaseService {
         creditPeriodDays: 30,
         paymentTerms: dist?.creditTerms || '30 Days Net Cheque',
         outstandingBalance: branch.outstandingBalance || 85000,
-        coordinates: branch.lat && branch.lng ? { lat: branch.lat, lng: branch.lng } : undefined,
+        coordinates: validGpsCoordinates(branch.lat, branch.lng) ? { lat: branch.lat, lng: branch.lng } : undefined,
         assignedOfficerId: branch.assignedOfficerId || '',
         assignedOfficerName: branch.assignedOfficerName || 'Field Officer',
         defaultMargins: branch.defaultMargins || dist?.defaultMargins,
@@ -1280,7 +1284,7 @@ export class DatabaseService {
         creditPeriodDays: (retailer as any).creditDays || (retailer as any).creditPeriodDays || 0,
         paymentTerms: retailer.creditTerms || 'COD',
         outstandingBalance: retailer.outstandingBalance || 0,
-        coordinates: retailer.lat && retailer.lng ? { lat: retailer.lat, lng: retailer.lng } : undefined,
+        coordinates: validGpsCoordinates(retailer.lat, retailer.lng) ? { lat: retailer.lat, lng: retailer.lng } : undefined,
         assignedOfficerId: retailer.assignedOfficerId || '',
         assignedOfficerName: retailer.assignedOfficerName || 'Field Officer',
         defaultMargins: retailer.defaultMargins,
@@ -1670,6 +1674,9 @@ export class DatabaseService {
     return this.documentTypes;
   }
 
+  public getOrderOptions(): OrderOptions { return this.orderOptions ? structuredClone(this.orderOptions) : defaultOrderOptions(); }
+  public setOrderOptions(options: OrderOptions): void { this.orderOptions = validateOrderOptions(options); this.persistState(); }
+
   public getAlertRules(): AlertRules { return { ...this.alertRules }; }
   public setAlertRules(rules: AlertRules): void { this.alertRules = validateAlertRules(rules); this.persistState(); }
 
@@ -1759,21 +1766,22 @@ export class DatabaseService {
     managerNote?: string
   ): BeatItem {
     const store = this.getUnifiedStoreById(storeId);
+    if (!store?.coordinates) throw new Error('Pin the store location before assigning a beat stop.');
     const storeName = store ? store.name : storeId;
-    const isDist = store && store.type === 'DISTRIBUTOR';
+    const isBranch = store?.type === 'BRANCH';
     const newBeat: BeatItem = {
       id: this.generateId('beat_override'),
       officerId,
       dateAd,
       dateBs: getTodayBs(),
       sequence: this.beatItems.length + 1,
-      entityType: isDist ? 'BRANCH' : 'RETAILER',
+      entityType: isBranch ? 'BRANCH' : 'RETAILER',
       entityId: store ? store.id : storeId,
       storeName,
       storeType: store?.subType || 'Store',
       address: store?.address || 'Kathmandu',
-      lat: store?.coordinates?.lat || 27.7172,
-      lng: store?.coordinates?.lng || 85.324,
+      lat: store.coordinates.lat,
+      lng: store.coordinates.lng,
       contactName: store?.primaryContactName || 'Manager',
       contactPhone: store?.primaryContactPhone || '+977-9800000000',
       contacts: store?.contacts || [],
@@ -1797,26 +1805,27 @@ export class DatabaseService {
     managerNotes?: string;
   }): BeatItem[] {
     const { officerId, dateAd, storeIds, priority = 'HIGH', managerNotes } = params;
+    if (storeIds.some(id => !this.getUnifiedStoreById(id)?.coordinates)) throw new Error('Every beat stop needs a pinned store location before assignment.');
     const newItems: BeatItem[] = [];
     const dateBs = getTodayBs();
 
     for (let i = 0; i < storeIds.length; i++) {
       const storeId = storeIds[i];
       const store = this.getUnifiedStoreById(storeId);
-      const isDist = store && store.type === 'DISTRIBUTOR';
+      const isBranch = store?.type === 'BRANCH';
       const item: BeatItem = {
         id: this.generateId(`beat_${i + 1}`),
         officerId,
         dateAd,
         dateBs,
         sequence: this.beatItems.length + i + 1,
-        entityType: isDist ? 'BRANCH' : 'RETAILER',
+        entityType: isBranch ? 'BRANCH' : 'RETAILER',
         entityId: store ? store.id : storeId,
         storeName: store ? store.name : storeId,
         storeType: store?.subType || 'Store',
         address: store?.address || 'Kathmandu Valley',
-        lat: store?.coordinates?.lat || 27.7172,
-        lng: store?.coordinates?.lng || 85.324,
+        lat: store!.coordinates!.lat,
+        lng: store!.coordinates!.lng,
         contactName: store?.primaryContactName || 'Store Manager',
         contactPhone: store?.primaryContactPhone || '+977-9800000000',
         contacts: store?.contacts || [],
@@ -2551,6 +2560,8 @@ export class DatabaseService {
   }
 
   public addOrder(order: Omit<Order, 'id' | 'createdAt'>): Order {
+    assertActiveOrderOption(this.getOrderOptions(), 'channels', order.platform);
+    assertActiveOrderOption(this.getOrderOptions(), 'deliveryMethods', order.deliveryMethod);
     const newOrder: Order = {
       ...order,
       id: this.generateId('ord'),
@@ -2634,6 +2645,8 @@ export class DatabaseService {
     if (idx === -1) return null;
 
     const existing = this.orders[idx];
+    if (updates.platform !== undefined) assertActiveOrderOption(this.getOrderOptions(), 'channels', updates.platform, existing.platform);
+    if (updates.deliveryMethod !== undefined) assertActiveOrderOption(this.getOrderOptions(), 'deliveryMethods', updates.deliveryMethod, existing.deliveryMethod);
     const editHistory = existing.editHistory ? [...existing.editHistory] : [];
     if (editNote || editorName) {
       editHistory.unshift({
@@ -2730,6 +2743,7 @@ export class DatabaseService {
   }
 
   public addDeliveryFailure(failure: Omit<DeliveryFailure, 'id' | 'createdAt'>): DeliveryFailure {
+    if (failure.deliveryMethod) assertActiveOrderOption(this.getOrderOptions(), 'deliveryMethods', failure.deliveryMethod);
     const newDf: DeliveryFailure = {
       ...failure,
       id: this.generateId('df'),

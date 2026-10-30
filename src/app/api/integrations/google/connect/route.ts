@@ -1,3 +1,4 @@
+import { requestOrigin } from '@/lib/request-origin';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireFeatureAccess } from '@/lib/auth-guard';
 import { AUTH_SESSION_COOKIE, AUTH_SESSION_MAX_AGE_SECONDS, getAuthSessionSecret, secureSessionCookie } from '@/lib/auth-session';
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
   if (!isSameOriginGoogleMutation(request)) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 });
   const config = googleOAuthConfiguration();
   if (!config.ready) return NextResponse.json({ error: 'Google OAuth setup is incomplete.', missing: config.missing }, { status: 503 });
-  if (new URL(config.redirectUri!).origin !== new URL(request.url).origin) return NextResponse.json({ error: 'Open the application on the origin configured in GOOGLE_REDIRECT_URI before connecting.' }, { status: 409 });
+  if (new URL(config.redirectUri!).origin !== requestOrigin(request)) return NextResponse.json({ error: 'Open the application on the origin configured in GOOGLE_REDIRECT_URI before connecting.' }, { status: 409 });
   try {
     const state = createGoogleState(auth.user.id, getAuthSessionSecret()!);
     const authorizationUrl = createGoogleOAuthClient().generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: GOOGLE_SCOPES, state: state.state });

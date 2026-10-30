@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from '@/lib/request-origin';
 import { NextResponse } from 'next/server';
 import { requireFeatureAccess } from '@/lib/auth-guard';
 import { isSuperAdmin } from '@/lib/permissions';
@@ -13,8 +14,7 @@ export async function POST(request: Request) {
   if (auth.response) return auth.response;
   if (!isSuperAdmin(auth.user)) return NextResponse.json({ success: false, error: 'Only a Super Admin can import workspace batches.' }, { status: 403 });
   if (request.headers.get('x-workspace-user') !== auth.user.id) return NextResponse.json({ success: false, error: 'The signed-in account changed. Sign in again before importing.' }, { status: 409 });
-  const origin = request.headers.get('origin');
-  if (origin && origin !== new URL(request.url).origin) return NextResponse.json({ success: false, error: 'Invalid request origin.' }, { status: 403 });
+  if (!isSameOriginRequest(request, true)) return NextResponse.json({ success: false, error: 'Invalid request origin.' }, { status: 403 });
   try {
     if (Number(request.headers.get('content-length') || 0) > 400000) throw new ApiInputError('The import request is too large.', 413);
     const body = await readBody(request);

@@ -1,5 +1,6 @@
 import { StaffLiveLocation, StaffLiveStatus } from '../types';
 import { db } from './db-service';
+import { freshGpsFix, validGpsCoordinates } from '../gps-validation';
 
 export interface GpsPingRecord {
   id?: string;
@@ -13,39 +14,41 @@ export interface GpsPingRecord {
   created_at?: string;
 }
 
-/**
- * Record a real GPS ping from field officer devices
- */
-export async function recordGpsPing(
-  officerId: string,
-  officerName: string,
-  lat: number,
-  lng: number,
-  status: StaffLiveStatus = 'IN_TRANSIT',
-  currentStoreName?: string,
-  batteryLevel?: number
-): Promise<boolean> {
-  // 1. Immediately update local database service
-  db.updateStaffPing(officerId, lat, lng, status, currentStoreName, batteryLevel);
+const pendingKey = (userId: string) => `bb_gps_latest_v1_${userId}`;
 
-  // Send through the authenticated server route so the device cannot spoof another officer.
+export function clearPendingGps(userId: string) {
+  if (typeof window !== 'undefined') localStorage.removeItem(pendingKey(userId));
+}
+
+export async function retryPendingGps(userId: string): Promise<boolean> {
+  if (typeof window === 'undefined' || db.getCurrentUser().id !== userId) return false;
+  let pending: any;
+  try { pending = JSON.parse(localStorage.getItem(pendingKey(userId)) || 'null'); } catch { clearPendingGps(userId); return false; }
+  if (!pending) return true;
+  if (pending.officerId !== userId || !freshGpsFix(pending)) { clearPendingGps(userId); return false; }
   try {
-    const response = await fetch('/api/gps/ping', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ lat, lng, status, currentStoreName, batteryLevel }),
-    });
-    if (!response.ok) {
-      const result = await response.json().catch(() => null);
-      console.warn('GPS ping was kept on this device but not synced:', result?.error || response.statusText);
-      return false;
-    }
+    const response = await fetch('/api/gps/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(pending) });
+    if (db.getCurrentUser().id !== userId) return false;
+    if (!response.ok) return false;
+    // A newer fix may have replaced this one while its request was in flight.
+    const latest = JSON.parse(localStorage.getItem(pendingKey(userId)) || 'null');
+    if (latest?.capturedAt === pending.capturedAt) clearPendingGps(userId);
     return true;
-  } catch (err) {
-    console.warn('GPS ping was kept on this device but not synced:', err);
-    return false;
-  }
+  } catch { return false; }
+}
+
+/** Retain only the latest genuine fix on the current user's device until confirmed. */
+export async function recordGpsPing(
+  officerId: string, officerName: string, lat: number, lng: number,
+  status: StaffLiveStatus = 'IN_TRANSIT', currentStoreName?: string, batteryLevel?: number,
+  capturedAt = new Date().toISOString(), accuracy?: number
+): Promise<boolean> {
+  if (db.getCurrentUser().id !== officerId || !validGpsCoordinates(lat, lng) || !freshGpsFix({ lat, lng, capturedAt })) return false;
+  const pending = { officerId, lat, lng, status, currentStoreName, batteryLevel, capturedAt, accuracy };
+  db.updateStaffPing(officerId, lat, lng, status, currentStoreName, batteryLevel);
+  if (typeof window === 'undefined') return false;
+  try { localStorage.setItem(pendingKey(officerId), JSON.stringify(pending)); } catch { return false; }
+  return retryPendingGps(officerId);
 }
 
 /**

@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from '@/lib/request-origin';
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-guard';
@@ -45,8 +46,7 @@ export async function GET(request: Request) {
 
 async function change(request: Request) {
   const auth = await requireAuth(request); if (auth.response) return auth.response;
-  const origin = request.headers.get('origin');
-  if (origin && origin !== new URL(request.url).origin) return fail('Invalid request origin.', 403);
+  if (!isSameOriginRequest(request, true)) return fail('Invalid request origin.', 403);
   try {
     let body;
     try { body = await request.json(); } catch { return fail('Invalid JSON payload.'); }

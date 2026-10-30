@@ -53,3 +53,9 @@ The cache and outbox belong to a user ID. Signing out clears the displayed works
 ## Verification boundary
 
 The recovery tests include real, separate Super Admin and Sales Officer accounts against Supabase, along with automated permission, queue, route, sharing, Google formatting and caching checks. Temporary test business records are removed after each run. See the release document for current evidence. Google consent/upload/export, a complete phone hardware run and sustained multi-user load require separate verification; a passing build is not a guarantee that every device or external service will work continuously.
+# October 29 feature update
+
+- Every authenticated user with Beat Plans access can opt into device GPS from the GPS sharing panel across the app. It reports real fixes, permission errors and confirmed saves; stopping/off-duty pauses capture. For background phone capture, pair the free native client using [GPS_SETUP.md](GPS_SETUP.md).
+- Each user enables push from the profile drawer, registers that device and sends a real test request. See [PUSH_NOTIFICATIONS.md](PUSH_NOTIFICATIONS.md).
+- Settings → Channels & Logistics supports add, rename and delete/archive with an explicit save. Used choices remain on historical orders. New choices propagate to order entry, edits, imports and channel reports.
+- Stores → Area selling prioritizes retailer and branch opportunities using recorded local delivered demand. City/area can be edited on store details with Store EDIT permission. Comparisons separate retailer/branch peers and show insufficient-data states. [AREA_SELLING_RULES.md](AREA_SELLING_RULES.md) explains the deterministic scores.

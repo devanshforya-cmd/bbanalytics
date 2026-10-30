@@ -23,6 +23,7 @@ export interface ExtractedProductItem {
 }
 
 export interface ExtractedOrderResult {
+  salesChannel?: string;
   id: string;
   customerName: ExtractedField<string>;
   customerPhone: ExtractedField<string>;

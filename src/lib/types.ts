@@ -222,6 +222,8 @@ export interface Branch {
   distributorName: string;
   name: string;
   address: string;
+  city?: string;
+  area?: string;
   lat: number;
   lng: number;
   assignedOfficerId: string;
@@ -655,26 +657,9 @@ export interface OrderItem {
   totalPrice: number;
 }
 
-export type OrderPlatform =
-  | 'Instagram'
-  | 'Messenger'
-  | 'WhatsApp'
-  | 'Website'
-  | 'TikTok'
-  | 'Walk-in'
-  | 'Pathao Bazaar'
-  | 'Phone Call'
-  | 'Field Order'
-  | 'YouTube'
-  | 'Facebook'
-  | 'Other';
-
-export type DeliveryMethod =
-  | 'Standard'
-  | 'Pathao'
-  | 'InDrive'
-  | 'Yango'
-  | 'Pick-up';
+// Channel/provider labels are configured in Settings; historical attribution stays unchanged.
+export type OrderPlatform = string;
+export type DeliveryMethod = string;
 
 export type OrderStatus =
   | 'PENDING'
@@ -741,7 +726,7 @@ export interface DeliveryFailure {
   customerName: string;
   customerPhone: string;
   productName?: string;
-  deliveryMethod?: 'Standard' | 'Pathao' | 'In-house Rider' | 'Nepal Post';
+  deliveryMethod?: DeliveryMethod;
   dateAd: string;
   dateBs: string;
   reason: 'Call not received' | 'Address not found' | 'Customer refused delivery' | 'Customer unavailable';

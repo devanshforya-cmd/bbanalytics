@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
+import { validGpsCoordinates } from '@/lib/gps-validation';
+import { analyzeStoreArea } from '@/lib/area-selling';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toast } from '@/components/common/Toast';
 import ConfirmModal from '@/components/common/ConfirmModal';
@@ -44,7 +46,7 @@ import { useSubmitGuard } from '@/hooks/useSubmitGuard';
 
 export default function StoresPage() {
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
-  const [currentUser] = useState(() => db.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState(() => db.getCurrentUser());
   const isSuper = isSuperAdmin(currentUser);
   const isSalesOfficer = !canPerform(currentUser, 'stores', 'DELETE') && getScope(currentUser, 'stores') === 'OWN';
   const canCreateStores = canPerform(currentUser, 'stores', 'CREATE');
@@ -53,6 +55,8 @@ export default function StoresPage() {
   const [branches, setBranches] = useState(() => db.getBranches());
   const [retailers, setRetailers] = useState(() => db.getRetailers());
   const [searchTerm, setSearchTerm] = useState('');
+  const [prioritizeOpportunities, setPrioritizeOpportunities] = useState(false);
+  const canViewSelling = hasAccess(currentUser, 'beat_plans');
   const [filterType, setFilterType] = useState<'ALL' | 'DISTRIBUTORS' | 'RETAILERS'>(isSalesOfficer ? 'RETAILERS' : 'ALL');
   const officers = db.getUsers().filter((u) => hasAccess(u, 'beat_plans') || u.id.startsWith('user_'));
   const storeCategories = db.getStoreCategories().filter((c) => c.isActive);
@@ -109,6 +113,8 @@ export default function StoresPage() {
   const [adminCity, setAdminCity] = useState('Kathmandu');
   const [adminArea, setAdminArea] = useState('');
   const [adminAddress, setAdminAddress] = useState('');
+  const [adminLat, setAdminLat] = useState('');
+  const [adminLng, setAdminLng] = useState('');
   const [adminHasBranches, setAdminHasBranches] = useState(false);
   const [adminPaymentTerms, setAdminPaymentTerms] = useState('15-day credit');
   const [adminDefaultMargins, setAdminDefaultMargins] = useState<DefaultMargins>(() => {
@@ -142,6 +148,7 @@ export default function StoresPage() {
   const [deleteConfirmStore, setDeleteConfirmStore] = useState<{ id: string; name: string } | null>(null);
 
   const refreshData = () => {
+    setCurrentUser(db.getCurrentUser());
     setDistributors([...db.getDistributors()]);
     setBranches([...db.getBranches()]);
     setRetailers([...db.getRetailers()]);
@@ -161,17 +168,19 @@ export default function StoresPage() {
     if (typeof window !== 'undefined' && 'geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
+          if (pos.coords.accuracy > 200) { toast.error('GPS accuracy is too low. Move outdoors and retry.'); return; }
           setFieldLat(pos.coords.latitude);
           setFieldLng(pos.coords.longitude);
           toast.success(`📍 Captured GPS: ${pos.coords.latitude.toFixed(4)}°N, ${pos.coords.longitude.toFixed(4)}°E`);
         },
         (err) => {
-          toast.error('Could not acquire device GPS. Using area default.');
-          setFieldLat(27.7172);
-          setFieldLng(85.324);
-        }
+          toast.error('Device GPS is unavailable. Allow location and retry; no location was invented.');
+          setFieldLat(null);
+          setFieldLng(null);
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
-    }
+    } else { toast.error('This browser does not support device GPS.'); }
   };
 
   const handleToggleBrand = (b: BrandCode) => {
@@ -198,6 +207,9 @@ export default function StoresPage() {
       return;
     }
 
+    if (fieldLat === null || fieldLng === null) { toast.error('Pin the store using device GPS before saving.'); return; }
+    if (!fieldArea.trim() || !fieldCity.trim()) { toast.error('Enter the store area and city.'); return; }
+
     guardedSubmit(async () => {
       const firstContact = fieldContacts[0] || { name: 'Owner', role: 'Store Owner', phone: '+977-9800000000' };
 
@@ -207,10 +219,10 @@ export default function StoresPage() {
         storeType: 'STANDALONE_RETAILER',
         category: fieldCategory,
         city: fieldCity,
-        area: fieldArea || 'Kathmandu',
+        area: fieldArea.trim(),
         address: fieldAddress || `${fieldArea}, ${fieldCity}`,
-        lat: fieldLat || 27.7172 + (Math.random() - 0.5) * 0.04,
-        lng: fieldLng || 85.324 + (Math.random() - 0.5) * 0.04,
+        lat: fieldLat,
+        lng: fieldLng,
         assignedOfficerId: currentUser.id,
         assignedOfficerName: currentUser.fullName,
         contactName: firstContact.name || 'Store Owner',
@@ -252,6 +264,8 @@ export default function StoresPage() {
       toast.error('Please enter the store name.');
       return;
     }
+
+    if (adminStoreType === 'STANDALONE_RETAILER' && (!adminArea.trim() || !adminCity.trim() || !adminLat.trim() || !adminLng.trim() || !validGpsCoordinates(Number(adminLat), Number(adminLng)))) { toast.error('Enter the store area, city and actual latitude/longitude before saving.'); return; }
 
     guardedSubmit(async () => {
       if (adminStoreType === 'DISTRIBUTOR') {
@@ -313,10 +327,10 @@ export default function StoresPage() {
           storeType: 'STANDALONE_RETAILER',
           category: adminCategory,
           city: adminCity,
-          area: adminArea || 'Kathmandu',
+          area: adminArea.trim(),
           address: adminAddress || `${adminArea}, ${adminCity}`,
-          lat: 27.7172,
-          lng: 85.324,
+          lat: Number(adminLat),
+          lng: Number(adminLng),
           assignedOfficerId: currentUser.id,
           assignedOfficerName: currentUser.fullName,
           contactName: adminContactName || 'Store Owner',
@@ -339,6 +353,7 @@ export default function StoresPage() {
       }
 
       setShowAdminAddModal(false);
+      setAdminLat(''); setAdminLng(''); setAdminArea(''); setAdminAddress('');
       refreshData();
     });
   };
@@ -408,6 +423,14 @@ export default function StoresPage() {
     });
   };
 
+  const areaAnalyses = useMemo(() => {
+    const orders = canViewSelling ? db.getSecondaryOrders() : [];
+    const products = db.getProducts();
+    const counts = canViewSelling ? db.getStockCounts() : [];
+    const stores = [...retailers.map(row => ({ ...row, entityType: 'RETAILER' as const })), ...branches.map(row => ({ ...row, entityType: 'BRANCH' as const }))];
+    return new Map<string, ReturnType<typeof analyzeStoreArea>>(canViewSelling ? stores.map(store => [`${store.entityType}:${store.id}`, analyzeStoreArea(store.id, stores, orders, products, counts, new Date(), store.entityType)] as const) : []);
+  }, [retailers, branches, canViewSelling]);
+
   // Filtered lists
   const filteredRetailers = retailers.filter((r) => {
     if (isSalesOfficer && r.assignedOfficerId !== currentUser.id && r.assignedOfficerName !== currentUser.fullName) {
@@ -419,6 +442,8 @@ export default function StoresPage() {
       (r.category && r.category.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   });
+
+  if (prioritizeOpportunities && canViewSelling) filteredRetailers.sort((a, b) => (areaAnalyses.get('RETAILER:' + b.id)?.opportunityScore ?? -1) - (areaAnalyses.get('RETAILER:' + a.id)?.opportunityScore ?? -1));
 
   const filteredDistributors = distributors.filter(
     (d) =>
@@ -479,6 +504,8 @@ export default function StoresPage() {
             )}
           </div>
         </div>
+
+        {canViewSelling && <label className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-xs text-blue-900 cursor-pointer"><input type="checkbox" checked={prioritizeOpportunities} onChange={event => setPrioritizeOpportunities(event.target.checked)} className="h-4 w-4" /><span><strong>Prioritize stores with area selling opportunities</strong><span className="block mt-1">Scores compare delivered orders from the last 30 days in each recorded city and area. Open a store to see the evidence.</span></span></label>}
 
         {/* Section 3c: Admin Pending Contact Removals Alert Banner */}
         {!isSalesOfficer && pendingRemovals.length > 0 && (
@@ -566,6 +593,8 @@ export default function StoresPage() {
                     b.distributorId === dist.id &&
                     (!isSalesOfficer || b.assignedOfficerId === currentUser.id || b.assignedOfficerName === currentUser.fullName)
                 );
+
+                if (prioritizeOpportunities && canViewSelling) distBranches.sort((a, b) => (areaAnalyses.get('BRANCH:' + b.id)?.opportunityScore ?? -1) - (areaAnalyses.get('BRANCH:' + a.id)?.opportunityScore ?? -1));
 
                 return (
                   <div key={dist.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
@@ -659,8 +688,9 @@ export default function StoresPage() {
                             className="flex items-center justify-between rounded-xl bg-slate-50 p-2.5 text-xs hover:bg-slate-100/70"
                           >
                             <div>
-                              <div className="font-semibold text-slate-800">{branch.name}</div>
+                              <Link href={`/offline-sales/stores/${branch.id}`} className="font-semibold text-blue-700 hover:underline">{branch.name}</Link>
                               <div className="text-[11px] text-slate-500">{branch.address}</div>
+                              {canViewSelling && <Link href={`/offline-sales/stores/${branch.id}?tab=selling`} className="mt-1 block text-[11px] font-semibold text-blue-700 hover:underline">Area selling: {areaAnalyses.get('BRANCH:' + branch.id)?.opportunityScore == null ? 'Building evidence' : `${areaAnalyses.get('BRANCH:' + branch.id)!.opportunityScore}/100`} →</Link>}
                             </div>
                             <a
                               href={`https://www.google.com/maps/dir/?api=1&destination=${branch.lat},${branch.lng}`}
@@ -749,6 +779,11 @@ export default function StoresPage() {
                         Under Distributor: <strong>{ret.distributorName}</strong>
                       </div>
                     )}
+
+                    {canViewSelling && <Link href={`/offline-sales/stores/${ret.id}?tab=selling`} className="block rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs hover:border-blue-300">
+                      <span className="flex items-center justify-between gap-2 font-bold text-blue-800"><span>Area selling opportunity</span><span>{areaAnalyses.get('RETAILER:' + ret.id)?.opportunityScore == null ? 'Building evidence' : `${areaAnalyses.get('RETAILER:' + ret.id)!.opportunityScore}/100`}</span></span>
+                      <span className="block mt-1 text-[11px] text-slate-600">{ret.area}, {ret.city} · {areaAnalyses.get('RETAILER:' + ret.id)?.opportunities[0]?.productName || 'View local demand and sample requirements'} →</span>
+                    </Link>}
 
                     {/* Section 3 Contacts List */}
                     <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-200/60 space-y-1.5">
@@ -1181,6 +1216,23 @@ export default function StoresPage() {
                     <span>Has multiple physical branches across Kathmandu</span>
                   </label>
                 )}
+
+                <div className="grid grid-cols-2 gap-3 rounded-xl border p-3">
+                  <label className="font-semibold">City<input value={adminCity} onChange={event => setAdminCity(event.target.value)} required className="block mt-1 w-full rounded-lg border p-2" /></label>
+                  <label className="font-semibold">Area<input value={adminArea} onChange={event => setAdminArea(event.target.value)} required={adminStoreType === 'STANDALONE_RETAILER'} className="block mt-1 w-full rounded-lg border p-2" /></label>
+                  <label className="font-semibold col-span-2">Address<input value={adminAddress} onChange={event => setAdminAddress(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
+                  {adminStoreType === 'STANDALONE_RETAILER' && <>
+                    <label className="font-semibold">Latitude<input type="number" step="any" min="-90" max="90" required value={adminLat} onChange={event => setAdminLat(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
+                    <label className="font-semibold">Longitude<input type="number" step="any" min="-180" max="180" required value={adminLng} onChange={event => setAdminLng(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
+                    <button type="button" className="col-span-2 rounded-lg border p-2 font-semibold text-blue-700" onClick={() => {
+                      if (!navigator.geolocation) { toast.error('This browser does not support GPS. Enter the store coordinates.'); return; }
+                      navigator.geolocation.getCurrentPosition(position => {
+                        if (position.coords.accuracy > 200) { toast.error('GPS accuracy is too low. Enter verified store coordinates or retry outdoors.'); return; }
+                        setAdminLat(String(position.coords.latitude)); setAdminLng(String(position.coords.longitude));
+                      }, () => toast.error('Location is unavailable. Allow location or enter verified store coordinates.'), { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+                    }}>Use current device GPS (when at the store)</button>
+                  </>}
+                </div>
 
                 {/* Section 4: Default Margins Per Brand */}
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">

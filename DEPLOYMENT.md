@@ -6,15 +6,14 @@ See [release setup and limits](docs/RELEASE_RECOVERY.md), [current user flow](do
 
 ## Verified deployment
 
-Application source commit: `31c6a9116c829694273336b687442bff013bed33`.
-Production deployment: `dpl_8yZiP9gy5AUTXsc6iE3qbqswHFDv`.
+Initial recovery commit: `31c6a9116c829694273336b687442bff013bed33`. The latest release is published from GitHub `main`; verify its SHA in Vercel before assigning production.
 
-- 80 automated tests, TypeScript and production build passed.
-- 15 grouped checks passed against the real Supabase database using distinct admin/officer accounts.
+- 112 automated tests, TypeScript and production build passed for the GPS/push/channels/area-selling update.
+- 17 grouped checks passed against the real Supabase database using distinct admin/officer accounts, including native GPS and push subscription security.
 - Seven live HTTPS checks passed: database/auth health, denied anonymous reads, secure admin login, saved record reload, stale-version rejection, Google configuration status, and test-record cleanup.
 - Production dependency audit: zero known vulnerabilities. The build retains 33 lint warnings and no lint errors.
 
-Google OAuth credentials and consent are still required before Drive uploads and Sheets exports work. Device location permission is currently denied, so physical GPS capture remains unverified. CSV batch rollback, scheduled email/lock-screen push and offsite backups are unavailable.
+Google OAuth credentials and consent are still required before Drive uploads and Sheets exports work. Physical GPS/background capture and lock-screen notification display require a real-device test. Native GPS pairing and Web Push server delivery are implemented; follow [GPS setup](docs/GPS_SETUP.md) and [push setup](docs/PUSH_NOTIFICATIONS.md). CSV batch rollback, scheduled email and offsite backups remain unavailable.
 
 ## Runtime configuration
 

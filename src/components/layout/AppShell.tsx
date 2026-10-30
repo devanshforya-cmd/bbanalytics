@@ -8,6 +8,7 @@ import MobileNav from './MobileNav';
 import PWAInstallBanner from '@/components/common/PWAInstallBanner';
 import { ToastContainer } from '@/components/common/Toast';
 import OfflineBar from '@/components/common/OfflineBar';
+import FieldGpsTracker from '@/components/common/FieldGpsTracker';
 import { getSessionUser } from '@/lib/auth';
 import { db } from '@/lib/db/db-service';
 
@@ -45,12 +46,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoginPage || isSharedPage) return;
     const refresh = () => {
-      if (document.visibilityState === 'visible' && navigator.onLine && getSessionUser()) void db.syncWithSupabase();
+      if (document.visibilityState === 'visible' && navigator.onLine && getSessionUser()) {
+        void db.syncWithSupabase();
+        if ('Notification' in window && Notification.permission === 'granted') void fetch('/api/push/flush', { method: 'POST' }).catch(() => undefined);
+      }
     };
     const interval = window.setInterval(refresh, 60000);
+    const onPush = (event: MessageEvent) => { if (event.data?.type === 'PUSH_RECEIVED') refresh(); };
+    navigator.serviceWorker?.addEventListener('message', onPush);
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
-    return () => { window.clearInterval(interval); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
+    return () => { window.clearInterval(interval); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); navigator.serviceWorker?.removeEventListener('message', onPush); };
   }, [isLoginPage, isSharedPage]);
 
   if (isLoginPage || isSharedPage) {
@@ -90,6 +96,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-8">
+          <FieldGpsTracker />
           {children}
         </main>
         <MobileNav />

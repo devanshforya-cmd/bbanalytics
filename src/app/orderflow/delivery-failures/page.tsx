@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
+import { useOrderOptions } from '@/hooks/useOrderOptions';
+import { activeOrderOptionNames, assertActiveOrderOption } from '@/lib/order-options';
 import { getBrands } from '@/lib/db/brands-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
@@ -79,6 +81,8 @@ function getHistoricalWeeklyTrend(failures: DeliveryFailure[]) {
 }
 
 export default function DeliveryFailuresPage() {
+  const orderOptions = useOrderOptions();
+  const deliveryMethods = activeOrderOptionNames(orderOptions, 'deliveryMethods');
   const [failures, setFailures] = useState<DeliveryFailure[]>(() => db.getDeliveryFailures());
   const HISTORICAL_WEEKLY_TREND = useMemo(() => getHistoricalWeeklyTrend(failures), [failures]);
   const currentWeekTrend = HISTORICAL_WEEKLY_TREND[HISTORICAL_WEEKLY_TREND.length - 1];
@@ -144,7 +148,8 @@ export default function DeliveryFailuresPage() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [productName, setProductName] = useState(products[0]?.name || '');
   const [brandCode, setBrandCode] = useState<BrandCode>('FORYA');
-  const [deliveryMethod, setDeliveryMethod] = useState<'Standard' | 'Pathao' | 'In-house Rider' | 'Nepal Post'>('Standard');
+  const [deliveryMethod, setDeliveryMethod] = useState<string>(() => deliveryMethods[0]);
+  useEffect(() => { const methods = activeOrderOptionNames(orderOptions, 'deliveryMethods'); if (!methods.includes(deliveryMethod)) setDeliveryMethod(methods[0]); }, [orderOptions, deliveryMethod]);
   const [reason, setReason] = useState<DeliveryFailure['reason']>('Call not received');
   const [valley, setValley] = useState<'Inside' | 'Outside'>('Outside');
   const [remarks, setRemarks] = useState('');
@@ -317,6 +322,7 @@ export default function DeliveryFailuresPage() {
     }
     setFormErrors({});
 
+    try { assertActiveOrderOption(db.getOrderOptions(), 'deliveryMethods', deliveryMethod); } catch (error) { toast.error(error instanceof Error ? error.message : 'Choose an active delivery method.'); return; }
     db.addDeliveryFailure({
       orderId: `ord_${Date.now()}`,
       orderNumber,
@@ -677,9 +683,7 @@ export default function DeliveryFailuresPage() {
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
               <option value="ALL">All Delivery Methods</option>
-              <option value="Standard">Standard Courier</option>
-              <option value="Pathao">Pathao Express</option>
-              <option value="In-house Rider">In-house Rider</option>
+              {[...new Set([...deliveryMethods, ...db.getDeliveryFailures().map(failure => failure.deliveryMethod).filter((method): method is string => Boolean(method))])].map(method => <option key={method} value={method}>{method}</option>)}
             </select>
           </div>
         </div>
@@ -1168,10 +1172,7 @@ export default function DeliveryFailuresPage() {
                   onChange={(e) => setDeliveryMethod(e.target.value as any)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
                 >
-                  <option value="Standard">Standard Courier</option>
-                  <option value="Pathao">Pathao Express</option>
-                  <option value="In-house Rider">In-house Rider</option>
-                  <option value="Nepal Post">Nepal Post</option>
+                  {deliveryMethods.map(method => <option key={method} value={method}>{method}</option>)}
                 </select>
               </div>
 

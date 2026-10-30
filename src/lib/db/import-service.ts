@@ -19,7 +19,7 @@ export async function processCsvImport(input: CsvImportInput, workspace: ImportW
   }
   const validated = validateCsvImport(input, {
     brands: workspace.db.getBrands(), products: workspace.db.getProducts(), orders: workspace.db.getOrders(), returns: workspace.db.getReturns(),
-    dispatches: workspace.db.getDispatches(), distributors: workspace.db.getDistributors(), branches: workspace.db.getBranches(), customers: workspace.db.getCustomers(),
+    dispatches: workspace.db.getDispatches(), distributors: workspace.db.getDistributors(), branches: workspace.db.getBranches(), customers: workspace.db.getCustomers(), orderOptions: workspace.db.getOrderOptions(),
   }, workspace.db.getCurrentUser().fullName);
   if (action === 'preview') return { preview: validated.preview, totalRows: validated.totalRows, alreadyImported: false };
   const { record } = workspace.db.importData({

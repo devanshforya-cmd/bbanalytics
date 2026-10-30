@@ -1,8 +1,11 @@
 import { createHash } from 'node:crypto';
+import { after } from 'next/server';
+import { deliverPushNotification } from '../push-server';
 import { validateAlertRules } from '../alert-rules';
+import { defaultOrderOptions, validateOrderOptions, requiredOrderOptionActions, assertActiveOrderOption } from '../order-options';
 import { DatabaseService } from './db-service';
 import { supabaseAdmin } from './supabase-server';
-import { getAssignedBrandCodes, getScope, hasAccess, isSuperAdmin } from '../permissions';
+import { canPerform, getAssignedBrandCodes, getScope, hasAccess, isSuperAdmin } from '../permissions';
 import type { Brand, User, SharedAccessLink } from '../types';
 import { WORKSPACE_COLLECTIONS, isWorkspaceCollection, type WorkspaceMutation, type WorkspaceSnapshot, type WorkspaceVersions } from './workspace-types';
 import { canReadWorkspaceRecord, canWriteWorkspaceRecord, recordBrandCodes, teamMemberIds, type StoredWorkspaceRecord } from './workspace-policy';
@@ -89,7 +92,8 @@ async function readMutationContext(mutation: WorkspaceMutation, prior: StoredWor
   };
   const [users, brands, stores, products] = await Promise.all([readStoredUsers(), readBrands(),
     related(['retailers', 'branches', 'distributors'], typeof storeId === 'string' ? [storeId] : []), related(['products'], productIds)]);
-  return { users, brands, records: [...(prior ? [prior] : []), ...stores, ...products] };
+  const config = ['orders', 'deliveryFailures'].includes(mutation.collection) ? await related(['workspaceConfig'], ['workspace']) : [];
+  return { users, brands, records: [...(prior ? [prior] : []), ...stores, ...products, ...config] };
 }
 
 export function visibleWorkspace(user: User, context: WorkspaceContext) {
@@ -135,8 +139,14 @@ export function validateWorkspaceMutation(value: unknown): asserts value is Work
   if (m.collection === 'orders' && m.data && (!Array.isArray(m.data.items) || !m.data.items.length || !m.data.customerName || !m.data.customerPhone || !m.data.brandCode || !m.data.orderNumber)) throw new WorkspaceError(400, 'An order needs a customer, brand, order number, and line items.');
   if (m.collection === 'orders' && m.data?.items.some((item: any) => !item || typeof item !== 'object' || !item.productName || !Number.isFinite(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0)) throw new WorkspaceError(400, 'Order line items need a product, positive quantity, and nonnegative price.');
   if (m.collection === 'tasks' && m.data && !String(m.data.title || '').trim()) throw new WorkspaceError(400, 'A task title is required.');
+  if (['retailers', 'branches'].includes(m.collection) && m.data) {
+    for (const field of ['city', 'area']) if (m.data[field] !== undefined && (typeof m.data[field] !== 'string' || m.data[field].length > 100 || /[\u0000-\u001f\u007f]/.test(m.data[field]))) throw new WorkspaceError(400, 'Store city and area must be text of at most 100 characters.');
+  }
   if (m.collection === 'products' && m.data && (!m.data.name || !m.data.sku || !m.data.brandCode)) throw new WorkspaceError(400, 'Product name, SKU, and brand are required.');
   if (m.collection === 'sharedAccessLinks' && m.data && !/^bb_[A-Za-z0-9_-]{43,128}$/.test(m.data.token || '')) throw new WorkspaceError(400, 'Regenerate this legacy sharing link before saving it.');
+  if (m.collection === 'workspaceConfig' && m.data?.orderOptions !== undefined) {
+    try { validateOrderOptions(m.data.orderOptions); } catch (error) { throw new WorkspaceError(400, error instanceof Error ? error.message : 'Invalid channel options.'); }
+  }
   if (m.collection === 'workspaceConfig' && m.data?.alertRules !== undefined) {
     try { validateAlertRules(m.data.alertRules); } catch { throw new WorkspaceError(400, 'Enter valid alert thresholds.'); }
   }
@@ -156,6 +166,22 @@ function prepareRecordData(user: User, mutation: WorkspaceMutation, prior: Store
   if (!mutation.data) return;
   mutation.data = { ...mutation.data, createdById: prior?.created_by || user.id };
   const data = mutation.data;
+  if (mutation.collection === 'workspaceConfig' && prior?.data.orderOptions && data.orderOptions === undefined) throw new WorkspaceError(400, 'Keep the configured channel lists when saving workspace settings.');
+  if (mutation.collection === 'workspaceConfig' && data.orderOptions !== undefined) {
+    if (mutation.id !== 'workspace') throw new WorkspaceError(400, 'Channel options belong to workspace settings.');
+    const before = prior?.data.orderOptions ? validateOrderOptions(prior.data.orderOptions) : defaultOrderOptions();
+    const after = validateOrderOptions(data.orderOptions);
+    if (requiredOrderOptionActions(before, after).some(action => !canPerform(user, 'settings', action))) throw new WorkspaceError(403, 'Your settings permissions do not allow this channel or delivery change.');
+    data.orderOptions = after;
+  }
+  if (mutation.collection === 'orders' || mutation.collection === 'deliveryFailures') {
+    const configured = context.records.find(row => row.collection === 'workspaceConfig' && row.id === 'workspace')?.data.orderOptions;
+    const options = configured ? validateOrderOptions(configured) : defaultOrderOptions();
+    try {
+      if (mutation.collection === 'orders') assertActiveOrderOption(options, 'channels', data.platform, prior?.data.platform);
+      if (mutation.collection === 'orders' || data.deliveryMethod) assertActiveOrderOption(options, 'deliveryMethods', data.deliveryMethod, prior?.data.deliveryMethod);
+    } catch (error) { throw new WorkspaceError(400, error instanceof Error ? error.message : 'Choose an active channel and delivery method.'); }
+  }
   if (mutation.collection === 'orders' && typeof data.orderNumber === 'string') data.orderNumber = data.orderNumber.trim().toUpperCase();
   if (mutation.collection === 'sharedAccessLinks') { data.accessCount = 0; delete data.lastAccessedAt; }
   const codes = recordBrandCodes({ collection: mutation.collection, id: mutation.id, data, created_by: prior?.created_by || user.id, version: prior?.version || 0 }, context.records);
@@ -173,6 +199,7 @@ async function notifyRecordChange(user: User, mutation: WorkspaceMutation, conte
   if (mutation.operation === 'delete') return;
   const recipients = new Set<string>();
   if (mutation.collection === 'tasks' && mutation.data?.assignedTo && mutation.data.assignedTo !== user.id) recipients.add(mutation.data.assignedTo);
+  if (mutation.collection === 'beatItems' && mutation.data?.officerId && mutation.data.officerId !== user.id) recipients.add(mutation.data.officerId);
   if (created && !isSuperAdmin(user) && ['cheques', 'documents', 'secondaryOrders', 'feedbackEntries', 'returns'].includes(mutation.collection)) {
     for (const admin of context.users) if (admin.active !== false && isSuperAdmin(admin)) recipients.add(admin.id);
   }
@@ -183,6 +210,10 @@ async function notifyRecordChange(user: User, mutation: WorkspaceMutation, conte
       priority: mutation.data?.priority || 'MEDIUM', read: false, entityType: mutation.collection, entityId: mutation.id, createdAt: new Date().toISOString() };
     const { error } = await supabaseAdmin.from('workspace_records').upsert({ collection: 'notifications', id, data, created_by: user.id, version: 1, last_mutation_id: mutation.mutationId }, { onConflict: 'collection,id', ignoreDuplicates: true });
     if (error) console.error('[Workspace] Notification could not be saved:', error.code);
+    else {
+      const target = context.users.find(entry => entry.id === recipient);
+      if (target) after(async () => { await deliverPushNotification(target, data); });
+    }
   }
 }
 

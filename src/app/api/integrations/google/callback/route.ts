@@ -1,3 +1,4 @@
+import { requestOrigin } from '@/lib/request-origin';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireFeatureAccess } from '@/lib/auth-guard';
 import { getAuthSessionSecret } from '@/lib/auth-session';
@@ -7,7 +8,7 @@ import { GOOGLE_STATE_COOKIE, verifyGoogleState } from '@/lib/google-workspace-s
 
 export async function GET(request: NextRequest) {
   const config = googleOAuthConfiguration();
-  if (!config.ready || `${request.nextUrl.origin}${request.nextUrl.pathname}` !== config.redirectUri) return NextResponse.json({ error: 'Invalid Google callback configuration.' }, { status: 400 });
+  if (!config.ready || `${requestOrigin(request)}${request.nextUrl.pathname}` !== config.redirectUri) return NextResponse.json({ error: 'Invalid Google callback configuration.' }, { status: 400 });
   const finish = (result: string) => {
     const response = NextResponse.redirect(new URL(`/settings?tab=google&google=${result}`, config.redirectUri!));
     response.cookies.set(GOOGLE_STATE_COOKIE, '', { path: '/api/integrations/google', maxAge: 0 });

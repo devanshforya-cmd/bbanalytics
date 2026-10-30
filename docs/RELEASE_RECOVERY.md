@@ -1,5 +1,17 @@
 # Recovery release operations
 
+## October 30 field and selling release
+
+The GPS/push/channel/area-selling update passed 112 automated tests, TypeScript and an optimized production build (33 existing lint warnings, no lint errors). Seventeen real HTTP/Supabase groups passed, including native GPS pairing, uploaded positions, stale protection, rotation, off-duty pause and revocation; push subscription ownership, public-key status, private-key secrecy, same-origin protection, endpoint validation and removal. The push storage tables have RLS enabled with no anonymous/authenticated grants. The production dependency audit reports zero known vulnerabilities. A browser check saved, renamed and removed a temporary channel, with confirmed sync.
+
+GPS now works across authenticated app routes with explicit sharing controls and a user-bound retry queue. Native background capture uses the paired Traccar Client receiver; see [GPS_SETUP.md](GPS_SETUP.md). Store/check-in coordinates are no longer invented when capture fails. Actual phone reception/background permissions remain a device test.
+
+Web Push runtime keys and protected subscription storage are configured. Profile controls register each device and request a test send. Persisted work notifications trigger delivery and deduplicated retries. Provider acceptance does not prove display; actual lock-screen display remains to be confirmed on the intended devices. See [PUSH_NOTIFICATIONS.md](PUSH_NOTIFICATIONS.md).
+
+Channels & Logistics supports persisted add/edit/delete/archive choices throughout order entry/imports/reports. Historical labels remain intact. Custom channels appear in ALL/channel reports; the existing D2C/B2B grouping is unchanged. Retailers and branches have deterministic area selling scores, explicit city/area editing, local product trends and evidence-based pitches; see [AREA_SELLING_RULES.md](AREA_SELLING_RULES.md). No AI provider or subscription is needed.
+
+Origin validation now uses the actual request Host rather than Next's internal URL hostname, so valid localhost/127.0.0.1 saves and callbacks work while cross-origin requests remain rejected.
+
 ## Architecture and security
 
 Supabase is the source of truth. Canonical camelCase business records are stored in `workspace_records` by collection and ID with a version, mutation ID and trusted creator. `users` and `brands` remain dedicated tables. GPS stores one current position per officer. Raw public/anonymous table privileges and the old permissive policies were removed; the server validates the app session, feature/action, brand and record scope before using its service credential.
@@ -42,9 +54,9 @@ Retain the previous deployment for code rollback, but do not reopen anonymous da
 
 ## Known limits
 
-- Foreground PWA GPS is supported. Mobile browsers can suspend background pages; continuous tracking needs a native client such as Traccar and an operated server. Free public map tiles do not offer a 100% uptime guarantee.
+- Foreground PWA GPS is supported. Mobile browsers can suspend background pages; background capture uses the paired native client described above. Physical phone setup is required. Free public map tiles do not offer a 100% uptime guarantee.
 - The sync response is a full permitted snapshot. Database reads are paginated internally, but very large workspaces will need response paging to stay within hosted response limits. Large-volume load and concurrent multi-device editing have not been soak-tested.
 - CSV imports support orders, returns and dispatches, one product per record, 50 rows and 300 KB per batch, within BS 2078–2085. Imports do not overwrite records. Batch rollback and Daily Counts imports are unavailable; the former fake success controls were removed.
 - Photos/documents require Google setup; uploads are capped at 4 MB. Existing embedded browser images are not automatically migrated.
-- Cron creates daily in-app alerts. Scheduled email, lock-screen push and offsite database backup storage are not configured. The endpoints report these limits instead of returning fake delivery success.
+- Cron creates daily in-app alerts and retries push for registered devices. Scheduled email and offsite database backup storage are not configured. Device notification display depends on browser/OS consent and device settings.
 - The build has existing lint warnings about React dependencies and ordinary image elements. Zero known build errors does not mean zero warnings or a guarantee of zero runtime faults.

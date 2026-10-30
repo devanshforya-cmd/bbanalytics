@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
-import { getTodayBs } from '@/lib/nepali-calendar';
+import { analyzeStoreArea, applicableStorePromotions } from '@/lib/area-selling';
+import StoreUpsellPanel from '@/components/stores/StoreUpsellPanel';
+import StoreAreaEditor from '@/components/stores/StoreAreaEditor';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toast } from '@/components/common/Toast';
 import {
@@ -36,16 +38,12 @@ import {
   ShieldCheck,
   ChevronRight,
   TrendingUp,
-  Target,
-  Award,
   BarChart3,
   Layers3,
   Activity,
-  Zap,
-  Tag,
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
-import { canPerform, getScope } from '@/lib/permissions';
+import { canPerform, getScope, hasAccess } from '@/lib/permissions';
 import {
   BeatItem,
   Cheque,
@@ -54,20 +52,32 @@ import {
   SecondaryOrder,
   StockCount,
   StoreHealthScore,
-  Promotion,
-  BrandCode,
 } from '@/lib/types';
 
 export default function StoreDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [, refresh] = useState(0);
+  useEffect(() => {
+    const update = () => refresh(value => value + 1);
+    window.addEventListener('bb-db-updated', update);
+    void db.syncWithSupabase().catch(() => {}).then(update);
+    return () => window.removeEventListener('bb-db-updated', update);
+  }, []);
   const storeIdParam = params?.id as string;
   const currentUser = db.getCurrentUser();
   const isOfficer = !canPerform(currentUser, 'stores', 'DELETE') && getScope(currentUser, 'stores') === 'OWN';
+  const canViewSelling = hasAccess(currentUser, 'beat_plans');
 
   const [activeTab, setActiveTab] = useState<
     'VISITS' | 'STOCK' | 'PHOTOS' | 'CHEQUES' | 'DOCS' | 'ORDERS' | 'ANALYTICS' | 'SALES_INTELLIGENCE' | 'NOTES'
-  >('VISITS');
+  >(searchParams.get('tab') === 'selling' && canViewSelling ? 'SALES_INTELLIGENCE' : 'VISITS');
+  const requestedSelling = searchParams.get('tab') === 'selling';
+  useEffect(() => {
+    if (requestedSelling && canViewSelling) setActiveTab('SALES_INTELLIGENCE');
+    if (!canViewSelling) setActiveTab(tab => tab === 'SALES_INTELLIGENCE' ? 'VISITS' : tab);
+  }, [requestedSelling, canViewSelling]);
 
   // Multi-Contact Modal State
   const [showAddContactModal, setShowAddContactModal] = useState(false);
@@ -79,10 +89,7 @@ export default function StoreDetailPage() {
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
 
   // Load store
-  const store = useMemo(() => {
-    if (!storeIdParam) return null;
-    return db.getUnifiedStoreById(storeIdParam);
-  }, [storeIdParam]);
+  const store = storeIdParam && [...db.getRetailers(), ...db.getBranches(), ...db.getDistributors()].some(row => row.id === storeIdParam) ? db.getUnifiedStoreById(storeIdParam) : null;
 
   // Load associated operational records
   const visits: BeatItem[] = useMemo(() => {
@@ -145,17 +152,10 @@ export default function StoreDetailPage() {
     return db.getStoreHealthScore(store.id);
   }, [store]);
 
-  // Fix 46: Smart Selling Assist Intelligence
-  const bestsellers = useMemo(() => {
-    if (!store) return [];
-    const lat = (store as any).coordinates?.lat || 27.7172;
-    const lng = (store as any).coordinates?.lng || 85.324;
-    return db.getAreaBestsellers(lat, lng, 3);
-  }, [store]);
-
-  const promotions = useMemo(() => {
-    return db.getPromotions(store?.type || 'GT');
-  }, [store]);
+  const areaStores = [...db.getRetailers().map(row => ({ ...row, entityType: 'RETAILER' as const })), ...db.getBranches().map(row => ({ ...row, entityType: 'BRANCH' as const }))];
+  const storeRecord = store?.type === 'BRANCH' ? db.getBranches().find(row => row.id === store.id) : store?.type === 'RETAILER' ? db.getRetailers().find(row => row.id === store.id) : undefined;
+  const areaAnalysis = analyzeStoreArea(store?.id || '', areaStores, canViewSelling ? db.getSecondaryOrders() : [], db.getProducts(), canViewSelling ? db.getStockCounts() : [], new Date(), store?.type === 'BRANCH' ? 'BRANCH' : 'RETAILER');
+  const promotions = canViewSelling && store ? applicableStorePromotions(db.getPromotions(), store.id, store.type === 'RETAILER' ? 'GT' : store.type === 'BRANCH' ? 'MT' : null) : [];
 
   const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const last30DaysOrders = secondaryOrders.filter((o) => {
@@ -171,44 +171,6 @@ export default function StoreDetailPage() {
     const d2 = new Date(c.cashDateAd).getTime();
     return sum + Math.max(0, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)));
   }, 0) / cashedCheques.length).toFixed(1) + ' Days' : 'N/A';
-
-  const [compositeSuccess, setCompositeSuccess] = useState(false);
-
-  const handleQuickCompositeOrder = () => {
-    if (!store || bestsellers.length === 0) return;
-    const top3 = bestsellers.slice(0, 3);
-    const currentUser = db.getCurrentUser();
-
-    db.createSecondaryOrder({
-      officerId: currentUser.id,
-      officerName: currentUser.fullName,
-      entityType: (store.type === 'BRANCH' ? 'BRANCH' : 'RETAILER') as 'BRANCH' | 'RETAILER',
-      entityId: store.id,
-      storeName: store.name,
-      contactName: store.primaryContactName,
-      contactPhone: store.primaryContactPhone,
-      orderDateAd: new Date().toISOString().split('T')[0],
-      orderDateBs: getTodayBs(),
-      items: top3.map((b) => ({
-        productId: b.productId,
-        productName: b.name,
-        brandCode: (db.getProducts().find((p) => p.id === b.productId)?.brandCode || db.getBrands('ACTIVE')[0]?.code || 'BRAND') as BrandCode,
-        cases: 2,
-        unitsPerCase: 24,
-        totalUnits: 48,
-        unitPrice: 350,
-        totalAmount: 16800,
-        appliedScheme: 'Recommended Area Bestseller Mix',
-      })),
-      totalAmount: 50400,
-      totalUnits: 144,
-      status: 'PENDING_DISPATCH',
-      notes: 'Auto-composed replenishment from Smart Selling Assist tool',
-    });
-
-    setCompositeSuccess(true);
-    setTimeout(() => setCompositeSuccess(false), 4000);
-  };
 
   if (!store) {
     return (
@@ -569,12 +531,14 @@ export default function StoreDetailPage() {
         </div>
       )}
 
+      {storeRecord && <StoreAreaEditor key={`${store.type}:${store.id}`} record={storeRecord} entityType={store.type === 'BRANCH' ? 'BRANCH' : 'RETAILER'} />}
+
       {/* Tabs Navigation */}
       <div className="flex overflow-x-auto gap-2 border-b border-slate-200 pb-2">
         {[
           { key: 'VISITS', label: 'Visit History', count: visits.length, icon: Clock },
           ...(!isOfficer ? [{ key: 'ANALYTICS', label: 'Analytics & Credit', icon: TrendingUp }] : []),
-          { key: 'SALES_INTELLIGENCE', label: 'Smart Selling Assist', icon: Sparkles },
+          ...(canViewSelling ? [{ key: 'SALES_INTELLIGENCE', label: 'Area Selling Assist', icon: TrendingUp }] : []),
           { key: 'STOCK', label: 'Stock Counts', count: stockCounts.length, icon: ClipboardList },
           { key: 'PHOTOS', label: 'Shelf Photos', count: shelfPhotos.length, icon: Camera },
           { key: 'CHEQUES', label: 'Cheques', count: cheques.length, icon: CreditCard },
@@ -804,152 +768,7 @@ export default function StoreDetailPage() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* TAB: SMART SELLING ASSIST (Fix 46) */}
-      {/* ========================================================================= */}
-      {activeTab === 'SALES_INTELLIGENCE' && (
-        <div className="space-y-6">
-          {/* Header Banner */}
-          <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-2xl p-5 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-400" />
-                <h3 className="font-bold text-base text-white">Smart Selling Assist Engine</h3>
-              </div>
-              <p className="text-xs text-slate-300 mt-1 max-w-xl">
-                Hyper-localized sales recommendations based on top-performing SKUs within 3km in Kathmandu Valley, distribution whitespace, and active trade promotions.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleQuickCompositeOrder}
-              className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-md flex items-center gap-2 self-start md:self-auto transition cursor-pointer"
-            >
-              <Zap className="w-4 h-4 fill-slate-950" />
-              <span>Book 1-Tap Replenishment Order</span>
-            </button>
-          </div>
-
-          {compositeSuccess && (
-            <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs font-semibold flex items-center gap-2 animate-fade-in">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span>
-                ✓ Composite replenishment order successfully queued into secondary orders table!
-              </span>
-            </div>
-          )}
-
-          {/* Area Bestsellers & Whitespace Gaps */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Area Bestsellers (Fix 46a) */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <Award className="w-4 h-4 text-amber-500" />
-                  Top Bestsellers in 3km Vicinity
-                </h4>
-                <span className="text-[11px] text-slate-500">Kathmandu Zone</span>
-              </div>
-
-              <div className="space-y-2.5">
-                {bestsellers.slice(0, 4).map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs hover:border-blue-300 transition"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs">
-                        #{idx + 1}
-                      </span>
-                      <div>
-                        <p className="font-bold text-slate-900">{item.name}</p>
-                        <span className="text-[10px] text-slate-500">{item.storeCount} nearby stores carry this</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-slate-900 block">{item.unitsMoved} units</span>
-                      <span className="text-[10px] text-emerald-600 font-semibold">Area Demand High</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Distribution Whitespace Gaps (Fix 46b) */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <Target className="w-4 h-4 text-rose-500" />
-                  Distribution Gaps (High Velocity Missing Here)
-                </h4>
-                <span className="text-[11px] text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                  Opportunity
-                </span>
-              </div>
-
-              <div className="space-y-2.5">
-                <div className="p-3 rounded-xl border border-rose-200 bg-rose-50/40 space-y-1 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900">Renée Madness pH Gloss</span>
-                    <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">
-                      Missing from Shelf
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600">
-                    Nearby modern marts sell 18+ units/week. Pitch starter carton with counter display stand.
-                  </p>
-                </div>
-
-                {db.getProducts()[1] && (
-                  <div className="p-3 rounded-xl border border-rose-200 bg-rose-50/40 space-y-1 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900">{db.getProducts()[1].name}</span>
-                      <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded">
-                        Out of Stock
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-600">
-                      High impulse purchase at cash counter. High margin retailer cut.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Active Trade Promotions (Fix 46d) */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                <Tag className="w-4 h-4 text-emerald-600" />
-                Active Schemes Applicable for this Account
-              </h4>
-              <span className="text-[11px] text-slate-500">{promotions.length} Schemes Active</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {promotions.map((promo) => (
-                <div
-                  key={promo.id}
-                  className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/30 text-xs space-y-1.5"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-emerald-950 text-sm">{promo.name}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 uppercase">
-                      {promo.offerType.replace(/_/g, ' ')}
-                    </span>
-                  </div>
-                  <p className="text-slate-600 text-[11px]">{promo.description}</p>
-                  <div className="text-[10px] text-slate-500 pt-1">
-                    Valid: {promo.validFromBs} – {promo.validToBs}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTab === 'SALES_INTELLIGENCE' && canViewSelling && <StoreUpsellPanel analysis={areaAnalysis} promotions={promotions} />}
 
       {/* TAB 2: STOCK COUNTS */}
       {activeTab === 'STOCK' && (

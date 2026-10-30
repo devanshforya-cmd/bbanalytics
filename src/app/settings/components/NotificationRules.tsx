@@ -36,7 +36,7 @@ export default function NotificationRules() {
         <div className="border-b border-slate-100 pb-3">
           <h3 className="text-base font-bold text-slate-900">Alert Tiers &amp; Smart Triggers</h3>
           <p className="text-xs text-slate-500">
-            Configure the daily in-app alerts delivered to Super Admin notification bells. Lock-screen push and email delivery are not configured.
+            Configure daily operations alerts for Super Admin notification bells and registered push devices. Each user enables push in their profile; email delivery is not configured.
           </p>
         </div>
 
@@ -45,10 +45,10 @@ export default function NotificationRules() {
           <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/40 space-y-2">
             <div className="flex items-center gap-2 text-rose-900 font-bold">
               <ShieldAlert className="w-4 h-4 text-rose-600" />
-              <span>🔴 Red Tier — Immediate Push to Lock Screen</span>
+              <span>🔴 Red Tier — Priority operations alerts</span>
             </div>
             <p className="text-slate-600">
-              Immediate escalation for: Cheque bounced, Customer karma &lt; 20 (blacklist risk), Urgent complaint without handler, Cheque overdue &ge; 3 days, GPS check-in override.
+              Daily checks cover bounced cheques, customer karma below 20, urgent unassigned complaints and the thresholds below. Task assignments also send a push when saved. Device settings control lock-screen display.
             </p>
           </div>
 

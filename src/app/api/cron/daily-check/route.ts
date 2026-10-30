@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
+import { flushUserPush } from '@/lib/push-server';
 import { openSystemWorkspace } from '@/lib/db/server-workspace';
 import { apiFailure } from '../../_workspace';
 import { requireCronAuth } from '@/lib/cron-auth';
@@ -73,6 +74,10 @@ export async function GET(request: Request) {
       const { error } = await supabaseAdmin.from('workspace_records').upsert(notifications, { onConflict: 'collection,id', ignoreDuplicates: true });
       if (error) return NextResponse.json({ success: false, error: 'Daily alerts could not be saved.' }, { status: 503 });
     }
+    after(async () => {
+      for (const user of db.getUsers().filter(user => user.active !== false)) await flushUserPush(user);
+      await supabaseAdmin.from('push_deliveries').delete().lt('updated_at', new Date(Date.now() - 7 * 86400000).toISOString());
+    });
 
     // --------------------------------------------------------------------------
     // B. WEEKLY REPORT EVALUATION (FRIDAYS OR FORCED)
