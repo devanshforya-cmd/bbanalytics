@@ -147,7 +147,7 @@ export default function DeliveryFailuresPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [productName, setProductName] = useState(products[0]?.name || '');
-  const [brandCode, setBrandCode] = useState<BrandCode>('FORYA');
+  const [brandCode, setBrandCode] = useState<BrandCode>('');
   const [deliveryMethod, setDeliveryMethod] = useState<string>(() => deliveryMethods[0]);
   useEffect(() => { const methods = activeOrderOptionNames(orderOptions, 'deliveryMethods'); if (!methods.includes(deliveryMethod)) setDeliveryMethod(methods[0]); }, [orderOptions, deliveryMethod]);
   const [reason, setReason] = useState<DeliveryFailure['reason']>('Call not received');
@@ -814,13 +814,7 @@ export default function DeliveryFailuresPage() {
                       {/* Brand */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <span
-                          className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                            df.brandCode === 'FORYA'
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : df.brandCode === 'RENEE'
-                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          }`}
+                          className="rounded px-2 py-0.5 text-[10px] font-bold bg-slate-50 text-slate-700 border border-slate-200"
                         >
                           {df.brandCode}
                         </span>
@@ -1101,6 +1095,7 @@ export default function DeliveryFailuresPage() {
                   onChange={(e) => setBrandCode(e.target.value as BrandCode)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-rose-500"
                 >
+                  <option value="">Select brand</option>
                   {getBrands('ACTIVE').map((b) => (
                     <option key={b.code} value={b.code}>
                       {b.name}
@@ -1143,7 +1138,7 @@ export default function DeliveryFailuresPage() {
               <label className="block font-bold text-slate-700 mb-1">Product SKU Description</label>
               <input
                 type="text"
-                placeholder="e.g. Forya Roll-On Peach 50ml, Renee Fab 5"
+                placeholder="Product names from the order"
                 value={productName}
                 onChange={(e) => setProductName(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-rose-500"

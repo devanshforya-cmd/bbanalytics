@@ -714,7 +714,7 @@ export default function InfluencerDirectoryPage() {
                   <label className="block font-bold text-slate-700 mb-1">Manager Notes</label>
                   <textarea
                     rows={2}
-                    placeholder="e.g. Recommended by Brand Manager for Forya serum launch..."
+                    placeholder="e.g. Recommended by the brand manager for a product launch..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     className="w-full p-3 rounded-xl border border-slate-300 text-slate-900 outline-none focus:border-blue-500"

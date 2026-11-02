@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { customerBrandMap } from '@/lib/product-catalog';
 import { db } from '@/lib/db/db-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
@@ -36,6 +37,12 @@ export default function CustomerInsightsPage() {
   const [activeTab, setActiveTab] = useState<TabCategory>('ALL');
   const [contactedMap, setContactedMap] = useState<Record<string, boolean>>({});
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => setRefreshKey(key => key + 1);
+    window.addEventListener('bb-db-updated', refresh);
+    return () => window.removeEventListener('bb-db-updated', refresh);
+  }, []);
 
   // Core dynamic datasets from db service
   const customers: Customer[] = useMemo(() => db.getCustomers(), [refreshKey]);
@@ -165,70 +172,7 @@ export default function CustomerInsightsPage() {
   // -------------------------------------------------------------
   // 2c. CROSS-BRAND BEHAVIOR MAP
   // -------------------------------------------------------------
-  const crossBrandMap = useMemo(() => {
-    let foryaOnly = 0;
-    let peeSafeOnly = 0;
-    let reneeOnly = 0;
-    let foryaPeeSafe = 0;
-    let foryaRenee = 0;
-    let peeSafeRenee = 0;
-    let allThree = 0;
-
-    customers.forEach((c) => {
-      const b = c.brandsPurchased || [];
-      const hasForya = b.includes('FORYA');
-      const hasPS = b.includes('PEE_SAFE') || (b as string[]).includes('FURR');
-      const hasRenee = b.includes('RENEE');
-
-      if (hasForya && hasPS && hasRenee) allThree++;
-      else if (hasForya && hasPS) foryaPeeSafe++;
-      else if (hasForya && hasRenee) foryaRenee++;
-      else if (hasPS && hasRenee) peeSafeRenee++;
-      else if (hasForya) foryaOnly++;
-      else if (hasPS) peeSafeOnly++;
-      else if (hasRenee) reneeOnly++;
-      else foryaOnly++;
-    });
-
-    const total = Math.max(1, customers.length);
-
-    // Cross-sell opportunities: High karma customers missing other brands
-    const crossSellOpportunities = customers
-      .filter((c) => (c.brandsPurchased || []).length < 3 && c.karmaScore >= 65)
-      .map((c) => {
-        const b = c.brandsPurchased || [];
-        const missing: string[] = [];
-        if (!b.includes('FORYA')) missing.push('Forya');
-        if (!b.includes('PEE_SAFE') && !(b as string[]).includes('FURR')) missing.push('Pee Safe & FURR');
-        if (!b.includes('RENEE')) missing.push('Renee');
-
-        return {
-          customer: c,
-          currentBrands: b.join(', '),
-          targetBrand: missing[0] || 'Forya',
-          suggestedPitch:
-            missing[0] === 'FORYA'
-              ? 'Introduce best-selling Forya catalog essentials'
-              : missing[0] === 'RENEE'
-              ? 'Recommend Renee beauty collection with introductory bundle'
-              : 'Include Pee Safe hygiene sample with next order',
-        };
-      })
-      .sort((a, b) => b.customer.karmaScore - a.customer.karmaScore)
-      .slice(0, 5);
-
-    return {
-      foryaOnly,
-      peeSafeOnly,
-      reneeOnly,
-      foryaPeeSafe,
-      foryaRenee,
-      peeSafeRenee,
-      allThree,
-      total,
-      crossSellOpportunities,
-    };
-  }, [customers]);
+  const crossBrandMap = customerBrandMap(customers, db.getBrands('ACTIVE'), db.getProducts());
 
   // -------------------------------------------------------------
   // 2d. REPEAT PURCHASE FUNNEL
@@ -420,10 +364,9 @@ export default function CustomerInsightsPage() {
         const lastDate = c.lastOrderDate || '2026-06-01';
         const daysInactive = Math.round((TODAY_MS - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24));
         const spend = customerSpendMap.get(norm(c.phone)) || c.totalOrders * 2100;
-        const brand = (c.brandsPurchased && c.brandsPurchased[0]) || 'FORYA';
+        const brand = c.brandsPurchased?.[0] || 'Not recorded';
 
-        let suggestedOffer = 'Free delivery + NPR 250 comeback voucher';
-        if (spend > 5000) suggestedOffer = 'Complimentary Forya Silk Mist + 20% privilege code';
+        const suggestedOffer = 'Review purchase history and choose an active offer from Promotions.';
 
         return {
           customer: c,
@@ -457,18 +400,18 @@ export default function CustomerInsightsPage() {
       const spend = customerSpendMap.get(norm(c.phone)) || c.totalOrders * 1900;
       cityMap[city].revenue += spend;
 
-      (c.brandsPurchased || ['FORYA']).forEach((b) => {
+      (c.brandsPurchased || []).forEach((b) => {
         cityMap[city].brands[b] = (cityMap[city].brands[b] || 0) + 1;
       });
     });
 
     const rows = Object.entries(cityMap).map(([city, d]) => {
-      let topBrand = 'Forya';
+      let topBrand = 'Not recorded';
       let maxB = 0;
       Object.entries(d.brands).forEach(([b, cnt]) => {
         if (cnt > maxB) {
           maxB = cnt;
-          topBrand = b === 'PEE_SAFE' ? 'Pee Safe & FURR' : b === 'RENEE' ? 'Renee' : 'Forya';
+          topBrand = db.getBrands().find(brand => brand.code === b)?.name || b;
         }
       });
 
@@ -703,7 +646,7 @@ export default function CustomerInsightsPage() {
             <Layers className="h-4 w-4 text-purple-600" />
           </div>
           <div className="mt-2 text-2xl font-black text-purple-950">
-            {crossBrandMap.allThree + crossBrandMap.foryaPeeSafe + crossBrandMap.foryaRenee + crossBrandMap.peeSafeRenee}
+            {crossBrandMap.multiBrand}
           </div>
           <div className="mt-1 text-[11px] text-purple-700">Multi-brand household buyers</div>
         </div>

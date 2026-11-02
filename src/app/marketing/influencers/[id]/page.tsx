@@ -62,7 +62,7 @@ export default function InfluencerDetailPage() {
   const [contentUrl, setContentUrl] = useState('');
   const [contentPlatform, setContentPlatform] = useState('Instagram');
   const [contentType, setContentType] = useState<InfluencerContentType>('REEL');
-  const [contentBrand, setContentBrand] = useState<BrandCode>('FORYA');
+  const [contentBrand, setContentBrand] = useState<BrandCode>('');
   const [contentProduct, setContentProduct] = useState('');
   const [contentDateAd, setContentDateAd] = useState(getTodayAd());
   const [contentDateBs, setContentDateBs] = useState(getTodayBs());
@@ -116,6 +116,7 @@ export default function InfluencerDetailPage() {
 
   const handleSaveContentLink = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!db.getBrands('ACTIVE').some(brand => brand.code === contentBrand)) { toast.error('Select an active brand.'); return; }
     if (!contentUrl.trim()) {
       toast.error('Validation Error', 'Content URL is required.');
       return;
@@ -515,6 +516,7 @@ export default function InfluencerDetailPage() {
                     onChange={(e) => setContentBrand(e.target.value as BrandCode)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs outline-none"
                   >
+                    <option value="">Select brand</option>
                     {getBrands('ACTIVE').map((b) => (
                       <option key={b.code} value={b.code}>
                         {b.name}

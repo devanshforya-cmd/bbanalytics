@@ -107,8 +107,6 @@ export const DEFAULT_STAFF_USERS: User[] = [
   DEFAULT_SUPER_ADMIN,
 ];
 
-const DEFAULT_BRANDS: Brand[] = [];
-
 import {
   User,
   Brand,
@@ -190,7 +188,7 @@ export interface OrderRealtimeEvent {
 export class DatabaseService {
   private users: User[] = [...DEFAULT_STAFF_USERS];
   private currentUser: User = DEFAULT_SUPER_ADMIN;
-  private brands: Brand[] = DEFAULT_BRANDS;
+  private brands: Brand[] = [];
   private products: Product[] = [];
   private combos: Combo[] = [];
   private secondaryOrders: SecondaryOrder[] = [];
@@ -390,10 +388,7 @@ export class DatabaseService {
     if (user) void syncManager.forceSyncNow();
   }
 
-  /**
-   * Ensures baseline seeds exist for brands, field staff GPS locations, stores, and beat items.
-   * Prevents blank screens, missing map markers, and uninitialized states.
-   */
+  /** Business catalogues start empty and are loaded from the workspace. */
   public ensureBaselineSeeds() {
     // Clean slate: brands and staff are configured by the administrator in Settings
     if (!this.brands) {
@@ -4078,9 +4073,6 @@ export class DatabaseService {
           code: b.code,
           count: filteredOrders.filter((o) => o.brandCode === b.code).length,
         })),
-        foryaOrders: filteredOrders.filter((o) => o.brandCode === 'FORYA').length,
-        peeSafeOrders: filteredOrders.filter((o) => o.brandCode === 'PEE_SAFE').length,
-        reneeOrders: filteredOrders.filter((o) => o.brandCode === 'RENEE').length,
         deliveryFailures: filteredFailures.length,
         deliveryFailuresReason: 'Call not received',
         returnsCount: filteredReturns.length,

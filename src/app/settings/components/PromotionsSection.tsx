@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { toast } from '@/components/common/Toast';
 import { db } from '@/lib/db/db-service';
 import { Promotion, BrandCode } from '@/lib/types';
 import { getTodayAd, getTodayBs, adToBs } from '@/lib/nepali-calendar';
@@ -21,7 +22,7 @@ export default function PromotionsSection() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [name, setName] = useState('');
-  const [brandCode, setBrandCode] = useState<BrandCode>('FORYA');
+  const [brandCode, setBrandCode] = useState<BrandCode>('');
   const [offerType, setOfferType] = useState<Promotion['offerType']>('BUY_X_GET_Y');
   const [productNames, setProductNames] = useState('');
   const [validFromBs, setValidFromBs] = useState(() => getTodayBs());
@@ -47,7 +48,7 @@ export default function PromotionsSection() {
 
   const handleCreatePromo = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !db.getBrands('ACTIVE').some(brand => brand.code === brandCode)) { toast.error('Enter a name and select an active brand.'); return; }
 
     const items = productNames
       .split(',')
@@ -58,7 +59,7 @@ export default function PromotionsSection() {
       name: name.trim(),
       brandCode,
       offerType,
-      productIds: ['prod_gen_' + Date.now()],
+      productIds: [],
       productNames: items.length > 0 ? items : ['General Brand Assortment'],
       validFromBs,
       validToBs,
@@ -214,9 +215,8 @@ export default function PromotionsSection() {
                     onChange={(e) => setBrandCode(e.target.value as BrandCode)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-brand-blue"
                   >
-                    <option value="FORYA">FORYA</option>
-                    <option value="PEE_SAFE">Pee Safe</option>
-                    <option value="RENEE">Renée Cosmetics</option>
+                    <option value="">Select brand</option>
+                    {db.getBrands('ACTIVE').map(brand => <option key={brand.id} value={brand.code}>{brand.name}</option>)}
                   </select>
                 </div>
                 <div>

@@ -1,3 +1,4 @@
+import { isSellableCombo } from './product-catalog';
 import { BrandCode, Product, Combo, Brand } from './types';
 import { db } from './db/db-service';
 import { adToBs, getTodayAd, getTodayBs } from './nepali-calendar';
@@ -197,7 +198,7 @@ export function extractSingleOrder(
   } else if (
     headerMatch &&
     headerMatch[1].trim().length > 2 &&
-    !/brand bucket|order|sales|support|info|forya|admin/i.test(headerMatch[1])
+    !/brand bucket|order|sales|support|info|admin/i.test(headerMatch[1])
   ) {
     extractedName = headerMatch[1].trim();
     nameConfidence = 'AUTO';
@@ -287,7 +288,7 @@ export function extractSingleOrder(
   let detectedComboRaw = '';
 
   // Step 6a: Check Combos first
-  const activeCombos = combos.filter((c) => c.active !== false && c.isActive !== false);
+  const activeCombos = combos.filter((c) => isSellableCombo(c, products));
   const matchedComboIds: string[] = [];
 
   for (const combo of activeCombos) {
@@ -566,7 +567,7 @@ export function extractOrdersDynamically(
 export function extractOrderFromChat(rawText: string): ExtractedOrderResult {
   const { db } = require('./db/db-service');
   const products = db.getProducts().filter((p: Product) => p.active !== false);
-  const combos = db.getCombos().filter((c: Combo) => c.active !== false && c.isActive !== false);
+  const combos = db.getCombos().filter((c: Combo) => isSellableCombo(c, products));
   const brands = db.getBrands().filter((b: Brand) => b.status !== 'ARCHIVED');
 
   return extractSingleOrder(rawText, { products, combos, brands });

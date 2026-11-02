@@ -28,7 +28,7 @@ export default function DispatchPage() {
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const [dispatches, setDispatches] = useState<Dispatch[]>(db.getDispatches());
   const unifiedStores = db.getStoresUnified();
-  const products = db.getProducts();
+  const products = db.getProducts().filter(product => product.active !== false);
 
   // Form State
   const [showLogModal, setShowLogModal] = useState(false);
@@ -79,10 +79,11 @@ export default function DispatchPage() {
     guardedSubmit(async () => {
       const items: DispatchItem[] = selectedItems.map((si) => {
         const p = products.find((prod) => prod.id === si.productId);
+        if (!p) throw new Error('Choose an active product before dispatching.');
         return {
           productId: si.productId,
           productName: p?.name || 'Product',
-          brandCode: p?.brandCode || 'FORYA',
+          brandCode: p.brandCode,
           quantity: si.quantity,
         };
       });

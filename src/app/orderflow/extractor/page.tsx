@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { isSellableCombo } from '@/lib/product-catalog';
 import { db } from '@/lib/db/db-service';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { activeOrderOptionNames, assertActiveOrderOption } from '@/lib/order-options';
@@ -59,10 +60,6 @@ export interface ExtractionHistoryItem {
 }
 
 const BRAND_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  FORYA: { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
-  PEE_SAFE: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  RENEE: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-  MAMAEARTH: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
   ALL: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
 };
 
@@ -139,7 +136,7 @@ export default function ExtractorPage() {
     if (!chatText.trim()) return;
 
     const products = db.getProducts().filter((p) => p.active !== false);
-    const combos = db.getCombos().filter((c) => c.active !== false && c.isActive !== false);
+    const combos = db.getCombos().filter((c) => isSellableCombo(c, products));
     const brands = db.getBrands('ACTIVE');
 
     const results = extractOrdersDynamically(chatText, {
@@ -588,7 +585,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
             rows={6}
             value={chatText}
             onChange={(e) => setChatText(e.target.value)}
-            placeholder="Paste WhatsApp chat message(s) here. E.g.:&#10;[11:32 AM] Sita: I want 2 bottles of Forya hair serum. Phone 9847890123...&#10;---&#10;Next order..."
+            placeholder="Paste WhatsApp chat message(s) here. E.g.:&#10;[11:32 AM] Sita: I want 2 bottles of the selected product. Phone 9847890123...&#10;---&#10;Next order..."
             className="w-full rounded-xl border border-slate-200 p-4 font-mono text-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
           />
 
@@ -673,7 +670,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
             <div className="space-y-4">
               {extractedOrders.map((ord, ordIdx) => {
                 const isSelected = selectedOrderIds.has(ord.id);
-                const colors = BRAND_COLORS[ord.brandCode.value] || BRAND_COLORS.FORYA;
+                const colors = BRAND_COLORS[ord.brandCode.value] || BRAND_COLORS.ALL;
 
                 return (
                   <div

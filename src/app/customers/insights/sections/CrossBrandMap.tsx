@@ -14,13 +14,7 @@ export interface CrossSellOpportunity {
 
 export interface CrossBrandMapData {
   total: number;
-  foryaOnly: number;
-  peeSafeOnly: number;
-  reneeOnly: number;
-  foryaPeeSafe: number;
-  foryaRenee: number;
-  peeSafeRenee: number;
-  allThree: number;
+  segments: { label: string; count: number }[];
   crossSellOpportunities: CrossSellOpportunity[];
 }
 
@@ -67,27 +61,19 @@ export default function CrossBrandMap({
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Tracks customer basket overlap across Forya, Pee Safe & FURR, and Renee to unlock cross-sell potential.
+              Tracks recorded customer purchases across your configured brand portfolio.
             </p>
           </div>
         </div>
 
         {/* Matrix Distribution Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-center">
-          {[
-            { label: 'Forya Only', count: crossBrandMap.foryaOnly, bg: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-            { label: 'Pee Safe Only', count: crossBrandMap.peeSafeOnly, bg: 'bg-purple-50 text-purple-800 border-purple-200' },
-            { label: 'Renee Only', count: crossBrandMap.reneeOnly, bg: 'bg-rose-50 text-rose-800 border-rose-200' },
-            { label: 'Forya + Pee Safe', count: crossBrandMap.foryaPeeSafe, bg: 'bg-blue-50 text-blue-800 border-blue-200' },
-            { label: 'Forya + Renee', count: crossBrandMap.foryaRenee, bg: 'bg-amber-50 text-amber-800 border-amber-200' },
-            { label: 'Pee Safe + Renee', count: crossBrandMap.peeSafeRenee, bg: 'bg-indigo-50 text-indigo-800 border-indigo-200' },
-            { label: 'All 3 Brands', count: crossBrandMap.allThree, bg: 'bg-emerald-100 text-emerald-950 border-emerald-300 font-black' },
-          ].map((m) => (
-            <div key={m.label} className={`rounded-xl border p-3 ${m.bg} space-y-1`}>
+          {crossBrandMap.segments.map((m) => (
+            <div key={m.label} className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-blue-900 space-y-1">
               <div className="text-[10px] font-bold uppercase tracking-wider">{m.label}</div>
               <div className="text-xl font-black">{m.count}</div>
               <div className="text-[10px] opacity-80">
-                {Math.round((m.count / crossBrandMap.total) * 100)}% of total
+                {Math.round((m.count / Math.max(1, crossBrandMap.total)) * 100)}% of total
               </div>
             </div>
           ))}

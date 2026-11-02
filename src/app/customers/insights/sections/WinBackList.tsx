@@ -93,7 +93,7 @@ export default function WinBackList({
                     </td>
                     <td className="py-3 px-3">
                       <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
-                        {item.brand === 'PEE_SAFE' ? 'Pee Safe & FURR' : item.brand}
+                        {item.brand}
                       </span>
                     </td>
                     <td className="py-3 px-3 text-emerald-800 font-semibold">

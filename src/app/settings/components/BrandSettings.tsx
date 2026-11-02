@@ -70,7 +70,7 @@ export default function BrandSettings() {
   const handleNameChange = (val: string) => {
     setBrandName(val);
     if (!codeManuallyEdited && !editingBrand) {
-      // Auto-generate code: "Forya" -> "FORYA", "Pee Safe" -> "PEE_SAFE"
+      // Auto-generate code: a brand name to a stable uppercase code
       const generated = val
         .trim()
         .toUpperCase()
@@ -425,7 +425,7 @@ export default function BrandSettings() {
                   required
                   value={brandName}
                   onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="e.g. Forya"
+                  placeholder="Brand name"
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -442,7 +442,7 @@ export default function BrandSettings() {
                     setCodeManuallyEdited(true);
                     setBrandCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''));
                   }}
-                  placeholder="e.g. FORYA"
+                  placeholder="BRAND_CODE"
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 uppercase font-mono text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
