@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
+import { matchingCatalogCombo } from '@/lib/product-catalog';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { activeOrderOptionNames, assertActiveOrderOption } from '@/lib/order-options';
 import { BrandCode, OrderPlatform, DeliveryMethod, InfluencerPlatformType } from '@/lib/types';
@@ -71,21 +72,24 @@ export default function ManualOrderEntryPage() {
   const assignedBrands = currentUser.assignedBrands || [];
   const hasBrandRestrictions = Boolean(assignedBrands.length > 0 && !assignedBrands.includes('ALL'));
 
-  const products = db.getProducts();
+  const products = db.getProducts().filter(product => product.active !== false);
+  const combos = db.getCombos();
   const allActiveBrands = db.getBrands('ACTIVE');
   const activeBrands = useMemo(() => {
     if (hasBrandRestrictions) {
       return allActiveBrands.filter(
         (b) =>
-          assignedBrands.includes(b.code) ||
-          (assignedBrands.includes('PEE_SAFE') && b.code === 'FURR')
+          assignedBrands.includes(b.code)
       );
     }
     return allActiveBrands;
   }, [allActiveBrands, hasBrandRestrictions, assignedBrands]);
 
   // Form State
-  const [brandCode, setBrandCode] = useState<BrandCode>(activeBrands[0]?.code || 'FORYA');
+  const [brandCode, setBrandCode] = useState<BrandCode>(activeBrands[0]?.code || '');
+  useEffect(() => {
+    if (!activeBrands.some(brand => brand.code === brandCode)) setBrandCode(activeBrands[0]?.code || '');
+  }, [activeBrands, brandCode]);
   const [orderDateAd, setOrderDateAd] = useState(getTodayAd());
   const [orderDateBs, setOrderDateBs] = useState(getTodayBs());
 
@@ -260,74 +264,29 @@ export default function ManualOrderEntryPage() {
 
   // 10a: Combo Detection
   const [comboApplied, setComboApplied] = useState<{
+    id: string;
     name: string;
     comboPrice: number;
     originalPrice: number;
     savings: number;
   } | null>(null);
 
-  const detectedCombo = useMemo(() => {
-    const itemNames = orderItems
-      .map((it) => products.find((p) => p.id === it.productId)?.name.toLowerCase() || '')
-      .filter(Boolean);
-
-    // Forya Refresh & Glow Duo (Peach Roll-On + Body Wash)
-    if (brandCode === 'FORYA') {
-      const hasPeach = itemNames.some((n) => n.includes('peach') || n.includes('roll-on'));
-      const hasBodyWash = itemNames.some((n) => n.includes('body wash') || n.includes('wash'));
-      if (hasPeach && hasBodyWash) {
-        return {
-          name: 'Forya Refresh & Glow Duo',
-          originalPrice: 1400,
-          comboPrice: 1199,
-          savings: 201,
-        };
-      }
-    }
-
-    // Pee Safe Daily Care Essentials (Toilet Seat Spray + Panty Liners)
-    if (brandCode === 'PEE_SAFE') {
-      const hasSpray = itemNames.some((n) => n.includes('toilet') || n.includes('spray'));
-      const hasLiners = itemNames.some((n) => n.includes('liner') || n.includes('cotton'));
-      if (hasSpray && hasLiners) {
-        return {
-          name: 'Pee Safe Daily Care Essentials',
-          originalPrice: 750,
-          comboPrice: 650,
-          savings: 100,
-        };
-      }
-    }
-
-    // Renee Glam Starter Kit (Madness Lipstick + Kohl Kajal)
-    if (brandCode === 'RENEE') {
-      const hasLipstick = itemNames.some((n) => n.includes('madness') || n.includes('lipstick'));
-      const hasKajal = itemNames.some((n) => n.includes('kajal') || n.includes('kohl'));
-      if (hasLipstick && hasKajal) {
-        return {
-          name: 'Renee Glam Starter Kit',
-          originalPrice: 1400,
-          comboPrice: 1199,
-          savings: 201,
-        };
-      }
-    }
-
-    return null;
-  }, [orderItems, brandCode, products]);
+  const detectedCombo = useMemo(() => matchingCatalogCombo(combos, products, orderItems, brandCode), [combos, products, orderItems, brandCode]);
+  const appliedCombo = comboApplied && detectedCombo && comboApplied.id === detectedCombo.id
+    && comboApplied.comboPrice === detectedCombo.comboPrice && comboApplied.originalPrice === detectedCombo.originalPrice ? detectedCombo : null;
 
   // Total amount calculation
   const totalAmount = useMemo(() => {
     if (isMarketing) return 0;
-    if (comboApplied && detectedCombo && comboApplied.name === detectedCombo.name) {
-      return comboApplied.comboPrice;
+    if (appliedCombo) {
+      return appliedCombo.comboPrice;
     }
     return orderItems.reduce((sum, item) => {
       const prod = products.find((p) => p.id === item.productId);
       const price = item.overridePrice ?? (prod?.mrp || 0);
       return sum + price * (item.quantity || 1);
     }, 0);
-  }, [orderItems, products, comboApplied, detectedCombo, isMarketing]);
+  }, [orderItems, products, appliedCombo, isMarketing]);
 
   const handleApplyCombo = () => {
     if (detectedCombo) {
@@ -387,7 +346,10 @@ export default function ManualOrderEntryPage() {
       assertActiveOrderOption(db.getOrderOptions(), 'deliveryMethods', deliveryMethod);
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Choose an active channel and delivery method.'); return; }
     guardedSubmit(async () => {
-      const items = orderItems.map((item) => {
+      const items = appliedCombo && !isMarketing ? [{
+        productId: appliedCombo.id, productName: appliedCombo.name, brandCode,
+        quantity: 1, unitPrice: appliedCombo.comboPrice, totalPrice: appliedCombo.comboPrice,
+      }] : orderItems.map((item) => {
         const p = products.find((prod) => prod.id === item.productId);
         const unitPrice = item.overridePrice ?? (p?.mrp || 0);
         return {
@@ -450,7 +412,7 @@ export default function ManualOrderEntryPage() {
         isMarketing,
         influencerId: finalInfluencerId || undefined,
         influencerHandle: influencerHandle.trim() || undefined,
-        notes: `${remarks ? remarks + '. ' : ''}${comboApplied ? `Combo: ${comboApplied.name}. ` : ''}${
+        notes: `${remarks ? remarks + '. ' : ''}${appliedCombo ? `Combo: ${appliedCombo.name}. ` : ''}${
           isMarketing ? `[MARKETING SEND to ${influencerName} (${influencerHandle})] ${influencerNotes}` : ''
         }`,
         items,
@@ -693,10 +655,10 @@ export default function ManualOrderEntryPage() {
               </div>
             </div>
 
-            {comboApplied && (
+            {appliedCombo && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-[11px] text-amber-900 flex items-center justify-between">
-                <span>Promotional Combo Applied: <strong>{comboApplied.name}</strong></span>
-                <span className="font-bold text-amber-800">Saves NPR {comboApplied.savings.toLocaleString()}</span>
+                <span>Promotional Combo Applied: <strong>{appliedCombo.name}</strong></span>
+                <span className="font-bold text-amber-800">Saves NPR {appliedCombo.savings.toLocaleString()}</span>
               </div>
             )}
 
@@ -981,7 +943,7 @@ export default function ManualOrderEntryPage() {
                             name: p.name,
                             group: p.brandCode,
                             price: p.mrp,
-                            context: p.brandCode === 'FORYA' ? 'High Velocity SKU' : undefined,
+                            context: undefined,
                           }))}
                           value={item.productId}
                           onChange={(val) => handleUpdateItem(idx, 'productId', val)}
@@ -1044,7 +1006,7 @@ export default function ManualOrderEntryPage() {
               </div>
 
               {/* 10a: Combo Detection Banner */}
-              {detectedCombo && !comboApplied && (
+              {detectedCombo && !appliedCombo && (
                 <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 shadow-xs animate-in fade-in">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-amber-600 shrink-0" />
@@ -1064,11 +1026,11 @@ export default function ManualOrderEntryPage() {
                 </div>
               )}
 
-              {comboApplied && (
+              {appliedCombo && (
                 <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-2.5 text-emerald-900 text-xs flex items-center justify-between">
                   <span>
-                    ✓ Combo pricing applied: <strong>{comboApplied.name}</strong> (NPR{' '}
-                    {comboApplied.comboPrice.toLocaleString()})
+                    ✓ Combo pricing applied: <strong>{appliedCombo.name}</strong> (NPR{' '}
+                    {appliedCombo.comboPrice.toLocaleString()})
                   </span>
                   <button
                     type="button"

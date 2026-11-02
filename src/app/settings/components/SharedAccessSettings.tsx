@@ -97,7 +97,7 @@ export default function SharedAccessSettings() {
       expiresAt = expDate.toISOString();
     }
 
-    const brandFilter: BrandCode[] = brandScope === 'ALL' ? ['FORYA', 'PEESAFE', 'RENEE'] : brandScope;
+    const brandFilter: BrandCode[] = brandScope === 'ALL' ? db.getBrands('ACTIVE').map(brand => brand.code) : brandScope;
     const currentUser = db.getCurrentUser();
 
     setSaving(true);
@@ -452,7 +452,7 @@ export default function SharedAccessSettings() {
                     >
                       All Portfolio Brands
                     </button>
-                    {(['FORYA', 'PEESAFE', 'RENEE'] as BrandCode[]).map((b) => {
+                    {db.getBrands('ACTIVE').map(brand => brand.code).map((b) => {
                       const isSelected = brandScope !== 'ALL' && brandScope.includes(b);
                       return (
                         <button

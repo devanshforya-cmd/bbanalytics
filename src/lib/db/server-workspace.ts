@@ -91,9 +91,11 @@ async function readMutationContext(mutation: WorkspaceMutation, prior: StoredWor
     return (data || []) as StoredWorkspaceRecord[];
   };
   const [users, brands, stores, products] = await Promise.all([readStoredUsers(), readBrands(),
-    related(['retailers', 'branches', 'distributors'], typeof storeId === 'string' ? [storeId] : []), related(['products'], productIds)]);
+    related(['retailers', 'branches', 'distributors'], typeof storeId === 'string' ? [storeId] : []), related(['products', 'combos'], productIds)]);
   const config = ['orders', 'deliveryFailures'].includes(mutation.collection) ? await related(['workspaceConfig'], ['workspace']) : [];
-  return { users, brands, records: [...(prior ? [prior] : []), ...stores, ...products, ...config] };
+  const componentIds = products.filter(row => row.collection === 'combos').flatMap(row => (row.data.items || []).map((item: any) => item.productId)).filter((id: unknown): id is string => typeof id === 'string');
+  const components = await related(['products'], componentIds);
+  return { users, brands, records: [...(prior ? [prior] : []), ...stores, ...products, ...components, ...config] };
 }
 
 export function visibleWorkspace(user: User, context: WorkspaceContext) {
@@ -185,7 +187,16 @@ function prepareRecordData(user: User, mutation: WorkspaceMutation, prior: Store
   if (mutation.collection === 'orders' && typeof data.orderNumber === 'string') data.orderNumber = data.orderNumber.trim().toUpperCase();
   if (mutation.collection === 'sharedAccessLinks') { data.accessCount = 0; delete data.lastAccessedAt; }
   const codes = recordBrandCodes({ collection: mutation.collection, id: mutation.id, data, created_by: prior?.created_by || user.id, version: prior?.version || 0 }, context.records);
-  if (codes.some((code) => code !== 'ALL' && !context.brands.some((brand) => brand.code.toUpperCase() === code))) throw new WorkspaceError(400, 'Configure the record’s brand in Settings before saving it.');
+  const previousCodes = prior ? recordBrandCodes(prior, context.records) : [];
+  if (codes.some((code) => code !== 'ALL' && !previousCodes.includes(code) && !context.brands.some((brand) => brand.code.toUpperCase() === code))) throw new WorkspaceError(400, 'Configure the record’s brand in Settings before saving it.');
+  if (['orders', 'secondaryOrders', 'dispatches'].includes(mutation.collection)) {
+    for (const item of data.items || []) {
+      if (prior?.data.items?.some((previous: any) => previous.productId === item.productId && JSON.stringify(previous) === JSON.stringify(item))) continue;
+      const product = context.records.find(row => ['products', 'combos'].includes(row.collection) && row.id === item.productId);
+      if (!product || product.data.active === false || product.data.isActive === false) throw new WorkspaceError(400, 'Choose an active product from the saved catalogue.');
+      if (product.collection === 'combos' && product.data.items?.some((component: any) => !context.records.some(row => row.collection === 'products' && row.id === component.productId && row.data.active !== false))) throw new WorkspaceError(400, 'This bundle includes an archived or missing product. Choose an active bundle.');
+    }
+  }
   for (const [idKey, nameKey] of [['officerId', 'officerName'], ['assignedOfficerId', 'assignedOfficerName'], ['assignedTo', 'assignedToName']]) {
     if (!data[idKey]) continue;
     const staff = context.users.find((entry) => entry.id === data[idKey]);
@@ -235,7 +246,13 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
   if ((prior?.version || 0) !== mutation.expectedVersion) throw new WorkspaceError(409, 'This record changed on another device. Review both versions before retrying.', prior?.version || 0);
   const version = (prior?.version || 0) + 1;
   let result;
-  if (mutation.operation === 'delete') {
+  if (mutation.operation === 'delete' && mutation.collection === 'products') {
+    const deletion = await supabaseAdmin.rpc('delete_workspace_product', { p_id: mutation.id, p_expected_version: mutation.expectedVersion });
+    if (deletion.error?.code === '23503') throw new WorkspaceError(409, 'This product has linked records or stock. Archive it instead.');
+    if (deletion.error?.code === '40001') throw new WorkspaceError(409, 'This product changed on another device. Refresh before deleting it.');
+    if (deletion.error) throw new WorkspaceError(503, 'The product was not deleted. Refresh and try again.');
+    result = { data: [{ id: mutation.id }], error: null };
+  } else if (mutation.operation === 'delete') {
     result = await supabaseAdmin.from('workspace_records').delete().eq('collection', mutation.collection).eq('id', mutation.id).eq('version', mutation.expectedVersion).select('id');
   } else {
     const payload = { data: mutation.data, version, last_mutation_id: mutation.mutationId, updated_at: new Date().toISOString() };
@@ -244,6 +261,7 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
       : await supabaseAdmin.from('workspace_records').insert({ ...payload, collection: mutation.collection, id: mutation.id, created_by: user.id }).select('id');
   }
   if (result.error?.code === '23505' || (!result.error && !result.data?.length)) throw new WorkspaceError(409, 'This record changed on another device. Refresh and review your pending change.');
+  if (result.error?.code === '23503') throw new WorkspaceError(409, 'A referenced product no longer exists. Refresh the catalogue before saving.');
   if (result.error) { console.error('[Workspace] Save failed:', result.error.code); throw new WorkspaceError(503, 'The record was not saved. Your pending change is safe on this device.'); }
   context.records = context.records.filter((r) => r.collection !== mutation.collection || r.id !== mutation.id);
   if (mutation.operation !== 'delete') context.records.push({ ...candidate, version, last_mutation_id: mutation.mutationId });
@@ -264,6 +282,7 @@ export async function openServerWorkspace(user: User) {
   return { db, async commit() {
     const pending: WorkspaceMutation[] = [];
     for (const mutation of db.getPendingMutations()) {
+      if (mutation.collection === 'products' && mutation.operation === 'delete') throw new WorkspaceError(400, 'Delete products through the catalogue so linked records and stock are checked.');
       if (mutation.collection === 'activityLogs' || mutation.collection === 'staffLiveLocations') continue;
       if (mutation.collection === 'notifications' && !isSuperAdmin(user) && mutation.data?.userId !== user.id) continue;
       if (mutation.collection === 'notifications' && !isSuperAdmin(user) && mutation.expectedVersion === 0) continue;
@@ -280,6 +299,7 @@ export async function openServerWorkspace(user: User) {
     if (!pending.length) return;
     const { error } = await supabaseAdmin.rpc('commit_workspace_mutations', { p_mutations: pending.map((mutation) => ({ ...mutation, createdBy: user.id })) });
     if (error?.code === '40001' || error?.code === '23505') throw new WorkspaceError(409, 'A record changed on another device. Refresh before retrying this operation.');
+    if (error?.code === '23503') throw new WorkspaceError(409, 'A referenced product no longer exists. Refresh the catalogue before saving.');
     if (error) { console.error('[Workspace] Transaction failed:', error.code); throw new WorkspaceError(503, 'The operation was not saved. Please retry.'); }
     for (const mutation of pending) {
       await appendAudit(user, mutation, mutation.expectedVersion === 0);

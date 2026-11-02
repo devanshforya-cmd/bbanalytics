@@ -49,7 +49,12 @@ export default function InlineOrderForm({
   onClose,
 }: InlineOrderFormProps) {
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
-  const products = useMemo(() => db.getProducts(), []);
+  const [products, setProducts] = useState(() => db.getProducts().filter(product => product.active !== false));
+  useEffect(() => {
+    const refresh = () => setProducts(db.getProducts().filter(product => product.active !== false));
+    window.addEventListener('bb-db-updated', refresh);
+    return () => window.removeEventListener('bb-db-updated', refresh);
+  }, []);
 
   // Multi-item rows
   const [lineItems, setLineItems] = useState<DraftLineItem[]>([

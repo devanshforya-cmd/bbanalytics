@@ -219,7 +219,7 @@ export default function CheckInFlow({
       {
         id: 'STOCK_COUNT',
         title: 'Shelf Stock Count',
-        desc: 'Audit stock across Forya, Pee Safe, Furr, Renee',
+        desc: 'Audit stock across your saved product catalogue',
         icon: Layers,
         color: 'text-purple-600 bg-purple-50',
       },

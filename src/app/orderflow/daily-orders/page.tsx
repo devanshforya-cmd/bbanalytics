@@ -189,8 +189,7 @@ export default function DailyOrdersPage() {
       0
     );
 
-    const foryaCount = commercialOrders.filter((o) => o.brandCode === 'FORYA').length;
-    const foryaPct = totalCommercial > 0 ? Math.round((foryaCount / totalCommercial) * 100) : 0;
+    const brandCount = new Set(commercialOrders.map(order => order.brandCode)).size;
 
     const instaCount = commercialOrders.filter((o) => o.platform === 'Instagram').length;
     const instaPct = totalCommercial > 0 ? Math.round((instaCount / totalCommercial) * 100) : 0;
@@ -201,7 +200,7 @@ export default function DailyOrdersPage() {
     return {
       totalCommercial,
       totalUnits,
-      foryaPct,
+      brandCount,
       instaPct,
       repeatPct,
     };
@@ -733,7 +732,7 @@ export default function DailyOrdersPage() {
                 <strong>Day Tally:</strong> {statsFooter.totalCommercial} commercial orders ({statsFooter.totalUnits} units)
               </span>
               <span className="text-slate-600">|</span>
-              <span>Forya Share: <strong>{statsFooter.foryaPct}%</strong></span>
+              <span>Brands represented: <strong>{statsFooter.brandCount}</strong></span>
               <span>Instagram: <strong>{statsFooter.instaPct}%</strong></span>
               <span>Repeat Customers: <strong>{statsFooter.repeatPct}%</strong></span>
             </div>

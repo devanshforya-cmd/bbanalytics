@@ -151,18 +151,14 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
 
   // Brand Engagement Summary (Fix 69c)
   const brandEngagement = useMemo(() => {
-    return [
-      { code: 'FORYA' as BrandCode, name: 'Forya', color: 'emerald', dot: '🟢' },
-      { code: 'PEE_SAFE' as BrandCode, name: 'Pee Safe', color: 'purple', dot: '🟣' },
-      { code: 'RENEE' as BrandCode, name: 'Renee', color: 'rose', dot: '⚪' },
-    ].map((b) => {
-      const bOrders = orders.filter((o) => (b.code === 'PEE_SAFE' ? o.brandCode === 'PEE_SAFE' || o.brandCode === 'FURR' : o.brandCode === b.code));
-      const bReturns = returns.filter((r) => (b.code === 'PEE_SAFE' ? r.brandCode === 'PEE_SAFE' || r.brandCode === 'FURR' : r.brandCode === b.code));
-      const bFeedback = feedback.filter((fb) => (b.code === 'PEE_SAFE' ? fb.brandCode === 'PEE_SAFE' || fb.brandCode === 'FURR' : fb.brandCode === b.code));
+    return allBrands.map((b) => {
+      const bOrders = orders.filter(order => order.brandCode === b.code);
+      const bReturns = returns.filter(item => item.brandCode === b.code);
+      const bFeedback = feedback.filter(item => item.brandCode === b.code);
       const firstDate = bOrders.length > 0 ? bOrders[bOrders.length - 1].orderDateAd : null;
 
       return {
-        ...b,
+        ...b, dot: '●',
         ordersCount: bOrders.length,
         returnsCount: bReturns.length,
         complaintsCount: bFeedback.length,
@@ -170,16 +166,13 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
         firstDate,
       };
     });
-  }, [orders, returns, feedback]);
+  }, [allBrands, orders, returns, feedback]);
 
   // Filtered Timeline Items (Fix 69b)
   const filteredTimelineItems = useMemo(() => {
     if (brandTimelineFilter === 'ALL') return timelineItems;
     return timelineItems.filter((item) => {
       const b = item.data?.brandCode;
-      if (brandTimelineFilter === 'PEE_SAFE') {
-        return b === 'PEE_SAFE' || b === 'FURR';
-      }
       return b === brandTimelineFilter;
     });
   }, [timelineItems, brandTimelineFilter]);
@@ -194,10 +187,10 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
         feedbackCount: customer.totalReviews,
       };
     }
-    const bOrders = orders.filter((o) => (brandTimelineFilter === 'PEE_SAFE' ? o.brandCode === 'PEE_SAFE' || o.brandCode === 'FURR' : o.brandCode === brandTimelineFilter));
-    const bFailures = failures.filter((f) => (brandTimelineFilter === 'PEE_SAFE' ? f.brandCode === 'PEE_SAFE' || f.brandCode === 'FURR' : f.brandCode === brandTimelineFilter));
-    const bReturns = returns.filter((r) => (brandTimelineFilter === 'PEE_SAFE' ? r.brandCode === 'PEE_SAFE' || r.brandCode === 'FURR' : r.brandCode === brandTimelineFilter));
-    const bFeedback = feedback.filter((fb) => (brandTimelineFilter === 'PEE_SAFE' ? fb.brandCode === 'PEE_SAFE' || fb.brandCode === 'FURR' : fb.brandCode === brandTimelineFilter));
+    const bOrders = orders.filter((o) => o.brandCode === brandTimelineFilter);
+    const bFailures = failures.filter((f) => f.brandCode === brandTimelineFilter);
+    const bReturns = returns.filter((r) => r.brandCode === brandTimelineFilter);
+    const bFeedback = feedback.filter((fb) => fb.brandCode === brandTimelineFilter);
     return {
       ordersCount: bOrders.length,
       failuresCount: bFailures.length,
@@ -362,13 +355,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
   // 1d. Brands Purchased Visual Counts
   const brandPurchases = useMemo(() => {
     return allBrands.map((b) => {
-      // FURR and PEE_SAFE are consolidated under PEE_SAFE
-      const count = orders.filter((o) => {
-        if (b.code === 'PEE_SAFE') {
-          return o.brandCode === 'PEE_SAFE' || o.brandCode === 'FURR';
-        }
-        return o.brandCode === b.code;
-      }).length;
+      const count = orders.filter(order => order.brandCode === b.code).length;
 
       return {
         brand: b,
@@ -514,13 +501,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
             <div
               key={be.code}
               className={`rounded-xl border p-3.5 transition ${
-                be.hasOrdered
-                  ? be.code === 'FORYA'
-                    ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
-                    : be.code === 'PEE_SAFE'
-                    ? 'bg-purple-50/60 border-purple-200 text-purple-950'
-                    : 'bg-rose-50/60 border-rose-200 text-rose-950'
-                  : 'bg-slate-50/80 border-slate-200 text-slate-500'
+                be.hasOrdered ? 'bg-blue-50/60 border-blue-200 text-blue-950' : 'bg-slate-50/80 border-slate-200 text-slate-500'
               }`}
             >
               <div className="flex items-center justify-between gap-2">
@@ -646,19 +627,8 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
             let dot = '⚪';
 
             if (hasPurchased) {
-              if (brand.code === 'FORYA') {
-                brandColorStyle = 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold';
-                dot = '🟢';
-              } else if (brand.code === 'PEE_SAFE') {
-                brandColorStyle = 'bg-purple-50 text-purple-800 border-purple-300 font-bold';
-                dot = '🟣';
-              } else if (brand.code === 'RENEE') {
-                brandColorStyle = 'bg-rose-50 text-rose-800 border-rose-300 font-bold';
-                dot = '🔴';
-              } else {
-                brandColorStyle = 'bg-blue-50 text-blue-800 border-blue-300 font-bold';
-                dot = '🔵';
-              }
+              brandColorStyle = 'bg-blue-50 text-blue-800 border-blue-300 font-bold';
+              dot = '●';
             }
 
             return (
@@ -705,9 +675,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
             <span className="font-bold text-slate-400 text-[11px] uppercase tracking-wider mr-1">Showing:</span>
             {[
               { id: 'ALL', label: 'All Brands' },
-              { id: 'FORYA', label: 'Forya' },
-              { id: 'PEE_SAFE', label: 'Pee Safe' },
-              { id: 'RENEE', label: 'Renee' },
+              ...allBrands.map(brand => ({ id: brand.code, label: brand.name })),
             ].map((pill) => (
               <button
                 key={pill.id}

@@ -27,6 +27,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
+import ProductActions from '@/components/products/ProductActions';
 import PageGuard from '@/components/common/PageGuard';
 
 export default function Product360Page() {
@@ -43,34 +44,31 @@ export default function Product360Page() {
 
   useEffect(() => {
     if (!productId) return;
-    const prod = db.getProductById(productId) || db.getProductByNameOrId(productId);
-    if (prod) {
-      setProduct(prod);
-    } else {
-      // Fallback if id wasn't found
-      const allProds = db.getProducts();
-      if (allProds.length > 0) setProduct(allProds[0]);
-    }
-
-    setSecondaryOrders(db.getSecondaryOrders());
-    setFeedback(db.getFeedback());
-    setRetailers(db.getRetailers());
-    setBranches(db.getBranches());
-    setStockCounts(db.getStockCounts());
+    const load = () => {
+      setProduct(db.getProductById(productId) || db.getProductByNameOrId(productId) || null);
+      setSecondaryOrders(db.getSecondaryOrders());
+      setFeedback(db.getFeedback());
+      setRetailers(db.getRetailers());
+      setBranches(db.getBranches());
+      setStockCounts(db.getStockCounts());
+    };
+    load();
+    window.addEventListener('bb-db-updated', load);
+    return () => window.removeEventListener('bb-db-updated', load);
   }, [productId]);
 
   if (!product) {
     return (
       <div className="p-8 text-center text-slate-500">
-        <div className="animate-spin w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full mx-auto mb-2" />
-        Loading Product 360 Intelligence...
+        <p>Product not found. It may have been deleted or your catalogue is still syncing.</p>
+        <Link href="/products" className="text-blue-700 underline">Back to products</Link>
       </div>
     );
   }
 
   // Filter orders containing this product
-  const relatedOrders = secondaryOrders.filter((o) =>
-    o.items.some((item) => item.productId === product.id || item.productName.toLowerCase().includes(product.name.toLowerCase().slice(0, 8)))
+  const relatedOrders = secondaryOrders.filter(order => order.status === 'DELIVERED').filter((o) =>
+    o.items.some((item) => item.productId === product.id)
   );
 
   // Filter feedback for this product
@@ -100,10 +98,10 @@ export default function Product360Page() {
   }
 
   // Channel estimates (Real operational unit metrics from orders)
-  const d2cOrders = db.getOrders();
+  const d2cOrders = db.getOrders().filter(order => order.status === 'DELIVERED');
   const d2cUnits = d2cOrders.reduce((sum, o) => {
     const matched = (o.items || []).filter(
-      (item) => item.productId === product.id || item.productName?.toLowerCase().includes(product.name.toLowerCase().slice(0, 8))
+      (item) => item.productId === product.id
     );
     return sum + matched.reduce((s, it) => s + (it.quantity || 1), 0);
   }, 0);
@@ -112,7 +110,7 @@ export default function Product360Page() {
     .filter((o) => !o.storeName?.toLowerCase().includes('bhatbhateni') && !o.storeName?.toLowerCase().includes('bigmart') && !o.storeName?.toLowerCase().includes('saleways'))
     .reduce((sum, o) => {
       const matched = o.items.filter(
-        (item) => item.productId === product.id || item.productName.toLowerCase().includes(product.name.toLowerCase().slice(0, 8))
+        (item) => item.productId === product.id
       );
       return sum + matched.reduce((s, it) => s + (it.totalUnits || 0), 0);
     }, 0);
@@ -121,7 +119,7 @@ export default function Product360Page() {
     .filter((o) => o.storeName?.toLowerCase().includes('bhatbhateni') || o.storeName?.toLowerCase().includes('bigmart') || o.storeName?.toLowerCase().includes('saleways'))
     .reduce((sum, o) => {
       const matched = o.items.filter(
-        (item) => item.productId === product.id || item.productName.toLowerCase().includes(product.name.toLowerCase().slice(0, 8))
+        (item) => item.productId === product.id
       );
       return sum + matched.reduce((s, it) => s + (it.totalUnits || 0), 0);
     }, 0);
@@ -173,7 +171,7 @@ export default function Product360Page() {
         daysAgo = Math.max(0, Math.floor((Date.now() - parsedDate.getTime()) / (1000 * 60 * 60 * 24)));
       }
       const item = latest.items.find(
-        (i) => i.productId === product.id || i.productName.toLowerCase().includes(product.name.toLowerCase().slice(0, 8))
+        (i) => i.productId === product.id
       );
       if (item) {
         shelfUnits = item.shelfQty;
@@ -218,21 +216,15 @@ export default function Product360Page() {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className={`text-[10px] font-black px-2.5 py-0.5 rounded-md ${
-                    product.brandCode === 'FORYA'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : product.brandCode === 'PEE_SAFE'
-                      ? 'bg-cyan-100 text-cyan-800'
-                      : product.brandCode === 'FURR'
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-pink-100 text-pink-800'
-                  }`}
+                  className="text-[10px] font-black px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700"
                 >
-                  {product.brandCode}
+                  {db.getBrands().find(brand => brand.code === product.brandCode)?.name || product.brandCode}
                 </span>
                 <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-bold">
                   {product.sku}
                 </span>
+                {product.active === false && <span className="text-xs text-amber-700">Archived</span>}
+                <ProductActions product={product} onChanged={() => { if (!db.getProductById(product.id)) router.push('/products'); }} />
                 <span className="text-xs text-slate-500">&bull; {product.category}</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1.5">
@@ -572,8 +564,7 @@ export default function Product360Page() {
                 {relatedOrders.map((ord) => {
                   const item = ord.items.find(
                     (i) =>
-                      i.productId === product.id ||
-                      i.productName.toLowerCase().includes(product.name.toLowerCase().slice(0, 8))
+                      i.productId === product.id
                   ) || ord.items[0];
 
                   return (

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db/db-service';
 import { addBrand as apiAddBrand, isBrandStorageLocalPreview } from '@/lib/db/brands-service';
 import { toast } from '@/components/common/Toast';
@@ -36,6 +36,15 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
     }
     return [];
   });
+  useEffect(() => {
+    const refresh = () => setConfiguredBrands(previous => {
+      const existing = db.getBrands().map(brand => ({ name: brand.name, code: brand.code, color: brand.color || '#10b981' }));
+      return [...existing, ...previous.filter(brand => !existing.some(saved => saved.code === brand.code))];
+    });
+    refresh();
+    window.addEventListener('bb-db-updated', refresh);
+    return () => window.removeEventListener('bb-db-updated', refresh);
+  }, []);
   const [newBrandName, setNewBrandName] = useState('');
   const [newBrandCode, setNewBrandCode] = useState('');
   const [newBrandColor, setNewBrandColor] = useState('#10b981');
@@ -126,7 +135,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
           isActive: true,
           status: 'ACTIVE' as const,
         };
-        const savedBrand = await apiAddBrand(brandObj);
+        const savedBrand = db.getBrands().find(brand => brand.code === b.code) || await apiAddBrand(brandObj);
         persistedBrandIds.set(savedBrand.code, savedBrand.id);
       }
 
@@ -289,7 +298,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                         setNewBrandName(e.target.value);
                         setNewBrandCode(e.target.value.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_'));
                       }}
-                      placeholder="e.g. Forya"
+                      placeholder="Brand name"
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-900"
                     />
                   </div>
@@ -299,7 +308,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                       type="text"
                       value={newBrandCode}
                       onChange={(e) => setNewBrandCode(e.target.value.toUpperCase())}
-                      placeholder="e.g. FORYA"
+                      placeholder="BRAND_CODE"
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 uppercase font-mono"
                     />
                   </div>

@@ -120,7 +120,7 @@ export default function RevenueConcentration({
                           key={b}
                           className="rounded bg-slate-100 text-slate-700 font-bold px-1.5 py-0.5 text-[9px]"
                         >
-                          {b === 'PEE_SAFE' ? 'Pee Safe & FURR' : b}
+                          {b}
                         </span>
                       ))}
                     </div>

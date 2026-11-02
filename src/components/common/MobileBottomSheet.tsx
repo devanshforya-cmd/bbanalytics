@@ -45,6 +45,7 @@ export default function MobileBottomSheet({
 
       {/* Drawer Container */}
       <div
+        role="dialog" aria-modal="true" aria-label={title}
         className={`relative w-full ${maxWidthClass} rounded-t-3xl sm:rounded-2xl bg-white shadow-2xl border border-slate-200 sm:border-slate-300 z-10 flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden transition-transform animate-in slide-in-from-bottom duration-200`}
         onClick={(e) => e.stopPropagation()}
       >

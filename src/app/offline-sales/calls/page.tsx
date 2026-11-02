@@ -42,7 +42,7 @@ export default function CallsPage() {
   const [isManual, setIsManual] = useState(false);
 
   // Inline Order Creation (When outcome === 'Order Received')
-  const products = db.getProducts();
+  const products = db.getProducts().filter(product => product.active !== false);
   const [orderProductId, setOrderProductId] = useState(products[0]?.id || '');
   const [orderQuantity, setOrderQuantity] = useState(1);
   const [paymentTerms, setPaymentTerms] = useState('Credit 15 days');
@@ -74,9 +74,10 @@ export default function CallsPage() {
     // If order was received, create the order inline
     if (callOutcome === 'Order Received') {
       const prod = products.find((p) => p.id === orderProductId);
+      if (!prod) { toast.error('Choose an active product first.'); return; }
       const newOrder = db.addOrder({
         orderNumber: `BB-FLD-${Date.now().toString().slice(-4)}`,
-        brandCode: prod?.brandCode || 'FORYA',
+        brandCode: prod.brandCode,
         orderDateAd: getTodayAd(),
         orderDateBs: getTodayBs(),
         platform: 'Phone Call',
@@ -96,7 +97,7 @@ export default function CallsPage() {
           {
             productId: prod?.id || '',
             productName: prod?.name || 'Product',
-            brandCode: prod?.brandCode || 'FORYA',
+            brandCode: prod.brandCode,
             quantity: orderQuantity,
             unitPrice: 0,
             totalPrice: 0,

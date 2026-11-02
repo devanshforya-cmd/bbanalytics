@@ -2,7 +2,6 @@ import { Brand } from '../types';
 import { db } from './db-service';
 
 let inMemoryBrands: Brand[] = [];
-let hasLoadedRemoteBrands = false;
 let brandStorageIsLocalPreview = false;
 
 export function isBrandStorageLocalPreview(): boolean {
@@ -34,13 +33,11 @@ export async function fetchBrandsFromSupabase(options: { requireRemote?: boolean
     const payload = await response.json().catch(() => null);
     if (payload?.localPreviewOnly === true) {
       brandStorageIsLocalPreview = true;
-      hasLoadedRemoteBrands = false;
       return db.getBrands('ALL');
     }
     if (response.ok && payload?.success && Array.isArray(payload.data)) {
       brandStorageIsLocalPreview = false;
       inMemoryBrands = payload.data as Brand[];
-      hasLoadedRemoteBrands = true;
       db.replaceBrands(inMemoryBrands);
       return inMemoryBrands;
     }
@@ -49,7 +46,6 @@ export async function fetchBrandsFromSupabase(options: { requireRemote?: boolean
     }
     if ([401, 403, 404].includes(response.status)) {
       inMemoryBrands = [];
-      hasLoadedRemoteBrands = true;
       return [];
     }
   } catch (err) {
@@ -60,7 +56,7 @@ export async function fetchBrandsFromSupabase(options: { requireRemote?: boolean
 }
 
 export function getBrands(status?: 'ACTIVE' | 'ALL'): Brand[] {
-  const source = hasLoadedRemoteBrands ? inMemoryBrands : db.getBrands(status);
+  const source = db.getBrands('ALL');
   if (status === 'ACTIVE') {
     return source.filter((b) => b.isActive !== false && b.status !== 'ARCHIVED');
   }
@@ -78,7 +74,6 @@ export function getBrandById(id: string): Brand | undefined {
 export async function addBrand(brand: Brand): Promise<Brand> {
   const payload = await requestBrands('POST', brand as unknown as Record<string, unknown>);
   if (payload.localPreviewOnly) {
-    hasLoadedRemoteBrands = false;
     const savedLocally = db.addBrand({
       ...brand,
       id: brand.id || `local_brand_${brand.code.toLowerCase()}`,
@@ -88,7 +83,6 @@ export async function addBrand(brand: Brand): Promise<Brand> {
     return savedLocally;
   }
   const saved = payload.data as Brand;
-  hasLoadedRemoteBrands = true;
   inMemoryBrands = [...inMemoryBrands.filter((entry) => entry.id !== saved.id && entry.code !== saved.code), saved];
   db.addBrand(saved);
   return saved;
@@ -99,13 +93,11 @@ export async function updateBrand(id: string, updates: Partial<Brand>): Promise<
   if (payload.localPreviewOnly) {
     const existing = db.getBrands('ALL').find((brand) => brand.id === id);
     if (!existing) return undefined;
-    hasLoadedRemoteBrands = false;
     const savedLocally = db.addBrand({ ...existing, ...updates, id });
     inMemoryBrands = db.getBrands('ALL');
     return savedLocally;
   }
   const saved = payload.data as Brand;
-  hasLoadedRemoteBrands = true;
   inMemoryBrands = [...inMemoryBrands.filter((entry) => entry.id !== saved.id), saved];
   db.addBrand(saved);
   return saved;

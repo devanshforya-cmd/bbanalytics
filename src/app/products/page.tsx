@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
-import { getBrands } from '@/lib/db/brands-service';
+import ProductActions from '@/components/products/ProductActions';
+import { isSellableCombo } from '@/lib/product-catalog';
 import { Product, Combo, BrandCode, SecondaryOrder, Order, ReturnEntry, Retailer, Branch } from '@/lib/types';
 import MobileBottomSheet from '@/components/common/MobileBottomSheet';
 import { toast } from '@/components/common/Toast';
@@ -43,16 +44,9 @@ function autoSuggestKeywords(name: string, brandCode?: string): string[] {
 
   suggestions.add(clean);
 
-  const brands = ['forya', 'pee safe', 'peesafe', 'furr', 'renee', 'mamaearth'];
-  let withoutBrand = clean;
-  for (const b of brands) {
-    if (withoutBrand.includes(b)) {
-      withoutBrand = withoutBrand.replace(b, '').trim();
-    }
-  }
-  if (withoutBrand && withoutBrand !== clean) {
-    suggestions.add(withoutBrand);
-  }
+  const brand = db.getBrands().find(item => item.code === brandCode);
+  const withoutBrand = brand?.name ? clean.replace(brand.name.toLowerCase(), '').trim() : clean;
+  if (withoutBrand) suggestions.add(withoutBrand);
 
   if (clean.includes('roll-on') || clean.includes('roll on')) {
     suggestions.add('roll on');
@@ -81,7 +75,6 @@ function autoSuggestKeywords(name: string, brandCode?: string): string[] {
   if (clean.includes('lipstick') || clean.includes('lip stick')) {
     suggestions.add('lipstick');
     suggestions.add('lip stick');
-    suggestions.add('ph mad');
   }
 
   words.forEach((w) => {
@@ -94,7 +87,7 @@ function autoSuggestKeywords(name: string, brandCode?: string): string[] {
 }
 
 export default function ProductsPage() {
-  const [currentUser] = useState(() => db.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState(() => db.getCurrentUser());
   const [products, setProducts] = useState<Product[]>([]);
   const [combos, setCombos] = useState<Combo[]>([]);
   const [secondaryOrders, setSecondaryOrders] = useState<SecondaryOrder[]>([]);
@@ -119,9 +112,9 @@ export default function ProductsPage() {
   const [newProd, setNewProd] = useState({
     name: '',
     sku: '',
-    brandCode: 'FORYA' as BrandCode,
+    brandCode: '' as BrandCode,
     category: 'Personal Care',
-    mrp: 550,
+    mrp: 0,
     caseSize: 24,
     orderUnitMode: 'BOTH' as 'CASES' | 'PIECES' | 'BOTH',
     thresholdQty: 12,
@@ -133,7 +126,7 @@ export default function ProductsPage() {
   const [newCombo, setNewCombo] = useState({
     name: '',
     sku: '',
-    brandCode: 'FORYA' as BrandCode,
+    brandCode: '' as BrandCode,
     description: '',
     selectedProd1Id: '',
     qty1: 1,
@@ -141,12 +134,13 @@ export default function ProductsPage() {
     qty2: 1,
     selectedProd3Id: '',
     qty3: 1,
-    comboPrice: 999,
+    comboPrice: 0,
     extractorKeywords: [] as string[],
     priceDetectionEnabled: true,
   });
 
   const loadCatalog = () => {
+    setCurrentUser(db.getCurrentUser());
     setProducts(db.getProducts());
     setCombos(db.getCombos());
     setSecondaryOrders(db.getSecondaryOrders());
@@ -159,28 +153,35 @@ export default function ProductsPage() {
 
   useEffect(() => {
     loadCatalog();
+    window.addEventListener('bb-db-updated', loadCatalog);
+    return () => window.removeEventListener('bb-db-updated', loadCatalog);
   }, []);
+
+  useEffect(() => {
+    setNewProd(value => activeBrandsList.some(brand => brand.code === value.brandCode) ? value : { ...value, brandCode: activeBrandsList[0]?.code || '' });
+    setNewCombo(value => activeBrandsList.some(brand => brand.code === value.brandCode) ? value : { ...value, brandCode: activeBrandsList[0]?.code || '' });
+  }, [activeBrandsList]);
+
+  const brandName = (code: string) => db.getBrands().find(brand => brand.code === code)?.name || code;
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Filtered lists with consolidated PEE_SAFE support (including FURR)
+  // The configured brand code is the exact catalogue identity.
   const assignedBrands = currentUser.assignedBrands || [];
   const hasBrandRestrictions = Boolean(assignedBrands.length > 0 && !assignedBrands.includes('ALL'));
 
   const filteredProducts = products.filter((p) => {
     if (hasBrandRestrictions) {
       const allowed =
-        assignedBrands.includes(p.brandCode) ||
-        (assignedBrands.includes('PEE_SAFE') && p.brandCode === 'FURR');
+        assignedBrands.includes(p.brandCode);
       if (!allowed) return false;
     }
     const matchesBrand =
       activeBrand === 'ALL' ||
-      p.brandCode === activeBrand ||
-      (activeBrand === 'PEE_SAFE' && (p.brandCode === 'PEE_SAFE' || p.brandCode === 'FURR'));
+      p.brandCode === activeBrand;
     const matchesSearch =
       !searchQuery ||
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -192,14 +193,12 @@ export default function ProductsPage() {
   const filteredCombos = combos.filter((c) => {
     if (hasBrandRestrictions) {
       const allowed =
-        assignedBrands.includes(c.brandCode) ||
-        (assignedBrands.includes('PEE_SAFE') && c.brandCode === 'FURR');
+        assignedBrands.includes(c.brandCode);
       if (!allowed) return false;
     }
     const matchesBrand =
       activeBrand === 'ALL' ||
-      c.brandCode === activeBrand ||
-      (activeBrand === 'PEE_SAFE' && (c.brandCode === 'PEE_SAFE' || c.brandCode === 'FURR'));
+      c.brandCode === activeBrand;
     const matchesSearch =
       !searchQuery ||
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -216,11 +215,10 @@ export default function ProductsPage() {
     let mtUnits = 0;
     const storeIds = new Set<string>();
 
-    secondaryOrders.forEach((o) => {
+    secondaryOrders.filter(order => order.status === 'DELIVERED').forEach((o) => {
       const item = o.items.find(
         (i) =>
-          i.productId === prod.id ||
-          i.productName.toLowerCase().includes(prod.name.toLowerCase().slice(0, 8))
+          i.productId === prod.id
       );
       if (item) {
         secondaryCases += item.cases;
@@ -239,11 +237,10 @@ export default function ProductsPage() {
 
     // Direct / Online Orders
     let onlineUnits = 0;
-    orders.forEach((o) => {
+    orders.filter(order => order.status === 'DELIVERED').forEach((o) => {
       const item = o.items.find(
         (i) =>
-          i.productId === prod.id ||
-          i.productName.toLowerCase().includes(prod.name.toLowerCase().slice(0, 8))
+          i.productId === prod.id
       );
       if (item) {
         onlineUnits += item.quantity;
@@ -260,8 +257,7 @@ export default function ProductsPage() {
     // Quality defect / return rate
     const prodReturns = returns.filter(
       (r) =>
-        r.productId === prod.id ||
-        r.productName.toLowerCase().includes(prod.name.toLowerCase().slice(0, 8))
+        r.productId === prod.id
     );
     const returnUnits = prodReturns.reduce((acc, r) => acc + (r.quantity || 1), 0);
     const returnRate =
@@ -318,17 +314,19 @@ export default function ProductsPage() {
     return Math.max(0, Math.round((diff / dynamicComboOriginalMrp) * 1000) / 10);
   }, [dynamicComboOriginalMrp, newCombo.comboPrice]);
 
-  const handleCreateProduct = (e: React.FormEvent) => {
+  const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProd.name || !newProd.sku) return;
 
+    const brand = activeBrandsList.find(item => item.code === newProd.brandCode);
+    if (!brand) { toast.error('Add or select an active brand in Settings first.'); return; }
     const mrpNum = Number(newProd.mrp) || 0;
 
     db.addProduct({
       name: newProd.name,
       sku: newProd.sku.toUpperCase(),
       brandCode: newProd.brandCode,
-      brandId: `brand_${newProd.brandCode.toLowerCase()}`,
+      brandId: brand.id,
       category: newProd.category,
       unitPrice: mrpNum,
       mrp: mrpNum,
@@ -345,13 +343,15 @@ export default function ProductsPage() {
 
     loadCatalog();
     setIsAddProductOpen(false);
-    triggerToast(`Created new SKU: ${newProd.name} (${newProd.sku.toUpperCase()})`);
+    const saved = await db.syncWithSupabase();
+    if (saved.success) triggerToast(`Created new SKU: ${newProd.name} (${newProd.sku.toUpperCase()})`);
+    else toast.error(`Product is pending sync. ${saved.message}`);
     setNewProd({
       name: '',
       sku: '',
-      brandCode: 'FORYA',
+      brandCode: '',
       category: 'Personal Care',
-      mrp: 550,
+      mrp: 0,
       caseSize: 24,
       orderUnitMode: 'BOTH',
       thresholdQty: 12,
@@ -367,6 +367,9 @@ export default function ProductsPage() {
       return;
     }
 
+    if (!activeBrandsList.some(brand => brand.code === newCombo.brandCode)) { toast.error('Select an active brand first.'); return; }
+    const selected = [newCombo.selectedProd1Id, newCombo.selectedProd2Id, newCombo.selectedProd3Id].filter(Boolean);
+    if (selected.some(id => !products.some(p => p.id === id && p.brandCode === newCombo.brandCode && p.active !== false))) { toast.error('Choose active products from the selected brand.'); return; }
     const items = [];
     const componentProductIds: string[] = [];
     let originalMrp = 0;
@@ -441,7 +444,7 @@ export default function ProductsPage() {
     setNewCombo({
       name: '',
       sku: '',
-      brandCode: 'FORYA',
+      brandCode: '',
       description: '',
       selectedProd1Id: '',
       qty1: 1,
@@ -449,7 +452,7 @@ export default function ProductsPage() {
       qty2: 1,
       selectedProd3Id: '',
       qty3: 1,
-      comboPrice: 999,
+      comboPrice: 0,
       extractorKeywords: [],
       priceDetectionEnabled: true,
     });
@@ -518,13 +521,13 @@ export default function ProductsPage() {
 
         <div className="bg-white rounded-2xl border border-purple-200 bg-purple-50/20 p-4 shadow-xs">
           <div className="text-xs font-semibold text-purple-700">D2C &amp; Social Combos</div>
-          <div className="text-2xl font-black text-purple-700 mt-1">{combos.length}</div>
+          <div className="text-2xl font-black text-purple-700 mt-1">{combos.filter(combo => isSellableCombo(combo, products)).length}</div>
           <div className="text-[11px] text-purple-600 mt-1">Instagram, TikTok &amp; Web (Not B2B)</div>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
           <div className="text-xs font-semibold text-slate-500">Active Catalog SKUs</div>
-          <div className="text-2xl font-black text-blue-600 mt-1">{products.length}</div>
+          <div className="text-2xl font-black text-blue-600 mt-1">{products.filter(product => product.active !== false).length}</div>
           <div className="text-[11px] text-slate-500 mt-1">Master retail products</div>
         </div>
 
@@ -618,7 +621,7 @@ export default function ProductsPage() {
           </span>
           {[
             { code: 'ALL', name: 'All Brands' },
-            ...getBrands('ACTIVE').map((b) => ({ code: b.code, name: b.name })),
+            ...activeBrandsList.map((b) => ({ code: b.code, name: b.name })),
           ].map((brand) => (
             <button
               key={brand.code}
@@ -661,20 +664,12 @@ export default function ProductsPage() {
                           {p.sku}
                         </span>
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                            p.brandCode === 'FORYA'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : p.brandCode === 'PEE_SAFE'
-                              ? 'bg-cyan-100 text-cyan-800'
-                              : p.brandCode === 'FURR'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-pink-100 text-pink-800'
-                          }`}
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700"
                         >
-                          {p.brandCode === 'PEE_SAFE' ? 'Pee Safe & FURR' : p.brandCode}
+                          {brandName(p.brandCode)}
                         </span>
                       </div>
-                      <h3 className="font-bold text-slate-900 text-sm mt-1">{p.name}</h3>
+                      <h3 className="font-bold text-slate-900 text-sm mt-1">{p.name} {p.active === false && <span className="text-xs text-amber-700">Archived</span>}</h3>
                       <p className="text-xs text-slate-500">
                         {p.category} &bull; Case of {p.caseSize || 24}N
                       </p>
@@ -728,7 +723,8 @@ export default function ProductsPage() {
                       <Package className="w-3.5 h-3.5 text-slate-400" /> {p.category} ({p.caseSize || 24}u/box)
                     </span>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <ProductActions product={p} onChanged={loadCatalog} />
                       <button
                         type="button"
                         onClick={() => setSelectedPerfProduct(p)}
@@ -778,23 +774,15 @@ export default function ProductsPage() {
                           onClick={() => setSelectedPerfProduct(p)}
                           className="font-bold text-slate-900 text-left hover:text-brand-600 transition"
                         >
-                          {p.name}
+                          {p.name} {p.active === false && <span className="text-xs text-amber-700">Archived</span>}
                         </button>
                         <div className="text-[11px] font-mono text-slate-400 mt-0.5">{p.sku}</div>
                       </td>
                       <td className="p-3.5">
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                            p.brandCode === 'FORYA'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : p.brandCode === 'PEE_SAFE'
-                              ? 'bg-cyan-100 text-cyan-800'
-                              : p.brandCode === 'FURR'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-pink-100 text-pink-800'
-                          }`}
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700"
                         >
-                          {p.brandCode === 'PEE_SAFE' ? 'Pee Safe & FURR' : p.brandCode}
+                          {brandName(p.brandCode)}
                         </span>
                       </td>
                       <td className="p-3.5 text-slate-600">{p.category}</td>
@@ -826,6 +814,7 @@ export default function ProductsPage() {
                         </button>
                       </td>
                       <td className="p-3.5 text-center">
+                        <ProductActions product={p} onChanged={loadCatalog} />
                         <Link
                           href={`/products/${p.id}`}
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-700 font-semibold text-slate-700 transition-colors"
@@ -855,9 +844,11 @@ export default function ProductsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCombos.map((c) => {
-            const kitsStock = c.stockQty !== undefined ? c.stockQty : 45;
-            const kitsSold = 185;
-            const comboRevenue = kitsSold * c.comboPrice;
+            const kitsStock = c.stockQty;
+            const comboOrders = orders.filter(order => order.status === 'DELIVERED');
+            const comboLines = comboOrders.flatMap(order => order.items).filter(item => item.productId === c.id);
+            const kitsSold = comboLines.reduce((sum, item) => sum + item.quantity, 0);
+            const comboRevenue = comboLines.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
 
             return (
               <div
@@ -871,7 +862,7 @@ export default function ProductsPage() {
                         {c.sku}
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                        {c.brandCode === 'PEE_SAFE' ? 'Pee Safe & FURR' : c.brandCode}
+                        {brandName(c.brandCode)}
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-800 border border-pink-200">
                         D2C / Social Media
@@ -884,6 +875,7 @@ export default function ProductsPage() {
 
                   <h3 className="font-bold text-slate-900 text-base mt-2">{c.name}</h3>
                   <p className="text-xs text-slate-500 mt-1 line-clamp-2">{c.description}</p>
+                  {!isSellableCombo(c, products) && <p className="mt-2 text-xs font-semibold text-amber-700">Unavailable for new orders: a component is missing or archived.</p>}
 
                   {/* Items included in Kit */}
                   <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
@@ -939,11 +931,11 @@ export default function ProductsPage() {
                       <span className="text-slate-400 text-[10px] uppercase font-semibold">
                         Stock Kits
                       </span>
-                      <div className="font-bold text-slate-800 mt-0.5 font-mono">{kitsStock}N</div>
+                      <div className="font-bold text-slate-800 mt-0.5 font-mono">{kitsStock === undefined ? 'Not recorded' : `${kitsStock} kits`}</div>
                     </div>
                     <div className="border-x border-purple-200/60">
                       <span className="text-slate-400 text-[10px] uppercase font-semibold">
-                        MTD Orders
+                        Delivered kits
                       </span>
                       <div className="font-bold text-purple-700 mt-0.5 font-mono">{kitsSold}</div>
                     </div>
@@ -997,9 +989,7 @@ export default function ProductsPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-100 text-brand-800">
-                      {selectedPerfProduct.brandCode === 'PEE_SAFE'
-                        ? 'Pee Safe & FURR'
-                        : selectedPerfProduct.brandCode}
+                      {brandName(selectedPerfProduct.brandCode)}
                     </span>
                     <span className="text-xs font-mono font-bold text-slate-500">
                       {selectedPerfProduct.sku}
@@ -1208,7 +1198,7 @@ export default function ProductsPage() {
               type="text"
               value={newProd.name}
               onChange={(e) => setNewProd({ ...newProd, name: e.target.value })}
-              placeholder="e.g. Forya Brightening Serum 30ml"
+              placeholder="Product name and size"
               className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-brand-500"
               required
             />
@@ -1239,8 +1229,8 @@ export default function ProductsPage() {
                 }
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-medium bg-white"
               >
-                {getBrands('ACTIVE').length > 0 ? (
-                  getBrands('ACTIVE').map((b) => (
+                {activeBrandsList.length > 0 ? (
+                  activeBrandsList.map((b) => (
                     <option key={b.code} value={b.code}>
                       {b.name}
                     </option>
@@ -1475,7 +1465,7 @@ export default function ProductsPage() {
               type="text"
               value={newCombo.name}
               onChange={(e) => setNewCombo({ ...newCombo, name: e.target.value })}
-              placeholder="e.g. Forya Glow Festive Pack"
+              placeholder="Bundle name"
               className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-medium"
               required
             />
@@ -1506,8 +1496,8 @@ export default function ProductsPage() {
                 }
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-medium bg-white"
               >
-                {getBrands('ACTIVE').length > 0 ? (
-                  getBrands('ACTIVE').map((b) => (
+                {activeBrandsList.length > 0 ? (
+                  activeBrandsList.map((b) => (
                     <option key={b.code} value={b.code}>
                       {b.name}
                     </option>
@@ -1530,7 +1520,7 @@ export default function ProductsPage() {
                 required
               >
                 <option value="">Select SKU #1</option>
-                {products.map((p) => (
+                {products.filter(p => p.brandCode === newCombo.brandCode && p.active !== false).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} (MRP {p.mrp})
                   </option>
@@ -1558,7 +1548,7 @@ export default function ProductsPage() {
                 className="col-span-2 px-2.5 py-2 border border-slate-300 rounded-lg text-xs font-medium bg-white"
               >
                 <option value="">Select SKU #2 (Optional)</option>
-                {products.map((p) => (
+                {products.filter(p => p.brandCode === newCombo.brandCode && p.active !== false).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} (MRP {p.mrp})
                   </option>
@@ -1585,7 +1575,7 @@ export default function ProductsPage() {
                 className="col-span-2 px-2.5 py-2 border border-slate-300 rounded-lg text-xs font-medium bg-white"
               >
                 <option value="">Select SKU #3 (Optional)</option>
-                {products.map((p) => (
+                {products.filter(p => p.brandCode === newCombo.brandCode && p.active !== false).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} (MRP {p.mrp})
                   </option>

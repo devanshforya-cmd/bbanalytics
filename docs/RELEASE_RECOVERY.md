@@ -12,6 +12,14 @@ Channels & Logistics supports persisted add/edit/delete/archive choices througho
 
 Origin validation now uses the actual request Host rather than Next's internal URL hostname, so valid localhost/127.0.0.1 saves and callbacks work while cross-origin requests remain rejected.
 
+## Catalogue management release — November 2, 2026
+
+The catalogue starts empty in code; existing seeded products are stored in `workspace_records`, not the legacy `products` table. Business brand names, fixed bundle pitches and invented combo sales/stock figures were removed from application screens. Menus and customer brand summaries use saved brands. Product 360 no longer substitutes the first product for a missing record.
+
+Super Admin can inspect, permanently delete unused products, archive linked products, and restore archived products from the catalogue and detail page. The `safe_product_deletion` migration protects linked records, warehouse stock, record versions and concurrent product references. Staff deletion is denied at the server. Archived products and bundles with archived components are excluded from new selling/extraction; recorded history remains available. See [CATALOGUE.md](CATALOGUE.md).
+
+Validation: 117 automated tests, TypeScript, production build, six real catalogue HTTP/Supabase groups (including a concurrent deletion/write), database guard assertions in a rolled-back transaction, and all 17 broader recovery groups passed. Browser checks confirmed server-linked usage and the archive control. Actual existing catalogue records were preserved.
+
 ## Architecture and security
 
 Supabase is the source of truth. Canonical camelCase business records are stored in `workspace_records` by collection and ID with a version, mutation ID and trusted creator. `users` and `brands` remain dedicated tables. GPS stores one current position per officer. Raw public/anonymous table privileges and the old permissive policies were removed; the server validates the app session, feature/action, brand and record scope before using its service credential.
