@@ -16,13 +16,16 @@ test('empty workspaces do not manufacture product or brand records', () => {
   assert.deepEqual(db.getBrands(), []);
 });
 
-test('deletion detects nested order, combo and promotion identifiers without confusing text or another product', () => {
+test('deletion keeps a precise usage preview even when history and stock no longer block removal', () => {
   for (const reference of [{ items: [{ productId: 'p1' }] }, { componentProductIds: ['p1'] }, { productIds: ['p1'] }, { outer: { comboItems: [{ productId: 'p1' }] } }]) {
     assert.equal(referencesProduct(reference, 'p1'), true);
   }
   assert.equal(referencesProduct({ productName: 'p1', id: 'p1', items: [{ productId: 'p10' }] }, 'p1'), false);
-  assert.equal(productUsage(product, { orders: [{ id: 'order', items: [{ productId: 'p1' }] }] }).canDelete, false);
-  assert.equal(productUsage({ ...product, stockQty: 5 }, {}).canDelete, false);
+  const usage = productUsage(product, { orders: [{ id: 'order', items: [{ productId: 'p1' }] }] });
+  assert.equal(usage.canDelete, true);
+  assert.deepEqual(usage.references, [{ collection: 'orders', count: 1 }]);
+  assert.equal(productUsage({ ...product, stockQty: 5 }, {}).canDelete, true);
+  assert.equal(productUsage({ ...product, stockQty: 5 }, {}).stockQty, 5);
   assert.equal(productUsage(product, { activityLogs: [{ id: 'audit', productId: 'p1' }], products: [product] }).canDelete, true);
 });
 

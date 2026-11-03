@@ -190,6 +190,7 @@ export class DatabaseService {
   private currentUser: User = DEFAULT_SUPER_ADMIN;
   private brands: Brand[] = [];
   private products: Product[] = [];
+  private deletedProductIds = new Set<string>();
   private combos: Combo[] = [];
   private secondaryOrders: SecondaryOrder[] = [];
   private facingAudits: FacingAudit[] = [];
@@ -372,6 +373,7 @@ export class DatabaseService {
     if (this.server) { if (user) this.currentUser = user; return; }
     if (this.activeUserId !== (user?.id || null)) {
       this.activeUserId = user?.id || null; this.syncPromise = null; this.legacySnapshot = null;
+      this.deletedProductIds.clear();
       this.hydrateSnapshot(this.initialSnapshot, user || DEFAULT_SUPER_ADMIN);
       this.users = user ? [user] : []; this.brands = [];
       this.activeBrandFilter = 'ALL'; this.calendarMode = 'BS'; this.comparisonMode = 'OFF'; this.salesMode = 'ALL';
@@ -418,11 +420,13 @@ export class DatabaseService {
         return { success: false, syncedCount: 0, message: 'Sign in again. Pending work has been kept for its owner.' };
       }
       if (!response.ok || !result?.success || !result.data || result.errors?.length) return { success: false, syncedCount: 0, message: result?.error || 'Workspace refresh failed. Your local changes are preserved.' };
+      if (Array.isArray(result.deletedProductIds)) this.deletedProductIds = new Set(result.deletedProductIds.filter((id: unknown): id is string => typeof id === 'string'));
       const remote: WorkspaceSnapshot = {};
       for (const collection of WORKSPACE_COLLECTIONS) remote[collection] = Array.isArray(result.data[collection]) ? result.data[collection] : [];
       const configuration = new Set(['workspaceConfig', 'documentTypes', 'storeCategories', 'activityLogs', 'notifications', 'holidays', 'taskTemplates', 'promotions', 'seasonalPatterns']);
       const remoteEmpty = WORKSPACE_COLLECTIONS.filter((collection) => !configuration.has(collection)).every((collection) => !remote[collection]?.length);
       if (this.legacySnapshot && !localStorage.getItem(`bb_workspace_recovered:${owner}`)) {
+        this.legacySnapshot.products = this.legacySnapshot.products?.filter(row => !this.deletedProductIds.has(row.id));
         const existing = new Set(syncManager.getWorkspaceMutations().map((mutation) => `${mutation.collection}:${mutation.id}`));
         for (const collection of WORKSPACE_COLLECTIONS) {
           if (collection === 'staffLiveLocations' || collection === 'activityLogs') continue;
@@ -444,6 +448,7 @@ export class DatabaseService {
       const records = WORKSPACE_COLLECTIONS.flatMap(collection => (remote[collection] || []).map(row => ({ collection, id: row.id, data: row, created_by: row.createdById || owner, version: result.versions?.[collection]?.[row.id] || 0 })));
       merged.staffLiveLocations = this.exportSnapshot().staffLiveLocations;
       for (const mutation of pending) {
+        if (mutation.collection === 'products' && this.deletedProductIds.has(mutation.id)) continue;
         const rows = (merged[mutation.collection] || []).filter((row) => row.id !== mutation.id);
         if (mutation.operation === 'upsert' && mutation.data && canReadWorkspaceRecord(freshUser, { collection: mutation.collection, id: mutation.id, data: mutation.data, created_by: mutation.data.createdById || owner, version: mutation.expectedVersion }, freshUsers, records)) rows.push(mutation.data);
         merged[mutation.collection] = rows;
@@ -474,8 +479,9 @@ export class DatabaseService {
       }
       if (stored) {
         const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed.deletedProductIds)) parsed.deletedProductIds.filter((id: unknown): id is string => typeof id === 'string').forEach((id: string) => this.deletedProductIds.add(id));
         if (parsed.users && parsed.users.length > 0) this.users = parsed.users;
-        if (parsed.products) this.products = parsed.products;
+        if (parsed.products) this.products = parsed.products.filter((product: Product) => !this.deletedProductIds.has(product.id));
         if (parsed.combos) this.combos = parsed.combos;
         if (parsed.secondaryOrders) this.secondaryOrders = parsed.secondaryOrders;
         if (parsed.facingAudits) this.facingAudits = parsed.facingAudits;
@@ -629,6 +635,7 @@ export class DatabaseService {
         users: this.users.map((user) => { const safe = { ...user } as any; delete safe.password; delete safe.passwordHash; delete safe.password_hash; return safe; }),
         brands: this.brands,
         products: this.products,
+        deletedProductIds: [...this.deletedProductIds],
         combos: this.combos,
         secondaryOrders: this.secondaryOrders,
         facingAudits: this.facingAudits,

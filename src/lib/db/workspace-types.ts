@@ -1,3 +1,4 @@
+// deletedProducts is private history, excluded from client snapshots and sync writes.
 /** Collections stored as individual, versioned records in Supabase. */
 export const WORKSPACE_COLLECTIONS = [
   'products', 'combos', 'secondaryOrders', 'facingAudits', 'distributors',

@@ -12,6 +12,12 @@ Channels & Logistics supports persisted add/edit/delete/archive choices througho
 
 Origin validation now uses the actual request Host rather than Next's internal URL hostname, so valid localhost/127.0.0.1 saves and callbacks work while cross-origin requests remain rejected.
 
+## Active, Archived and deletion release — November 3, 2026
+
+Products now opens Active, with a separate Archived tab. Delete is available for both active and archived products, including linked or stocked SKUs; typing DELETE confirms catalogue removal. Archive remains reversible. Existing transaction payloads remain unchanged, and a private deletedProducts snapshot retains product identity/warehouse quantity outside both catalogue lists. The existing database batch transaction commits the snapshot and removal together; no new migration or public grants are needed. Server sync rejects deleted-ID reuse, and scoped deletion IDs invalidate stale offline overlays and cache entries without exposing historical snapshots.
+
+Validation: 118 automated tests, TypeScript and optimized build, seven real catalogue groups (linked deletion/history, stock retention, stale versions, permission checks, archive/restore, private snapshot protection, ID reuse and concurrent sale/deletion), and the 17 wider recovery groups passed. Browser checks confirmed Active excludes archived rows and Archived displays its own Restore/Delete controls. See CATALOGUE.md.
+
 ## Catalogue management release — November 2, 2026
 
 The catalogue starts empty in code; existing seeded products are stored in `workspace_records`, not the legacy `products` table. Business brand names, fixed bundle pitches and invented combo sales/stock figures were removed from application screens. Menus and customer brand summaries use saved brands. Product 360 no longer substitutes the first product for a missing record.

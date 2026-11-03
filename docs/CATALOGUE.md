@@ -17,14 +17,18 @@ On November 2, 2026, the connected database contained ten product records with `
 
 ## Manage products in the app
 
-As Super Admin, open **Products → Delete / archive**, or the same control on a product's detail page. The app refreshes pending work and checks server records before showing the confirmation.
+**Products** opens the **Active products** section. **Archived products** is a separate tab and never appears mixed into Active. The archive tab includes Restore and Delete controls. Search and brand filters apply within the selected section.
 
-- **Permanently delete** is offered only for products without linked orders, combos, promotions, stock counts, other product references, or recorded warehouse stock. It requires connectivity, the current record version, and Super Admin authorization. The database rechecks links under a lock. New product references are checked by a database trigger, preventing a concurrent write from attaching to a product after deletion.
-- **Archive product** removes the SKU from new sales and extraction while retaining historical records. Bundles containing an archived product are excluded from selling suggestions. Historical status updates remain available.
-- **Restore product** makes an archived SKU available again. Restore is in the same management dialog.
+As Super Admin, use **Delete / archive** on the list or detail page:
+
+- **Delete product** removes the SKU from both Active and Archived, including products linked to orders, combos or stock. Type `DELETE` to confirm. It cannot be restored through the app. Existing orders, stock counts, returns and their saved line details are unchanged. A private `deletedProducts` snapshot retains original product metadata and recorded warehouse quantity for historical integrity; it is excluded from client snapshots and sync writes.
+- **Archive product** moves the SKU to Archived and excludes it from new sales/extraction. It remains restorable.
+- **Restore product** moves an archived SKU back to Active.
+
+Deletion requires connectivity, the current record version and Super Admin authorization. The existing database transaction API version-checks the product, retains the historical snapshot and removes the live row atomically. The complete snapshot is saved as `snapshotJson` in private history. Deleted IDs are rejected by server sync so stale browser queues cannot restore the catalogue entry. New sales cannot reference deleted products; existing historical records can still change status. Bundles with missing or archived components cannot be sold.
 
 Product deletion is denied to ordinary staff even if they have a product DELETE grant. Server checks apply to direct sync requests as well as the visible controls. The protected database functions are unavailable to public, anonymous and authenticated Supabase clients.
 
 Brand menus, labels, cross-brand customer summaries, sharing selections and reports use saved brand records. No built-in business brand is assumed. Manual-order bundle suggestions require an active saved combo matching the exact basket and its quantities; prices come from that combo. The catalogue's combo sales figures use recorded delivered lines, and unrecorded kit stock is labelled as such.
 
-Apply the `safe_product_deletion` migration before deploying this code. It changes no existing catalogue data.
+This release uses the existing `commit_workspace_mutations` transaction and reference guard; no new database migration or public grant is required. Catalogue deletion is an explicit application action.
