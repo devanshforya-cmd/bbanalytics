@@ -98,7 +98,7 @@ export default function ProductsPage() {
   const [activeBrandsList, setActiveBrandsList] = useState(() => db.getBrands('ACTIVE'));
 
   const [activeBrand, setActiveBrand] = useState<BrandCode>('ALL');
-  const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'COMBOS'>('PRODUCTS');
+  const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'ARCHIVED' | 'COMBOS'>('PRODUCTS');
   const [activeViewMode, setActiveViewMode] = useState<'OVERVIEW' | 'PERFORMANCE'>('OVERVIEW');
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -173,7 +173,7 @@ export default function ProductsPage() {
   const assignedBrands = currentUser.assignedBrands || [];
   const hasBrandRestrictions = Boolean(assignedBrands.length > 0 && !assignedBrands.includes('ALL'));
 
-  const filteredProducts = products.filter((p) => {
+  const matchingProducts = products.filter((p) => {
     if (hasBrandRestrictions) {
       const allowed =
         assignedBrands.includes(p.brandCode);
@@ -189,6 +189,10 @@ export default function ProductsPage() {
       p.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesBrand && matchesSearch;
   });
+
+  const activeProducts = matchingProducts.filter(product => product.active !== false);
+  const archivedProducts = matchingProducts.filter(product => product.active === false);
+  const filteredProducts = activeTab === 'ARCHIVED' ? archivedProducts : activeProducts;
 
   const filteredCombos = combos.filter((c) => {
     if (hasBrandRestrictions) {
@@ -343,6 +347,7 @@ export default function ProductsPage() {
 
     loadCatalog();
     setIsAddProductOpen(false);
+    setActiveTab('PRODUCTS');
     const saved = await db.syncWithSupabase();
     if (saved.success) triggerToast(`Created new SKU: ${newProd.name} (${newProd.sku.toUpperCase()})`);
     else toast.error(`Product is pending sync. ${saved.message}`);
@@ -548,13 +553,22 @@ export default function ProductsPage() {
             <button
               type="button"
               onClick={() => setActiveTab('PRODUCTS')}
+              aria-pressed={activeTab === 'PRODUCTS'}
               className={`flex-1 lg:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition ${
                 activeTab === 'PRODUCTS'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Standard SKUs ({filteredProducts.length})
+              Active products ({activeProducts.length})
+            </button>
+            <button
+              type="button"
+              aria-pressed={activeTab === 'ARCHIVED'}
+              onClick={() => setActiveTab('ARCHIVED')}
+              className={`flex-1 lg:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition ${activeTab === 'ARCHIVED' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              Archived products ({archivedProducts.length})
             </button>
             <button
               type="button"
@@ -572,7 +586,7 @@ export default function ProductsPage() {
 
           <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full lg:w-auto">
             {/* View Mode Toggle: Overview vs Performance */}
-            {activeTab === 'PRODUCTS' && (
+            {activeTab !== 'COMBOS' && (
               <div className="flex items-center rounded-xl bg-slate-100 p-1 w-full sm:w-auto text-xs font-semibold">
                 <button
                   type="button"
@@ -639,12 +653,12 @@ export default function ProductsPage() {
       </div>
 
       {/* Content View: Products Catalog */}
-      {activeTab === 'PRODUCTS' && (
+      {activeTab !== 'COMBOS' && (
         filteredProducts.length === 0 ? (
           <EmptyState
             type="generic"
-            title="No Products Found"
-            description="No products match your brand filter or search criteria."
+            title={activeTab === 'ARCHIVED' ? 'No archived products' : 'No active products'}
+            description={activeTab === 'ARCHIVED' ? 'Archived products appear here. Deleted products do not appear in either section.' : 'Add a product to start your catalogue, or adjust your search and brand filter.'}
           />
         ) : (
           <div className="space-y-3">

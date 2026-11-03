@@ -247,3 +247,25 @@ test('matching legacy data is backed up but permission-denied defaults are not u
   assert.equal(storage.getItem('bb_command_center_db_state_v14'), legacy);
   db.setSessionUser(null);
 });
+
+test('server-deleted products stay hidden despite stale offline edits and cache reloads', async (t) => {
+  const storage = new MemoryStorage();
+  const user = { ...DEFAULT_SUPER_ADMIN, id: 'deleted-cache-owner' };
+  storage.setItem('bb_auth_user_session_v3', JSON.stringify({ user, expiresAt: Date.now() + 60000 }));
+  class TestCustomEvent extends Event { detail: any; constructor(type: string, options?: any) { super(type); this.detail = options?.detail; } }
+  mockGlobals(t, { localStorage: storage, window: new EventTarget(), navigator: { onLine: true }, CustomEvent: TestCustomEvent,
+    fetch: async (_url: string, options: RequestInit) => options?.method === 'POST'
+      ? Response.json({ success: false, error: 'Product deleted' }, { status: 409 })
+      : Response.json({ success: true, data: { products: [], users: [user], brands: [] }, versions: {}, deletedProductIds: ['p-deleted'], errors: [] }) });
+  const db = new DatabaseService();
+  db.hydrateSnapshot({ products: [{ id: 'p-deleted', name: 'Old product', sku: 'OLD' }] }, user, { products: { 'p-deleted': 1 } });
+  db.updateProduct('p-deleted', { name: 'Unsent edit' });
+  await db.syncWithSupabase();
+  assert.deepEqual(db.getProducts(), []);
+  assert.equal(db.getPendingMutations().length, 1, 'Keep the old edit in its owner’s outbox for review');
+  const saved = JSON.parse(storage.getItem(`bb_workspace_cache_v1:${user.id}`)!);
+  assert.deepEqual(saved.deletedProductIds, ['p-deleted']);
+  saved.products = [{ id: 'p-deleted', name: 'Stale cached copy', sku: 'OLD' }];
+  storage.setItem(`bb_workspace_cache_v1:${user.id}`, JSON.stringify(saved));
+  assert.deepEqual(new DatabaseService().getProducts(), []);
+});

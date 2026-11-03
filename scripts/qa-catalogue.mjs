@@ -9,7 +9,7 @@ const env = Object.fromEntries((await readFile('.env.local', 'utf8')).split(/\r?
 const base = process.env.QA_BASE_URL || 'http://127.0.0.1:3001';
 const tag = `qa_catalog_${Date.now()}_${randomBytes(3).toString('hex')}`;
 const ids = new Set();
-let brand, officerId, admin;
+let brand, otherBrand, officerId, admin;
 let passed = 0;
 const mark = text => { passed++; console.log(`PASS ${text}`); };
 async function api(path, { method = 'GET', body, cookie = admin?.cookie, user = admin?.user.id, status = 200, origin = base } = {}) {
@@ -52,38 +52,71 @@ try {
 
   const combo = { id: `${tag}_combo`, brandCode: brand.code, componentProductIds: [product.id], items: [{ productId: product.id, quantity: 1 }] };
   await mutation('combos', combo);
-  assert.equal((await inspect(product.id)).data.canDelete, false);
-  await remove(product.id, 1, 409);
+  assert.equal((await inspect(product.id)).data.canDelete, true);
   await api(`/api/products/${product.id}`, { method: 'PATCH', body: { expectedVersion: 1, active: false } });
   assert.equal((await inspect(product.id)).data.product.active, false);
-  const order = { id: `${tag}_order`, orderNumber: `${tag}_ORDER`, brandCode: brand.code, customerName: 'QA customer', customerPhone: '9800000000', status: 'PENDING', items: [{ productId: product.id, productName: product.name, brandCode: brand.code, quantity: 1, unitPrice: 100, totalPrice: 100 }] };
-  await mutation('orders', order, 0, 400);
+  const options = (await api('/api/sync')).data.data.workspaceConfig.find(row => row.id === 'workspace')?.orderOptions;
+  const platform = options?.channels.find(row => row.active)?.name || 'Instagram';
+  const deliveryMethod = options?.deliveryMethods.find(row => row.active)?.name || 'Standard';
+  const order = { platform, deliveryMethod, id: `${tag}_order`, orderNumber: `${tag}_ORDER`, brandCode: brand.code, customerName: 'QA customer', customerPhone: '9800000000', status: 'PENDING', items: [{ productId: product.id, productName: product.name, brandCode: brand.code, quantity: 1, unitPrice: 100, totalPrice: 100 }] };
+  assert.match((await mutation('orders', order, 0, 400)).error, /active product/i);
   await api(`/api/products/${product.id}`, { method: 'PATCH', body: { expectedVersion: 2, active: true } });
-  mark('Linked deletion denied; archive and restore persist; new sales reject archived SKUs');
+  mark('Archive and restore persist; new sales reject archived SKUs');
+  await mutation('orders', order);
+  const originalOrder = (await service(`workspace_records?collection=eq.orders&id=eq.${order.id}&select=data`))[0].data;
+  await remove(product.id, 3);
+  await api(`/api/products/${product.id}`, { status: 404 });
+  await api(`/api/products/${product.id}`, { method: 'PATCH', status: 404, body: { expectedVersion: 3, active: true } });
+  assert.deepEqual((await service(`workspace_records?collection=eq.orders&id=eq.${order.id}&select=data`))[0].data, originalOrder);
+  const historical = await service(`workspace_records?collection=eq.deletedProducts&id=eq.${product.id}&select=data`);
+  assert.equal(historical[0].data.name, product.name);
+  assert.equal(JSON.parse(historical[0].data.snapshotJson).sku, product.sku);
+  const refreshed = (await api('/api/sync')).data;
+  const workspace = refreshed.data;
+  assert(refreshed.deletedProductIds.includes(product.id));
+  assert(!workspace.products.some(row => row.id === product.id));
+  assert.equal(workspace.deletedProducts, undefined);
+  await mutation('products', product, 0, 409);
+  assert.match((await mutation('orders', { ...order, id: `${tag}_deleted_sale`, orderNumber: `${tag}_DELETED` }, 0, 400)).error, /active product/i);
+  await api('/api/sync', { method: 'POST', status: 400, body: { collection: 'deletedProducts', id: product.id, operation: 'delete', expectedVersion: 1, mutationId: `${tag}_history_denied` } });
+
+  otherBrand = (await api('/api/brands', { method: 'POST', status: 201, body: { code: `${tag}_OTHER`.toUpperCase(), name: 'QA foreign catalogue brand' } })).data.data;
+  const foreign = { ...product, id: `${tag}_foreign_product`, sku: `${tag}_FOREIGN`, brandCode: otherBrand.code, brandId: otherBrand.id };
+  await mutation('products', foreign);
+  await remove(foreign.id, 1);
+  const officerView = (await api('/api/sync', { cookie, user: officerId })).data;
+  assert(officerView.deletedProductIds.includes(product.id));
+  assert(!officerView.deletedProductIds.includes(foreign.id), 'Deletion IDs leaked another brand');
+  mark('Linked deletion removes catalogue row, preserves exact order history, hides internal snapshot, rejects restoration/reuse and new sales');
 
   const unused = { ...product, id: `${tag}_unused`, sku: `${tag}_UNUSED` };
   await mutation('products', unused);
   await remove(unused.id, 1);
   await api(`/api/products/${unused.id}`, { status: 404 });
   assert.equal((await service(`workspace_records?collection=eq.products&id=eq.${unused.id}&select=id`)).length, 0);
-  mark('Unused product is permanently deleted from Supabase and no longer returned');
+  mark('Unused product disappears from the catalogue and lookup');
 
   const stocked = { ...product, id: `${tag}_stocked`, sku: `${tag}_STOCKED`, stockQty: 5 };
   await mutation('products', stocked);
-  await remove(stocked.id, 1, 409);
-  mark('Warehouse stock prevents permanent deletion');
+  await remove(stocked.id, 1);
+  const stockHistory = await service(`workspace_records?collection=eq.deletedProducts&id=eq.${stocked.id}&select=data`);
+  assert.equal(stockHistory[0].data.stockQty, 5);
+  mark('Deletion with recorded warehouse stock preserves its quantity in private history');
 
   const raceProduct = { ...product, id: `${tag}_race`, sku: `${tag}_RACE` };
   await mutation('products', raceProduct);
-  const countId = `${tag}_race_count`; ids.add(countId);
+  const countId = `${tag}_race_sale`; ids.add(countId);
+  const raceOrder = { ...order, id: countId, orderNumber: `${tag}_RACE`, items: [{ ...order.items[0], productId: raceProduct.id }] };
   const results = await Promise.all([
     fetch(`${base}/api/products/${raceProduct.id}`, { method: 'DELETE', headers: { Cookie: admin.cookie, 'X-Workspace-User': admin.user.id, Origin: base, 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedVersion: 1 }) }),
-    fetch(`${base}/api/sync`, { method: 'POST', headers: { Cookie: admin.cookie, 'X-Workspace-User': admin.user.id, Origin: base, 'Content-Type': 'application/json' }, body: JSON.stringify({ collection: 'stockCounts', id: countId, data: { id: countId, items: [{ productId: raceProduct.id }] }, operation: 'upsert', expectedVersion: 0, mutationId: `${tag}_race_count_save` }) }),
+    fetch(`${base}/api/sync`, { method: 'POST', headers: { Cookie: admin.cookie, 'X-Workspace-User': admin.user.id, Origin: base, 'Content-Type': 'application/json' }, body: JSON.stringify({ collection: 'orders', id: countId, data: raceOrder, operation: 'upsert', expectedVersion: 0, mutationId: `${tag}_race_count_save` }) }),
   ]);
-  assert(results.every(response => [200, 409].includes(response.status)));
+  assert.equal(results[0].status, 200);
+  assert([200, 400, 409].includes(results[1].status));
   const remaining = await service(`workspace_records?id=in.(${raceProduct.id},${countId})&select=collection,id`);
-  assert(!remaining.some(row => row.id === countId) || remaining.some(row => row.id === raceProduct.id), 'Concurrent write left an orphan');
-  mark('Concurrent deletion and stock write leave no dangling reference');
+  assert(!remaining.some(row => row.collection === 'products'));
+  assert(remaining.some(row => row.collection === 'deletedProducts' && row.id === raceProduct.id), 'Missing historical product snapshot');
+  mark('Concurrent deletion and sale preserve historical identity without restoring the catalogue product');
   console.log(JSON.stringify({ passed, base }));
 } finally {
   if (admin) {
@@ -93,6 +126,7 @@ try {
     for (const row of own.filter(row => row.collection === 'products')) await service(`workspace_records?collection=eq.products&id=eq.${encodeURIComponent(row.id)}`, { method: 'DELETE' });
     if (officerId) await service(`users?id=eq.${officerId}`, { method: 'DELETE' });
     if (brand) await service(`brands?id=eq.${encodeURIComponent(brand.id)}`, { method: 'DELETE' });
+    if (otherBrand) await service(`brands?id=eq.${encodeURIComponent(otherBrand.id)}`, { method: 'DELETE' });
     console.log('Temporary catalogue QA records removed. Existing catalogue preserved.');
   }
 }

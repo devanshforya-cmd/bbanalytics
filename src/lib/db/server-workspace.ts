@@ -65,6 +65,19 @@ export async function readWorkspaceContext(): Promise<WorkspaceContext> {
   return { users, brands, records };
 }
 
+/** Only IDs are sent for cache invalidation; historical snapshots stay server-only. */
+export async function readDeletedProductIds(user: User): Promise<string[]> {
+  if (!['products', 'beat_plans', 'orderflow', 'dispatches'].some(feature => hasAccess(user, feature))) return [];
+  const assigned = getAssignedBrandCodes(user);
+  const ids: string[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabaseAdmin.from('workspace_records').select('id,data').eq('collection', 'deletedProducts').order('id').range(offset, offset + 999);
+    if (error) throw new WorkspaceError(503, 'Product deletion status could not be refreshed.');
+    for (const row of data || []) if (assigned.includes('ALL') || assigned.includes(String(row.data.brandCode || '').toUpperCase())) ids.push(row.id);
+    if (!data || data.length < 1000) return ids;
+  }
+}
+
 export async function readSharedAccessLink(token: string): Promise<SharedAccessLink> {
   const { data, error } = await supabaseAdmin.from('workspace_records').select('data,created_by').eq('collection', 'sharedAccessLinks').eq('data->>token', token).maybeSingle();
   if (error) throw new WorkspaceError(503, 'Shared access is temporarily unavailable.');
@@ -234,6 +247,11 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
   const { data: previous, error: readError } = await supabaseAdmin.from('workspace_records').select('*').eq('collection', mutation.collection).eq('id', mutation.id).maybeSingle();
   if (readError) throw new WorkspaceError(503, 'This record could not be read.');
   const prior = previous as StoredWorkspaceRecord | null;
+  if (mutation.collection === 'products' && mutation.operation === 'upsert') {
+    const history = await supabaseAdmin.from('workspace_records').select('id').eq('collection', 'deletedProducts').eq('id', mutation.id).maybeSingle();
+    if (history.error) throw new WorkspaceError(503, 'Product deletion history could not be checked.');
+    if (history.data) throw new WorkspaceError(409, 'This product was deleted. Add a new product instead of reusing its identifier.');
+  }
   const context = suppliedContext || await readMutationContext(mutation, prior);
   prepareRecordData(user, mutation, prior, context);
   const candidate: StoredWorkspaceRecord = { collection: mutation.collection, id: mutation.id, data: mutation.data || prior?.data || { id: mutation.id },
@@ -247,9 +265,17 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
   const version = (prior?.version || 0) + 1;
   let result;
   if (mutation.operation === 'delete' && mutation.collection === 'products') {
-    const deletion = await supabaseAdmin.rpc('delete_workspace_product', { p_id: mutation.id, p_expected_version: mutation.expectedVersion });
-    if (deletion.error?.code === '23503') throw new WorkspaceError(409, 'This product has linked records or stock. Archive it instead.');
-    if (deletion.error?.code === '40001') throw new WorkspaceError(409, 'This product changed on another device. Refresh before deleting it.');
+    // The existing transaction preserves private history and removes the live SKU together.
+    // Keep the full snapshot as JSON text so old invalid component links cannot block removal.
+    const history = { id: mutation.id, name: prior!.data.name, sku: prior!.data.sku, brandCode: prior!.data.brandCode,
+      stockQty: prior!.data.stockQty ?? 0, deletedAt: new Date().toISOString(), deletedById: user.id,
+      originalCreatedById: prior!.created_by, snapshotJson: JSON.stringify(prior!.data) };
+    const deletion = await supabaseAdmin.rpc('commit_workspace_mutations', { p_mutations: [
+      { collection: 'deletedProducts', id: mutation.id, operation: 'upsert', data: history, expectedVersion: 0,
+        mutationId: `${mutation.mutationId}:history`, createdBy: user.id },
+      { ...mutation, createdBy: user.id },
+    ] });
+    if (deletion.error?.code === '40001' || deletion.error?.code === '23505') throw new WorkspaceError(409, 'This product changed on another device. Refresh before deleting it.');
     if (deletion.error) throw new WorkspaceError(503, 'The product was not deleted. Refresh and try again.');
     result = { data: [{ id: mutation.id }], error: null };
   } else if (mutation.operation === 'delete') {

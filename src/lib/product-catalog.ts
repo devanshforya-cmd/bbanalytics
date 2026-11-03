@@ -16,7 +16,7 @@ export function productUsage(product: Product, snapshot: WorkspaceSnapshot) {
     const count = (rows || []).filter(row => !(collection === 'products' && row.id === product.id) && referencesProduct(row, product.id)).length;
     return count ? [{ collection, count }] : [];
   });
-  return { references, stockQty: product.stockQty ?? 0, canDelete: !references.length && !product.stockQty };
+  return { references, stockQty: product.stockQty ?? 0, canDelete: true };
 }
 
 export function isSellableCombo(combo: Combo, products: Product[]) {
