@@ -1,3 +1,4 @@
+import { DEFAULT_SUPER_ADMIN } from './fixtures';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -116,7 +117,9 @@ test('Permission visibility hides ungranted features and empty brand assignments
 // 3. UI Flow & Assignment Logic
 // ==========================================
 test('UI Flow - Beat Route Assignment & Staff Leave Relief Workflow', () => {
-  // Test User
+  // Fixtures belong to the test, never to a new production workspace.
+  db.replaceUsers([DEFAULT_SUPER_ADMIN]);
+  db.hydrateSnapshot({}, DEFAULT_SUPER_ADMIN);
   const users = db.getUsers();
   assert.ok(users.length > 0, 'Must have at least super admin user');
 

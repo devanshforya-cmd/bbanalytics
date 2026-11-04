@@ -1,7 +1,8 @@
+import { DEFAULT_SUPER_ADMIN } from './fixtures';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultOrderOptions, validateOrderOptions, requiredOrderOptionActions, activeOrderOptionNames, assertActiveOrderOption } from '../src/lib/order-options.ts';
-import { DatabaseService, DEFAULT_SUPER_ADMIN } from '../src/lib/db/db-service.ts';
+import { DatabaseService } from '../src/lib/db/db-service.ts';
 import { canReadWorkspaceRecord, canWriteWorkspaceRecord } from '../src/lib/db/workspace-policy.ts';
 import { validateWorkspaceMutation } from '../src/lib/db/server-workspace.ts';
 import { validateCsvImport, IMPORT_COLUMNS } from '../src/lib/import-validation.ts';

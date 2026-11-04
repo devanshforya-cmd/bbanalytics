@@ -1,9 +1,6 @@
+import { installWorkspaceFetch } from '../workspace-reset-client';
 import { validGpsCoordinates } from '../gps-validation';
 import {
-  SUPER_ADMIN_TEMPLATE,
-  MANAGER_TEMPLATE,
-  FIELD_SALES_OFFICER_TEMPLATE,
-  OFFICE_STAFF_TEMPLATE,
   getScope,
 } from '../permissions';
 import { WORKSPACE_COLLECTIONS, WorkspaceCollection, WorkspaceMutation, WorkspaceSnapshot, WorkspaceVersions } from './workspace-types';
@@ -11,101 +8,7 @@ import { canReadWorkspaceRecord, canWriteWorkspaceRecord, StoredWorkspaceRecord 
 import { DEFAULT_ALERT_RULES, validateAlertRules, type AlertRules } from '../alert-rules';
 import { defaultOrderOptions, validateOrderOptions, assertActiveOrderOption, type OrderOptions } from '../order-options';
 
-export const DEFAULT_SUPER_ADMIN: User = {
-  id: 'user_devansh',
-  fullName: 'Devansh Agarwal',
-  email: 'devansh@brandbucket.com',
-  phone: '+977-9801234567',
-  role: 'SUPER_ADMIN',
-  isSuperAdmin: true,
-  dutyStatus: 'ONLINE',
-  active: true,
-  assignedBrands: ['ALL'],
-  territory: 'ALL',
-  permissions: {
-    canViewAnalytics: true,
-    canExportSheets: true,
-    canManageDispatches: true,
-    canManageCheques: true,
-    canApproveSkips: true,
-    canManageStaff: true,
-    canConfigureSettings: true,
-  },
-  customPermissions: SUPER_ADMIN_TEMPLATE,
-};
-
-export const DEFAULT_OPS_ADMIN: User = {
-  id: 'user_ops_admin',
-  fullName: 'Operations Manager',
-  email: 'ops@brandbucket.com',
-  phone: '+977-9801112233',
-  role: 'ADMIN',
-  isSuperAdmin: false,
-  dutyStatus: 'ONLINE',
-  active: true,
-  assignedBrands: ['ALL'],
-  territory: 'ALL',
-  permissions: {
-    canViewAnalytics: true,
-    canExportSheets: true,
-    canManageDispatches: true,
-    canManageCheques: true,
-    canApproveSkips: true,
-    canManageStaff: false,
-    canConfigureSettings: false,
-  },
-  customPermissions: MANAGER_TEMPLATE,
-};
-
-export const DEFAULT_SALES_OFFICER: User = {
-  id: 'user_rohan',
-  fullName: 'Rohan Shrestha',
-  email: 'rohan@brandbucket.com',
-  phone: '+977-9841234567',
-  role: 'SALES_OFFICER',
-  isSuperAdmin: false,
-  dutyStatus: 'ONLINE',
-  active: true,
-  assignedBrands: ['ALL'],
-  territory: 'Kathmandu Central',
-  permissions: {
-    canViewAnalytics: false,
-    canExportSheets: false,
-    canManageDispatches: false,
-    canManageCheques: true,
-    canApproveSkips: false,
-    canManageStaff: false,
-    canConfigureSettings: false,
-  },
-  customPermissions: FIELD_SALES_OFFICER_TEMPLATE,
-};
-
-export const DEFAULT_MARKETING_LEAD: User = {
-  id: 'user_sita',
-  fullName: 'Sita Gurung',
-  email: 'sita@brandbucket.com',
-  phone: '+977-9851122334',
-  role: 'OFFICE_STAFF',
-  isSuperAdmin: false,
-  dutyStatus: 'ONLINE',
-  active: true,
-  assignedBrands: ['ALL'],
-  territory: 'Kathmandu Valley',
-  permissions: {
-    canViewAnalytics: true,
-    canExportSheets: false,
-    canManageDispatches: false,
-    canManageCheques: false,
-    canApproveSkips: false,
-    canManageStaff: false,
-    canConfigureSettings: false,
-  },
-  customPermissions: OFFICE_STAFF_TEMPLATE,
-};
-
-export const DEFAULT_STAFF_USERS: User[] = [
-  DEFAULT_SUPER_ADMIN,
-];
+const ANONYMOUS_USER: User = { id: '', fullName: '', email: '', phone: '', role: 'OFFICE_STAFF', active: false, isSuperAdmin: false, dutyStatus: 'OFFLINE', assignedBrands: [], permissions: {}, customPermissions: {} };
 
 import {
   User,
@@ -186,11 +89,12 @@ export interface OrderRealtimeEvent {
 }
 
 export class DatabaseService {
-  private users: User[] = [...DEFAULT_STAFF_USERS];
-  private currentUser: User = DEFAULT_SUPER_ADMIN;
+  private users: User[] = [];
+  private currentUser: User = ANONYMOUS_USER;
   private brands: Brand[] = [];
   private products: Product[] = [];
   private deletedProductIds = new Set<string>();
+  private deletedStoreIds = new Set<string>();
   private combos: Combo[] = [];
   private secondaryOrders: SecondaryOrder[] = [];
   private facingAudits: FacingAudit[] = [];
@@ -229,24 +133,8 @@ export class DatabaseService {
   private salesMode: DashboardSalesMode = 'ALL';
   private orderSubscribers: Set<(event: OrderRealtimeEvent) => void> = new Set();
 
-  private documentTypes: DocumentTypeConfig[] = [
-    { id: 'doc_po', name: 'Purchase Order', isActive: true },
-    { id: 'doc_inv', name: 'Signed Invoice', isActive: true },
-    { id: 'doc_receipt', name: 'Delivery Receipt', isActive: true },
-    { id: 'doc_stock', name: 'Stock Acknowledgment', isActive: true },
-    { id: 'doc_credit', name: 'Credit Note', isActive: true },
-    { id: 'doc_ret', name: 'Return Authorization', isActive: true },
-  ];
-
-  private storeCategories: StoreCategoryConfig[] = [
-    { id: 'cat_supermarket', name: 'Supermarket', isActive: true },
-    { id: 'cat_pharmacy', name: 'Pharmacy', isActive: true },
-    { id: 'cat_kirana', name: 'Kirana', isActive: true },
-    { id: 'cat_cosmetics', name: 'Cosmetics Store', isActive: true },
-    { id: 'cat_wholesale', name: 'Wholesale', isActive: true },
-    { id: 'cat_general', name: 'General Store', isActive: true },
-    { id: 'cat_dept', name: 'Department Store', isActive: true },
-  ];
+  private documentTypes: DocumentTypeConfig[] = [];
+  private storeCategories: StoreCategoryConfig[] = [];
 
   private requireStorePhotoAtCheckIn: boolean = false;
   private alertRules: AlertRules = { ...DEFAULT_ALERT_RULES };
@@ -270,6 +158,8 @@ export class DatabaseService {
     this.initialSnapshot = this.exportSnapshot();
     this.baseline = this.exportSnapshot();
     if (this.server) return;
+    installWorkspaceFetch();
+    window.addEventListener('bb-workspace-reset', () => this.setSessionUser(null));
     const sessionUser = this.readSessionUser();
     this.activeUserId = sessionUser?.id || null;
     if (sessionUser) { this.currentUser = sessionUser; this.users = [sessionUser]; }
@@ -373,8 +263,8 @@ export class DatabaseService {
     if (this.server) { if (user) this.currentUser = user; return; }
     if (this.activeUserId !== (user?.id || null)) {
       this.activeUserId = user?.id || null; this.syncPromise = null; this.legacySnapshot = null;
-      this.deletedProductIds.clear();
-      this.hydrateSnapshot(this.initialSnapshot, user || DEFAULT_SUPER_ADMIN);
+      this.deletedProductIds.clear(); this.deletedStoreIds.clear();
+      this.hydrateSnapshot(this.initialSnapshot, user || ANONYMOUS_USER);
       this.users = user ? [user] : []; this.brands = [];
       this.activeBrandFilter = 'ALL'; this.calendarMode = 'BS'; this.comparisonMode = 'OFF'; this.salesMode = 'ALL';
       syncManager.setUser(this.activeUserId);
@@ -421,11 +311,13 @@ export class DatabaseService {
       }
       if (!response.ok || !result?.success || !result.data || result.errors?.length) return { success: false, syncedCount: 0, message: result?.error || 'Workspace refresh failed. Your local changes are preserved.' };
       if (Array.isArray(result.deletedProductIds)) this.deletedProductIds = new Set(result.deletedProductIds.filter((id: unknown): id is string => typeof id === 'string'));
+      if (Array.isArray(result.deletedStoreIds)) this.deletedStoreIds = new Set(result.deletedStoreIds.filter((id: unknown): id is string => typeof id === 'string'));
       const remote: WorkspaceSnapshot = {};
       for (const collection of WORKSPACE_COLLECTIONS) remote[collection] = Array.isArray(result.data[collection]) ? result.data[collection] : [];
       const configuration = new Set(['workspaceConfig', 'documentTypes', 'storeCategories', 'activityLogs', 'notifications', 'holidays', 'taskTemplates', 'promotions', 'seasonalPatterns']);
       const remoteEmpty = WORKSPACE_COLLECTIONS.filter((collection) => !configuration.has(collection)).every((collection) => !remote[collection]?.length);
       if (this.legacySnapshot && !localStorage.getItem(`bb_workspace_recovered:${owner}`)) {
+        for (const collection of ['retailers', 'branches', 'distributors'] as const) this.legacySnapshot[collection] = this.legacySnapshot[collection]?.filter(row => !this.deletedStoreIds.has(row.id));
         this.legacySnapshot.products = this.legacySnapshot.products?.filter(row => !this.deletedProductIds.has(row.id));
         const existing = new Set(syncManager.getWorkspaceMutations().map((mutation) => `${mutation.collection}:${mutation.id}`));
         for (const collection of WORKSPACE_COLLECTIONS) {
@@ -448,7 +340,7 @@ export class DatabaseService {
       const records = WORKSPACE_COLLECTIONS.flatMap(collection => (remote[collection] || []).map(row => ({ collection, id: row.id, data: row, created_by: row.createdById || owner, version: result.versions?.[collection]?.[row.id] || 0 })));
       merged.staffLiveLocations = this.exportSnapshot().staffLiveLocations;
       for (const mutation of pending) {
-        if (mutation.collection === 'products' && this.deletedProductIds.has(mutation.id)) continue;
+        if (mutation.collection === 'products' && this.deletedProductIds.has(mutation.id) || ['retailers', 'branches', 'distributors'].includes(mutation.collection) && this.deletedStoreIds.has(mutation.id)) continue;
         const rows = (merged[mutation.collection] || []).filter((row) => row.id !== mutation.id);
         if (mutation.operation === 'upsert' && mutation.data && canReadWorkspaceRecord(freshUser, { collection: mutation.collection, id: mutation.id, data: mutation.data, created_by: mutation.data.createdById || owner, version: mutation.expectedVersion }, freshUsers, records)) rows.push(mutation.data);
         merged[mutation.collection] = rows;
@@ -481,6 +373,7 @@ export class DatabaseService {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed.deletedProductIds)) parsed.deletedProductIds.filter((id: unknown): id is string => typeof id === 'string').forEach((id: string) => this.deletedProductIds.add(id));
         if (parsed.users && parsed.users.length > 0) this.users = parsed.users;
+        if (Array.isArray(parsed.deletedStoreIds)) parsed.deletedStoreIds.filter((id: unknown): id is string => typeof id === 'string').forEach((id: string) => this.deletedStoreIds.add(id));
         if (parsed.products) this.products = parsed.products.filter((product: Product) => !this.deletedProductIds.has(product.id));
         if (parsed.combos) this.combos = parsed.combos;
         if (parsed.secondaryOrders) this.secondaryOrders = parsed.secondaryOrders;
@@ -494,9 +387,9 @@ export class DatabaseService {
         if (parsed.feedbackEntries) this.feedbackEntries = parsed.feedbackEntries;
         if (parsed.reviewCategories) this.reviewCategories = parsed.reviewCategories;
         if (parsed.tasks) this.tasks = parsed.tasks;
-        if (parsed.retailers) this.retailers = parsed.retailers;
-        if (parsed.distributors) this.distributors = parsed.distributors;
-        if (parsed.branches) this.branches = parsed.branches;
+        if (parsed.retailers) this.retailers = parsed.retailers.filter((row: { id: string }) => !this.deletedStoreIds.has(row.id));
+        if (parsed.distributors) this.distributors = parsed.distributors.filter((row: { id: string }) => !this.deletedStoreIds.has(row.id));
+        if (parsed.branches) this.branches = parsed.branches.filter((row: { id: string }) => !this.deletedStoreIds.has(row.id));
         if (parsed.dispatches) this.dispatches = parsed.dispatches;
         if (parsed.stockCounts) this.stockCounts = parsed.stockCounts;
         if (parsed.shelfPhotos) this.shelfPhotos = parsed.shelfPhotos;
@@ -636,6 +529,7 @@ export class DatabaseService {
         brands: this.brands,
         products: this.products,
         deletedProductIds: [...this.deletedProductIds],
+        deletedStoreIds: [...this.deletedStoreIds],
         combos: this.combos,
         secondaryOrders: this.secondaryOrders,
         facingAudits: this.facingAudits,
@@ -2416,7 +2310,7 @@ export class DatabaseService {
       now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
     if (newStatus === 'HANDED_OVER') {
-      const recipient = details?.handedToUserName || 'Sita Gurung (Ops Desk)';
+      const recipient = details?.handedToUserName?.trim() || this.currentUser.fullName;
       doc.handedToUserName = recipient;
       doc.handoverDate = now.toISOString().split('T')[0];
       doc.currentHolder = recipient;
@@ -2470,7 +2364,7 @@ export class DatabaseService {
         flaggedBy: this.currentUser.fullName,
       });
       this.addNotification({
-        userId: 'user_devansh',
+        userId: this.users.find(user => user.active !== false && user.isSuperAdmin)?.id || this.currentUser.id,
         title: 'CRITICAL: Document Flagged as MISSING',
         message: `${doc.documentType} (${doc.referenceNumber || doc.id}) from ${doc.storeName} was marked as MISSING by ${this.currentUser.fullName}. Immediate audit investigation required.`,
         priority: 'HIGH',

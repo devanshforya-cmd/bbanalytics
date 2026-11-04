@@ -59,3 +59,11 @@ The recovery tests include real, separate Super Admin and Sales Officer accounts
 - Each user enables push from the profile drawer, registers that device and sends a real test request. See [PUSH_NOTIFICATIONS.md](PUSH_NOTIFICATIONS.md).
 - Settings → Channels & Logistics supports add, rename and delete/archive with an explicit save. Used choices remain on historical orders. New choices propagate to order entry, edits, imports and channel reports.
 - Stores → Area selling prioritizes retailer and branch opportunities using recorded local delivered demand. City/area can be edited on store details with Store EDIT permission. Comparisons separate retailer/branch peers and show insufficient-data states. [AREA_SELLING_RULES.md](AREA_SELLING_RULES.md) explains the deterministic scores.
+
+## Fresh workspace and store deletion
+
+A new workspace starts with empty business catalogues, store directories, document types and store categories. Staff records come from the server; no sample staff account is supplied by the client.
+
+Super Admin can delete retailers, branches and distributors from the store list or detail page. The confirmation shows linked children and pending route assignments. Delete linked retailers/branches first, then their parent. Deletion cancels pending beat assignments and recurring schedules, preserves completed transaction history, and prevents a stale device from recreating the same store ID.
+
+A full administrative reset clears business history as well as the current directory. The `workspace_reset_state` technical setting identifies the current dataset and blocks app writes while cleanup runs. API requests from an earlier dataset are refused. On reconnection, browsers clear app storage, drafts, offline queues, GPS caches, IndexedDB, service-worker caches and push registration, then return to sign-in. An offline device clears its local copy when it next connects and reloads. Server settings and the retained Super Admin login are not business seed data.

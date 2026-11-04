@@ -3,7 +3,7 @@
  * Provides offline caching for static assets, app shell, and background sync integration.
  */
 
-const CACHE_NAME = 'bb-command-center-v7-field-push';
+const CACHE_NAME = 'bb-command-center-v8-fresh-workspace';
 // Install: Precache core app shell & static routes
 self.addEventListener('install', (event) => {
   self.skipWaiting();

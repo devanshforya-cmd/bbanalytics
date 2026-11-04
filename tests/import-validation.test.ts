@@ -1,8 +1,9 @@
+import { DEFAULT_SUPER_ADMIN } from './fixtures';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { IMPORT_COLUMNS, parseImportCsv, validateCsvImport, type CsvImportInput, type CsvImportType, type ImportCatalog } from '../src/lib/import-validation.ts';
 import { generateCSV } from '../src/lib/csv.ts';
-import { DatabaseService, DEFAULT_SUPER_ADMIN } from '../src/lib/db/db-service.ts';
+import { DatabaseService } from '../src/lib/db/db-service.ts';
 import { processCsvImport } from '../src/lib/db/import-service.ts';
 
 const batchId = 'ba8ad376-5ea7-4d34-a4cb-486de85a90a7';

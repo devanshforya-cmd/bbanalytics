@@ -1,3 +1,4 @@
+import { readWorkspaceResetState } from '@/lib/db/workspace-reset-server';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
@@ -13,6 +14,7 @@ const response = (status: number, message: string) => new NextResponse(message, 
 async function receive(request: Request) {
   if (Number(request.headers.get('content-length') || 0) > 8192 || request.url.length > 8192) return response(413, 'Request too large');
   try {
+    if ((await readWorkspaceResetState()).resetting) return response(503, 'Workspace reset in progress');
     const params = new URL(request.url).searchParams;
     if (request.method === 'POST') {
       const reader = request.body?.getReader();

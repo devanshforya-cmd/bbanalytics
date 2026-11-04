@@ -12,8 +12,9 @@ const ids = new Set();
 let brand, otherBrand, officerId, admin;
 let passed = 0;
 const mark = text => { passed++; console.log(`PASS ${text}`); };
-async function api(path, { method = 'GET', body, cookie = admin?.cookie, user = admin?.user.id, status = 200, origin = base } = {}) {
-  const response = await fetch(base + path, { method, headers: { ...(cookie ? { Cookie: cookie } : {}), ...(user ? { 'X-Workspace-User': user } : {}), ...(method !== 'GET' ? { Origin: origin } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+const epoch = (await (await fetch(base + '/api/workspace-state')).json()).epoch;
+async function api(path, { method = 'GET', body, cookie = admin?.cookie, user = admin?.user.id, status = 200, origin = base, headers = {} } = {}) {
+  const response = await fetch(base + path, { method, headers: { 'X-Workspace-Epoch': epoch, ...(cookie ? { Cookie: cookie } : {}), ...(user ? { 'X-Workspace-User': user } : {}), ...(method !== 'GET' ? { Origin: origin } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
   const data = await response.json();
   assert.equal(response.status, status, `${method} ${path}: ${response.status} ${data.error || ''}`);
   return { data, response };
@@ -108,8 +109,8 @@ try {
   const countId = `${tag}_race_sale`; ids.add(countId);
   const raceOrder = { ...order, id: countId, orderNumber: `${tag}_RACE`, items: [{ ...order.items[0], productId: raceProduct.id }] };
   const results = await Promise.all([
-    fetch(`${base}/api/products/${raceProduct.id}`, { method: 'DELETE', headers: { Cookie: admin.cookie, 'X-Workspace-User': admin.user.id, Origin: base, 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedVersion: 1 }) }),
-    fetch(`${base}/api/sync`, { method: 'POST', headers: { Cookie: admin.cookie, 'X-Workspace-User': admin.user.id, Origin: base, 'Content-Type': 'application/json' }, body: JSON.stringify({ collection: 'orders', id: countId, data: raceOrder, operation: 'upsert', expectedVersion: 0, mutationId: `${tag}_race_count_save` }) }),
+    fetch(`${base}/api/products/${raceProduct.id}`, { method: 'DELETE', headers: { 'X-Workspace-Epoch': epoch, Cookie: admin.cookie, 'X-Workspace-User': admin.user.id, Origin: base, 'Content-Type': 'application/json' }, body: JSON.stringify({ expectedVersion: 1 }) }),
+    fetch(`${base}/api/sync`, { method: 'POST', headers: { 'X-Workspace-Epoch': epoch, Cookie: admin.cookie, 'X-Workspace-User': admin.user.id, Origin: base, 'Content-Type': 'application/json' }, body: JSON.stringify({ collection: 'orders', id: countId, data: raceOrder, operation: 'upsert', expectedVersion: 0, mutationId: `${tag}_race_count_save` }) }),
   ]);
   assert.equal(results[0].status, 200);
   assert([200, 400, 409].includes(results[1].status));
@@ -117,6 +118,37 @@ try {
   assert(!remaining.some(row => row.collection === 'products'));
   assert(remaining.some(row => row.collection === 'deletedProducts' && row.id === raceProduct.id), 'Missing historical product snapshot');
   mark('Concurrent deletion and sale preserve historical identity without restoring the catalogue product');
+  const distributor = { id: `${tag}_dist`, name: 'QA distributor', city: 'QA', brandsRepresented: [brand.code] };
+  const branch = { id: `${tag}_branch`, name: 'QA branch', distributorId: distributor.id, brandsAvailable: [brand.code] };
+  const retailer = { id: `${tag}_retailer`, name: 'QA retailer', branchId: branch.id, distributorId: distributor.id, brandsStocked: [brand.code], assignedOfficerId: admin.user.id };
+  await mutation('distributors', distributor); await mutation('branches', branch); await mutation('retailers', retailer);
+  const inspectStore = async id => (await api(`/api/stores/${id}`)).data;
+  const deleteStore = async (store, status = 200, extra = {}) => api(`/api/stores/${store.id}`, { method: 'DELETE', status, body: { collection: store.collection, expectedVersion: store.version }, ...extra });
+  const d = { ...await inspectStore(distributor.id), id: distributor.id };
+  assert.equal(d.children.length, 2); await deleteStore(d, 409);
+  const r = { ...await inspectStore(retailer.id), id: retailer.id };
+  await deleteStore(r, 403, { cookie, user: officerId });
+  await deleteStore(r, 403, { origin: 'https://other.example' });
+  await deleteStore({ ...r, version: 999 }, 409);
+  mark('Store deletion enforces Super Admin, account origin, version and linked-child checks');
+  const beat = { id: `${tag}_store_beat`, storeId: retailer.id, storeName: retailer.name, officerId: admin.user.id, status: 'PENDING' };
+  const schedule = { id: `${tag}_store_schedule`, storeId: retailer.id, officerId: admin.user.id };
+  const visit = { id: `${tag}_store_visit`, storeId: retailer.id, officerId: admin.user.id, status: 'COMPLETED' };
+  await mutation('beatItems', beat); await mutation('recurringSchedules', schedule); await mutation('visits', visit);
+  const preview = await inspectStore(retailer.id); assert.equal(preview.pendingCount, 2);
+  await deleteStore(r);
+  await api(`/api/stores/${retailer.id}`, { status: 404 });
+  await mutation('retailers', retailer, 0, 409);
+  const snapshot = (await api('/api/sync')).data;
+  assert(snapshot.deletedStoreIds.includes(retailer.id));
+  assert(!snapshot.data.beatItems.some(row => row.id === beat.id));
+  assert(!snapshot.data.recurringSchedules.some(row => row.id === schedule.id));
+  assert(snapshot.data.visits.some(row => row.id === visit.id));
+  await deleteStore({ ...await inspectStore(branch.id), id: branch.id });
+  await deleteStore({ ...await inspectStore(distributor.id), id: distributor.id });
+  mark('Retailer, branch and distributor delete permanently; routes cancel, history remains and stale IDs cannot return');
+  await api('/api/sync', { method: 'POST', status: 409, headers: { 'X-Workspace-Epoch': 'before-reset' }, body: { collection: 'retailers', id: retailer.id, data: retailer, operation: 'upsert', expectedVersion: 0, mutationId: `${tag}_stale_reset` } });
+  mark('A browser from an earlier dataset cannot upload cached records');
   console.log(JSON.stringify({ passed, base }));
 } finally {
   if (admin) {

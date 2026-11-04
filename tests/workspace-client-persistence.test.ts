@@ -1,6 +1,7 @@
+import { DEFAULT_SUPER_ADMIN } from './fixtures';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DatabaseService, DEFAULT_SUPER_ADMIN, db as coreDb } from '../src/lib/db/db-service.ts';
+import { DatabaseService, db as coreDb } from '../src/lib/db/db-service.ts';
 import { OfflineSyncManager, syncManager } from '../src/lib/offline-sync.ts';
 import { fetchLatestPingsFromSupabase } from '../src/lib/db/gps-service.ts';
 import type { WorkspaceMutation } from '../src/lib/db/workspace-types.ts';

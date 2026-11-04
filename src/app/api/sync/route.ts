@@ -1,7 +1,7 @@
 import { isSameOriginRequest } from '@/lib/request-origin';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-guard';
-import { readWorkspaceContext, readDeletedProductIds, visibleWorkspace, saveWorkspaceMutation, WorkspaceError } from '@/lib/db/server-workspace';
+import { readWorkspaceContext, readDeletedProductIds, readDeletedStoreIds, visibleWorkspace, saveWorkspaceMutation, WorkspaceError } from '@/lib/db/server-workspace';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 import { canPerform, getScope, isSuperAdmin } from '@/lib/permissions';
 import { teamMemberIds } from '@/lib/db/workspace-policy';
@@ -20,9 +20,9 @@ export async function GET(request: Request) {
   if (auth.response) return auth.response;
   if (request.headers.has('x-workspace-user') && request.headers.get('x-workspace-user') !== auth.user.id) return NextResponse.json({ success: false, error: 'The signed-in account changed. Sign in again before syncing.' }, { status: 409 });
   try {
-    const [context, deletedProductIds] = await Promise.all([readWorkspaceContext(), readDeletedProductIds(auth.user)]);
+    const [context, deletedProductIds, deletedStoreIds] = await Promise.all([readWorkspaceContext(), readDeletedProductIds(auth.user), readDeletedStoreIds(auth.user)]);
     const view = visibleWorkspace(auth.user, context);
-    return NextResponse.json({ success: true, data: view.data, versions: view.versions, deletedProductIds, errors: [] }, { headers: { 'Cache-Control': 'private, no-store' } });
+    return NextResponse.json({ success: true, data: view.data, versions: view.versions, deletedProductIds, deletedStoreIds, errors: [] }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) { return failure(error); }
 }
 

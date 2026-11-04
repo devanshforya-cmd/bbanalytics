@@ -3,8 +3,8 @@ import { normalizePhoneNumber } from './auth-utils';
 import type { User } from './types';
 
 export const LOCAL_PREVIEW_USER: User = {
-  id: 'user_devansh',
-  fullName: 'Devansh Agarwal (Local Preview)',
+  id: 'local_preview_admin',
+  fullName: 'Local Preview Admin',
   email: 'admin@brandbucket.com',
   phone: '9800000001',
   role: 'SUPER_ADMIN',
