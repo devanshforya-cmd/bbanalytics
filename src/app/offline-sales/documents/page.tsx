@@ -236,6 +236,7 @@ export default function DocumentsPage() {
   // Status Handlers (5c)
   const handleConfirmHandover = () => {
     if (!handoverModalDoc) return;
+    if (!handoverRecipient.trim()) { toast.error('Choose the receiving staff member.'); return; }
     db.updateDocumentStatus(handoverModalDoc.id, 'HANDED_OVER', {
       handedToUserName: handoverRecipient,
       notes: handoverNotes.trim() || undefined,
@@ -268,7 +269,7 @@ export default function DocumentsPage() {
 
   const handleRecoverDocument = (doc: HandoverDocument) => {
     db.updateDocumentStatus(doc.id, 'HANDED_OVER', {
-      handedToUserName: 'Sita Gurung (Ops Desk)',
+      handedToUserName: db.getCurrentUser().fullName,
       notes: 'Document recovered and accounted for in office custody.',
     });
     setDocuments([...db.getDocuments()]);
@@ -881,7 +882,7 @@ export default function DocumentsPage() {
                           <button
                             onClick={() => {
                               setHandoverModalDoc(doc);
-                              setHandoverRecipient('Sita Gurung (Ops Desk)');
+                              setHandoverRecipient('');
                               setHandoverNotes('');
                             }}
                             className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition-colors"

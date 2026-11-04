@@ -1,6 +1,7 @@
+import { DEFAULT_SUPER_ADMIN } from './fixtures';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DatabaseService, DEFAULT_SUPER_ADMIN } from '../src/lib/db/db-service';
+import { DatabaseService } from '../src/lib/db/db-service';
 import { customerBrandMap, isSellableCombo, matchingCatalogCombo, productUsage, referencesProduct } from '../src/lib/product-catalog';
 import { canWriteWorkspaceRecord } from '../src/lib/db/workspace-policy';
 import type { Brand, Combo, Customer, Product } from '../src/lib/types';

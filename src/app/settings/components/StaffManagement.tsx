@@ -79,8 +79,8 @@ export default function StaffManagement() {
     setStaffPhone('');
     setStaffPassword('');
     setShowPassword(false);
-    setReportsToId('user_devansh');
-    setAssignedTerritory('Kathmandu Valley');
+    setReportsToId(db.getCurrentUser().id);
+    setAssignedTerritory('');
     setPermissionsState(JSON.parse(JSON.stringify(FIELD_SALES_OFFICER_TEMPLATE)));
     setShowAddStaffModal(true);
   };

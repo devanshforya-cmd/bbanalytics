@@ -96,7 +96,7 @@ function FeedbackContent() {
   // Resolution note state in detail modal
   const [resolutionNote, setResolutionNote] = useState('');
   const [showEscalateModal, setShowEscalateModal] = useState(false);
-  const [escalateAssignee, setEscalateAssignee] = useState('Sita Gurung');
+  const [escalateAssignee, setEscalateAssignee] = useState(() => db.getCurrentUser().fullName);
   const [escalateNote, setEscalateNote] = useState('');
 
   const handleConfirmEscalate = () => {

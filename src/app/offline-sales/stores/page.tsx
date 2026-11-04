@@ -40,6 +40,7 @@ import {
   Sparkles,
   Percent,
 } from 'lucide-react';
+import StoreDeleteButton from '@/components/stores/StoreDeleteButton';
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
 import { useSubmitGuard } from '@/hooks/useSubmitGuard';
@@ -601,7 +602,7 @@ export default function StoresPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-bold text-slate-900 text-base">{dist.name}</h3>
+                          <h3 className="font-bold text-slate-900 text-base">{dist.name}</h3><StoreDeleteButton id={dist.id} name={dist.name} onDeleted={refreshData} />
                           <span className="rounded-full bg-blue-50 text-blue-700 px-2.5 py-0.5 text-[10px] font-bold border border-blue-200">
                             {dist.storeType === 'CHAIN_STORE' ? 'Chain Store' : 'Bulk Distributor'}
                           </span>
@@ -692,6 +693,7 @@ export default function StoresPage() {
                               <div className="text-[11px] text-slate-500">{branch.address}</div>
                               {canViewSelling && <Link href={`/offline-sales/stores/${branch.id}?tab=selling`} className="mt-1 block text-[11px] font-semibold text-blue-700 hover:underline">Area selling: {areaAnalyses.get('BRANCH:' + branch.id)?.opportunityScore == null ? 'Building evidence' : `${areaAnalyses.get('BRANCH:' + branch.id)!.opportunityScore}/100`} →</Link>}
                             </div>
+                            <StoreDeleteButton id={branch.id} name={branch.name} onDeleted={refreshData} />
                             <a
                               href={`https://www.google.com/maps/dir/?api=1&destination=${branch.lat},${branch.lng}`}
                               target="_blank"
@@ -727,7 +729,7 @@ export default function StoresPage() {
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm">{ret.name}</h3>
+                        <h3 className="font-bold text-slate-900 text-sm">{ret.name}</h3><StoreDeleteButton id={ret.id} name={ret.name} onDeleted={refreshData} />
                         <span className="inline-block mt-0.5 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
                           {ret.category || ret.type}
                         </span>

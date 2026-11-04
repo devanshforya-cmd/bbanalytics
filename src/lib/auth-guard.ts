@@ -1,3 +1,5 @@
+import { readWorkspaceResetState } from '@/lib/db/workspace-reset-server';
+import { workspaceEpochMatches } from '@/lib/workspace-reset';
 import { NextResponse } from 'next/server';
 import { User, UserRole } from '@/lib/types';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
@@ -118,6 +120,20 @@ export async function requireAuth(request: Request, allowedRoles?: UserRole[]): 
     };
   }
 
+  // Every client binds requests to the dataset it loaded, including old open tabs.
+  // Google redirects cannot carry this header; their signed OAuth state is checked separately.
+  if (new URL(request.url).pathname !== '/api/integrations/google/callback') {
+    try {
+      const state = await readWorkspaceResetState();
+      const navigation = request.method === 'GET' && request.headers.get('sec-fetch-mode') === 'navigate';
+      if (state.resetting || !navigation && !workspaceEpochMatches(request.headers.get('x-workspace-epoch'), state)) {
+        const error = state.resetting ? 'Workspace reset is in progress.' : 'Workspace was reset. Reload and sign in again.';
+        return { error, response: NextResponse.json({ success: false, error, code: 'WORKSPACE_RESET' }, { status: state.resetting ? 503 : 409 }) };
+      }
+    } catch {
+      return { error: 'Workspace status is unavailable.', response: NextResponse.json({ success: false, error: 'Workspace status is unavailable.' }, { status: 503 }) };
+    }
+  }
   return { user };
 }
 

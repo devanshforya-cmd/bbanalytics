@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
 import { analyzeStoreArea, applicableStorePromotions } from '@/lib/area-selling';
 import StoreUpsellPanel from '@/components/stores/StoreUpsellPanel';
+import StoreDeleteButton from '@/components/stores/StoreDeleteButton';
 import StoreAreaEditor from '@/components/stores/StoreAreaEditor';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toast } from '@/components/common/Toast';
@@ -215,6 +216,7 @@ export default function StoreDetailPage() {
                   <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
                     {store.name}
                   </h1>
+                  <StoreDeleteButton id={store.id} name={store.name} onDeleted={() => router.push('/offline-sales/stores')} />
                   <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-700 border border-slate-200">
                     {store.type}
                   </span>

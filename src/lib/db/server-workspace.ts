@@ -1,3 +1,5 @@
+import { STORE_COLLECTIONS, storeDeletionPlan } from '../store-deletion';
+import { readWorkspaceResetState } from './workspace-reset-server';
 import { createHash } from 'node:crypto';
 import { after } from 'next/server';
 import { deliverPushNotification } from '../push-server';
@@ -78,6 +80,17 @@ export async function readDeletedProductIds(user: User): Promise<string[]> {
   }
 }
 
+export async function readDeletedStoreIds(user: User): Promise<string[]> {
+  if (!hasAccess(user, 'stores') && !hasAccess(user, 'distributors') && !hasAccess(user, 'beat_plans')) return [];
+  const ids: string[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabaseAdmin.from('workspace_records').select('id').eq('collection', 'deletedStores').order('id').range(offset, offset + 999);
+    if (error) throw new WorkspaceError(503, 'Store deletion status is unavailable.');
+    ids.push(...(data || []).map(row => row.id));
+    if (!data || data.length < 1000) return ids;
+  }
+}
+
 export async function readSharedAccessLink(token: string): Promise<SharedAccessLink> {
   const { data, error } = await supabaseAdmin.from('workspace_records').select('data,created_by').eq('collection', 'sharedAccessLinks').eq('data->>token', token).maybeSingle();
   if (error) throw new WorkspaceError(503, 'Shared access is temporarily unavailable.');
@@ -95,7 +108,7 @@ export async function recordSharedAccess(id: string) {
 
 async function readMutationContext(mutation: WorkspaceMutation, prior: StoredWorkspaceRecord | null): Promise<WorkspaceContext> {
   const data: Record<string, any> = mutation.data || prior?.data || {};
-  const storeId = data.storeId || data.entityId;
+  const storeIds = [data.storeId, data.entityId, data.distributorId, data.branchId].filter((id): id is string => typeof id === 'string' && !!id);
   const productIds: string[] = Array.isArray(data.items) ? [...new Set<string>(data.items.map((item: any) => item?.productId).filter((id: unknown): id is string => typeof id === 'string'))] : [];
   const related = async (collections: string[], ids: string[]) => {
     if (!ids.length) return [];
@@ -104,7 +117,7 @@ async function readMutationContext(mutation: WorkspaceMutation, prior: StoredWor
     return (data || []) as StoredWorkspaceRecord[];
   };
   const [users, brands, stores, products] = await Promise.all([readStoredUsers(), readBrands(),
-    related(['retailers', 'branches', 'distributors'], typeof storeId === 'string' ? [storeId] : []), related(['products', 'combos'], productIds)]);
+    related(['retailers', 'branches', 'distributors'], storeIds), related(['products', 'combos'], productIds)]);
   const config = ['orders', 'deliveryFailures'].includes(mutation.collection) ? await related(['workspaceConfig'], ['workspace']) : [];
   const componentIds = products.filter(row => row.collection === 'combos').flatMap(row => (row.data.items || []).map((item: any) => item.productId)).filter((id: unknown): id is string => typeof id === 'string');
   const components = await related(['products'], componentIds);
@@ -252,7 +265,13 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
     if (history.error) throw new WorkspaceError(503, 'Product deletion history could not be checked.');
     if (history.data) throw new WorkspaceError(409, 'This product was deleted. Add a new product instead of reusing its identifier.');
   }
-  const context = suppliedContext || await readMutationContext(mutation, prior);
+  const storeCollection = (STORE_COLLECTIONS as readonly string[]).includes(mutation.collection);
+  const context = suppliedContext || (storeCollection && mutation.operation === 'delete' ? await readWorkspaceContext() : await readMutationContext(mutation, prior));
+  if (storeCollection && mutation.operation === 'upsert') {
+    const deleted = await supabaseAdmin.from('workspace_records').select('id').eq('collection', 'deletedStores').eq('id', mutation.id).maybeSingle();
+    if (deleted.error) throw new WorkspaceError(503, 'Store deletion status could not be checked.');
+    if (deleted.data) throw new WorkspaceError(409, 'This store was deleted. Add a new store instead.');
+  }
   prepareRecordData(user, mutation, prior, context);
   const candidate: StoredWorkspaceRecord = { collection: mutation.collection, id: mutation.id, data: mutation.data || prior?.data || { id: mutation.id },
     created_by: prior?.created_by || user.id, version: prior?.version || 0 };
@@ -264,7 +283,18 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
   if ((prior?.version || 0) !== mutation.expectedVersion) throw new WorkspaceError(409, 'This record changed on another device. Review both versions before retrying.', prior?.version || 0);
   const version = (prior?.version || 0) + 1;
   let result;
-  if (mutation.operation === 'delete' && mutation.collection === 'products') {
+  if (mutation.operation === 'delete' && storeCollection) {
+    const plan = storeDeletionPlan(prior!, context.records);
+    if (plan.children.length) throw new WorkspaceError(409, 'Delete the linked branches and retailers first.');
+    const deletion = await supabaseAdmin.rpc('commit_workspace_mutations', { p_mutations: [
+      { collection: 'deletedStores', id: mutation.id, operation: 'upsert', data: { id: mutation.id }, expectedVersion: 0, mutationId: `${mutation.mutationId}:deleted`, createdBy: user.id },
+      ...plan.pending.map(row => ({ collection: row.collection, id: row.id, operation: 'delete', expectedVersion: row.version, mutationId: `${mutation.mutationId}:${row.id}`, createdBy: user.id })),
+      { ...mutation, createdBy: user.id },
+    ] });
+    if (deletion.error?.code === '40001' || deletion.error?.code === '23505') throw new WorkspaceError(409, 'The store or its route changed. Refresh before deleting.');
+    if (deletion.error) throw new WorkspaceError(503, 'The store was not deleted. Please retry.');
+    result = { data: [{ id: mutation.id }], error: null };
+  } else if (mutation.operation === 'delete' && mutation.collection === 'products') {
     // The existing transaction preserves private history and removes the live SKU together.
     // Keep the full snapshot as JSON text so old invalid component links cannot block removal.
     const history = { id: mutation.id, name: prior!.data.name, sku: prior!.data.sku, brandCode: prior!.data.brandCode,
@@ -280,6 +310,18 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
     result = { data: [{ id: mutation.id }], error: null };
   } else if (mutation.operation === 'delete') {
     result = await supabaseAdmin.from('workspace_records').delete().eq('collection', mutation.collection).eq('id', mutation.id).eq('version', mutation.expectedVersion).select('id');
+  } else if (storeCollection && (mutation.data?.distributorId || mutation.data?.branchId)) {
+    const parents = [['distributorId', 'distributors'], ['branchId', 'branches']].filter(([key]) => mutation.data?.[key]).map(([key, collection]) => {
+      const row = context.records.find(row => row.collection === collection && row.id === mutation.data![key]);
+      if (!row) throw new WorkspaceError(409, 'The parent store no longer exists. Refresh the directory.');
+      return row;
+    });
+    const saved = await supabaseAdmin.rpc('commit_workspace_mutations', { p_mutations: [
+      ...parents.map(row => ({ collection: row.collection, id: row.id, operation: 'upsert', data: row.data, expectedVersion: row.version, mutationId: `${mutation.mutationId}:${row.id}`, createdBy: row.created_by })),
+      { ...mutation, createdBy: user.id },
+    ] });
+    if (saved.error?.code === '40001' || saved.error?.code === '23505') throw new WorkspaceError(409, 'The store or its parent changed. Refresh and try again.');
+    result = { data: saved.error ? [] : [{ id: mutation.id }], error: saved.error };
   } else {
     const payload = { data: mutation.data, version, last_mutation_id: mutation.mutationId, updated_at: new Date().toISOString() };
     result = prior
@@ -308,7 +350,7 @@ export async function openServerWorkspace(user: User) {
   return { db, async commit() {
     const pending: WorkspaceMutation[] = [];
     for (const mutation of db.getPendingMutations()) {
-      if (mutation.collection === 'products' && mutation.operation === 'delete') throw new WorkspaceError(400, 'Delete products through the catalogue so linked records and stock are checked.');
+      if (['products', ...STORE_COLLECTIONS].includes(mutation.collection) && mutation.operation === 'delete') throw new WorkspaceError(400, 'Use the product or store directory to check and delete this record.');
       if (mutation.collection === 'activityLogs' || mutation.collection === 'staffLiveLocations') continue;
       if (mutation.collection === 'notifications' && !isSuperAdmin(user) && mutation.data?.userId !== user.id) continue;
       if (mutation.collection === 'notifications' && !isSuperAdmin(user) && mutation.expectedVersion === 0) continue;
@@ -335,6 +377,7 @@ export async function openServerWorkspace(user: User) {
 }
 
 export async function openSystemWorkspace() {
+  if ((await readWorkspaceResetState()).resetting) throw new WorkspaceError(503, 'Workspace reset is in progress.');
   const users = await readStoredUsers();
   const admin = users.find((entry) => entry.active !== false && isSuperAdmin(entry));
   if (!admin) throw new WorkspaceError(503, 'An active Super Admin is required for workspace jobs.');

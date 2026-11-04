@@ -1,7 +1,8 @@
+import { DEFAULT_SUPER_ADMIN } from './fixtures';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { freshGpsFix, parseNativeFix, validGpsCoordinates, geolocationMessage } from '../src/lib/gps-validation.ts';
-import { DatabaseService, DEFAULT_SUPER_ADMIN } from '../src/lib/db/db-service.ts';
+import { DatabaseService } from '../src/lib/db/db-service.ts';
 
 const now = Date.parse('2026-10-29T12:00:00.000Z');
 test('only fresh bounded device fixes qualify for check-in and browser retry', () => {

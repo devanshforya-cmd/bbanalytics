@@ -7,7 +7,7 @@ import { createHmac, createHash, createECDH, randomBytes, randomUUID } from 'nod
 const env = Object.fromEntries((await readFile(new URL('../.env.local', import.meta.url), 'utf8')).split(/\r?\n/).filter(line => line.includes('=') && !line.trim().startsWith('#')).map(line => {
   const i = line.indexOf('='); return [line.slice(0, i).trim(), line.slice(i + 1).trim().replace(/^(['"])(.*)\1$/, '$2')];
 }));
-const base = 'http://127.0.0.1:3000';
+const base = process.env.QA_BASE_URL || 'http://127.0.0.1:3000';
 const tag = `qa_${Date.now()}_${randomBytes(3).toString('hex')}`;
 const officerId = `${tag}_officer`;
 const officerPassword = randomBytes(24).toString('base64url');
@@ -21,8 +21,9 @@ let officerCreated = false;
 let adminId;
 let adminCookie;
 const mark = message => { checks.push(message); console.log(`PASS ${message}`); };
+const epoch = (await (await fetch(base + '/api/workspace-state')).json()).epoch;
 async function api(path, { cookie, method = 'GET', body, headers = {}, status = 200 } = {}) {
-  const response = await fetch(base + path, { method, headers: { ...(method !== 'GET' ? { Origin: base } : {}), ...(cookie ? { Cookie: cookie } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const response = await fetch(base + path, { method, headers: { 'X-Workspace-Epoch': epoch, ...(method !== 'GET' ? { Origin: base } : {}), ...(cookie ? { Cookie: cookie } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
   const data = await response.json();
   assert.equal(response.status, status, `${method} ${path}: ${response.status}: ${data.error || JSON.stringify(data)}`);
   return { data, response };
