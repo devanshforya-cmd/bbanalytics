@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { isSellableCombo } from '@/lib/product-catalog';
 import { db } from '@/lib/db/db-service';
+import NepalLocationFields from '@/components/common/NepalLocationFields';
 import { canPerform, d2cAssignees } from '@/lib/permissions';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { extractorCSV, followUpDates } from '@/lib/extractor-export';
@@ -619,28 +620,11 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         <label className="font-semibold text-slate-500 mb-1 block" htmlFor={`alt_${ord.id}`}>Alternate phone</label>
                         <input id={`alt_${ord.id}`} type="tel" value={ord.alternatePhone.value} onChange={event => handleUpdateOrderField(ord.id, 'alternatePhone', event.target.value)} className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs" placeholder="Optional second phone" />
                       </div>
-                      <div>
-                        <label className="font-semibold text-slate-500 mb-1 block" htmlFor={`province_${ord.id}`}>Province (optional)</label>
-                        <input id={`province_${ord.id}`} maxLength={200} value={ord.province.value} onChange={event => handleUpdateOrderField(ord.id, 'province', event.target.value)} className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs" placeholder="Add now or later" />
-                      </div>
+                      <NepalLocationFields idPrefix={`location_${ord.id}`} province={ord.province.value} city={ord.city.value} onChange={next => setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, province: { ...order.province, value: next.province }, city: { ...order.city, value: next.city } }) : order))} />
                       <div>
                         <label className="font-semibold text-slate-500 mb-1 block" htmlFor={`date_${ord.id}`}>Order date</label>
                         <input id={`date_${ord.id}`} type="date" value={ord.orderDateAd.value} onChange={event => handleUpdateOrderField(ord.id, 'orderDateAd', event.target.value)} className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs" />
                       </div>
-                      {/* City */}
-                      <div>
-                        <label className="font-semibold text-slate-500 mb-1 block" htmlFor={`city_${ord.id}`}>City / district (optional)</label>
-                        <input
-                          id={`city_${ord.id}`}
-                          type="text"
-                          maxLength={200}
-                          value={ord.city.value}
-                          onChange={(e) => handleUpdateOrderField(ord.id, 'city', e.target.value)}
-                          className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                          placeholder="Add now or later"
-                        />
-                      </div>
-
                       {/* Address (Exact message address preserved) */}
                       <div>
                         <div className="flex items-center justify-between mb-1">

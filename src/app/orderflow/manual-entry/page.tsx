@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
+import NepalLocationFields from '@/components/common/NepalLocationFields';
 import { syncManager } from '@/lib/offline-sync';
 import { canPerform, hasAccess, d2cAssignees } from '@/lib/permissions';
 import { matchingCatalogCombo } from '@/lib/product-catalog';
@@ -49,16 +50,6 @@ import {
   Search,
 } from 'lucide-react';
 
-const NEPAL_PROVINCES = [
-  'Koshi Province',
-  'Madhesh Province',
-  'Bagmati Province',
-  'Gandaki Province',
-  'Lumbini Province',
-  'Karnali Province',
-  'Sudurpashchim Province',
-];
-
 interface OrderItemRow {
   productId: string;
   quantity: number;
@@ -99,8 +90,8 @@ export default function ManualOrderEntryPage() {
   const [platform, setPlatform] = useState<OrderPlatform>(() => platformOptions.includes('Instagram') ? 'Instagram' : platformOptions[0]);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [province, setProvince] = useState('Bagmati Province');
-  const [district, setDistrict] = useState('Kathmandu');
+  const [province, setProvince] = useState('');
+  const [district, setDistrict] = useState('');
   const [address, setAddress] = useState('');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>(() => deliveryMethods.includes('Pathao') ? 'Pathao' : deliveryMethods[0]);
   useEffect(() => {
@@ -329,6 +320,7 @@ export default function ManualOrderEntryPage() {
 
     const phoneErr = validateNepaliPhone(customerPhone);
     if (phoneErr) errors.customerPhone = phoneErr;
+    if (!isMarketing && !address.trim() && !district.trim()) errors.address = 'Enter a delivery address or city.';
 
     if (orderItems.length === 0) {
       errors.orderItems = 'Please add at least one product SKU.';
@@ -383,7 +375,7 @@ export default function ManualOrderEntryPage() {
                 handle: influencerHandle.trim() || `@${influencerName.toLowerCase().replace(/\s+/g, '')}`,
               },
             ],
-            city: district || 'Kathmandu',
+            city: district,
             category: 'Beauty',
             qualityRating: 'NOT_RATED',
             notes: influencerNotes.trim() || 'Created from Manual Order Entry',
@@ -457,6 +449,8 @@ export default function ManualOrderEntryPage() {
     setCustomerName('');
     setCustomerPhone('');
     setAddress('');
+    setProvince('');
+    setDistrict('');
     setRemarks('');
     setComboApplied(null);
     setIsMarketing(false);
@@ -828,36 +822,7 @@ export default function ManualOrderEntryPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Province <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={province}
-                    onChange={(e) => setProvince(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-semibold text-slate-800"
-                  >
-                    {NEPAL_PROVINCES.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    District / City <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Kathmandu, Pokhara, Lalitpur"
-                    value={district}
-                    onChange={(e) => setDistrict(e.target.value)}
-                    required
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-semibold text-slate-800"
-                  />
-                </div>
+                <NepalLocationFields idPrefix="manual-location" province={province} city={district} onChange={next => { setProvince(next.province); setDistrict(next.city); }} />
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
@@ -870,6 +835,7 @@ export default function ManualOrderEntryPage() {
                     onChange={(e) => setAddress(e.target.value)}
                     className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none text-slate-800"
                   />
+                  {formErrors.address && <p className="mt-1 text-xs text-red-500">{formErrors.address}</p>}
                 </div>
               </div>
             </div>

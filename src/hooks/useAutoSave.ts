@@ -27,6 +27,7 @@ export function useAutoSave<T extends Record<string, any>>(formKey: string, form
 
   // Auto-save every 10 seconds if form has content
   useEffect(() => {
+    if (hasDraft) return;
     const timer = setInterval(() => {
       const hasValues = Object.values(formData).some((v) => v !== '' && v !== null && v !== undefined && (!Array.isArray(v) || v.length > 0));
       if (hasValues) {
@@ -43,7 +44,7 @@ export function useAutoSave<T extends Record<string, any>>(formKey: string, form
     }, 10000);
 
     return () => clearInterval(timer);
-  }, [storageKey, formData]);
+  }, [storageKey, formData, hasDraft]);
 
   const resumeDraft = useCallback((): T | null => {
     if (savedDraft) {
