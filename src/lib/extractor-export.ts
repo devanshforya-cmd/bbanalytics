@@ -35,7 +35,7 @@ export function extractorCSV(orders: ExtractedOrderResult[], products: Product[]
     return items.map((item,index) => {
       const amount = item ? allocation[index] : undefined;
       const original = item ? Math.round(item.unitPrice * item.quantity * 100) / 100 : undefined;
-      const values: unknown[] = [++serial,'',order.orderDateAd.value,'New',order.salesChannel || defaultChannel,order.customerName.value,order.customerPhone.value,order.alternatePhone.value,order.province.value,
+      const values: unknown[] = [++serial,'',order.orderDateAd.value,'New',order.salesChannel ?? defaultChannel,order.customerName.value,order.customerPhone.value,order.alternatePhone.value,order.province.value,
         item?.isCombo ? 'Combo' : products.find(product => product.id === item?.productId)?.category || '', item?.name || 'Review manually',item?.unitPrice ?? '',item?.quantity ?? '',
         original !== undefined && amount !== undefined ? Math.round((original - amount) * 100) / 100 : '', amount ?? '', '',
         [item?.isCombo ? `Combo: ${item.name}` : '', order.extractionErrors.length ? `Review: ${order.extractionErrors.join('; ')}` : ''].filter(Boolean).join('; '), ...followUps];

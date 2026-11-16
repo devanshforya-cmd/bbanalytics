@@ -73,7 +73,7 @@ export default function ExtractorPage() {
   const orderOptions = useOrderOptions();
   const channels = activeOrderOptionNames(orderOptions, 'channels');
   const deliveryMethods = activeOrderOptionNames(orderOptions, 'deliveryMethods');
-  const sourceChannel = channels.includes('WhatsApp') ? 'WhatsApp' : channels[0];
+  const sourceChannel = channels.find(channel => channel.toLowerCase() === 'instagram') || '';
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const [chatText, setChatText] = useState('');
   const [extractedOrders, setExtractedOrders] = useState<ExtractedOrderResult[]>([]);
@@ -149,7 +149,7 @@ export default function ExtractorPage() {
     });
 
     for (const result of results) {
-      if (result.salesChannel && !channels.includes(result.salesChannel)) { result.flags.push(`The detected ${result.salesChannel} channel is unavailable; choose an active channel.`); result.salesChannel = undefined; }
+      if (result.salesChannel && !channels.includes(result.salesChannel)) { result.flags.push(`The detected ${result.salesChannel} channel is unavailable; choose an active channel.`); result.salesChannel = ''; }
       if (result.deliveryMethod.value && !deliveryMethods.includes(result.deliveryMethod.value)) { result.flags.push(`The detected ${result.deliveryMethod.value} logistics option is unavailable; choose an active option.`); result.deliveryMethod.value = ''; }
     }
     setExtractedOrders(results);
@@ -243,7 +243,7 @@ export default function ExtractorPage() {
     if (invalid) { toast.error('Review the order before saving', invalid.errors[0]); return; }
     try {
       for (const order of ordersToPush) {
-        assertActiveOrderOption(db.getOrderOptions(), 'channels', order.salesChannel || sourceChannel);
+        assertActiveOrderOption(db.getOrderOptions(), 'channels', order.salesChannel ?? sourceChannel);
         assertActiveOrderOption(db.getOrderOptions(), 'deliveryMethods', order.deliveryMethod.value || deliveryMethods[0]);
       }
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Choose an active channel and delivery method.'); return; }
@@ -252,7 +252,7 @@ export default function ExtractorPage() {
         const response = await fetch('/api/extractor/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Workspace-User': currentUser.id }, body: JSON.stringify({ orders: ordersToPush.map(order => ({
           clientId: order.id, customerName: order.customerName.value, customerPhone: order.customerPhone.value, alternatePhone: order.alternatePhone.value,
           city: order.city.value, province: order.province.value, address: order.address.value, orderDateAd: order.orderDateAd.value,
-          platform: order.salesChannel || sourceChannel, deliveryMethod: order.deliveryMethod.value || deliveryMethods[0], paymentTerms: order.paymentTerms.value, assignedToId: order.assignedToId || currentUser.id,
+          platform: order.salesChannel ?? sourceChannel, deliveryMethod: order.deliveryMethod.value || deliveryMethods[0], paymentTerms: order.paymentTerms.value, assignedToId: order.assignedToId || currentUser.id,
           statedPrice: order.statedPrice.provided ? order.statedPrice.value : null, discountPercent: order.discountPercent?.provided ? order.discountPercent.value : null, isMarketing: false,
           items: order.products.map(item => ({ productId: item.productId, quantity: item.quantity, expectedUnitPrice: item.unitPrice })),
         })) }) });
@@ -576,7 +576,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                             <span>{flag}</span>
                           </div>
                         ))}
-                        {ord.flags.some(flag => flag.includes('matches multiple catalogue items') || flag.startsWith('Multiple combos match')) && <button type="button" className="mt-2 rounded-lg border border-amber-400 bg-white px-3 py-2 font-semibold text-amber-900" onClick={() => setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, flags: order.flags.filter(flag => !flag.includes('matches multiple catalogue items') && !flag.startsWith('Multiple combos match')) }) : order))}>I reviewed and selected the correct items</button>}
+                        {ord.flags.some(flag => flag.includes('matches multiple catalogue items') || flag.startsWith('Multiple combos match') || flag.startsWith('Unrecognized order item:')) && <button type="button" className="mt-2 rounded-lg border border-amber-400 bg-white px-3 py-2 font-semibold text-amber-900" onClick={() => setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, flags: order.flags.filter(flag => !flag.includes('matches multiple catalogue items') && !flag.startsWith('Multiple combos match') && !flag.startsWith('Unrecognized order item:')) }) : order))}>I reviewed and selected the correct items</button>}
                       </div>
                     )}
 
@@ -756,7 +756,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         </div>
                         <div>
                           <label className="text-slate-500" htmlFor={`channel_${ord.id}`}>Sales channel</label>
-                          <select id={`channel_${ord.id}`} value={ord.salesChannel || sourceChannel} onChange={event => handleUpdateOrderField(ord.id, 'salesChannel', event.target.value)} className="ml-2 rounded-lg border border-slate-200 p-1 text-slate-800">{channels.map(channel => <option key={channel} value={channel}>{channel}</option>)}</select>
+                          <select id={`channel_${ord.id}`} value={ord.salesChannel ?? sourceChannel} onChange={event => handleUpdateOrderField(ord.id, 'salesChannel', event.target.value)} className="ml-2 rounded-lg border border-slate-200 p-1 text-slate-800">{(!sourceChannel || ord.salesChannel === '') && <option value="">Choose channel</option>}{channels.map(channel => <option key={channel} value={channel}>{channel}</option>)}</select>
                         </div>
                         <div>
                           <label className="text-slate-500" htmlFor={`delivery_${ord.id}`}>Logistics</label>

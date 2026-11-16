@@ -275,10 +275,10 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
   const { data: previous, error: readError } = await supabaseAdmin.from('workspace_records').select('*').eq('collection', mutation.collection).eq('id', mutation.id).maybeSingle();
   if (readError) throw new WorkspaceError(503, 'This record could not be read.');
   const prior = previous as StoredWorkspaceRecord | null;
-  if (mutation.collection === 'products' && mutation.operation === 'upsert') {
+  if (['products', 'combos'].includes(mutation.collection) && mutation.operation === 'upsert') {
     const history = await supabaseAdmin.from('workspace_records').select('id').eq('collection', 'deletedProducts').eq('id', mutation.id).maybeSingle();
     if (history.error) throw new WorkspaceError(503, 'Product deletion history could not be checked.');
-    if (history.data) throw new WorkspaceError(409, 'This product was deleted. Add a new product instead of reusing its identifier.');
+    if (history.data) throw new WorkspaceError(409, 'This catalogue item was deleted. Add a new item instead of reusing its identifier.');
   }
   const storeCollection = (STORE_COLLECTIONS as readonly string[]).includes(mutation.collection);
   const context = suppliedContext || (storeCollection && mutation.operation === 'delete' ? await readWorkspaceContext() : await readMutationContext(mutation, prior));
@@ -309,10 +309,10 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
     if (deletion.error?.code === '40001' || deletion.error?.code === '23505') throw new WorkspaceError(409, 'The store or its route changed. Refresh before deleting.');
     if (deletion.error) throw new WorkspaceError(503, 'The store was not deleted. Please retry.');
     result = { data: [{ id: mutation.id }], error: null };
-  } else if (mutation.operation === 'delete' && mutation.collection === 'products') {
+  } else if (mutation.operation === 'delete' && ['products', 'combos'].includes(mutation.collection)) {
     // The existing transaction preserves private history and removes the live SKU together.
     // Keep the full snapshot as JSON text so old invalid component links cannot block removal.
-    const history = { id: mutation.id, name: prior!.data.name, sku: prior!.data.sku, brandCode: prior!.data.brandCode,
+    const history = { id: mutation.id, collection: mutation.collection, name: prior!.data.name, sku: prior!.data.sku, brandCode: prior!.data.brandCode,
       stockQty: prior!.data.stockQty ?? 0, deletedAt: new Date().toISOString(), deletedById: user.id,
       originalCreatedById: prior!.created_by, snapshotJson: JSON.stringify(prior!.data) };
     const deletion = await supabaseAdmin.rpc('commit_workspace_mutations', { p_mutations: [
@@ -365,7 +365,7 @@ export async function openServerWorkspace(user: User) {
   return { db, async commit() {
     const pending: WorkspaceMutation[] = [];
     for (const mutation of db.getPendingMutations()) {
-      if (['products', ...STORE_COLLECTIONS].includes(mutation.collection) && mutation.operation === 'delete') throw new WorkspaceError(400, 'Use the product or store directory to check and delete this record.');
+      if (['products', 'combos', ...STORE_COLLECTIONS].includes(mutation.collection) && mutation.operation === 'delete') throw new WorkspaceError(400, 'Use the catalogue or store directory to check and delete this record.');
       if (mutation.collection === 'activityLogs' || mutation.collection === 'staffLiveLocations') continue;
       if (mutation.collection === 'notifications' && !isSuperAdmin(user) && mutation.data?.userId !== user.id) continue;
       if (mutation.collection === 'notifications' && !isSuperAdmin(user) && mutation.expectedVersion === 0) continue;

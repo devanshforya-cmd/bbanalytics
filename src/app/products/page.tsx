@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import ProductActions from '@/components/products/ProductActions';
+import CatalogEditor from '@/components/products/CatalogEditor';
 import { isSellableCombo } from '@/lib/product-catalog';
 import { Product, Combo, BrandCode, SecondaryOrder, Order, ReturnEntry, Retailer, Branch } from '@/lib/types';
 import MobileBottomSheet from '@/components/common/MobileBottomSheet';
@@ -84,6 +85,13 @@ function autoSuggestKeywords(name: string, brandCode?: string): string[] {
   });
 
   return Array.from(suggestions).filter((k) => k.length > 1);
+}
+
+function autoSuggestComboKeywords(name: string, brandCode?: string): string[] {
+  const clean = name.toLowerCase().trim();
+  const brand = db.getBrands().find(item => item.code === brandCode)?.name?.toLowerCase();
+  const withoutBrand = brand && clean.startsWith(`${brand} `) ? clean.slice(brand.length).trim() : clean;
+  return [...new Set([clean, withoutBrand].filter(Boolean))];
 }
 
 export default function ProductsPage() {
@@ -738,6 +746,7 @@ export default function ProductsPage() {
                     </span>
 
                     <div className="flex flex-wrap items-center gap-2">
+                      <CatalogEditor item={p} kind="products" products={products} onChanged={loadCatalog} />
                       <ProductActions product={p} onChanged={loadCatalog} />
                       <button
                         type="button"
@@ -828,6 +837,7 @@ export default function ProductsPage() {
                         </button>
                       </td>
                       <td className="p-3.5 text-center">
+                        <CatalogEditor item={p} kind="products" products={products} onChanged={loadCatalog} />
                         <ProductActions product={p} onChanged={loadCatalog} />
                         <Link
                           href={`/products/${p.id}`}
@@ -859,6 +869,8 @@ export default function ProductsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCombos.map((c) => {
             const kitsStock = c.stockQty;
+            const currentMrp = c.items.reduce((sum, part) => sum + (products.find(product => product.id === part.productId)?.mrp ?? part.mrp) * part.quantity, 0);
+            const currentSavings = currentMrp > 0 ? Math.max(0, Math.round((1 - c.comboPrice / currentMrp) * 1000) / 10) : 0;
             const comboOrders = orders.filter(order => order.status === 'DELIVERED');
             const comboLines = comboOrders.flatMap(order => order.items).filter(item => item.productId === c.id);
             const kitsSold = comboLines.reduce((sum, item) => sum + item.quantity, 0);
@@ -883,7 +895,7 @@ export default function ProductsPage() {
                       </span>
                     </div>
                     <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                      Save {c.savingsPct}%
+                      Save {currentSavings}%
                     </span>
                   </div>
 
@@ -905,7 +917,7 @@ export default function ProductsPage() {
                           <span className="font-medium text-slate-800 truncate max-w-[200px]">
                             {item.quantity}x {item.productName}
                           </span>
-                          <span className="text-slate-400 font-mono">MRP {item.mrp}</span>
+                          <span className="text-slate-400 font-mono">MRP {products.find(product => product.id === item.productId)?.mrp ?? item.mrp}</span>
                         </div>
                       ))}
                     </div>
@@ -920,7 +932,7 @@ export default function ProductsPage() {
                         </span>
                         {c.priceDetectionEnabled && (
                           <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-bold text-[10px]">
-                            ⚡ Price Collapse (Rs. {c.comboPrice})
+                            Price suggestion (Rs. {c.comboPrice})
                           </span>
                         )}
                       </div>
@@ -958,7 +970,7 @@ export default function ProductsPage() {
                         Discount
                       </span>
                       <div className="font-bold text-emerald-700 mt-0.5 font-mono">
-                        Save {c.savingsPct}%
+                        Save {currentSavings}%
                       </div>
                     </div>
                   </div>
@@ -968,7 +980,7 @@ export default function ProductsPage() {
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                   <div>
                     <span className="text-[10px] text-slate-400 line-through mr-2 font-mono">
-                      NPR {c.totalOriginalMrp}
+                      NPR {currentMrp.toFixed(2)}
                     </span>
                     <span className="text-lg font-black text-purple-700 font-mono">
                       NPR {c.comboPrice}
@@ -981,6 +993,7 @@ export default function ProductsPage() {
                     <div className="text-[10px] text-slate-400">Instagram, TikTok &amp; Web</div>
                   </div>
                 </div>
+                <CatalogEditor item={c} kind="combos" products={products} onChanged={loadCatalog} />
               </div>
             );
           })}
@@ -1652,7 +1665,7 @@ export default function ProductsPage() {
                     toast.error('Please enter a combo bundle name first.');
                     return;
                   }
-                  const suggested = autoSuggestKeywords(newCombo.name, newCombo.brandCode);
+                  const suggested = autoSuggestComboKeywords(newCombo.name, newCombo.brandCode);
                   const combined = Array.from(new Set([...newCombo.extractorKeywords, ...suggested]));
                   setNewCombo({ ...newCombo, extractorKeywords: combined });
                   toast.success(`Auto-suggested ${suggested.length} combo keywords!`);
@@ -1744,8 +1757,8 @@ export default function ProductsPage() {
               className="w-4 h-4 text-purple-600 rounded mt-0.5 border-slate-300 focus:ring-purple-500 cursor-pointer"
             />
             <label htmlFor="priceDetectionEnabled" className="text-xs text-purple-950 font-medium cursor-pointer">
-              <span className="font-bold block text-purple-900">Enable Price-Based Auto Collapse</span>
-              Allow the WhatsApp extractor to match this combo when the message names its exact components and states the saved total of <span className="font-mono font-bold">NPR {newCombo.comboPrice}</span>.
+              <span className="font-bold block text-purple-900">Suggest based on components and price</span>
+              Show a suggestion when the message names these components and states <span className="font-mono font-bold">NPR {newCombo.comboPrice}</span>. The extractor keeps the products separate unless you select the combo.
             </label>
           </div>
 

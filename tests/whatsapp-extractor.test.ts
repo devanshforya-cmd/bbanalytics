@@ -38,15 +38,39 @@ test('catalogue names, aliases and new products match without treating pack size
   assert.equal(extractSingleOrder('Product: Vitamin C Face Wash', options).products.length,0);
 });
 
-test('explicit combos and exact component-price combinations use saved catalogue prices and quantities', () => {
+test('explicit combos are matched, but component-price combinations remain separate products', () => {
   const direct = extractSingleOrder('Product: hair pair 2 sets\nserum 1 pc',options);
   assert.deepEqual(direct.products.map(item=>[item.productId,item.quantity]),[['pair',2],['serum',1]]);
   const collapse = extractSingleOrder('Product: shampoo 2 pcs\nconditioner 2 pcs\nTotal: Rs. 3,036.00',options);
-  assert.deepEqual(collapse.products.map(item=>[item.productId,item.quantity,item.totalPrice]),[['pair',2,3036]]);
+  assert.deepEqual(collapse.products.map(item=>[item.productId,item.quantity]),[['shampoo',2],['conditioner',2]]);
+  assert(collapse.flags.some(flag => flag.includes('select the combo manually')));
   const almost = extractSingleOrder('Product: shampoo 1 pc\nconditioner 1 pc\nTotal: Rs. 1,550',options);
   assert.deepEqual(almost.products.map(item=>item.productId),['shampoo','conditioner']);
   const disabled = extractSingleOrder('Product: shampoo 1 pc\nconditioner 1 pc\nTotal: Rs. 1518',{...options,combos:[{...pair,priceDetectionEnabled:false}]});
   assert.equal(disabled.products.length,2);
+});
+
+test('generic combo keywords never turn separate dash-quantity products into a bundle', () => {
+  const wash = {...product('wash','Exfoliating Body Wash',719), extractorKeywords:['body','wash','exfoliating body wash']};
+  const bodyCombo: Combo = {...pair, id:'body-combo', name:'Body Care Duo', sku:'BODY-DUO', extractorKeywords:['body','care','brand','combo','kit','pack','body care duo'], items:[{productId:'wash',productName:wash.name,quantity:1,mrp:719},{productId:'aqua',productName:aqua.name,quantity:1,mrp:399}]};
+  const current = {...options,products:[...options.products,wash],combos:[bodyCombo]};
+  const message = 'Name: Rina\nPhone: 9800001011\nAddress: Chabahil Road\nConditioner- 2 units\nExfoliating body wash -2 units';
+  const order = extractSingleOrder(message,current);
+  assert.deepEqual(order.products.map(item=>[item.productId,item.quantity]),[['conditioner',2],['wash',2]]);
+  assert(!order.products.some(item=>item.isCombo)); assert.equal(order.salesChannel,'Instagram');
+  assert.equal(extractSingleOrder('Product: body care duo',current).products[0]?.productId,'body-combo');
+  assert(!extractSingleOrder('Product: shampoo kit',current).products.some(item=>item.isCombo));
+  const noConditioner = extractSingleOrder(message,{...current,products:current.products.filter(item=>item.id!=='conditioner')});
+  assert.deepEqual(noConditioner.products.map(item=>item.productId),['wash']);
+  assert(noConditioner.extractionErrors.some(error=>error.includes('unrecognized item')));
+  assert(!noConditioner.address.value.includes('Conditioner'));
+});
+
+test('unmentioned channels default to Instagram, while explicitly named channels remain distinct', () => {
+  assert.equal(extractSingleOrder('Product: shampoo', {...options,channels:['Instagram','WhatsApp']}).salesChannel,'Instagram');
+  assert.equal(extractSingleOrder('Product: shampoo\nMessenger', {...options,channels:['Instagram','Messenger']}).salesChannel,'Messenger');
+  assert.equal(extractSingleOrder('Product: shampoo\nPlatform: NewSocial', {...options,channels:['Instagram','WhatsApp']}).salesChannel,'NewSocial');
+  assert.equal(extractSingleOrder('Product: shampoo', {...options,channels:['WhatsApp']}).salesChannel,undefined);
 });
 
 test('ambiguous aliases, missing customer fields, invalid dates and archived items require review', () => {
@@ -191,7 +215,7 @@ test('generic free shipping and millilitres do not invent a fragrance-free item 
   const fragranceFree=product('free','Fragrance Free Underarm Roll On',399);
   const current={...options,products:[...options.products,fragranceFree]};
   const normal=extractSingleOrder('Name: Asha\nPhone: 9841234567\nAddress: Kathmandu Road\nProduct: shampoo 200 ml\nDelivery free',current);
-  assert.deepEqual(normal.products.map(item=>item.productId),['shampoo']); assert.equal(normal.salesChannel,undefined);
+  assert.deepEqual(normal.products.map(item=>item.productId),['shampoo']); assert.equal(normal.salesChannel,'Instagram');
   assert.equal(extractSingleOrder('Product: fragrance free',current).products[0]?.productId,'free');
 });
 

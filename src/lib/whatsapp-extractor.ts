@@ -120,7 +120,7 @@ type Match = { id: string; item: Product | Combo; keyword: string; start: number
 function qtyFor(lines: string[], match: Match, text: string): number {
   const line = lines[match.line]; const start = match.start; const end = match.end;
   const before = line.slice(0, start), after = line.slice(end);
-  const suffix = /^\s*(?:[x×]\s*(\d{1,6})\b|(\d{1,6})\s*(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)\b|(\d{1,6})\s*$)/i.exec(after);
+  const suffix = /^\s*(?:[:=\-–—]\s*)?(?:[x×]\s*(\d{1,6})\b|(\d{1,6})\s*(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)\b|(\d{1,6})\s*$)/i.exec(after);
   const prefix = /(?:^|\s)(\d{1,6})\s*(?:(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)\s*(?:of\s*)?|[x×]\s*)?$/i.exec(before);
   const nextLine = lines.slice(match.line + 1, match.line + 5).find(line => line.trim());
   const next = /^\s*(\d{1,6})\s*(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)\s*$/i.exec(nextLine || '');
@@ -136,6 +136,12 @@ function matchCatalog(text: string, products: Product[], combos: Combo[], flags:
     const re = expression(keyword);
     lines.forEach((line, index) => {
       if (/^\s*(?:name|naam|customer|phone|mobile|contact|address|location|delivery address|shipping address|total|price|amount|payment|platform)\s*[:=\-]/i.test(line)) return;
+      if (combo) {
+        const isSku = item.sku && keyword.toLowerCase() === item.sku.toLowerCase();
+        const namesBundle = /\b(?:duo|pair|trio|kit|set|combo|bundle|pack)\b/i.test(keyword) && /[a-z0-9]/i.test(keyword.replace(/\b(?:duo|pair|trio|kit|set|combo|bundle|pack)\b/gi, '').trim());
+        const exactName = keyword.toLowerCase() === item.name.toLowerCase() && new RegExp(`^\\s*${escapeRegex(keyword)}\\s*(?:[:=\\-–—]?\\s*(?:[x×]\\s*)?\\d+\\s*(?:units?|pcs?|pieces?|sets?|kits?|pairs?|combos?)?)?\\s*$`, 'i').test(line);
+        if (!isSku && !namesBundle && !exactName) return;
+      }
       const found = re.exec(line); if (found) candidates.push({ id: item.id, item, keyword, start: found.index, end: found.index + found[0].length, line: index, combo });
     });
   }
@@ -182,8 +188,8 @@ function collapseCombo(items: ExtractedProductItem[], combos: Combo[], stated: n
   });
   if (found.length > 1) { flags.push('Multiple combos match these items and price; choose one manually.'); return items; }
   if (!found.length) return items;
-  const { combo, quantity, price } = found[0]; flags.push(`Matched ${combo.name} using its saved components and exact price.`);
-  return [{ productId: combo.id, name: combo.name, brandCode: combo.brandCode, quantity, unitPrice: price, totalPrice: price * quantity, confidence: 'AUTO', isCombo: true }];
+  const { combo } = found[0]; flags.push(`The items and price also match ${combo.name}; select the combo manually if intended.`);
+  return items;
 }
 export function validateExtractedOrder(order: ExtractedOrderResult): string[] {
   const errors: string[] = [];
@@ -206,6 +212,7 @@ export function validateExtractedOrder(order: ExtractedOrderResult): string[] {
     if (order.flags.some(flag => flag.startsWith('Discount scope is unclear'))) errors.push('Review the discount scope; clear the percentage and enter the agreed order total.');
   }
   if (order.flags.some(flag => flag.includes('matches multiple catalogue items') || flag.startsWith('Multiple combos match'))) errors.push('Resolve the ambiguous catalogue match before saving.');
+  if (order.flags.some(flag => flag.startsWith('Unrecognized order item:'))) errors.push('Review the unrecognized item and add the correct catalogue product before saving.');
   return errors;
 }
 export function extractSingleOrder(blockText: string, options: DynamicExtractorOptions): ExtractedOrderResult {
@@ -219,6 +226,12 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
   const stated = parseStatedPrice(body);
   const discount = parseDiscountPercent(body);
   let items = matchCatalog(body, products, combos, flags);
+  for (const line of lines) {
+    if (/^\s*(?:name|naam|customer|phone|mobile|contact|address|location|delivery|shipping|payment|total|amount|price|discount|date|platform|channel|note)\b/i.test(line)) continue;
+    const quantity = /\b\d{1,6}\s*(?:units?|pcs?|pieces?|bottles?|kits?|sets?|pairs?|combos?)\b/i.exec(line);
+    const before = quantity ? line.slice(0, quantity.index).replace(/[^\p{L}]+/gu, '') : '';
+    if (before && !matchCatalog(line, products, combos, []).length) flags.push(`Unrecognized order item: ${line.slice(0, 160)}. Select the correct product and review.`);
+  }
   items = collapseCombo(items, combos, stated, flags, discount);
   if (discount !== null && items.length > 1 && lines.some(line => parseDiscountPercent(line) !== null && [...products, ...combos].some(item => keywordsFor(item, 'items' in item).some(keyword => expression(keyword).test(line))))) flags.push('Discount scope is unclear because the percentage appears on an item line.');
   const catalogTotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -238,6 +251,7 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
     if (line === name || phoneNumbers(line).length || optionNames.some(option => option.toLowerCase() === line.toLowerCase())) return false;
     if (/^(?:outside|inside|name|naam|customer|receiver|phone|mobile|contact|ph\s*no|address|location|thau|product|items?|qty|quantity|order|date|payment|paid|unpaid|cod|total|amount|price|discount|sale|platform|channel|courier|delivery|shipping|note|remarks?)\b/i.test(line)) return false;
     if (/^(?:free\s+(?:shipping|delivery)\b|\d+\s*(?:units?|pcs?|pieces?|sets?|kits?|pairs?|combos?|bottles?)\b|\d+(?:\.\d+)?\s*%|(?:rs\.?|npr|₹)\s*\d)/i.test(line)) return false;
+    if (/\b\d{1,6}\s*(?:units?|pcs?|pieces?|bottles?|kits?|sets?|pairs?|combos?)\b/i.test(line)) return false;
     return !matchCatalog(line, products, combos, []).length;
   }).join(', ') : '';
   const addressBase = addressLine?.replace(addressPrefix, '').trim() || fallbackAddress || knownAddress || '';
@@ -255,7 +269,8 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
   const province = provinceRules.find(([pattern]) => pattern.test(body))?.[1] || '';
   const detectedBrands = [...new Set(items.map(item => item.brandCode))];
   const brand = detectedBrands.length === 1 ? detectedBrands[0] : options.brands.find(item => expression(item.code).test(body) || expression(item.name).test(body))?.code || 'ALL';
-  const platform = options.channels?.slice().sort((a,b) => b.length - a.length).find(value => expression(value).test(body)) || (/\btiktok\b/i.test(body) ? 'TikTok' : /\bwhatsapp\b/i.test(body) ? 'WhatsApp' : /\bmessenger\b/i.test(body) ? 'Messenger' : (/\bwebsite\b/i.test(body) || /(?:^|\n)\s*(?:platform\s*[:=]\s*)?ML\s*(?:$|\n)/.test(body)) ? 'Website' : /\binstagram\b/i.test(body) ? 'Instagram' : undefined);
+  const labelledChannel = lines.find(line => /^(?:platform|sales\s*channel|channel|source)\s*[:=\-]/i.test(line))?.replace(/^(?:platform|sales\s*channel|channel|source)\s*[:=\-]\s*/i, '').trim();
+  const platform = options.channels?.slice().sort((a,b) => b.length - a.length).find(value => expression(value).test(body)) || (/\btiktok\b/i.test(body) ? 'TikTok' : /\bwhatsapp\b/i.test(body) ? 'WhatsApp' : /\bmessenger\b/i.test(body) ? 'Messenger' : (/\bwebsite\b/i.test(body) || /(?:^|\n)\s*(?:platform\s*[:=]\s*)?ML\s*(?:$|\n)/.test(body)) ? 'Website' : /\binstagram\b/i.test(body) ? 'Instagram' : undefined) || labelledChannel || (options.channels ? options.channels.find(value => value.toLowerCase() === 'instagram') : 'Instagram');
   const prepaid = !/\b(?:unpaid|not\s+paid)\b/i.test(body) && /\b(?:paid|prepaid|esewa|khalti|fonepay|bank transfer)\b/i.test(body);
   const delivery = options.deliveryMethods?.slice().sort((a,b) => b.length - a.length).find(value => expression(value).test(body)) || (/\bpathao\b/i.test(body) ? 'Pathao' : /\bindrive\b/i.test(body) ? 'InDrive' : '');
   if (!items.length) flags.push('No catalogue item recognized; add the correct product or combo.');

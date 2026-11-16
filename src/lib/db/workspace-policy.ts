@@ -105,7 +105,7 @@ export function canWriteWorkspaceRecord(user: User, row: StoredWorkspaceRecord, 
   // Audit and GPS records have dedicated trusted server writers.
   if (row.collection === 'activityLogs' || row.collection === 'staffLiveLocations') return false;
   if (isSuperAdmin(user)) return true;
-  if (['products', 'retailers', 'branches', 'distributors'].includes(row.collection) && action === 'DELETE') return false;
+  if (['products', 'combos', 'retailers', 'branches', 'distributors'].includes(row.collection) && action === 'DELETE') return false;
   if (row.collection === 'sharedAccessLinks' || row.collection === 'importHistory') return false;
   if (row.collection === 'notifications') return action !== 'CREATE' && row.data.userId === user.id;
   const writeFeatures = collectionFeatures(row.collection).filter((feature) => canPerform(user, feature, action));
