@@ -131,6 +131,44 @@ test('unlabeled locations and separated quantity lines retain delivery zones', (
   assert.deepEqual(order.extractionErrors, []);
 });
 
+test('unrecognized address text is retained for review without guessing city or province', () => {
+  const text = '[16/11/2026, 12:58:15] ~ Sales: Rina Limbu\n9800001011\nSilver Orchard Sector 7\nOutside Valley\n\nunderarm rollon aqua\n\n1 unit\nMessenger';
+  const order = extractSingleOrder(text, options);
+  assert.equal(order.address.value, 'Silver Orchard Sector 7, Outside Valley');
+  assert.equal(order.address.confidence, 'REVIEW');
+  assert.equal(order.city.value, ''); assert.equal(order.province.value, '');
+  assert.deepEqual(order.extractionErrors, []);
+  const multi = extractSingleOrder('[16/11/2026, 12:58:15] ~ Sales: Rina Limbu\n9800001011\nSilver Orchard Sector 7\nnear Blue School\nOutside Valley\nunderarm rollon aqua\n1 unit\nMessenger', options);
+  assert.equal(multi.address.value, 'Silver Orchard Sector 7, near Blue School, Outside Valley');
+  const missing = extractSingleOrder('[16/11/2026, 12:58:15] ~ Sales: Rina Limbu\n9800001011\nunderarm rollon aqua\n1 unit\nMessenger', options);
+  assert.equal(missing.address.value, ''); assert(missing.extractionErrors.some(error => error.includes('delivery address')));
+  const noAddress = extractSingleOrder('Name: Rina\nPhone: 9800001011\nAddress:\nProduct: aqua\nQuantity: 1\nML', options);
+  assert.equal(noAddress.address.value, '');
+});
+
+test('address text is retained even without catalogue matches and labels can omit punctuation', () => {
+  const empty = {...options, products:[], combos:[]};
+  const beforePhone = extractSingleOrder('[16/11/2026, 15:29:48] ~ Sales: Mira\nSilver Orchard Police Station\n9800001011\nInside ringroad\n\nUnlisted item - 2 units', empty);
+  assert.equal(beforePhone.address.value, 'Silver Orchard Police Station, Inside ringroad');
+  assert(beforePhone.extractionErrors.some(error => error.includes('catalogue')));
+  const labelled = extractSingleOrder('[16/11/2026, 15:31:06] ~ Sales: Name Rina Karki\nNo 9800001011\nLocation Silver Orchard\nOutside ringroad\nUnlisted item', empty);
+  assert.equal(labelled.customerName.value, 'Rina Karki');
+  assert.equal(labelled.address.value, 'Silver Orchard, Outside ringroad');
+  assert.equal(labelled.city.value, ''); assert.equal(labelled.province.value, '');
+});
+
+test('orders can be saved without a city or province and completed later', async () => {
+  const ws = workspace();
+  await saveExtractedOrders({orders:[{...row('ext_12345678-1234-1234-1234-123456789abc'),city:'',province:'  ',address:'Silver Orchard Sector 7'}]},ws);
+  const order = ws.db.getOrders()[0];
+  assert.equal(order.district, ''); assert.equal(order.province, ''); assert.equal(order.address, 'Silver Orchard Sector 7');
+  ws.db.updateOrder(order.id, {district:'Example City',province:'Example Province'});
+  assert.equal(ws.db.getOrders()[0].district, 'Example City');
+  assert.equal(ws.db.getOrders()[0].province, 'Example Province');
+  assert.equal(ws.db.getOrders()[0].totalAmount, 1500);
+  await assert.rejects(saveExtractedOrders({orders:[{...row('ext_87654321-1234-1234-1234-123456789abc'),city:123}]},workspace()), /city/);
+});
+
 test('order discounts use the current catalogue and reject contradictory totals', async () => {
   const base = 'Name: Rina\nPhone: 9800001011\nAddress: Kathmandu Road\nProduct: shampoo 2 pcs';
   const discounted = extractSingleOrder(`${base}\n10% off`, options);

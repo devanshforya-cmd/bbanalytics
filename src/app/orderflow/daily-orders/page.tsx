@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db, OrderRealtimeEvent } from '@/lib/db/db-service';
+import { syncManager } from '@/lib/offline-sync';
 import { canPerform, hasAccess, d2cAssignees } from '@/lib/permissions';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { activeOrderOptionNames } from '@/lib/order-options';
@@ -64,6 +65,9 @@ export default function DailyOrdersPage() {
   const [editCustomerName, setEditCustomerName] = useState('');
   const [editCustomerPhone, setEditCustomerPhone] = useState('');
   const [editAddress, setEditAddress] = useState('');
+  const [editCity, setEditCity] = useState('');
+  const [editProvince, setEditProvince] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
   const [editPaymentTerms, setEditPaymentTerms] = useState<any>('COD');
   const [editDeliveryMethod, setEditDeliveryMethod] = useState<any>('Pathao');
   const [editItems, setEditItems] = useState<OrderItem[]>([]);
@@ -265,37 +269,49 @@ export default function DailyOrdersPage() {
     setEditCustomerName(ord.customerName);
     setEditCustomerPhone(ord.customerPhone);
     setEditAddress(ord.address);
+    setEditCity(ord.district || '');
+    setEditProvince(ord.province || '');
     setEditPaymentTerms(ord.paymentTerms);
     setEditDeliveryMethod(ord.deliveryMethod);
     setEditItems([...ord.items]);
     setEditNote('');
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingOrder) return;
+    if (!editingOrder || savingEdit) return;
 
-    const newTotal = editItems.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
+    const newTotal = JSON.stringify(editItems) === JSON.stringify(editingOrder.items) ? editingOrder.totalAmount : editItems.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
 
-    db.updateOrder(
+    setSavingEdit(true);
+    try {
+      const updated = db.updateOrder(
       editingOrder.id,
       {
         customerName: editCustomerName,
         assignedToId: editAssignee,
         customerPhone: editCustomerPhone,
         address: editAddress,
+        district: editCity.trim(),
+        province: editProvince.trim(),
         paymentTerms: editPaymentTerms,
         deliveryMethod: editDeliveryMethod,
         items: editItems,
         totalAmount: editingOrder.isMarketing ? 0 : newTotal,
       },
-      'Devansh',
+      db.getCurrentUser().fullName,
       editNote || 'Modified order line items & customer fields'
     );
 
-    toast.success(`Updated order #${editingOrder.orderNumber}`);
-    setEditingOrder(null);
-    loadOrders();
+      if (!updated) throw new Error('This order is no longer available. Refresh and try again.');
+      try { await syncManager.forceSyncNow(); } catch { /* The edit remains in the device sync queue. */ }
+      const pending = syncManager.getWorkspaceMutations().some(mutation => mutation.collection === 'orders' && mutation.id === editingOrder.id);
+      if (pending) toast.info(`Order #${editingOrder.orderNumber} is pending sync`, 'Check Sync status to resolve connection or permission errors.');
+      else toast.success(`Updated order #${editingOrder.orderNumber}`);
+      setEditingOrder(null);
+      loadOrders();
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not update the order.'); }
+    finally { setSavingEdit(false); }
   };
 
   const handleDeleteConfirmed = () => {
@@ -532,6 +548,7 @@ export default function DailyOrdersPage() {
                             <span className="text-[10px] text-slate-400 block truncate max-w-[140px]">
                               {ord.address}
                             </span>
+                            <span className="text-[10px] text-slate-500 block">{[ord.district, ord.province].filter(Boolean).join(', ') || 'City and province not added'}</span>
                             <span className="text-[10px] text-slate-500 block">Responsible: {ord.assignedToName || 'Not assigned'}</span>
                           </td>
                           <td className="py-3 px-3 font-mono text-[11px] text-slate-600">
@@ -801,6 +818,11 @@ export default function DailyOrdersPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
+                  <div><label className="font-semibold text-slate-600 block mb-1" htmlFor="edit-city">City / district (optional)</label><input id="edit-city" maxLength={200} value={editCity} onChange={event => setEditCity(event.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs" placeholder="Add city or district" /></div>
+                  <div><label className="font-semibold text-slate-600 block mb-1" htmlFor="edit-province">Province (optional)</label><input id="edit-province" maxLength={200} value={editProvince} onChange={event => setEditProvince(event.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs" placeholder="Add province" /></div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="font-semibold text-slate-600 block mb-1">Payment Method</label>
                     <select
@@ -888,9 +910,10 @@ export default function DailyOrdersPage() {
                   </button>
                   <button
                     type="submit"
+                    disabled={savingEdit}
                     className="px-5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-xs"
                   >
-                    Save Changes &amp; Broadcast
+                    {savingEdit ? 'Saving…' : 'Save Changes'}
                   </button>
                 </div>
               </form>

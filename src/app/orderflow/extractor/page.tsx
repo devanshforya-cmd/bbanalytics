@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { isSellableCombo } from '@/lib/product-catalog';
 import { db } from '@/lib/db/db-service';
-import { canPerform, hasAccess, d2cAssignees } from '@/lib/permissions';
+import { canPerform, d2cAssignees } from '@/lib/permissions';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { extractorCSV, followUpDates } from '@/lib/extractor-export';
 import { downloadCSV } from '@/lib/csv';
@@ -19,7 +19,7 @@ import {
   Confidence,
 } from '@/lib/whatsapp-extractor';
 import { getTodayAd } from '@/lib/nepali-calendar';
-import { BrandCode, Influencer } from '@/lib/types';
+import { BrandCode } from '@/lib/types';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toast } from '@/components/common/Toast';
 import {
@@ -39,7 +39,6 @@ import {
   ShoppingBag,
   Check,
   X,
-  Gift,
   Calendar,
   Layers,
   ChevronDown,
@@ -89,8 +88,6 @@ export default function ExtractorPage() {
   const [catalogRevision, setCatalogRevision] = useState(0);
   const catalogStatus = useMemo(() => ({ brands: db.getBrands('ACTIVE').length }), [catalogRevision]);
 
-  // Influencers list for marketing tagging
-  const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [activeCatalogProducts, setActiveCatalogProducts] = useState(db.getProducts().filter((p) => p.active !== false));
   const [activeCatalogCombos, setActiveCatalogCombos] = useState(db.getCombos().filter(combo => isSellableCombo(combo, db.getProducts())));
 
@@ -102,7 +99,6 @@ export default function ExtractorPage() {
   // Extraction History
   const currentUser = db.getCurrentUser();
   const canCreateOrders = canPerform(currentUser, 'orderflow', 'CREATE');
-  const canUseMarketing = hasAccess(currentUser, 'marketing');
   const historyKey = `bb_wa_extraction_history_v3:${currentUser.id}`;
   const [history, setHistory] = useState<ExtractionHistoryItem[]>([]);
 
@@ -110,7 +106,7 @@ export default function ExtractorPage() {
     const refreshCatalog = () => {
       const products = db.getProducts().filter(product => product.active !== false);
       setActiveCatalogProducts(products); setActiveCatalogCombos(db.getCombos().filter(combo => isSellableCombo(combo, products)));
-      setInfluencers(db.getInfluencers()); setCatalogRevision(value => value + 1);
+      setCatalogRevision(value => value + 1);
     };
     refreshCatalog(); window.addEventListener('bb-db-updated', refreshCatalog);
     void db.syncWithSupabase().catch(() => {});
@@ -215,26 +211,6 @@ export default function ExtractorPage() {
     }));
   };
 
-  // Toggle marketing send on an order (Fix 71b)
-  const handleToggleMarketing = (orderId: string, isMarketing: boolean) => {
-    setExtractedOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id !== orderId) return ord;
-        return refreshOrder({ ...ord, isMarketing });
-      })
-    );
-  };
-
-  const handleSelectInfluencer = (orderId: string, influencerId: string) => {
-    const inf = influencers.find((i) => i.id === influencerId);
-    setExtractedOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id !== orderId) return ord;
-        return refreshOrder({ ...ord, influencerId, influencerName: inf?.name || '', customerName: inf ? { ...ord.customerName, value: inf.name } : ord.customerName, customerPhone: inf?.phone ? { ...ord.customerPhone, value: inf.phone } : ord.customerPhone });
-      })
-    );
-  };
-
   // Discard single or batch
   const handleDiscardOrder = (orderId: string) => {
     const target = extractedOrders.find((o) => o.id === orderId);
@@ -262,8 +238,8 @@ export default function ExtractorPage() {
 
   const executePushOrders = (ordersToPush: ExtractedOrderResult[]) => {
     if (!ordersToPush.length) return;
-    const invalid = ordersToPush.map(order => ({ order, errors: validateExtractedOrder(order) })).find(item => item.errors.length || item.order.isMarketing && !item.order.influencerId);
-    if (invalid) { toast.error('Review the order before saving', invalid.errors[0] || 'Choose an influencer for the marketing send.'); return; }
+    const invalid = ordersToPush.map(order => ({ order, errors: validateExtractedOrder(order) })).find(item => item.errors.length);
+    if (invalid) { toast.error('Review the order before saving', invalid.errors[0]); return; }
     try {
       for (const order of ordersToPush) {
         assertActiveOrderOption(db.getOrderOptions(), 'channels', order.salesChannel || sourceChannel);
@@ -276,7 +252,7 @@ export default function ExtractorPage() {
           clientId: order.id, customerName: order.customerName.value, customerPhone: order.customerPhone.value, alternatePhone: order.alternatePhone.value,
           city: order.city.value, province: order.province.value, address: order.address.value, orderDateAd: order.orderDateAd.value,
           platform: order.salesChannel || sourceChannel, deliveryMethod: order.deliveryMethod.value || deliveryMethods[0], paymentTerms: order.paymentTerms.value, assignedToId: order.assignedToId || currentUser.id,
-          statedPrice: order.statedPrice.provided ? order.statedPrice.value : null, discountPercent: order.discountPercent?.provided ? order.discountPercent.value : null, isMarketing: !!order.isMarketing, influencerId: order.influencerId || '',
+          statedPrice: order.statedPrice.provided ? order.statedPrice.value : null, discountPercent: order.discountPercent?.provided ? order.discountPercent.value : null, isMarketing: false,
           items: order.products.map(item => ({ productId: item.productId, quantity: item.quantity, expectedUnitPrice: item.unitPrice })),
         })) }) });
         const result = await response.json().catch(() => null);
@@ -533,9 +509,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                   <div
                     key={ord.id}
                     className={`rounded-2xl border bg-white p-5 shadow-xs transition ${
-                      ord.isMarketing
-                        ? 'border-purple-300 ring-2 ring-purple-100'
-                        : isSelected
+                      isSelected
                         ? 'border-blue-300 ring-1 ring-blue-100'
                         : 'border-slate-200'
                     }`}
@@ -561,11 +535,6 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         {ord.combo.value !== 'None (Standard SKU)' && (
                           <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
                             🎁 Combo: {ord.combo.value}
-                          </span>
-                        )}
-                        {ord.isMarketing && (
-                          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
-                            🎁 MARKETING SEND
                           </span>
                         )}
                       </div>
@@ -610,40 +579,6 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       </div>
                     )}
 
-                    {/* Marketing Checkbox (Fix 71b) */}
-                    {canUseMarketing && <div className="mt-3 p-3 bg-purple-50/50 border border-purple-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={!!ord.isMarketing}
-                          onChange={(e) => handleToggleMarketing(ord.id, e.target.checked)}
-                          className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
-                        />
-                        <span className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
-                          <Gift className="w-3.5 h-3.5 text-purple-600" />
-                          Marketing / Influencer Send (Not a commercial order)
-                        </span>
-                      </label>
-
-                      {ord.isMarketing && (
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-slate-600 font-medium">Influencer:</span>
-                          <select
-                            value={ord.influencerId || ''}
-                            onChange={(e) => handleSelectInfluencer(ord.id, e.target.value)}
-                            className="px-2.5 py-1 border border-purple-300 rounded-lg bg-white text-xs font-semibold text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          >
-                            <option value="">-- Select from Directory --</option>
-                            {influencers.map((inf) => (
-                              <option key={inf.id} value={inf.id}>
-                                {inf.name} ({inf.platforms[0]?.handle || inf.category})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </div>}
-
                     {/* Editable Fields Grid */}
                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                       {/* Customer Name */}
@@ -685,8 +620,8 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         <input id={`alt_${ord.id}`} type="tel" value={ord.alternatePhone.value} onChange={event => handleUpdateOrderField(ord.id, 'alternatePhone', event.target.value)} className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs" placeholder="Optional second phone" />
                       </div>
                       <div>
-                        <label className="font-semibold text-slate-500 mb-1 block" htmlFor={`province_${ord.id}`}>Province</label>
-                        <input id={`province_${ord.id}`} value={ord.province.value} onChange={event => handleUpdateOrderField(ord.id, 'province', event.target.value)} className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs" placeholder="Province" />
+                        <label className="font-semibold text-slate-500 mb-1 block" htmlFor={`province_${ord.id}`}>Province (optional)</label>
+                        <input id={`province_${ord.id}`} maxLength={200} value={ord.province.value} onChange={event => handleUpdateOrderField(ord.id, 'province', event.target.value)} className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs" placeholder="Add now or later" />
                       </div>
                       <div>
                         <label className="font-semibold text-slate-500 mb-1 block" htmlFor={`date_${ord.id}`}>Order date</label>
@@ -694,13 +629,15 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       </div>
                       {/* City */}
                       <div>
-                        <label className="font-semibold text-slate-500 mb-1 block">City</label>
+                        <label className="font-semibold text-slate-500 mb-1 block" htmlFor={`city_${ord.id}`}>City / district (optional)</label>
                         <input
+                          id={`city_${ord.id}`}
                           type="text"
+                          maxLength={200}
                           value={ord.city.value}
                           onChange={(e) => handleUpdateOrderField(ord.id, 'city', e.target.value)}
                           className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                          placeholder="City"
+                          placeholder="Add now or later"
                         />
                       </div>
 
@@ -720,6 +657,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         </div>
                         <input
                           type="text"
+                          maxLength={500}
                           value={ord.address.value}
                           onChange={(e) => handleUpdateOrderField(ord.id, 'address', e.target.value)}
                           className={`w-full px-2.5 py-1.5 border rounded-lg text-xs font-medium focus:outline-none ${
@@ -732,6 +670,8 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                             Exact text: <span className="font-mono text-slate-600 font-semibold">{ord.rawAddress}</span>
                           </div>
                         )}
+                        {ord.address.value && ord.address.confidence === 'REVIEW' && <p className="text-[10px] text-amber-700 mt-1">Address copied from the message; its location has not been verified. Please review.</p>}
+                        {ord.address.value && !ord.city.value && !ord.province.value && <p className="text-[10px] text-amber-700 mt-1">City and province are empty. You can add them later in Daily Orders.</p>}
                       </div>
                     </div>
 

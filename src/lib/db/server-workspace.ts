@@ -213,6 +213,10 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
     } catch (error) { throw new WorkspaceError(400, error instanceof Error ? error.message : 'Choose an active channel and delivery method.'); }
   }
   if (mutation.collection === 'orders') {
+    for (const field of ['province', 'district']) {
+      if (data[field] != null && (typeof data[field] !== 'string' || data[field].length > 200 || /[\u0000-\u001f\u007f]/.test(data[field]))) throw new WorkspaceError(400, `Invalid ${field}.`);
+      if (typeof data[field] === 'string') data[field] = data[field].trim();
+    }
     const previous = prior?.data.assignedToId || prior?.created_by;
     const assigneeId = data.assignedToId || previous || user.id;
     if (assigneeId !== (previous || user.id) && (!canPerform(user, 'orderflow', 'EDIT') || !(isSuperAdmin(user) || getScope(user, 'orderflow') === 'ALL' || getScope(user, 'orderflow') === 'TEAM' && teamMemberIds(user, context.users).has(assigneeId)))) throw new WorkspaceError(403, 'You cannot assign this order to that staff member.');

@@ -32,6 +32,15 @@ test('server validates the responsible person and prevents assignment outside th
   assert.throws(() => prepareRecordData(admin, mutation('alice'), null, {...context,users:[admin,wrongBrand]}), /active staff/);
 });
 
+test('order location fields accept blanks and reject malformed updates', () => {
+  const context: any = { users, brands:[{code:'A'}], records:[] };
+  const mutation = (district: unknown, province: unknown): any => ({collection:'orders', id:'o1', data:{id:'o1',brandCode:'A',platform:'WhatsApp',deliveryMethod:'Pathao',district,province,items:[]}});
+  const blank = mutation('  ', ''); prepareRecordData(admin, blank, null, context);
+  assert.equal(blank.data.district, ''); assert.equal(blank.data.province, '');
+  assert.throws(() => prepareRecordData(admin, mutation(123, ''), null, context), /Invalid district/);
+  assert.throws(() => prepareRecordData(admin, mutation('', 'x'.repeat(201)), null, context), /Invalid province/);
+});
+
 test('canonical policy enforces own, recursive team, hidden features and every brand in a mixed record', () => {
   const own = row('orders', 'o1', { brandCode: 'A' });
   const other = row('orders', 'o2', { brandCode: 'A' }, 'bob');
