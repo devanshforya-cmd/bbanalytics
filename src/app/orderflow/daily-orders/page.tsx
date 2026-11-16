@@ -53,10 +53,7 @@ export default function DailyOrdersPage() {
   const [recentlyInsertedIds, setRecentlyInsertedIds] = useState<Set<string>>(new Set());
 
   // Active online staff presence
-  const onlineStaffCount = useMemo(() => {
-    const online = db.getUsers().filter((u) => u.dutyStatus === 'ONLINE').length;
-    return Math.max(1, online);
-  }, []);
+  const onlineStaffCount = db.getUsers().filter((u) => u.dutyStatus === 'ONLINE').length;
   const [connectionStatus, setConnectionStatus] = useState<'CONNECTED' | 'RECONNECTING' | 'OFFLINE'>('CONNECTED');
 
   // Editing order modal state
@@ -760,11 +757,6 @@ export default function DailyOrdersPage() {
               <span>Repeat Customers: <strong>{statsFooter.repeatPct}%</strong></span>
             </div>
 
-            <div className="flex items-center gap-3 text-slate-400 text-[11px]">
-              <span>Vs Yesterday: <strong className="text-emerald-400">+3 (↑27%)</strong></span>
-              <span className="text-slate-600">|</span>
-              <span>Vs Last Week: <strong className="text-rose-400">-2 (↓12%)</strong></span>
-            </div>
           </div>
         </div>
 
