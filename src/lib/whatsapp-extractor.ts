@@ -132,7 +132,16 @@ function matchCatalog(text: string, products: Product[], combos: Combo[], flags:
     const group = candidates.filter(candidate => candidate.combo === combo).sort((a,b) => (b.end - b.start) - (a.end - a.start));
     for (const candidate of group) {
       if (chosen.some(c => c.id === candidate.id)) continue;
-      if (!combo && chosen.some(c => c.combo && c.line === candidate.line)) continue;
+      if (!combo) {
+        const namedCombo = chosen.find(c => c.combo && c.line === candidate.line);
+        if (namedCombo) {
+          const before = lines[candidate.line].slice(namedCombo.end, candidate.start);
+          const open = before.lastIndexOf('('), close = before.lastIndexOf(')');
+          if (open >= 0 && open > close) continue;
+          const component = (namedCombo.item as Combo).items.some(part => part.productId === candidate.id);
+          if (component && !/(?:\+|\bplus\b|\band\b|\balso\b)\s*(?:\d+\s*[x×]?\s*)?$/i.test(before)) continue;
+        }
+      }
       if (chosen.some(c => c.line === candidate.line && candidate.start < c.end && candidate.end > c.start)) continue;
       const collision = group.some(other => other.id !== candidate.id && other.line === candidate.line && other.start === candidate.start && other.end === candidate.end);
       if (collision) { ambiguous.push({ candidate, ids: group.filter(other => other.line === candidate.line && other.start === candidate.start && other.end === candidate.end).map(other => other.id) }); continue; }

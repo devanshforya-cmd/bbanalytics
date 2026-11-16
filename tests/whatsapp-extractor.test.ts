@@ -135,3 +135,12 @@ test('two orders for one phone in a batch update one customer twice', async () =
   await saveExtractedOrders({orders:[first,second]},ws);
   assert.equal(ws.db.getOrders().length,2); assert.equal(ws.db.getCustomers().length,1); assert.equal(ws.db.getCustomers()[0].totalOrders,2); assert.equal(ws.commits,1);
 });
+
+test('a named combo and extra products on the same line are retained without duplicating explanatory components', () => {
+  const combined=extractSingleOrder('Product: hair pair + serum 1 pc',options);
+  assert.deepEqual(combined.products.map(item=>item.productId),['pair','serum']);
+  const extra=extractSingleOrder('Product: hair pair + shampoo 2 pcs',options);
+  assert.deepEqual(extra.products.map(item=>[item.productId,item.quantity]),[['pair',1],['shampoo',2]]);
+  const explanation=extractSingleOrder('Product: hair pair (shampoo + conditioner)',options);
+  assert.deepEqual(explanation.products.map(item=>item.productId),['pair']);
+});
