@@ -4,15 +4,20 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { isSellableCombo } from '@/lib/product-catalog';
 import { db } from '@/lib/db/db-service';
+import { canPerform, hasAccess } from '@/lib/permissions';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
+import { extractorCSV, followUpDates } from '@/lib/extractor-export';
+import { downloadCSV } from '@/lib/csv';
 import { activeOrderOptionNames, assertActiveOrderOption } from '@/lib/order-options';
 import {
   extractOrdersDynamically,
+  validateExtractedOrder,
+  splitMessageBlocks,
   ExtractedOrderResult,
   ExtractedProductItem,
   Confidence,
 } from '@/lib/whatsapp-extractor';
-import { getTodayAd, getTodayBs } from '@/lib/nepali-calendar';
+import { getTodayAd } from '@/lib/nepali-calendar';
 import { BrandCode, Influencer } from '@/lib/types';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toast } from '@/components/common/Toast';
@@ -80,12 +85,13 @@ export default function ExtractorPage() {
   // Template toggle (Fix 67i)
   const [showTemplate, setShowTemplate] = useState(false);
 
-  // Catalog status
-  const catalogStatus = useMemo(() => db.getLastCatalogUpdate(), []);
+  const [catalogRevision, setCatalogRevision] = useState(0);
+  const catalogStatus = useMemo(() => ({ brands: db.getBrands('ACTIVE').length }), [catalogRevision]);
 
   // Influencers list for marketing tagging
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [activeCatalogProducts, setActiveCatalogProducts] = useState(db.getProducts().filter((p) => p.active !== false));
+  const [activeCatalogCombos, setActiveCatalogCombos] = useState(db.getCombos().filter(combo => isSellableCombo(combo, db.getProducts())));
 
   // Push confirmation modal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -94,46 +100,42 @@ export default function ExtractorPage() {
 
   // Extraction History
   const currentUser = db.getCurrentUser();
+  const canCreateOrders = canPerform(currentUser, 'orderflow', 'CREATE');
+  const canUseMarketing = hasAccess(currentUser, 'marketing');
+  const historyKey = `bb_wa_extraction_history_v3:${currentUser.id}`;
   const [history, setHistory] = useState<ExtractionHistoryItem[]>([]);
 
   useEffect(() => {
-    setInfluencers(db.getInfluencers());
-    setActiveCatalogProducts(db.getProducts().filter((p) => p.active !== false));
+    const refreshCatalog = () => {
+      const products = db.getProducts().filter(product => product.active !== false);
+      setActiveCatalogProducts(products); setActiveCatalogCombos(db.getCombos().filter(combo => isSellableCombo(combo, products)));
+      setInfluencers(db.getInfluencers()); setCatalogRevision(value => value + 1);
+    };
+    refreshCatalog(); window.addEventListener('bb-db-updated', refreshCatalog);
+    void db.syncWithSupabase().catch(() => {});
     try {
-      const saved = localStorage.getItem('bb_wa_extraction_history_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const clean = parsed.filter(
-            (item: ExtractionHistoryItem) =>
-              item.id !== 'eh_1' &&
-              item.id !== 'eh_2' &&
-              !item.customerName?.includes('Sita Gurung') &&
-              !item.customerName?.includes('Anjali Shrestha')
-          );
-          setHistory(clean);
-          if (clean.length !== parsed.length) {
-            localStorage.setItem('bb_wa_extraction_history_v2', JSON.stringify(clean));
-          }
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
+      setHistory([]);
+      const saved = currentUser.id ? localStorage.getItem(historyKey) : null;
+      if (saved) { const parsed = JSON.parse(saved); if (Array.isArray(parsed)) setHistory(parsed); }
+    } catch { /* Ignore malformed local history. */ }
+    return () => window.removeEventListener('bb-db-updated', refreshCatalog);
+  }, [currentUser.id, historyKey]);
 
   const saveHistory = (items: ExtractionHistoryItem[]) => {
     setHistory(items);
     try {
-      localStorage.setItem('bb_wa_extraction_history_v2', JSON.stringify(items));
+      if (currentUser.id) localStorage.setItem(historyKey, JSON.stringify(items));
     } catch {
       // ignore
     }
   };
 
   // Main Dynamic Extraction Handler (Fix 67d)
-  const handleExtract = () => {
+  const handleExtract = async () => {
     if (!chatText.trim()) return;
+    if (chatText.length > 150000 || splitMessageBlocks(chatText).length > 50) { toast.error('Extract up to 50 messages or 150,000 characters at a time.'); return; }
+    const sync = await db.syncWithSupabase();
+    if (!sync.success) toast.info('Using the catalogue saved on this device. Reconnect before saving orders.');
 
     const products = db.getProducts().filter((p) => p.active !== false);
     const combos = db.getCombos().filter((c) => isSellableCombo(c, products));
@@ -146,6 +148,10 @@ export default function ExtractorPage() {
       dateOverride: dateMode === 'OVERRIDE' ? overrideDateAd : undefined,
     });
 
+    for (const result of results) {
+      if (result.salesChannel && !channels.includes(result.salesChannel)) { result.flags.push(`The detected ${result.salesChannel} channel is unavailable; choose an active channel.`); result.salesChannel = undefined; }
+      if (result.deliveryMethod.value && !deliveryMethods.includes(result.deliveryMethod.value)) { result.flags.push(`The detected ${result.deliveryMethod.value} logistics option is unavailable; choose an active option.`); result.deliveryMethod.value = ''; }
+    }
     setExtractedOrders(results);
     setSelectedOrderIds(new Set(results.map((r) => r.id)));
     setPushedSummary(null);
@@ -165,85 +171,45 @@ export default function ExtractorPage() {
     }
   };
 
-  // Update order field in batch state
+  const refreshOrder = (order: ExtractedOrderResult): ExtractedOrderResult => {
+    const catalogTotal = order.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+    const brandCodes = [...new Set(order.products.map(item => item.brandCode))];
+    const combos = order.products.filter(item => item.isCombo).map(item => item.name);
+    const amount = order.isMarketing ? 0 : order.statedPrice.value > 0 && order.statedPrice.value <= catalogTotal ? order.statedPrice.value : catalogTotal;
+    const updated = { ...order, brandCode: { ...order.brandCode, value: brandCodes.length === 1 ? brandCodes[0] : 'ALL' },
+      combo: { ...order.combo, value: combos.join(', ') || 'None (Standard SKU)' }, totalAmount: { ...order.totalAmount, value: amount },
+      flags: order.flags.filter(flag => !flag.startsWith('Stated total NPR') && !flag.startsWith('No catalogue item recognized') && !(order.statedPrice.value > 0 && flag.startsWith('The message states a zero total'))) };
+    return { ...updated, extractionErrors: validateExtractedOrder(updated) };
+  };
   const handleUpdateOrderField = (orderId: string, field: string, value: any) => {
-    setExtractedOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id !== orderId) return ord;
-        return {
-          ...ord,
-          [field]: typeof ord[field as keyof ExtractedOrderResult] === 'object' && 'value' in (ord[field as keyof ExtractedOrderResult] as any)
-            ? { ...(ord[field as keyof ExtractedOrderResult] as any), value }
-            : value,
-        };
-      })
-    );
+    setExtractedOrders(previous => previous.map(order => {
+      if (order.id !== orderId) return order;
+      const current = order[field as keyof ExtractedOrderResult];
+      return refreshOrder({ ...order, [field]: current && typeof current === 'object' && 'value' in current ? { ...current, value } : value });
+    }));
   };
-
-  // Update product quantities in an order
   const handleUpdateItemQty = (orderId: string, itemIdx: number, newQty: number) => {
-    if (newQty < 1) return;
-    setExtractedOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id !== orderId) return ord;
-        const newItems = [...ord.products];
-        newItems[itemIdx] = {
-          ...newItems[itemIdx],
-          quantity: newQty,
-          totalPrice: newItems[itemIdx].unitPrice * newQty,
-        };
-        const newTotal = newItems.reduce((acc, it) => acc + it.totalPrice, 0);
-        return {
-          ...ord,
-          products: newItems,
-          totalAmount: { ...ord.totalAmount, value: newTotal },
-        };
-      })
-    );
+    if (newQty < 1 || newQty > 10000) return;
+    setExtractedOrders(previous => previous.map(order => {
+      if (order.id !== orderId) return order;
+      const items = [...order.products]; items[itemIdx] = { ...items[itemIdx], quantity: newQty, totalPrice: items[itemIdx].unitPrice * newQty };
+      return refreshOrder({ ...order, products: items });
+    }));
   };
-
-  // Remove product from order
-  const handleRemoveItem = (orderId: string, itemIdx: number) => {
-    setExtractedOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id !== orderId) return ord;
-        const newItems = ord.products.filter((_, i) => i !== itemIdx);
-        const newTotal = newItems.reduce((acc, it) => acc + it.totalPrice, 0);
-        return {
-          ...ord,
-          products: newItems,
-          totalAmount: { ...ord.totalAmount, value: newTotal },
-        };
-      })
-    );
-  };
-
-  // Add catalog product to order
-  const handleAddItemToOrder = (orderId: string, productId: string) => {
-    const prod = activeCatalogProducts.find((p) => p.id === productId);
-    if (!prod) return;
-
-    setExtractedOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id !== orderId) return ord;
-        const newItem: ExtractedProductItem = {
-          productId: prod.id,
-          name: prod.name,
-          brandCode: prod.brandCode,
-          quantity: 1,
-          unitPrice: prod.mrp,
-          totalPrice: prod.mrp,
-          confidence: 'HIGH',
-        };
-        const newItems = [...ord.products, newItem];
-        const newTotal = newItems.reduce((acc, it) => acc + it.totalPrice, 0);
-        return {
-          ...ord,
-          products: newItems,
-          totalAmount: { ...ord.totalAmount, value: newTotal },
-        };
-      })
-    );
+  const handleRemoveItem = (orderId: string, itemIdx: number) => setExtractedOrders(previous => previous.map(order => order.id === orderId ? refreshOrder({ ...order, products: order.products.filter((_, index) => index !== itemIdx) }) : order));
+  const handleAddItemToOrder = (orderId: string, value: string) => {
+    const [kind, productId] = value.split(':');
+    const product = kind === 'product' ? activeCatalogProducts.find(item => item.id === productId) : undefined;
+    const combo = kind === 'combo' ? activeCatalogCombos.find(item => item.id === productId) : undefined;
+    const selected = product || combo; if (!selected) return;
+    const price = product ? product.mrp : combo!.comboPrice || combo!.comboMrp || 0;
+    setExtractedOrders(previous => previous.map(order => {
+      if (order.id !== orderId) return order;
+      const existing = order.products.find(item => item.productId === productId);
+      const products = existing ? order.products.map(item => item.productId === productId ? { ...item, quantity: Math.min(item.quantity + 1, 10000), totalPrice: item.unitPrice * Math.min(item.quantity + 1, 10000) } : item)
+        : [...order.products, { productId, name: selected.name, brandCode: selected.brandCode, quantity: 1, unitPrice: price, totalPrice: price, confidence: 'HIGH' as Confidence, ...(combo ? { isCombo: true } : {}) }];
+      return refreshOrder({ ...order, products });
+    }));
   };
 
   // Toggle marketing send on an order (Fix 71b)
@@ -251,11 +217,7 @@ export default function ExtractorPage() {
     setExtractedOrders((prev) =>
       prev.map((ord) => {
         if (ord.id !== orderId) return ord;
-        return {
-          ...ord,
-          isMarketing,
-          totalAmount: isMarketing ? { ...ord.totalAmount, value: 0 } : ord.totalAmount,
-        };
+        return refreshOrder({ ...ord, isMarketing });
       })
     );
   };
@@ -265,13 +227,7 @@ export default function ExtractorPage() {
     setExtractedOrders((prev) =>
       prev.map((ord) => {
         if (ord.id !== orderId) return ord;
-        return {
-          ...ord,
-          influencerId,
-          influencerName: inf ? inf.name : '',
-          customerName: inf ? { ...ord.customerName, value: `${inf.name} (PR)` } : ord.customerName,
-          customerPhone: inf && inf.phone ? { ...ord.customerPhone, value: inf.phone } : ord.customerPhone,
-        };
+        return refreshOrder({ ...ord, influencerId, influencerName: inf?.name || '', customerName: inf ? { ...ord.customerName, value: inf.name } : ord.customerName, customerPhone: inf?.phone ? { ...ord.customerPhone, value: inf.phone } : ord.customerPhone });
       })
     );
   };
@@ -289,148 +245,48 @@ export default function ExtractorPage() {
         productSummary: target.products.map((p) => `${p.name} (${p.quantity})`).join(', ') || 'No items',
         totalAmount: target.totalAmount.value,
         status: 'DISCARDED',
-        rawText: target.rawText,
       };
       saveHistory([discarded, ...history.slice(0, 19)]);
     }
     setExtractedOrders((prev) => prev.filter((o) => o.id !== orderId));
-    selectedOrderIds.delete(orderId);
+    setSelectedOrderIds(previous => { const next = new Set(previous); next.delete(orderId); return next; });
   };
 
   const handleDiscardAll = () => {
-    extractedOrders.forEach((target) => {
-      const discarded: ExtractionHistoryItem = {
-        id: `eh_${Date.now()}_${Math.random()}`,
-        timestamp: 'Just now',
-        customerName: target.customerName.value || 'Unidentified Customer',
-        customerPhone: target.customerPhone.value || 'No Phone',
-        brandCode: target.brandCode.value,
-        productSummary: target.products.map((p) => `${p.name} (${p.quantity})`).join(', ') || 'No items',
-        totalAmount: target.totalAmount.value,
-        status: 'DISCARDED',
-        rawText: target.rawText,
-      };
-      saveHistory([discarded, ...history.slice(0, 19)]);
-    });
-    setExtractedOrders([]);
-    setSelectedOrderIds(new Set());
-    toast.info('Discarded extracted orders.');
+    const discarded: ExtractionHistoryItem[] = extractedOrders.map((order, index) => ({ id: `eh_${Date.now()}_${index}`, timestamp: 'Just now', customerName: order.customerName.value || 'Unidentified Customer', customerPhone: order.customerPhone.value || 'No Phone', brandCode: order.brandCode.value, productSummary: order.products.map(item => `${item.name} (${item.quantity})`).join(', ') || 'No items', totalAmount: order.totalAmount.value, status: 'DISCARDED' }));
+    saveHistory([...discarded, ...history].slice(0, 20)); setExtractedOrders([]); setSelectedOrderIds(new Set()); toast.info('Discarded extracted orders.');
   };
 
-  // Push Orders Execution
   const executePushOrders = (ordersToPush: ExtractedOrderResult[]) => {
-    if (ordersToPush.length === 0) return;
-
+    if (!ordersToPush.length) return;
+    const invalid = ordersToPush.map(order => ({ order, errors: validateExtractedOrder(order) })).find(item => item.errors.length || item.order.isMarketing && !item.order.influencerId);
+    if (invalid) { toast.error('Review the order before saving', invalid.errors[0] || 'Choose an influencer for the marketing send.'); return; }
     try {
       for (const order of ordersToPush) {
         assertActiveOrderOption(db.getOrderOptions(), 'channels', order.salesChannel || sourceChannel);
         assertActiveOrderOption(db.getOrderOptions(), 'deliveryMethods', order.deliveryMethod.value || deliveryMethods[0]);
       }
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Choose an active channel and delivery method.'); return; }
-    guardedSubmit(async () => {
-      const pushedOrderNumbers: string[] = [];
-      const newHistoryItems: ExtractionHistoryItem[] = [];
-
-      ordersToPush.forEach((ord, index) => {
-        const orderNumber = `BB-WA-${(Date.now() + index).toString().slice(-4)}`;
-        pushedOrderNumbers.push(orderNumber);
-
-        const custName = ord.customerName.value || (ord.isMarketing && ord.influencerName ? `${ord.influencerName} (PR)` : 'Customer');
-        const custPhone = ord.customerPhone.value || '9800000000';
-        const orderBrand = ord.brandCode.value;
-        const orderCity = ord.city.value || 'Kathmandu';
-        const orderAddress = ord.address.value || orderCity;
-        const amount = ord.isMarketing ? 0 : ord.totalAmount.value;
-
-        // 1. Add order to DB
-        db.addOrder({
-          orderNumber,
-          brandCode: orderBrand,
-          orderDateAd: ord.orderDateAd.value || getTodayAd(),
-          orderDateBs: ord.orderDateBs.value || getTodayBs(),
-          platform: ord.salesChannel || sourceChannel,
-          customerName: custName,
-          customerPhone: custPhone,
-          province: orderCity.toLowerCase().includes('pokhara') ? 'Gandaki Province' : 'Bagmati Province',
-          district: orderCity,
-          address: orderAddress,
-          deliveryMethod: ord.deliveryMethod.value || deliveryMethods[0],
-          paymentTerms: ord.isMarketing ? 'Advance' : ((ord.paymentTerms.value as any) || 'COD'),
-          orderType: 'NEW',
-          totalAmount: amount,
-          statedPrice: ord.statedPrice.value || undefined,
-          status: 'PENDING',
-          source: 'WHATSAPP_EXTRACTOR',
-          notes: `Extracted via WhatsApp Extractor. ${ord.combo.value !== 'None (Standard SKU)' ? `Combo: ${ord.combo.value}` : ''}`,
-          isMarketing: ord.isMarketing,
-          influencerId: ord.influencerId,
-          influencerHandle: ord.influencerName,
-          items: ord.products.map((p) => ({
-            productId: p.productId || 'prod_gen',
-            productName: p.name,
-            brandCode: p.brandCode,
-            quantity: p.quantity,
-            unitPrice: p.unitPrice,
-            totalPrice: ord.isMarketing ? 0 : p.unitPrice * p.quantity,
-          })),
-        });
-
-        // 2. Customer 360 profile update (skip if marketing)
-        if (!ord.isMarketing) {
-          const existingCust = db.getCustomerByPhone(custPhone);
-          if (existingCust) {
-            db.updateCustomer(existingCust.id, {
-              name: custName,
-              city: orderCity || existingCust.city,
-              lastOrderDate: ord.orderDateAd.value || getTodayAd(),
-              totalOrders: (existingCust.totalOrders || 0) + 1,
-              karmaScore: Math.min(100, (existingCust.karmaScore || 85) + 1),
-              brandsPurchased: Array.from(new Set([...existingCust.brandsPurchased, orderBrand])),
-            });
-          } else {
-            db.addCustomer({
-              phone: custPhone,
-              name: custName,
-              city: orderCity,
-              province: 'Bagmati Province',
-              firstOrderDate: ord.orderDateAd.value || getTodayAd(),
-              lastOrderDate: ord.orderDateAd.value || getTodayAd(),
-              totalOrders: 1,
-              totalDelivered: 0,
-              totalReturns: 0,
-              totalDeliveryFailures: 0,
-              totalCancellations: 0,
-              totalComplaints: 0,
-              totalReviews: 0,
-              karmaScore: 85,
-              segment: 'NEW',
-              activeFlags: [],
-              brandsPurchased: [orderBrand],
-            });
-          }
-        }
-
-        // History item
-        newHistoryItems.push({
-          id: `eh_${Date.now()}_${index}`,
-          timestamp: 'Just now',
-          customerName: custName,
-          customerPhone: custPhone,
-          brandCode: orderBrand,
-          productSummary: ord.products.map((p) => `${p.name} (${p.quantity})`).join(', ') || 'Catalog SKU',
-          totalAmount: amount,
-          status: 'PUSHED',
-          orderNumber,
-          rawText: ord.rawText,
-        });
-      });
-
-      saveHistory([...newHistoryItems, ...history.slice(0, 20)]);
-      setPushedSummary({ count: ordersToPush.length, orderNumbers: pushedOrderNumbers });
-      setExtractedOrders((prev) => prev.filter((o) => !ordersToPush.some((p) => p.id === o.id)));
-      setSelectedOrderIds(new Set());
-      setShowConfirmModal(false);
-      toast.success(`Successfully pushed ${ordersToPush.length} order(s) into OrderFlow!`);
+    void guardedSubmit(async () => {
+      try {
+        const response = await fetch('/api/extractor/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Workspace-User': currentUser.id }, body: JSON.stringify({ orders: ordersToPush.map(order => ({
+          clientId: order.id, customerName: order.customerName.value, customerPhone: order.customerPhone.value, alternatePhone: order.alternatePhone.value,
+          city: order.city.value, province: order.province.value, address: order.address.value, orderDateAd: order.orderDateAd.value,
+          platform: order.salesChannel || sourceChannel, deliveryMethod: order.deliveryMethod.value || deliveryMethods[0], paymentTerms: order.paymentTerms.value,
+          statedPrice: order.statedPrice.value || null, isMarketing: !!order.isMarketing, influencerId: order.influencerId || '',
+          items: order.products.map(item => ({ productId: item.productId, quantity: item.quantity, expectedUnitPrice: item.unitPrice })),
+        })) }) });
+        const result = await response.json().catch(() => null);
+        if (!response.ok || !result?.success || !Array.isArray(result.orderNumbers)) throw new Error(result?.error || 'Could not save orders. Your review stays here for retry.');
+        const numbers = result.orderNumbers as string[];
+        const entries: ExtractionHistoryItem[] = ordersToPush.map((order, index) => ({ id: `eh_${order.id}`, timestamp: 'Just now', customerName: order.customerName.value, customerPhone: order.customerPhone.value, brandCode: order.brandCode.value, productSummary: order.products.map(item => `${item.name} (${item.quantity})`).join(', '), totalAmount: order.totalAmount.value, status: 'PUSHED', orderNumber: numbers[index] }));
+        saveHistory([...entries, ...history].slice(0, 20)); setPushedSummary({ count: numbers.length, orderNumbers: numbers });
+        setExtractedOrders(previous => previous.filter(order => !ordersToPush.some(saved => saved.id === order.id)));
+        setSelectedOrderIds(new Set()); setShowConfirmModal(false);
+        const sync = await db.syncWithSupabase();
+        toast.success(`${numbers.length} order(s) saved to OrderFlow.`);
+        if (!sync.success) toast.info('Orders were saved. Refresh the app to see the latest data.');
+      } catch (error) { toast.error(error instanceof Error ? error.message : 'Orders could not be saved.'); }
     });
   };
 
@@ -493,15 +349,12 @@ export default function ExtractorPage() {
             <div className="flex items-center gap-2">
               <span className="text-sm">📚</span>
               <span>
-                <strong>Catalog Synced:</strong> {catalogStatus.activeProductsCount} active products · {catalogStatus.activeCombosCount} active combos across {catalogStatus.activeBrandsCount} brands
+                <strong>Available catalogue:</strong> {activeCatalogProducts.length} active products · {activeCatalogCombos.length} active combos across {catalogStatus.brands} brands
               </span>
             </div>
             <div className="flex items-center gap-2 text-slate-500">
               <Clock className="w-3.5 h-3.5" />
-              <span>Status: {catalogStatus.lastUpdatedText}</span>
-              {catalogStatus.newProductsCount > 0 && (
-                <span className="text-emerald-600 font-medium">({catalogStatus.newProductsCount} new items ready)</span>
-              )}
+              <span>Refreshes before extraction</span>
             </div>
           </div>
         </div>
@@ -514,14 +367,14 @@ export default function ExtractorPage() {
           >
             <span className="flex items-center gap-2">
               <HelpCircle className="w-4 h-4 text-blue-600" />
-              Suggested WhatsApp Order Format (Optional — for 99% accuracy)
+              Suggested WhatsApp Order Format
             </span>
             {showTemplate ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
           </button>
           {showTemplate && (
             <div className="px-5 pb-4 pt-1 bg-slate-50/50 border-t border-slate-100 text-xs text-slate-600 space-y-2">
               <p className="text-slate-500">
-                The extractor recognizes freeform text automatically. However, sharing this template with your social media reps guarantees near-instant 99% parsing:
+                Use this format to make messages easier to review. Product names and aliases come from the current catalogue:
               </p>
               <pre className="p-3 bg-white rounded-xl border border-slate-200 font-mono text-[11px] text-slate-800 select-all overflow-x-auto">
 {`Name: [Customer Name]
@@ -591,7 +444,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
             <span className="text-xs text-slate-400">
-              Matches against {catalogStatus.activeProductsCount} active products &amp; {catalogStatus.activeCombosCount} combos in database.
+              Matches against {activeCatalogProducts.length} active products &amp; {activeCatalogCombos.length} combos in database.
             </span>
 
             <div className="flex items-center gap-2">
@@ -636,13 +489,14 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                 >
                   {selectedOrderIds.size === extractedOrders.length ? 'Deselect All' : 'Select All'}
                 </button>
+                <button type="button" onClick={() => downloadCSV('\uFEFF' + extractorCSV(extractedOrders, activeCatalogProducts, sourceChannel), `extracted-orders-${getTodayAd()}.csv`)} className="px-3 py-1.5 border border-blue-300 bg-white rounded-lg text-xs font-semibold text-blue-700 hover:bg-blue-50">Download CSV</button>
                 <button
                   onClick={handleDiscardAll}
                   className="px-3 py-1.5 border border-rose-200 bg-white rounded-lg text-xs font-semibold text-rose-700 hover:bg-rose-50"
                 >
                   Discard All
                 </button>
-                <button
+                {canCreateOrders && <button
                   onClick={() => {
                     setPushMode('SELECTED');
                     setShowConfirmModal(true);
@@ -652,8 +506,8 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                 >
                   <CheckCircle className="w-3.5 h-3.5" />
                   Push Selected ({selectedOrderIds.size})
-                </button>
-                <button
+                </button>}
+                {canCreateOrders && <button
                   onClick={() => {
                     setPushMode('ALL');
                     setShowConfirmModal(true);
@@ -662,7 +516,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                 >
                   <ShoppingBag className="w-3.5 h-3.5" />
                   Push All Orders ({extractedOrders.length})
-                </button>
+                </button>}
               </div>
             </div>
 
@@ -749,11 +603,12 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                             <span>{flag}</span>
                           </div>
                         ))}
+                        {ord.flags.some(flag => flag.includes('matches multiple catalogue items') || flag.startsWith('Multiple combos match')) && <button type="button" className="mt-2 rounded-lg border border-amber-400 bg-white px-3 py-2 font-semibold text-amber-900" onClick={() => setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, flags: order.flags.filter(flag => !flag.includes('matches multiple catalogue items') && !flag.startsWith('Multiple combos match')) }) : order))}>I reviewed and selected the correct items</button>}
                       </div>
                     )}
 
                     {/* Marketing Checkbox (Fix 71b) */}
-                    <div className="mt-3 p-3 bg-purple-50/50 border border-purple-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    {canUseMarketing && <div className="mt-3 p-3 bg-purple-50/50 border border-purple-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
@@ -784,7 +639,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           </select>
                         </div>
                       )}
-                    </div>
+                    </div>}
 
                     {/* Editable Fields Grid */}
                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
@@ -822,6 +677,18 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         />
                       </div>
 
+                      <div>
+                        <label className="font-semibold text-slate-500 mb-1 block" htmlFor={`alt_${ord.id}`}>Alternate phone</label>
+                        <input id={`alt_${ord.id}`} type="tel" value={ord.alternatePhone.value} onChange={event => handleUpdateOrderField(ord.id, 'alternatePhone', event.target.value)} className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs" placeholder="Optional second phone" />
+                      </div>
+                      <div>
+                        <label className="font-semibold text-slate-500 mb-1 block" htmlFor={`province_${ord.id}`}>Province</label>
+                        <input id={`province_${ord.id}`} value={ord.province.value} onChange={event => handleUpdateOrderField(ord.id, 'province', event.target.value)} className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs" placeholder="Province" />
+                      </div>
+                      <div>
+                        <label className="font-semibold text-slate-500 mb-1 block" htmlFor={`date_${ord.id}`}>Order date</label>
+                        <input id={`date_${ord.id}`} type="date" value={ord.orderDateAd.value} onChange={event => handleUpdateOrderField(ord.id, 'orderDateAd', event.target.value)} className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs" />
+                      </div>
                       {/* City */}
                       <div>
                         <label className="font-semibold text-slate-500 mb-1 block">City</label>
@@ -881,11 +748,8 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                             className="bg-white border border-slate-200 rounded px-2 py-0.5 text-xs font-normal"
                           >
                             <option value="">+ Add from catalog...</option>
-                            {activeCatalogProducts.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name} (₹{p.mrp})
-                              </option>
-                            ))}
+                            <optgroup label="Products">{activeCatalogProducts.map(product => <option key={product.id} value={`product:${product.id}`}>{product.name} (NPR {product.mrp})</option>)}</optgroup>
+                            <optgroup label="Combos">{activeCatalogCombos.map(combo => <option key={combo.id} value={`combo:${combo.id}`}>{combo.name} (NPR {combo.comboPrice || combo.comboMrp})</option>)}</optgroup>
                           </select>
                         </div>
                       </div>
@@ -904,7 +768,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                                 </span>
                               )}
                               <span className="font-semibold text-slate-900">{item.name}</span>
-                              <span className="text-slate-400">@ ₹{item.unitPrice.toLocaleString()}</span>
+                              <span className="text-slate-400">@ NPR {item.unitPrice.toLocaleString()}</span>
                             </div>
 
                             <div className="flex items-center gap-3">
@@ -928,7 +792,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                               </div>
 
                               <span className="font-bold text-slate-900 w-20 text-right">
-                                ₹{item.totalPrice.toLocaleString()}
+                                NPR {item.totalPrice.toLocaleString()}
                               </span>
 
                               <button
@@ -943,25 +807,23 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       </div>
                     </div>
 
+                    <p className="mt-3 text-xs text-slate-500">Follow-ups: {followUpDates(ord.orderDateAd.value)[0] || '—'} (21 days) · {followUpDates(ord.orderDateAd.value)[1] || '—'} (2 months)</p>
+
                     {/* Order Footer: Stated vs Calculated Price & Action */}
                     <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                       <div className="flex items-center gap-4 flex-wrap">
                         <div>
-                          <span className="text-slate-400">Catalog MRP Total: </span>
-                          <span className="font-bold text-slate-900">₹{ord.totalAmount.value.toLocaleString()}</span>
+                          <span className="text-slate-400">Catalogue total: </span>
+                          <span className="font-bold text-slate-900">NPR {ord.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0).toLocaleString()}</span>
                         </div>
-                        {ord.statedPrice.value > 0 && (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-slate-400">Stated in Message: </span>
-                            <span className="font-bold text-blue-700">₹{ord.statedPrice.value.toLocaleString()}</span>
-                            {ord.statedPrice.level === 'WARNING' && (
-                              <span className="text-amber-600 font-semibold">({ord.statedPrice.differencePct}% diff)</span>
-                            )}
-                          </div>
-                        )}
                         <div>
-                          <span className="text-slate-400">Payment: </span>
-                          <span className="font-semibold text-slate-800">{ord.paymentTerms.value}</span>
+                          <label className="text-slate-500" htmlFor={`amount_${ord.id}`}>Stated total (NPR)</label>
+                          <input id={`amount_${ord.id}`} type="number" min="0" step="0.01" value={ord.statedPrice.value || ''} onChange={event => handleUpdateOrderField(ord.id, 'statedPrice', Number(event.target.value))} className="ml-2 w-28 rounded-lg border border-slate-200 p-1" placeholder="Optional" />
+                        </div>
+                        <div><span className="text-slate-400">Order total: </span><span className="font-bold text-slate-900">NPR {ord.totalAmount.value.toLocaleString()}</span></div>
+                        <div>
+                          <label className="text-slate-500" htmlFor={`payment_${ord.id}`}>Payment</label>
+                          <select id={`payment_${ord.id}`} value={ord.paymentTerms.value} onChange={event => handleUpdateOrderField(ord.id, 'paymentTerms', event.target.value)} className="ml-2 rounded-lg border border-slate-200 p-1"><option value="COD">COD</option><option value="Prepaid">Prepaid</option></select>
                         </div>
                         <div>
                           <label className="text-slate-500" htmlFor={`channel_${ord.id}`}>Sales channel</label>
@@ -973,14 +835,14 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {(!ord.customerPhone.value || ord.products.length === 0) ? (
+                      {canCreateOrders && <div className="flex items-center gap-2">
+                        {ord.extractionErrors.length > 0 ? (
                           <button
                             type="button"
                             onClick={() => {
                               toast.error(
                                 'Cannot Push Incomplete Order',
-                                `Please ensure a phone number and at least 1 product are provided before pushing to OrderFlow.`
+                                ord.extractionErrors[0]
                               );
                             }}
                             className="px-4 py-1.5 bg-rose-100 text-rose-800 font-bold rounded-xl hover:bg-rose-200 transition flex items-center gap-1.5 shadow-xs text-xs border border-rose-300"
@@ -1002,7 +864,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                             {isSubmitting ? 'Pushing...' : 'Push This Order'}
                           </button>
                         )}
-                      </div>
+                      </div>}
                     </div>
                   </div>
                 );
@@ -1046,7 +908,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                 type="button"
                 onClick={() => {
                   setHistory([]);
-                  localStorage.removeItem('bb_wa_extraction_history_v2');
+                  localStorage.removeItem(historyKey);
                 }}
                 className="text-[11px] text-slate-400 hover:text-rose-600 font-semibold"
               >
@@ -1087,7 +949,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         </span>
                       </td>
                       <td className="py-2.5 px-3 max-w-xs truncate text-slate-700">{item.productSummary}</td>
-                      <td className="py-2.5 px-3 font-bold text-slate-900">₹{item.totalAmount.toLocaleString()}</td>
+                      <td className="py-2.5 px-3 font-bold text-slate-900">NPR {item.totalAmount.toLocaleString()}</td>
                       <td className="py-2.5 px-3">
                         {item.status === 'PUSHED' ? (
                           <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
@@ -1126,7 +988,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                 <strong>
                   {pushMode === 'ALL' ? extractedOrders.length : selectedOrderIds.size} order(s)
                 </strong>{' '}
-                into the live database. Customer profiles will be created/updated and inventory allocations recorded.
+                into the live database. Customer profiles will be created or updated for commercial orders.
               </p>
 
               <div className="flex items-center justify-end gap-2 pt-2">

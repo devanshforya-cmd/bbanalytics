@@ -531,6 +531,7 @@ export default function DailyOrdersPage() {
                           </td>
                           <td className="py-3 px-3 font-mono text-[11px] text-slate-600">
                             {ord.customerPhone}
+                            {ord.alternatePhone && <span className="block text-slate-400">Alt: {ord.alternatePhone}</span>}
                           </td>
                           <td className="py-3 px-3">
                             {ord.isMarketing ? (

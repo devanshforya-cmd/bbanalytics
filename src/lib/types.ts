@@ -655,6 +655,8 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  catalogUnitPrice?: number;
+  discountAmount?: number;
 }
 
 // Channel/provider labels are configured in Settings; historical attribution stays unchanged.
@@ -679,6 +681,8 @@ export interface Order {
   platform: OrderPlatform;
   customerName: string;
   customerPhone: string;
+  alternatePhone?: string;
+  extractorRequestHash?: string;
   province: string;
   district: string;
   address: string;
