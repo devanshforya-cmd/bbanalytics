@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { isSellableCombo } from '@/lib/product-catalog';
 import { db } from '@/lib/db/db-service';
-import { canPerform, hasAccess } from '@/lib/permissions';
+import { canPerform, hasAccess, d2cAssignees } from '@/lib/permissions';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { extractorCSV, followUpDates } from '@/lib/extractor-export';
 import { downloadCSV } from '@/lib/csv';
@@ -12,6 +12,7 @@ import { activeOrderOptionNames, assertActiveOrderOption } from '@/lib/order-opt
 import {
   extractOrdersDynamically,
   validateExtractedOrder,
+  extractedOrderTotal,
   splitMessageBlocks,
   ExtractedOrderResult,
   ExtractedProductItem,
@@ -145,6 +146,8 @@ export default function ExtractorPage() {
       products,
       combos,
       brands,
+      channels,
+      deliveryMethods,
       dateOverride: dateMode === 'OVERRIDE' ? overrideDateAd : undefined,
     });
 
@@ -175,7 +178,7 @@ export default function ExtractorPage() {
     const catalogTotal = order.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
     const brandCodes = [...new Set(order.products.map(item => item.brandCode))];
     const combos = order.products.filter(item => item.isCombo).map(item => item.name);
-    const amount = order.isMarketing ? 0 : order.statedPrice.value > 0 && order.statedPrice.value <= catalogTotal ? order.statedPrice.value : catalogTotal;
+    const amount = extractedOrderTotal(order);
     const updated = { ...order, brandCode: { ...order.brandCode, value: brandCodes.length === 1 ? brandCodes[0] : 'ALL' },
       combo: { ...order.combo, value: combos.join(', ') || 'None (Standard SKU)' }, totalAmount: { ...order.totalAmount, value: amount },
       flags: order.flags.filter(flag => !flag.startsWith('Stated total NPR') && !flag.startsWith('No catalogue item recognized') && !(order.statedPrice.value > 0 && flag.startsWith('The message states a zero total'))) };
@@ -272,8 +275,8 @@ export default function ExtractorPage() {
         const response = await fetch('/api/extractor/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Workspace-User': currentUser.id }, body: JSON.stringify({ orders: ordersToPush.map(order => ({
           clientId: order.id, customerName: order.customerName.value, customerPhone: order.customerPhone.value, alternatePhone: order.alternatePhone.value,
           city: order.city.value, province: order.province.value, address: order.address.value, orderDateAd: order.orderDateAd.value,
-          platform: order.salesChannel || sourceChannel, deliveryMethod: order.deliveryMethod.value || deliveryMethods[0], paymentTerms: order.paymentTerms.value,
-          statedPrice: order.statedPrice.value || null, isMarketing: !!order.isMarketing, influencerId: order.influencerId || '',
+          platform: order.salesChannel || sourceChannel, deliveryMethod: order.deliveryMethod.value || deliveryMethods[0], paymentTerms: order.paymentTerms.value, assignedToId: order.assignedToId || currentUser.id,
+          statedPrice: order.statedPrice.provided ? order.statedPrice.value : null, discountPercent: order.discountPercent?.provided ? order.discountPercent.value : null, isMarketing: !!order.isMarketing, influencerId: order.influencerId || '',
           items: order.products.map(item => ({ productId: item.productId, quantity: item.quantity, expectedUnitPrice: item.unitPrice })),
         })) }) });
         const result = await response.json().catch(() => null);
@@ -818,9 +821,11 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         </div>
                         <div>
                           <label className="text-slate-500" htmlFor={`amount_${ord.id}`}>Stated total (NPR)</label>
-                          <input id={`amount_${ord.id}`} type="number" min="0" step="0.01" value={ord.statedPrice.value || ''} onChange={event => handleUpdateOrderField(ord.id, 'statedPrice', Number(event.target.value))} className="ml-2 w-28 rounded-lg border border-slate-200 p-1" placeholder="Optional" />
+                          <input id={`amount_${ord.id}`} type="number" min="0" step="0.01" value={ord.statedPrice.provided ? ord.statedPrice.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, statedPrice: { ...order.statedPrice, provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-28 rounded-lg border border-slate-200 p-1" placeholder="Optional" />
                         </div>
+                        <div><label className="text-slate-500" htmlFor={`discount_${ord.id}`}>Discount (%)</label><input id={`discount_${ord.id}`} type="number" min="0" max="100" step="0.01" value={ord.discountPercent?.provided ? ord.discountPercent.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, discountPercent: { confidence: 'HIGH', provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-20 rounded-lg border border-slate-200 p-1" placeholder="Optional" /></div>
                         <div><span className="text-slate-400">Order total: </span><span className="font-bold text-slate-900">NPR {ord.totalAmount.value.toLocaleString()}</span></div>
+                        <div><label className="text-slate-500" htmlFor={`assignee_${ord.id}`}>Responsible person</label><select id={`assignee_${ord.id}`} value={ord.assignedToId || currentUser.id} onChange={event => handleUpdateOrderField(ord.id, 'assignedToId', event.target.value)} className="ml-2 rounded-lg border border-slate-200 p-1">{d2cAssignees(currentUser, db.getUsers(), ord.brandCode.value).map(user => <option key={user.id} value={user.id}>{user.fullName}</option>)}</select></div>
                         <div>
                           <label className="text-slate-500" htmlFor={`payment_${ord.id}`}>Payment</label>
                           <select id={`payment_${ord.id}`} value={ord.paymentTerms.value} onChange={event => handleUpdateOrderField(ord.id, 'paymentTerms', event.target.value)} className="ml-2 rounded-lg border border-slate-200 p-1"><option value="COD">COD</option><option value="Prepaid">Prepaid</option></select>

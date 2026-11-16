@@ -94,10 +94,10 @@ export function canReadWorkspaceRecord(user: User, row: StoredWorkspaceRecord, u
   if (!assigned.includes('ALL') && brands.length && !brands.every((code) => assigned.includes(code))) return false;
   if (!assigned.length && ['products', 'combos', 'orders', 'secondaryOrders', 'retailers', 'branches', 'distributors', 'cheques'].includes(row.collection)) return false;
   if (GLOBAL_CATALOG.has(row.collection)) return true;
-  const owner = recordOwner(row);
+  const owners = row.collection === 'orders' ? [row.created_by, row.data.assignedToId].filter(Boolean) : [recordOwner(row)];
   return features.some((feature) => {
     const scope = getScope(user, feature);
-    return scope === 'ALL' || (scope === 'OWN' ? owner === user.id : teamMemberIds(user, users).has(owner));
+    return scope === 'ALL' || (scope === 'OWN' ? owners.includes(user.id) : owners.some(owner => teamMemberIds(user, users).has(owner)));
   });
 }
 
@@ -109,10 +109,10 @@ export function canWriteWorkspaceRecord(user: User, row: StoredWorkspaceRecord, 
   if (row.collection === 'sharedAccessLinks' || row.collection === 'importHistory') return false;
   if (row.collection === 'notifications') return action !== 'CREATE' && row.data.userId === user.id;
   const writeFeatures = collectionFeatures(row.collection).filter((feature) => canPerform(user, feature, action));
-  const owner = recordOwner(row);
+  const owners = row.collection === 'orders' ? [row.created_by, row.data.assignedToId].filter(Boolean) : [recordOwner(row)];
   if (!writeFeatures.some((feature) => {
     const scope = getScope(user, feature);
-    return scope === 'ALL' || scope === 'OWN' && owner === user.id || scope === 'TEAM' && teamMemberIds(user, users).has(owner);
+    return scope === 'ALL' || scope === 'OWN' && owners.includes(user.id) || scope === 'TEAM' && owners.some(owner => teamMemberIds(user, users).has(owner));
   })) return false;
   if (!canReadWorkspaceRecord(user, row, users, records)) return false;
   const storeId = row.data.storeId || row.data.entityId;

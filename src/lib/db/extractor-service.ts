@@ -62,16 +62,20 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     if (!db.getBrands('ACTIVE').some(brand => brand.code === brandCode)) throw new ExtractorInputError(`${label} brand is no longer active.`, 409);
     const catalogCents = items.reduce((sum,item) => sum + Math.round(item.totalPrice * 100), 0);
     if (!Number.isSafeInteger(catalogCents) || catalogCents <= 0) throw new ExtractorInputError(`${label} catalogue total is too large.`);
-    const stated = row.statedPrice == null || row.statedPrice === 0 ? null : Number(row.statedPrice);
-    if (stated !== null && (!Number.isFinite(stated) || stated <= 0 || Math.abs(stated * 100 - Math.round(stated * 100)) > 1e-6 || !Number.isSafeInteger(Math.round(stated * 100)) || stated * 100 > catalogCents + 0.5)) throw new ExtractorInputError(`${label} stated amount must be positive and cannot exceed the catalogue total.`);
-    const targetCents = row.isMarketing ? 0 : stated === null ? catalogCents : Math.round(stated * 100);
+    const stated = row.statedPrice == null ? null : Number(row.statedPrice);
+    const discount = row.discountPercent == null ? null : Number(row.discountPercent);
+    if (stated !== null && (!Number.isFinite(stated) || stated < 0 || Math.abs(stated * 100 - Math.round(stated * 100)) > 1e-6 || !Number.isSafeInteger(Math.round(stated * 100)) || stated * 100 > catalogCents + 0.5)) throw new ExtractorInputError(`${label} stated amount cannot exceed the catalogue total.`);
+    if (discount !== null && (!Number.isFinite(discount) || discount < 0 || discount > 100 || Math.abs(discount * 100 - Math.round(discount * 100)) > 1e-6)) throw new ExtractorInputError(`${label} discount must be between 0 and 100%.`);
+    const discountedCents = discount === null ? catalogCents : Math.round(catalogCents * (1 - discount / 100));
+    if (!row.isMarketing && stated !== null && discount !== null && Math.round(stated * 100) !== discountedCents) throw new ExtractorInputError(`${label} stated amount and discount do not match.`);
+    const targetCents = row.isMarketing ? 0 : stated === null ? discountedCents : Math.round(stated * 100);
     const totals = allocateOrderTotal(items, targetCents / 100);
     const adjusted: OrderItem[] = items.map((item,i) => ({ ...item, catalogUnitPrice: item.unitPrice, totalPrice: totals[i], unitPrice: totals[i] / item.quantity, discountAmount: money(item.totalPrice - totals[i]) }));
     const bs = adToBs(date);
     const order: Omit<Order,'id'|'createdAt'> = { orderNumber, extractorRequestHash: requestHash, brandCode, orderDateAd, orderDateBs: `${bs.monthName} ${bs.day}, ${bs.year}`,
-      platform, customerName, customerPhone, ...(alternatePhone ? { alternatePhone } : {}), province, district, address, deliveryMethod,
+      platform, customerName, customerPhone, ...(alternatePhone ? { alternatePhone } : {}), province, district, address, deliveryMethod, ...(row.assignedToId ? { assignedToId: required(row.assignedToId, `${label} responsible person`) } : {}),
       paymentTerms: row.isMarketing ? 'Advance' : row.paymentTerms, orderType: 'NEW', items: adjusted, totalAmount: targetCents / 100,
-      ...(stated !== null ? { statedPrice: stated } : {}), status: 'PENDING', source: 'WHATSAPP_EXTRACTOR',
+      ...(stated !== null ? { statedPrice: stated } : {}), ...(discount !== null ? { discountPercent: discount } : {}), status: 'PENDING', source: 'WHATSAPP_EXTRACTOR',
       ...(row.isMarketing ? { isMarketing: true, influencerId: influencer!.id, influencerHandle: influencer!.name } : {}), notes: 'Extracted and reviewed from WhatsApp.' };
     return { existing: null, order, orderNumber };
   });

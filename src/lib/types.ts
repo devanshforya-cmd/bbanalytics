@@ -25,6 +25,8 @@ export interface UserPermissions {
 }
 
 export interface User {
+  orderflowAssignable?: boolean;
+  orderflowBrands?: string[];
   id: string;
   email: string;
   fullName: string;
@@ -692,6 +694,9 @@ export interface Order {
   items: OrderItem[];
   totalAmount: number;
   statedPrice?: number;
+  discountPercent?: number;
+  assignedToId?: string;
+  assignedToName?: string;
   status: OrderStatus;
   source: 'WHATSAPP_EXTRACTOR' | 'MANUAL' | 'FIELD_CALL' | 'Extractor' | 'Manual' | 'Field';
   linkedCallId?: string;
