@@ -257,7 +257,7 @@ test('server-deleted products stay hidden despite stale offline edits and cache 
   mockGlobals(t, { localStorage: storage, window: new EventTarget(), navigator: { onLine: true }, CustomEvent: TestCustomEvent,
     fetch: async (_url: string, options: RequestInit) => options?.method === 'POST'
       ? Response.json({ success: false, error: 'Product deleted' }, { status: 409 })
-      : Response.json({ success: true, data: { products: [], users: [user], brands: [] }, versions: {}, deletedProductIds: ['p-deleted'], errors: [] }) });
+      : Response.json({ success: true, data: { products: [], combos: [], users: [user], brands: [] }, versions: {}, deletedProductIds: ['p-deleted', 'c-deleted'], errors: [] }) });
   const db = new DatabaseService();
   db.hydrateSnapshot({ products: [{ id: 'p-deleted', name: 'Old product', sku: 'OLD' }] }, user, { products: { 'p-deleted': 1 } });
   db.updateProduct('p-deleted', { name: 'Unsent edit' });
@@ -265,8 +265,10 @@ test('server-deleted products stay hidden despite stale offline edits and cache 
   assert.deepEqual(db.getProducts(), []);
   assert.equal(db.getPendingMutations().length, 1, 'Keep the old edit in its owner’s outbox for review');
   const saved = JSON.parse(storage.getItem(`bb_workspace_cache_v1:${user.id}`)!);
-  assert.deepEqual(saved.deletedProductIds, ['p-deleted']);
+  assert.deepEqual(saved.deletedProductIds, ['p-deleted', 'c-deleted']);
   saved.products = [{ id: 'p-deleted', name: 'Stale cached copy', sku: 'OLD' }];
+  saved.combos = [{ id: 'c-deleted', name: 'Stale cached combo', sku: 'OLD-C' }];
   storage.setItem(`bb_workspace_cache_v1:${user.id}`, JSON.stringify(saved));
   assert.deepEqual(new DatabaseService().getProducts(), []);
+  assert.deepEqual(new DatabaseService().getCombos(), []);
 });

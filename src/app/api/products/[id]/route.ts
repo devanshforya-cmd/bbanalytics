@@ -4,6 +4,7 @@ import { isSuperAdmin } from '@/lib/permissions';
 import { isSameOriginRequest } from '@/lib/request-origin';
 import { readWorkspaceContext, saveWorkspaceMutation, WorkspaceError } from '@/lib/db/server-workspace';
 import { productUsage } from '@/lib/product-catalog';
+import { editProduct } from '@/lib/catalog-edit';
 import type { Product } from '@/lib/types';
 import type { WorkspaceSnapshot } from '@/lib/db/workspace-types';
 import { apiFailure, readBody } from '../../_workspace';
@@ -42,11 +43,16 @@ async function change(request: Request, params: Promise<{ id: string }>, operati
     if (!Number.isSafeInteger(body.expectedVersion) || body.expectedVersion < 1) throw new WorkspaceError(400, 'Refresh the product before changing it.');
     let data;
     if (operation === 'upsert') {
-      if (typeof body.active !== 'boolean') throw new WorkspaceError(400, 'A product status is required.');
       const context = await readWorkspaceContext();
       const row = context.records.find(record => record.collection === 'products' && record.id === id);
       if (!row) throw new WorkspaceError(404, 'Product not found.');
-      data = { ...row.data, active: body.active };
+      if (body.updates && typeof body.updates === 'object' && !Array.isArray(body.updates)) {
+        const catalogue = context.records.filter(record => record.collection === 'products' || record.collection === 'combos').map(record => record.data as { id: string; sku?: string });
+        data = editProduct(row.data as Product, body.updates, catalogue);
+      } else {
+        if (typeof body.active !== 'boolean') throw new WorkspaceError(400, 'Product details or status are required.');
+        data = { ...row.data, active: body.active };
+      }
     }
     const result = await saveWorkspaceMutation(auth.user!, { collection: 'products', id, operation, data,
       expectedVersion: body.expectedVersion, mutationId: `catalog_${crypto.randomUUID()}` });
