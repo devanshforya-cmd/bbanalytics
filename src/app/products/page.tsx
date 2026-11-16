@@ -1745,7 +1745,7 @@ export default function ProductsPage() {
             />
             <label htmlFor="priceDetectionEnabled" className="text-xs text-purple-950 font-medium cursor-pointer">
               <span className="font-bold block text-purple-900">Enable Price-Based Auto Collapse</span>
-              Allow the WhatsApp extractor to detect this combo automatically when the customer message states total price <span className="font-mono font-bold">Rs. {newCombo.comboPrice}</span> even if individual items aren&apos;t explicitly named.
+              Allow the WhatsApp extractor to match this combo when the message names its exact components and states the saved total of <span className="font-mono font-bold">NPR {newCombo.comboPrice}</span>.
             </label>
           </div>
 

@@ -1,3 +1,4 @@
+import { normalizePhoneNumber } from '../auth-utils';
 import { installWorkspaceFetch } from '../workspace-reset-client';
 import { validGpsCoordinates } from '../gps-validation';
 import {
@@ -2467,8 +2468,10 @@ export class DatabaseService {
     this.orders.unshift(newOrder);
 
 
+    // Marketing sends are not commercial customer orders.
+    if (!newOrder.isMarketing) {
     // Update Customer 360 record
-    let customer = this.customers.find((c) => c.phone === newOrder.customerPhone);
+    let customer = this.customers.find((c) => normalizePhoneNumber(c.phone) === normalizePhoneNumber(newOrder.customerPhone));
     if (customer) {
       customer.totalOrders += 1;
       customer.lastOrderDate = newOrder.orderDateAd;
@@ -2481,7 +2484,7 @@ export class DatabaseService {
         KARMA_RULES.ORDER_PLACED,
         `Order #${newOrder.orderNumber}`
       );
-      customer = updatedCustomer;
+      Object.assign(customer, updatedCustomer);
     } else {
       const newCust: Customer = {
         id: this.generateId('cust'),
@@ -2504,6 +2507,8 @@ export class DatabaseService {
         brandsPurchased: [newOrder.brandCode],
       };
       this.customers.unshift(newCust);
+    }
+
     }
 
     // Update influencer metrics if marketing send
@@ -3040,7 +3045,7 @@ export class DatabaseService {
   }
 
   public getCustomerByPhone(phone: string): Customer | undefined {
-    return this.customers.find((c) => c.phone.replace(/\D/g, '') === phone.replace(/\D/g, ''));
+    return this.customers.find((c) => normalizePhoneNumber(c.phone) === normalizePhoneNumber(phone));
   }
 
   public addCustomer(cust: Omit<Customer, 'id'>): Customer {
