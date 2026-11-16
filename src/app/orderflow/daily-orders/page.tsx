@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db, OrderRealtimeEvent } from '@/lib/db/db-service';
+import NepalLocationFields from '@/components/common/NepalLocationFields';
 import { syncManager } from '@/lib/offline-sync';
 import { canPerform, hasAccess, d2cAssignees } from '@/lib/permissions';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
@@ -810,8 +811,7 @@ export default function DailyOrdersPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="font-semibold text-slate-600 block mb-1" htmlFor="edit-city">City / district (optional)</label><input id="edit-city" maxLength={200} value={editCity} onChange={event => setEditCity(event.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs" placeholder="Add city or district" /></div>
-                  <div><label className="font-semibold text-slate-600 block mb-1" htmlFor="edit-province">Province (optional)</label><input id="edit-province" maxLength={200} value={editProvince} onChange={event => setEditProvince(event.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs" placeholder="Add province" /></div>
+                  <NepalLocationFields idPrefix="edit-location" province={editProvince} city={editCity} onChange={next => { setEditProvince(next.province); setEditCity(next.city); }} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
