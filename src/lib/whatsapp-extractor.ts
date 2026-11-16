@@ -193,8 +193,6 @@ export function validateExtractedOrder(order: ExtractedOrderResult): string[] {
   const date = new Date(`${order.orderDateAd.value}T12:00:00Z`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(order.orderDateAd.value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0,10) !== order.orderDateAd.value) errors.push('Enter a valid order date.');
   if (!order.address.value.trim()) errors.push('Enter the delivery address.');
-  if (!order.city.value.trim()) errors.push('Enter the city or district.');
-  if (!order.province.value.trim()) errors.push('Choose or enter the province.');
   if (order.isMarketing && !order.influencerId) errors.push('Choose an influencer for the marketing send.');
   if (!order.products.length || order.products.some(item => !item.productId || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || item.quantity > 10000 || item.unitPrice <= 0)) errors.push('Select valid catalogue items and quantities.');
   if (new Set(order.products.map(item => item.brandCode)).size > 1) errors.push('Split products from different brands into separate orders.');
@@ -224,11 +222,25 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
   items = collapseCombo(items, combos, stated, flags, discount);
   if (discount !== null && items.length > 1 && lines.some(line => parseDiscountPercent(line) !== null && [...products, ...combos].some(item => keywordsFor(item, 'items' in item).some(keyword => expression(keyword).test(line))))) flags.push('Discount scope is unclear because the percentage appears on an item line.');
   const catalogTotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
-  const nameLine = lines.find(line => /^(?:name|naam|customer(?:\s+name)?|receiver)\s*[:=\-]/i.test(line));
-  let name = nameLine?.replace(/^(?:name|naam|customer(?:\s+name)?|receiver)\s*[:=\-]\s*/i, '').trim() || '';
+  const namePrefix = /^(?:name|naam|customer(?:\s+name)?|receiver)(?:\s*[:=\-]\s*|\s+)/i;
+  const nameLine = lines.find(line => namePrefix.test(line));
+  let name = nameLine?.replace(namePrefix, '').trim() || '';
   if (!name) name = lines.find(line => /^[\p{L}][\p{L}\s.'-]{1,79}$/u.test(line) && !/^(?:contact|order|website|number|location|address|phone|delivery|note|ph\s*no|paid|unpaid|cod|total|product|items?)\b/i.test(line) && !NEPAL_CITIES.some(city => line.toLowerCase() === city.toLowerCase()) && !items.some(item => expression(item.name).test(line) || item.name.toLowerCase().includes(line.toLowerCase()))) || '';
-  const addressLine = lines.find(line => /^(?:delivery\s*address|shipping\s*address|address|location|thau)\s*[:=\-]/i.test(line));
-  const addressBase = addressLine?.replace(/^(?:delivery\s*address|shipping\s*address|address|location|thau)\s*[:=\-]\s*/i, '').trim() || lines.find(line => line !== name && !/^(?:outside|inside|name|phone|product|total|payment|price)\b/i.test(line) && (/\b(?:near|chowk|tole|marg|galli|road|bazaar|mall|height|park|village|dang)\b/i.test(line) || NEPAL_CITIES.some(city => expression(city).test(line)))) || '';
+  const addressPrefix = /^(?:delivery\s*address|shipping\s*address|address|location|thau)(?:\s*[:=\-]\s*|\s+)/i;
+  const addressLine = lines.find(line => addressPrefix.test(line));
+  const knownAddress = lines.find(line => line !== name && !/^(?:outside|inside|name|phone|product|total|payment|price)\b/i.test(line) && (/\b(?:near|chowk|tole|marg|galli|road|bazaar|mall|height|park|village|dang)\b/i.test(line) || NEPAL_CITIES.some(city => expression(city).test(line))));
+  const optionNames = ['ML', ...(options.channels || ['TikTok', 'WhatsApp', 'Messenger', 'Website', 'Instagram', 'Facebook']), ...(options.deliveryMethods || ['Pathao', 'InDrive'])];
+  const zoneIndex = lines.findIndex(line => /^(?:outside|inside)\s+(?:the\s+)?(?:valley|ring\s*road)\b/i.test(line));
+  const phoneIndex = lines.findIndex(line => phoneNumbers(line).length);
+  // shortcut: without a matching product, only customer lines before a delivery zone or phone are candidates; ambiguous formats need review.
+  const addressLines = items.length ? lines : zoneIndex >= 0 ? lines.slice(0, zoneIndex) : phoneIndex >= 0 ? lines.slice(0, phoneIndex) : [];
+  const fallbackAddress = !addressLine ? addressLines.filter(line => {
+    if (line === name || phoneNumbers(line).length || optionNames.some(option => option.toLowerCase() === line.toLowerCase())) return false;
+    if (/^(?:outside|inside|name|naam|customer|receiver|phone|mobile|contact|ph\s*no|address|location|thau|product|items?|qty|quantity|order|date|payment|paid|unpaid|cod|total|amount|price|discount|sale|platform|channel|courier|delivery|shipping|note|remarks?)\b/i.test(line)) return false;
+    if (/^(?:free\s+(?:shipping|delivery)\b|\d+\s*(?:units?|pcs?|pieces?|sets?|kits?|pairs?|combos?|bottles?)\b|\d+(?:\.\d+)?\s*%|(?:rs\.?|npr|₹)\s*\d)/i.test(line)) return false;
+    return !matchCatalog(line, products, combos, []).length;
+  }).join(', ') : '';
+  const addressBase = addressLine?.replace(addressPrefix, '').trim() || fallbackAddress || knownAddress || '';
   const zone = lines.find(line => /^(?:outside|inside)\s+(?:the\s+)?(?:valley|ring\s*road)\b/i.test(line));
   const address = addressBase && zone && !addressBase.toLowerCase().includes(zone.toLowerCase()) ? `${addressBase}, ${zone}` : addressBase;
   const city = NEPAL_CITIES.find(value => expression(value).test(body)) || '';

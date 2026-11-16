@@ -13,6 +13,7 @@ const required = (value: unknown, label: string, max = 200) => {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > max || /[\u0000-\u001f\u007f]/.test(value)) throw new ExtractorInputError(`${label} is required (maximum ${max} characters).`);
   return value.trim();
 };
+const optional = (value: unknown, label: string, max = 200) => value == null || typeof value === 'string' && !value.trim() ? '' : required(value, label, max);
 const money = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 export async function saveExtractedOrders(input: any, workspace: { db: DatabaseService; commit(): Promise<void> }) {
   if (!Array.isArray(input?.orders) || input.orders.length < 1 || input.orders.length > 50) throw new ExtractorInputError('Save between 1 and 50 orders at a time.');
@@ -36,7 +37,7 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     if (typeof row.isMarketing !== 'boolean') throw new ExtractorInputError(`${label} needs a valid order type.`);
     const alternatePhone = row.alternatePhone ? normalizePhoneNumber(required(row.alternatePhone, `${label} alternate phone`)) : '';
     if (alternatePhone && !/^9[678]\d{8}$/.test(alternatePhone)) throw new ExtractorInputError(`${label} alternate phone is invalid.`);
-    const province = required(row.province, `${label} province`), district = required(row.city, `${label} city`), address = required(row.address, `${label} address`, 500);
+    const province = optional(row.province, `${label} province`), district = optional(row.city, `${label} city`), address = required(row.address, `${label} address`, 500);
     const orderDateAd = required(row.orderDateAd, `${label} date`, 10);
     const date = new Date(`${orderDateAd}T12:00:00Z`);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(orderDateAd) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0,10) !== orderDateAd) throw new ExtractorInputError(`${label} date is invalid.`);
