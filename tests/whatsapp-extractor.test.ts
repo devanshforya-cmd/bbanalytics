@@ -116,9 +116,37 @@ test('V6 combo aliases derive from saved names without guessing an ordinary prod
 
 test('large and zero quantities or zero prices never silently become a one-item full-price order', () => {
   const big=extractSingleOrder('Name: Asha\nPhone: 9841234567\nAddress: Kathmandu Road\nProduct: shampoo 100 pcs\nTotal: Rs 0',options);
-  assert.equal(big.products[0].quantity,100); assert.equal(big.statedPrice.value,0); assert(big.extractionErrors.some(error=>error.includes('zero total')));
+  assert.equal(big.products[0].quantity,100); assert.equal(big.statedPrice.value,0); assert.equal(big.statedPrice.provided,true); assert.equal(big.totalAmount.value,0);
   const zero=extractSingleOrder('Name: Asha\nPhone: 9841234567\nAddress: Kathmandu Road\nProduct: shampoo x 0',options);
   assert.equal(zero.products[0].quantity,0); assert(zero.extractionErrors.some(error=>error.includes('quantities')));
+});
+
+test('unlabeled locations and separated quantity lines retain delivery zones', () => {
+  const text = '[16/11/2026, 12:58:15] ~ Sales: Rina Limbu\nDang ghorahi\n9800001011\nOUTSIDE VALLEY\n\nUnderarm rollon aqua\n\n2 units\nMessenger';
+  const order = extractSingleOrder(text, options);
+  assert.equal(order.customerName.value, 'Rina Limbu');
+  assert.equal(order.address.value, 'Dang ghorahi, OUTSIDE VALLEY');
+  assert.equal(order.city.value, 'Ghorahi'); assert.equal(order.province.value, 'Lumbini Province');
+  assert.equal(order.products[0].quantity, 2); assert.equal(order.salesChannel, 'Messenger');
+  assert.deepEqual(order.extractionErrors, []);
+});
+
+test('order discounts use the current catalogue and reject contradictory totals', async () => {
+  const base = 'Name: Rina\nPhone: 9800001011\nAddress: Kathmandu Road\nProduct: shampoo 2 pcs';
+  const discounted = extractSingleOrder(`${base}\n10% off`, options);
+  assert.equal(discounted.discountPercent?.value, 10); assert.equal(discounted.totalAmount.value, 1438.2);
+  assert.equal(extractSingleOrder(`${base}\nVAT 13%`, options).totalAmount.value, 1598);
+  assert.match(extractSingleOrder(`${base}\n10% discount\nTotal: Rs 1400`, options).extractionErrors.join(' '), /do not match/);
+  const ws = workspace(); const valid = {...row('ext_12345678-1234-1234-1234-123456789abc'), statedPrice: null, discountPercent: 10};
+  await saveExtractedOrders({orders:[valid]}, ws);
+  assert.equal(ws.db.getOrders()[0].totalAmount, 1438.2);
+  assert.equal(ws.db.getOrders()[0].items.reduce((sum,item)=>sum+Math.round(item.totalPrice*100),0),143820);
+  await assert.rejects(saveExtractedOrders({orders:[{...valid, statedPrice:1400}]}, workspace()), /do not match/);
+});
+
+test('newly configured channel and logistics names are recognized in pasted messages', () => {
+  const order = extractSingleOrder('Name: Rina\nPhone: 9800001011\nAddress: Kathmandu Road\nProduct: aqua\nNewSocial\nQuickCourier', {...options, channels:['NewSocial'], deliveryMethods:['QuickCourier']});
+  assert.equal(order.salesChannel, 'NewSocial'); assert.equal(order.deliveryMethod.value, 'QuickCourier');
 });
 
 test('generic free shipping and millilitres do not invent a fragrance-free item or Website channel', () => {

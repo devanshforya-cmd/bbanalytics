@@ -28,6 +28,7 @@ import {
   UserCustomPermissions,
   FIELD_SALES_OFFICER_TEMPLATE,
   OFFICE_STAFF_TEMPLATE,
+  D2C_OFFICER_TEMPLATE,
   MANAGER_TEMPLATE,
   VIEWER_TEMPLATE,
   FEATURE_METADATA,
@@ -505,6 +506,7 @@ export default function StaffManagement() {
                   Quick Templates (Starting Point)
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" onClick={() => applyTemplate(D2C_OFFICER_TEMPLATE, 'D2C Officer')} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold">D2C Officer (own orders)</button>
                   <button
                     type="button"
                     onClick={() => applyTemplate(FIELD_SALES_OFFICER_TEMPLATE, 'Field Sales Officer')}

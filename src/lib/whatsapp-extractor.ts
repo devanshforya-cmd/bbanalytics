@@ -8,18 +8,19 @@ export interface ExtractedProductItem {
   productId?: string; name: string; brandCode: BrandCode; quantity: number; unitPrice: number; totalPrice: number; confidence: Confidence; isCombo?: boolean;
 }
 export interface ExtractedOrderResult {
-  salesChannel?: string; id: string;
+  salesChannel?: string; assignedToId?: string; id: string;
   customerName: ExtractedField<string>; customerPhone: ExtractedField<string>; alternatePhone: ExtractedField<string>;
   brandCode: ExtractedField<BrandCode>; products: ExtractedProductItem[];
   address: ExtractedField<string>; rawAddress?: string; city: ExtractedField<string>; province: ExtractedField<string>;
   combo: ExtractedField<string>; totalAmount: ExtractedField<number>;
-  statedPrice: ExtractedField<number> & { difference?: number; differencePct?: number; warning?: string; level?: 'OK' | 'WARNING' | 'REVIEW' };
+  statedPrice: ExtractedField<number> & { provided?: boolean; difference?: number; differencePct?: number; warning?: string; level?: 'OK' | 'WARNING' | 'REVIEW' };
+  discountPercent?: ExtractedField<number> & { provided?: boolean };
   paymentTerms: ExtractedField<string>; deliveryMethod: ExtractedField<string>;
   orderDateAd: ExtractedField<string>; orderDateBs: ExtractedField<string>;
   flags: string[]; extractionErrors: string[]; isMarketing?: boolean; influencerId?: string; influencerName?: string; rawText: string;
 }
-export const NEPAL_CITIES = ['Kathmandu','Lalitpur','Bhaktapur','Pokhara','Chitwan','Narayangarh','Biratnagar','Butwal','Dharan','Birgunj','Hetauda','Nepalgunj','Itahari','Dhangadhi','Bhairahawa','Janakpur','Jhapa','Birtamode','Birtamod','Banepa','Dhulikhel','Surkhet'];
-export interface DynamicExtractorOptions { products: Product[]; combos: Combo[]; brands: Brand[]; dateOverride?: string; customSeparator?: string }
+export const NEPAL_CITIES = ['Ghorahi','Budhanilkantha','Thecho','Kathmandu','Lalitpur','Bhaktapur','Pokhara','Chitwan','Narayangarh','Biratnagar','Butwal','Dharan','Birgunj','Hetauda','Nepalgunj','Itahari','Dhangadhi','Bhairahawa','Janakpur','Jhapa','Birtamode','Birtamod','Banepa','Dhulikhel','Surkhet'];
+export interface DynamicExtractorOptions { products: Product[]; combos: Combo[]; brands: Brand[]; channels?: string[]; deliveryMethods?: string[]; dateOverride?: string; customSeparator?: string }
 
 const headerStart = /^(?:\[(?=[^\]\n]*(?:\d{1,2}[/:.]\d{1,2}))[^\]\n]+\]\s*[^\n:]+:\s*|\d{1,2}[/.\-]\d{1,2}(?:[/.\-]\d{2,4})?,?\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:[AP]M)?\s*-\s*[^\n:]+:\s*)/gim;
 export function splitMessageBlocks(rawText: string, customSeparator?: string): string[] {
@@ -73,6 +74,17 @@ export function parseStatedPrice(text: string): number | null {
   for (const pattern of patterns) { const m = pattern.exec(text); if (m) { const amount = Number(m[1].replace(/,/g, '')); if (Number.isFinite(amount) && amount >= 0) return amount; } }
   return null;
 }
+export function parseDiscountPercent(text: string): number | null {
+  const match = /\b(\d{1,3}(?:\.\d{1,2})?)\s*%\s*(?:off|discount)\b|\b(?:discount|sale)\s*[:=-]?\s*(\d{1,3}(?:\.\d{1,2})?)\s*%/i.exec(text);
+  return match ? Number(match[1] || match[2]) : null;
+}
+export function extractedOrderTotal(order: ExtractedOrderResult): number {
+  const cents = Math.round(order.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) * 100);
+  if (order.isMarketing) return 0;
+  if (order.statedPrice.provided ?? order.statedPrice.value > 0) return order.statedPrice.value;
+  if (order.discountPercent?.provided) return Math.round(cents * (1 - order.discountPercent.value / 100)) / 100;
+  return cents / 100;
+}
 const aliases: [RegExp, string[]][] = [
   [/\bshampoo\b/i, ['shampo','shampu']], [/\bconditioner\b/i, ['condtioner','condi','cond']],
   [/\bserum\b/i, ['seram']], [/\bexfoliat\w*\b/i, ['exfo']], [/\bpeach\b/i, ['pech']],
@@ -110,7 +122,8 @@ function qtyFor(lines: string[], match: Match, text: string): number {
   const before = line.slice(0, start), after = line.slice(end);
   const suffix = /^\s*(?:[x×]\s*(\d{1,6})\b|(\d{1,6})\s*(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)\b|(\d{1,6})\s*$)/i.exec(after);
   const prefix = /(?:^|\s)(\d{1,6})\s*(?:(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)\s*(?:of\s*)?|[x×]\s*)?$/i.exec(before);
-  const next = /^\s*(\d{1,6})\s*(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)\b/i.exec(lines[match.line + 1] || '');
+  const nextLine = lines.slice(match.line + 1, match.line + 5).find(line => line.trim());
+  const next = /^\s*(\d{1,6})\s*(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)\s*$/i.exec(nextLine || '');
   const each = /\b(\d{1,6})\s*(?:units?|pcs?|pieces?)?\s*each\b/i.exec(text);
   const qty = Number(suffix?.[1] || suffix?.[2] || suffix?.[3] || prefix?.[1] || next?.[1] || each?.[1] || 1);
   return qty;
@@ -157,14 +170,15 @@ function matchCatalog(text: string, products: Product[], combos: Combo[], flags:
     return { productId: match.id, name: match.item.name, brandCode: match.item.brandCode, quantity, unitPrice: price, totalPrice: price * quantity, confidence: 'HIGH' as Confidence, ...(match.combo ? { isCombo: true } : {}) };
   });
 }
-function collapseCombo(items: ExtractedProductItem[], combos: Combo[], stated: number | null, flags: string[]): ExtractedProductItem[] {
+function collapseCombo(items: ExtractedProductItem[], combos: Combo[], stated: number | null, flags: string[], discount: number | null): ExtractedProductItem[] {
   if (stated === null || items.some(item => item.isCombo) || items.length < 2) return items;
   const found = combos.filter(combo => combo.priceDetectionEnabled !== false).flatMap(combo => {
     const needed = new Map<string, number>(); combo.items.forEach(item => needed.set(item.productId, (needed.get(item.productId) || 0) + item.quantity));
     if (needed.size !== items.length) return [];
     const counts = items.map(item => item.productId && needed.has(item.productId) ? item.quantity / needed.get(item.productId)! : 0);
     const quantity = counts[0]; const price = combo.comboPrice || combo.comboMrp || 0;
-    return Number.isInteger(quantity) && quantity > 0 && counts.every(count => count === quantity) && Math.abs(stated - price * quantity) < 0.005 ? [{ combo, quantity, price }] : [];
+    const expected = Math.round(price * quantity * 100 * (1 - (discount ?? 0) / 100)) / 100;
+    return Number.isInteger(quantity) && quantity > 0 && counts.every(count => count === quantity) && Math.abs(stated - expected) < 0.005 ? [{ combo, quantity, price }] : [];
   });
   if (found.length > 1) { flags.push('Multiple combos match these items and price; choose one manually.'); return items; }
   if (!found.length) return items;
@@ -184,9 +198,15 @@ export function validateExtractedOrder(order: ExtractedOrderResult): string[] {
   if (order.isMarketing && !order.influencerId) errors.push('Choose an influencer for the marketing send.');
   if (!order.products.length || order.products.some(item => !item.productId || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || item.quantity > 10000 || item.unitPrice <= 0)) errors.push('Select valid catalogue items and quantities.');
   if (new Set(order.products.map(item => item.brandCode)).size > 1) errors.push('Split products from different brands into separate orders.');
-  if (!order.isMarketing && order.flags.some(flag => flag.startsWith('The message states a zero total'))) errors.push('Confirm the zero total as a marketing send or enter the amount to charge.');
   if (order.statedPrice.value < 0 || !Number.isFinite(order.statedPrice.value) || Math.abs(order.statedPrice.value * 100 - Math.round(order.statedPrice.value * 100)) > 1e-6) errors.push('Enter a valid stated amount.');
   if (!order.isMarketing && order.statedPrice.value > order.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) + 0.005) errors.push('The stated amount exceeds the catalogue total; review items or amount.');
+  if (order.discountPercent?.provided) {
+    const pct = order.discountPercent.value;
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100 || Math.abs(pct * 100 - Math.round(pct * 100)) > 1e-6) errors.push('Enter a discount between 0 and 100%.');
+    const cents = Math.round(order.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) * 100);
+    if (!order.isMarketing && (order.statedPrice.provided ?? order.statedPrice.value > 0) && Math.abs(Math.round(order.statedPrice.value * 100) - Math.round(cents * (1 - pct / 100))) > 0) errors.push('The stated total and percentage discount do not match; correct or clear one.');
+    if (order.flags.some(flag => flag.startsWith('Discount scope is unclear'))) errors.push('Review the discount scope; clear the percentage and enter the agreed order total.');
+  }
   if (order.flags.some(flag => flag.includes('matches multiple catalogue items') || flag.startsWith('Multiple combos match'))) errors.push('Resolve the ambiguous catalogue match before saving.');
   return errors;
 }
@@ -199,31 +219,34 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
   const products = options.products.filter(product => product.active !== false);
   const combos = options.combos.filter(combo => isSellableCombo(combo, products));
   const stated = parseStatedPrice(body);
+  const discount = parseDiscountPercent(body);
   let items = matchCatalog(body, products, combos, flags);
-  items = collapseCombo(items, combos, stated, flags);
+  items = collapseCombo(items, combos, stated, flags, discount);
+  if (discount !== null && items.length > 1 && lines.some(line => parseDiscountPercent(line) !== null && [...products, ...combos].some(item => keywordsFor(item, 'items' in item).some(keyword => expression(keyword).test(line))))) flags.push('Discount scope is unclear because the percentage appears on an item line.');
   const catalogTotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
   const nameLine = lines.find(line => /^(?:name|naam|customer(?:\s+name)?|receiver)\s*[:=\-]/i.test(line));
   let name = nameLine?.replace(/^(?:name|naam|customer(?:\s+name)?|receiver)\s*[:=\-]\s*/i, '').trim() || '';
   if (!name) name = lines.find(line => /^[\p{L}][\p{L}\s.'-]{1,79}$/u.test(line) && !/^(?:contact|order|website|number|location|address|phone|delivery|note|ph\s*no|paid|unpaid|cod|total|product|items?)\b/i.test(line) && !NEPAL_CITIES.some(city => line.toLowerCase() === city.toLowerCase()) && !items.some(item => expression(item.name).test(line) || item.name.toLowerCase().includes(line.toLowerCase()))) || '';
   const addressLine = lines.find(line => /^(?:delivery\s*address|shipping\s*address|address|location|thau)\s*[:=\-]/i.test(line));
-  const address = addressLine?.replace(/^(?:delivery\s*address|shipping\s*address|address|location|thau)\s*[:=\-]\s*/i, '').trim() || lines.find(line => /\b(?:near|chowk|tole|marg|galli|road|bazaar|mall|height|park)\b/i.test(line) && !/^(?:name|phone|product|total|payment|price)\b/i.test(line)) || '';
+  const addressBase = addressLine?.replace(/^(?:delivery\s*address|shipping\s*address|address|location|thau)\s*[:=\-]\s*/i, '').trim() || lines.find(line => line !== name && !/^(?:outside|inside|name|phone|product|total|payment|price)\b/i.test(line) && (/\b(?:near|chowk|tole|marg|galli|road|bazaar|mall|height|park|village|dang)\b/i.test(line) || NEPAL_CITIES.some(city => expression(city).test(line)))) || '';
+  const zone = lines.find(line => /^(?:outside|inside)\s+(?:the\s+)?(?:valley|ring\s*road)\b/i.test(line));
+  const address = addressBase && zone && !addressBase.toLowerCase().includes(zone.toLowerCase()) ? `${addressBase}, ${zone}` : addressBase;
   const city = NEPAL_CITIES.find(value => expression(value).test(body)) || '';
   const provinceRules: [RegExp, string][] = [
     [/\b(?:koshi|itahari|sunsari|dharan|jhapa|morang|damak|birtamod(?:e)?|biratnagar|ilam|taplejung|sankhuwasabha)\b/i,'Koshi Province'],
     [/\b(?:gandaki|gorkha|tanahun|kaski|pokhara|syangja|lamjung|baglung|myagdi|damauli|besishahar)\b/i,'Gandaki Province'],
-    [/\b(?:lumbini|butwal|rupandehi|bhairahawa|nawalparasi|palpa|dang|nepalgunj|banke|bardaghat|tansen)\b/i,'Lumbini Province'],
+    [/\b(?:lumbini|butwal|rupandehi|bhairahawa|nawalparasi|palpa|dang|ghorahi|nepalgunj|banke|bardaghat|tansen)\b/i,'Lumbini Province'],
     [/\b(?:madhesh|janakpur|birgunj|parsa|rautahat)\b/i,'Madhesh Province'], [/\b(?:karnali|surkhet)\b/i,'Karnali Province'],
     [/\b(?:sudurpashchim|kailali|kanchanpur|dhangadhi|tikapur)\b/i,'Sudurpashchim Province'],
-    [/\b(?:bagmati|kathmandu|lalitpur|bhaktapur|hetauda|chitwan|narayangarh|banepa|dhulikhel)\b/i,'Bagmati Province'],
+    [/\b(?:bagmati|kathmandu|lalitpur|thecho|budhanilkantha|bhaktapur|hetauda|chitwan|narayangarh|banepa|dhulikhel)\b/i,'Bagmati Province'],
   ];
   const province = provinceRules.find(([pattern]) => pattern.test(body))?.[1] || '';
   const detectedBrands = [...new Set(items.map(item => item.brandCode))];
   const brand = detectedBrands.length === 1 ? detectedBrands[0] : options.brands.find(item => expression(item.code).test(body) || expression(item.name).test(body))?.code || 'ALL';
-  const platform = /\btiktok\b/i.test(body) ? 'TikTok' : /\bwhatsapp\b/i.test(body) ? 'WhatsApp' : /\bmessenger\b/i.test(body) ? 'Messenger' : (/\bwebsite\b/i.test(body) || /(?:^|\n)\s*(?:platform\s*[:=]\s*)?ML\s*(?:$|\n)/.test(body)) ? 'Website' : /\binstagram\b/i.test(body) ? 'Instagram' : undefined;
+  const platform = options.channels?.slice().sort((a,b) => b.length - a.length).find(value => expression(value).test(body)) || (/\btiktok\b/i.test(body) ? 'TikTok' : /\bwhatsapp\b/i.test(body) ? 'WhatsApp' : /\bmessenger\b/i.test(body) ? 'Messenger' : (/\bwebsite\b/i.test(body) || /(?:^|\n)\s*(?:platform\s*[:=]\s*)?ML\s*(?:$|\n)/.test(body)) ? 'Website' : /\binstagram\b/i.test(body) ? 'Instagram' : undefined);
   const prepaid = !/\b(?:unpaid|not\s+paid)\b/i.test(body) && /\b(?:paid|prepaid|esewa|khalti|fonepay|bank transfer)\b/i.test(body);
-  const delivery = /\bpathao\b/i.test(body) ? 'Pathao' : /\bindrive\b/i.test(body) ? 'InDrive' : '';
+  const delivery = options.deliveryMethods?.slice().sort((a,b) => b.length - a.length).find(value => expression(value).test(body)) || (/\bpathao\b/i.test(body) ? 'Pathao' : /\bindrive\b/i.test(body) ? 'InDrive' : '');
   if (!items.length) flags.push('No catalogue item recognized; add the correct product or combo.');
-  if (stated === 0) flags.push('The message states a zero total; confirm whether this is a marketing send.');
   if (stated !== null && catalogTotal > 0 && stated !== catalogTotal) flags.push(`Stated total NPR ${stated.toLocaleString()} differs from catalogue total NPR ${catalogTotal.toLocaleString()}; review before saving.`);
   const comboNames = items.filter(item => item.isCombo).map(item => item.name);
   const order: ExtractedOrderResult = {
@@ -235,11 +258,13 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
     city: { value: city, confidence: city ? 'AUTO' : 'FAILED' }, province: { value: province, confidence: province ? 'AUTO' : 'FAILED' },
     combo: { value: comboNames.join(', ') || 'None (Standard SKU)', confidence: 'AUTO' },
     totalAmount: { value: stated !== null && stated <= catalogTotal ? stated : catalogTotal, confidence: catalogTotal ? 'HIGH' : 'REVIEW' },
-    statedPrice: { value: stated ?? 0, confidence: stated !== null ? 'HIGH' : 'REVIEW', difference: stated === null ? 0 : Math.abs(stated-catalogTotal), differencePct: catalogTotal && stated !== null ? Math.round(Math.abs(stated-catalogTotal)/catalogTotal*100) : 0, level: stated !== null && stated !== catalogTotal ? 'WARNING' : 'OK' },
+    statedPrice: { value: stated ?? 0, provided: stated !== null, confidence: stated !== null ? 'HIGH' : 'REVIEW', difference: stated === null ? 0 : Math.abs(stated-catalogTotal), differencePct: catalogTotal && stated !== null ? Math.round(Math.abs(stated-catalogTotal)/catalogTotal*100) : 0, level: stated !== null && stated !== catalogTotal ? 'WARNING' : 'OK' },
+    discountPercent: { value: discount ?? 0, provided: discount !== null, confidence: discount !== null ? 'HIGH' : 'REVIEW' },
     paymentTerms: { value: prepaid ? 'Prepaid' : 'COD', confidence: 'AUTO' }, deliveryMethod: { value: delivery, confidence: delivery ? 'AUTO' : 'REVIEW' },
     orderDateAd: { value: date.value, confidence: date.confidence }, orderDateBs: { value: dateBs(date.value), confidence: date.confidence },
     flags, extractionErrors: [], isMarketing: false, rawText: text,
   };
+  order.totalAmount.value = extractedOrderTotal(order);
   order.extractionErrors = validateExtractedOrder(order); return order;
 }
 export function extractOrdersDynamically(rawText: string, options: DynamicExtractorOptions): ExtractedOrderResult[] {

@@ -134,13 +134,15 @@ export function visibleWorkspace(user: User, context: WorkspaceContext) {
     }
   }
   const team = teamMemberIds(user, context.users);
-  const rosterFeatures = ['settings', 'staff_scorecards', 'tasks', 'gps_tracking', 'beat_plans'].filter((feature) => hasAccess(user, feature));
+  const rosterFeatures = ['settings', 'staff_scorecards', 'tasks', 'gps_tracking', 'beat_plans', 'orderflow'].filter((feature) => hasAccess(user, feature));
   const allRoster = isSuperAdmin(user) || rosterFeatures.some((feature) => getScope(user, feature) === 'ALL');
   const teamRoster = rosterFeatures.some((feature) => getScope(user, feature) === 'TEAM');
   const users = context.users.filter((entry) => entry.id === user.id || allRoster || teamRoster && team.has(entry.id));
   const safeUsers = hasAccess(user, 'settings') ? users : users.map((entry) => entry.id === user.id ? entry : ({
     id: entry.id, fullName: entry.fullName, role: entry.role, active: entry.active, dutyStatus: entry.dutyStatus,
     reportsToId: entry.reportsToId, email: '', phone: '', assignedBrands: [],
+    orderflowAssignable: entry.active !== false && hasAccess(entry, 'orderflow'),
+    orderflowBrands: getAssignedBrandCodes(entry).includes('ALL') ? getAssignedBrandCodes(user) : getAssignedBrandCodes(entry).filter(code => getAssignedBrandCodes(user).includes('ALL') || getAssignedBrandCodes(user).includes(code)),
   }));
   const assigned = getAssignedBrandCodes(user);
   const mayReadBrands = ['settings', 'products', 'beat_plans', 'stores', 'distributors', 'dispatches', 'cheque_tracker', 'orderflow', 'reviews', 'marketing', 'dashboard', 'export'].some((feature) => hasAccess(user, feature));
@@ -190,7 +192,7 @@ async function appendAudit(user: User, mutation: WorkspaceMutation, created: boo
   if (error) console.error('[Workspace] Audit record could not be saved:', error.code);
 }
 
-function prepareRecordData(user: User, mutation: WorkspaceMutation, prior: StoredWorkspaceRecord | undefined | null, context: WorkspaceContext) {
+export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior: StoredWorkspaceRecord | undefined | null, context: WorkspaceContext) {
   if (!mutation.data) return;
   mutation.data = { ...mutation.data, createdById: prior?.created_by || user.id };
   const data = mutation.data;
@@ -209,6 +211,15 @@ function prepareRecordData(user: User, mutation: WorkspaceMutation, prior: Store
       if (mutation.collection === 'orders') assertActiveOrderOption(options, 'channels', data.platform, prior?.data.platform);
       if (mutation.collection === 'orders' || data.deliveryMethod) assertActiveOrderOption(options, 'deliveryMethods', data.deliveryMethod, prior?.data.deliveryMethod);
     } catch (error) { throw new WorkspaceError(400, error instanceof Error ? error.message : 'Choose an active channel and delivery method.'); }
+  }
+  if (mutation.collection === 'orders') {
+    const previous = prior?.data.assignedToId || prior?.created_by;
+    const assigneeId = data.assignedToId || previous || user.id;
+    if (assigneeId !== (previous || user.id) && (!canPerform(user, 'orderflow', 'EDIT') || !(isSuperAdmin(user) || getScope(user, 'orderflow') === 'ALL' || getScope(user, 'orderflow') === 'TEAM' && teamMemberIds(user, context.users).has(assigneeId)))) throw new WorkspaceError(403, 'You cannot assign this order to that staff member.');
+    const assignee = context.users.find(entry => entry.id === assigneeId);
+    if (!assignee || ((!prior || assigneeId !== previous) && (assignee.active === false || !hasAccess(assignee, 'orderflow') || !getAssignedBrandCodes(assignee).some(code => code === 'ALL' || code === String(data.brandCode).toUpperCase())))) throw new WorkspaceError(400, 'Choose an active staff member with access to OrderFlow and this brand.');
+    data.assignedToId = assignee.id;
+    data.assignedToName = assignee.fullName;
   }
   if (mutation.collection === 'orders' && typeof data.orderNumber === 'string') data.orderNumber = data.orderNumber.trim().toUpperCase();
   if (mutation.collection === 'sharedAccessLinks') { data.accessCount = 0; delete data.lastAccessedAt; }

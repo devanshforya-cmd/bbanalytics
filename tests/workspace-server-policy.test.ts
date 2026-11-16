@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FIELD_SALES_OFFICER_TEMPLATE, MANAGER_TEMPLATE } from '../src/lib/permissions.ts';
 import { canReadWorkspaceRecord, canWriteWorkspaceRecord, type StoredWorkspaceRecord } from '../src/lib/db/workspace-policy.ts';
-import { mapStoredUser, validateWorkspaceMutation, visibleWorkspace } from '../src/lib/db/server-workspace.ts';
+import { mapStoredUser, prepareRecordData, validateWorkspaceMutation, visibleWorkspace } from '../src/lib/db/server-workspace.ts';
 import { staffPatch } from '../src/lib/staff-validation.ts';
 import { runtimeReadiness } from '../src/lib/runtime-config.ts';
 
@@ -12,6 +12,25 @@ const bob: any = { ...alice, id: 'bob', fullName: 'Bob', reportsToId: 'other_man
 const manager: any = { ...alice, id: 'manager', customPermissions: MANAGER_TEMPLATE };
 const users = [admin, alice, bob, manager];
 const row = (collection: any, id: string, data: any = {}, creator = 'alice'): StoredWorkspaceRecord => ({ collection, id, data: { id, ...data }, created_by: creator, version: 1 });
+
+test('D2C order scope includes its assignee and creator but excludes unrelated staff', () => {
+  const assigned = row('orders', 'assigned', { brandCode: 'A', assignedToId: 'alice' }, 'admin');
+  assert.equal(canReadWorkspaceRecord(alice, assigned, users, [assigned]), true);
+  assert.equal(canWriteWorkspaceRecord(alice, assigned, 'EDIT', users, [assigned]), true);
+  assert.equal(canReadWorkspaceRecord(bob, assigned, users, [assigned]), false);
+  assert.equal(canReadWorkspaceRecord({...alice, assignedBrands:['B']}, assigned, users, [assigned]), false);
+});
+
+test('server validates the responsible person and prevents assignment outside the actor scope', () => {
+  const context: any = { users, brands:[{code:'A'}], records:[] };
+  const mutation = (assignedToId: string): any => ({collection:'orders', id:'o1', data:{id:'o1',brandCode:'A',platform:'WhatsApp',deliveryMethod:'Pathao',assignedToId,assignedToName:'forged',items:[]}});
+  const allowed = mutation('alice'); prepareRecordData(admin, allowed, null, context);
+  assert.equal(allowed.data.assignedToName, 'Alice');
+  assert.throws(() => prepareRecordData(alice, mutation('bob'), null, context), /cannot assign/);
+  assert.throws(() => prepareRecordData(admin, mutation('missing'), null, context), /active staff/);
+  const wrongBrand = {...alice, assignedBrands:['B']};
+  assert.throws(() => prepareRecordData(admin, mutation('alice'), null, {...context,users:[admin,wrongBrand]}), /active staff/);
+});
 
 test('canonical policy enforces own, recursive team, hidden features and every brand in a mixed record', () => {
   const own = row('orders', 'o1', { brandCode: 'A' });

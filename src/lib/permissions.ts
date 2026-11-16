@@ -104,6 +104,12 @@ export const FIELD_SALES_OFFICER_TEMPLATE: UserCustomPermissions = {
   export: { access: 'HIDDEN', scope: null, actions: [] },
 };
 
+export const D2C_OFFICER_TEMPLATE: UserCustomPermissions = {
+  ...Object.fromEntries(ALL_FEATURE_KEYS.map(key => [key, { access: 'HIDDEN', scope: null, actions: [] }])),
+  orderflow: { access: 'FULL', scope: 'OWN', actions: ['VIEW', 'CREATE', 'EDIT'] },
+  products: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
+} as UserCustomPermissions;
+
 export const OFFICE_STAFF_TEMPLATE: UserCustomPermissions = {
   beat_plans: { access: 'HIDDEN', scope: null, actions: [] },
   stores: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
@@ -230,6 +236,22 @@ export function getAssignedBrandCodes(user?: UserWithPermissions | null): string
 export function canAccessBrand(user: UserWithPermissions | null | undefined, brandCode: string): boolean {
   const assigned = getAssignedBrandCodes(user);
   return assigned.includes('ALL') || assigned.includes(String(brandCode).trim().toUpperCase());
+}
+
+export function canAssignD2C(user: UserWithPermissions & { active?: boolean; orderflowAssignable?: boolean; orderflowBrands?: string[] }, brandCode?: string): boolean {
+  if (user.active === false || !(user.orderflowAssignable ?? hasAccess(user, 'orderflow'))) return false;
+  const brands = user.orderflowBrands ?? getAssignedBrandCodes(user);
+  return !brandCode || brandCode === 'ALL' || brands.includes('ALL') || brands.includes(brandCode.toUpperCase());
+}
+
+export function d2cAssignees<T extends UserWithPermissions & { active?: boolean; orderflowAssignable?: boolean; orderflowBrands?: string[] }>(actor: UserWithPermissions, users: T[], brandCode?: string): T[] {
+  const ids = new Set([actor.id]);
+  if (canPerform(actor, 'orderflow', 'EDIT') && getScope(actor, 'orderflow') === 'TEAM') {
+    let changed = true;
+    while (changed) { changed = false; for (const user of users) if (user.id && ids.has(user.reportsToId || user.reports_to_id || '') && !ids.has(user.id)) { ids.add(user.id); changed = true; } }
+  }
+  const all = canPerform(actor, 'orderflow', 'EDIT') && getScope(actor, 'orderflow') === 'ALL';
+  return users.filter(user => (all || ids.has(user.id)) && canAssignD2C(user, brandCode));
 }
 
 export function getEffectivePermission(

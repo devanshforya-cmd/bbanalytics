@@ -67,7 +67,7 @@ export function scopeOfficerIds(db: DatabaseService, user: User, feature: Featur
 }
 
 export function ownsRecord(record: Record<string, any>, ids: Set<string> | null): boolean {
-  return ids === null || [record.officerId, record.createdById, record.createdBy, record.assignedTo].some(id => typeof id === 'string' && ids.has(id));
+  return ids === null || [record.officerId, record.createdById, record.createdBy, record.assignedTo, record.assignedToId].some(id => typeof id === 'string' && ids.has(id));
 }
 
 export function assertBrand(db: DatabaseService, user: User, value: unknown): string {

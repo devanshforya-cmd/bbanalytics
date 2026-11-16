@@ -3,6 +3,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
+import { syncManager } from '@/lib/offline-sync';
+import { d2cAssignees } from '@/lib/permissions';
 import { matchingCatalogCombo } from '@/lib/product-catalog';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { activeOrderOptionNames, assertActiveOrderOption } from '@/lib/order-options';
@@ -69,6 +71,7 @@ export default function ManualOrderEntryPage() {
   const deliveryMethods = activeOrderOptionNames(options, 'deliveryMethods');
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const [currentUser] = useState(() => db.getCurrentUser());
+  const [assignedToId, setAssignedToId] = useState(currentUser.id);
   const assignedBrands = currentUser.assignedBrands || [];
   const hasBrandRestrictions = Boolean(assignedBrands.length > 0 && !assignedBrands.includes('ALL'));
 
@@ -204,6 +207,7 @@ export default function ManualOrderEntryPage() {
     deliveryMethod: string;
     paymentTerms: string;
     karmaAwarded: number;
+    pending: boolean;
   } | null>(null);
 
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -341,6 +345,7 @@ export default function ManualOrderEntryPage() {
 
   // Step 2: Confirm & Save Order (10c)
   const handleConfirmAndSave = () => {
+    if (!d2cAssignees(currentUser, db.getUsers(), brandCode).some(user => user.id === assignedToId)) { toast.error('Choose an eligible responsible person for this brand.'); return; }
     try {
       assertActiveOrderOption(db.getOrderOptions(), 'channels', isMarketing ? influencerPlatform : platform);
       assertActiveOrderOption(db.getOrderOptions(), 'deliveryMethods', deliveryMethod);
@@ -385,15 +390,12 @@ export default function ManualOrderEntryPage() {
           });
           finalInfluencerId = createdInf.id;
         }
-        // Increment total sends (Fix 71a)
-        if (finalInfluencerId) {
-          db.incrementInfluencerSends(finalInfluencerId);
-        }
       }
 
       // 2. Add order to database
-      db.addOrder({
+      const createdOrder = db.addOrder({
         orderNumber,
+        assignedToId,
         brandCode,
         orderDateAd,
         orderDateBs,
@@ -418,40 +420,8 @@ export default function ManualOrderEntryPage() {
         items,
       });
 
-      // 2. Auto-update Customer 360 and Karma Score (+2 for order placed)
-      const karmaBoost = 2;
-      if (existingCustomer) {
-        const newKarma = Math.min(100, (existingCustomer.karmaScore || 85) + karmaBoost);
-        db.updateCustomer(existingCustomer.id, {
-          name: customerName.trim(),
-          city: district,
-          province,
-          lastOrderDate: orderDateAd,
-          totalOrders: (existingCustomer.totalOrders || 0) + 1,
-          karmaScore: newKarma,
-          brandsPurchased: Array.from(new Set([...existingCustomer.brandsPurchased, brandCode])),
-        });
-      } else {
-        db.addCustomer({
-          phone: customerPhone.trim(),
-          name: customerName.trim(),
-          city: district || 'Kathmandu',
-          province: province || 'Bagmati Province',
-          firstOrderDate: orderDateAd,
-          lastOrderDate: orderDateAd,
-          totalOrders: 1,
-          totalDelivered: 0,
-          totalReturns: 0,
-          totalDeliveryFailures: 0,
-          totalCancellations: 0,
-          totalComplaints: 0,
-          totalReviews: 0,
-          karmaScore: 85 + karmaBoost, // 87 karma points on first order!
-          segment: 'NEW',
-          activeFlags: [],
-          brandsPurchased: [brandCode],
-        });
-      }
+      try { await syncManager.forceSyncNow(); } catch { /* Keep the local order in the durable sync queue. */ }
+      const pending = syncManager.getWorkspaceMutations().some(mutation => mutation.collection === 'orders' && mutation.id === createdOrder.id);
 
       // Save summary state for success UI
       setSavedOrder({
@@ -468,10 +438,12 @@ export default function ManualOrderEntryPage() {
         })),
         deliveryMethod,
         paymentTerms: isMarketing ? 'Product Seeding (NPR 0)' : paymentTerms,
-        karmaAwarded: karmaBoost,
+        karmaAwarded: 0,
+        pending,
       });
 
-      toast.success(`Order ${orderNumber} created and confirmed successfully!`);
+      if (pending) toast.info(`Order ${orderNumber} is pending sync`, 'Check the sync status before relying on it on another device.');
+      else toast.success(`Order ${orderNumber} saved successfully!`);
       clearDraft();
       setIsReviewing(false);
     });
@@ -544,7 +516,7 @@ export default function ManualOrderEntryPage() {
               </div>
               <div>
                 <span className="rounded bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 text-[10px] uppercase tracking-wide">
-                  Order Successfully Created
+                  {savedOrder.pending ? 'Order pending sync' : 'Order successfully saved'}
                 </span>
                 <h2 className="text-xl font-black text-slate-900 mt-1">
                   Order #{savedOrder.orderNumber}
@@ -555,11 +527,7 @@ export default function ManualOrderEntryPage() {
               </div>
             </div>
 
-            <div className="rounded-xl bg-white p-3 border border-emerald-200 text-center shrink-0">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Karma Boost</span>
-              <span className="text-lg font-black text-emerald-600">+{savedOrder.karmaAwarded} Points</span>
-              <span className="text-[10px] text-slate-500 block">Auto-updated in 360</span>
-            </div>
+            {savedOrder.pending && <p className="text-xs text-amber-700">Saved on this device. Check Sync status to resolve any connection or permission error.</p>}
           </div>
 
           {/* Action Links */}
@@ -777,6 +745,7 @@ export default function ManualOrderEntryPage() {
                 </span>
               </div>
 
+              <div><label className="block text-xs font-semibold text-slate-600 mb-1" htmlFor="responsible-person">Responsible person</label><select id="responsible-person" value={assignedToId} onChange={event => setAssignedToId(event.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2">{d2cAssignees(currentUser, db.getUsers(), brandCode).map(user => <option key={user.id} value={user.id}>{user.fullName}</option>)}</select></div>
               {/* Order Date: Standard AD Date for Social Media Order */}
               <div>
                 <label className="block font-bold text-slate-700 mb-1">

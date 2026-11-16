@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db, OrderRealtimeEvent } from '@/lib/db/db-service';
+import { d2cAssignees } from '@/lib/permissions';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { activeOrderOptionNames } from '@/lib/order-options';
 import { getBrands } from '@/lib/db/brands-service';
@@ -59,6 +60,7 @@ export default function DailyOrdersPage() {
 
   // Editing order modal state
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [editAssignee, setEditAssignee] = useState('');
   const [editCustomerName, setEditCustomerName] = useState('');
   const [editCustomerPhone, setEditCustomerPhone] = useState('');
   const [editAddress, setEditAddress] = useState('');
@@ -259,6 +261,7 @@ export default function DailyOrdersPage() {
   // Edit handler
   const handleOpenEdit = (ord: Order) => {
     setEditingOrder(ord);
+    setEditAssignee(ord.assignedToId || (ord as any).createdById || db.getCurrentUser().id);
     setEditCustomerName(ord.customerName);
     setEditCustomerPhone(ord.customerPhone);
     setEditAddress(ord.address);
@@ -278,6 +281,7 @@ export default function DailyOrdersPage() {
       editingOrder.id,
       {
         customerName: editCustomerName,
+        assignedToId: editAssignee,
         customerPhone: editCustomerPhone,
         address: editAddress,
         paymentTerms: editPaymentTerms,
@@ -528,6 +532,7 @@ export default function DailyOrdersPage() {
                             <span className="text-[10px] text-slate-400 block truncate max-w-[140px]">
                               {ord.address}
                             </span>
+                            <span className="text-[10px] text-slate-500 block">Responsible: {ord.assignedToName || 'Not assigned'}</span>
                           </td>
                           <td className="py-3 px-3 font-mono text-[11px] text-slate-600">
                             {ord.customerPhone}
@@ -760,6 +765,7 @@ export default function DailyOrdersPage() {
               </div>
 
               <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
+                <div><label className="font-semibold text-slate-600 block mb-1" htmlFor="edit-assignee">Responsible person</label><select id="edit-assignee" value={editAssignee} onChange={event => setEditAssignee(event.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg">{db.getUsers().filter(user => user.id === editAssignee || d2cAssignees(db.getCurrentUser(), db.getUsers(), editingOrder.brandCode).some(candidate => candidate.id === user.id)).map(user => <option key={user.id} value={user.id}>{user.fullName}</option>)}</select></div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="font-semibold text-slate-600 block mb-1">Customer Name</label>
