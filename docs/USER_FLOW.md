@@ -28,7 +28,7 @@ The client refreshes on focus and once a minute while visible and online. A refr
 
 ## Orders and service
 
-Orderflow supports extraction/manual entry, daily orders and failed deliveries. Orders use configured products and real prices/quantities; an order and its customer update commit together through the server API. Customer profiles, complaints, returns and dispatch work use the same durable workspace, with permissions repeated at the server boundary.
+Orderflow supports extraction/manual entry, daily orders and failed deliveries. Orders use configured products and real prices/quantities. Extractor orders and customer updates commit together through the server API; manual entry uses the device sync queue and displays when an order is still pending. Customer profiles, complaints, returns and dispatch work use the same durable workspace, with permissions repeated at the server boundary.
 
 Dashboard statistics use saved records. No-order channels show no measured delivery success, regional timings require recorded deliveries, complaints link to actual orders, and weekly beat lines use that week's scheduled beats. Officer totals match user IDs rather than names.
 
@@ -76,3 +76,9 @@ A full administrative reset clears business history as well as the current direc
 4. The preview shows catalogue and stated totals, discounts and follow-up dates. Download CSV for a V6-style spreadsheet, or save the reviewed orders to OrderFlow. A successful save is confirmed by the server; a retry uses the same order identifiers so it does not create duplicates. Commercial orders update Customer 360 once; marketing sends do not create customer orders.
 
 The extractor refreshes the catalogue before parsing. If a product or price changes before save, refresh and extract again. An amount higher than the catalogue total requires review; delivery charges are not automatically inferred from the difference. Users should review outputs before saving, especially free-form messages, ambiguous names and dates.
+
+Unlabeled locations such as a district and city can be recognized, and an outside-valley or ring-road zone is retained alongside the address. Inferred addresses are marked for review; missing details are not invented.
+
+For an order-wide sale, enter the final total or a percentage such as `10% off`. The catalogue MRP stays unchanged and the discount is allocated across order lines. When both a total and percentage are given, they must agree. A percentage attached to one item in a multi-item order needs manual review.
+
+In Settings → Staff, the D2C Officer template grants access to their own OrderFlow orders and the product catalogue. The Super Admin can adjust actions, brand assignments and OWN/TEAM/ALL scope. Choose a responsible person in the extractor or manual entry, and change them from Daily Orders when permitted. The creator and assigned person can see an order within their granted feature, brand and data scope. Settings → Channels & Logistics controls available choices for both entry methods.
