@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db, OrderRealtimeEvent } from '@/lib/db/db-service';
-import { d2cAssignees } from '@/lib/permissions';
+import { canPerform, hasAccess, d2cAssignees } from '@/lib/permissions';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { activeOrderOptionNames } from '@/lib/order-options';
 import { getBrands } from '@/lib/db/brands-service';
@@ -608,27 +608,27 @@ export default function DailyOrdersPage() {
                           </td>
                           <td className="py-3 px-3 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <button
+                              {canPerform(db.getCurrentUser(), 'orderflow', 'EDIT') && <button
                                 onClick={() => handleOpenEdit(ord)}
                                 className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded"
                                 title="Edit Order"
                               >
                                 <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <Link
+                              </button>}
+                              {hasAccess(db.getCurrentUser(), 'customers') && <Link
                                 href={`/customers/${ord.customerPhone.replace(/\D/g, '')}`}
                                 className="p-1 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded"
                                 title="Customer 360"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
-                              </Link>
-                              <button
+                              </Link>}
+                              {canPerform(db.getCurrentUser(), 'orderflow', 'DELETE') && <button
                                 onClick={() => setOrderToDelete(ord)}
                                 className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded"
                                 title="Delete Order"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              </button>}
                             </div>
                           </td>
                         </tr>

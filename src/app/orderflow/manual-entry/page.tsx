@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import { syncManager } from '@/lib/offline-sync';
-import { d2cAssignees } from '@/lib/permissions';
+import { canPerform, hasAccess, d2cAssignees } from '@/lib/permissions';
 import { matchingCatalogCombo } from '@/lib/product-catalog';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { activeOrderOptionNames, assertActiveOrderOption } from '@/lib/order-options';
@@ -322,6 +322,7 @@ export default function ManualOrderEntryPage() {
   // Step 1: Trigger Review Mode
   const handleProceedToReview = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canPerform(currentUser, 'orderflow', 'CREATE')) return;
     const errors: { [key: string]: string } = {};
     const nameErr = validateRequired(customerName, 'Customer Name');
     if (nameErr) errors.customerName = nameErr;
@@ -539,13 +540,13 @@ export default function ManualOrderEntryPage() {
               <Package className="h-4 w-4" />
               View Order Invoice
             </button>
-            <Link
+            {hasAccess(currentUser, 'customers') && <Link
               href={`/customers/${savedOrder.customerPhone}`}
               className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-sm flex items-center gap-1.5"
             >
               <User className="h-4 w-4" />
               View Customer 360 Profile ↗
-            </Link>
+            </Link>}
             <button
               onClick={handleResetForNewOrder}
               className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm flex items-center gap-1.5"
@@ -1261,13 +1262,13 @@ export default function ManualOrderEntryPage() {
                   NPR {totalAmount.toLocaleString()}
                 </strong>
               </div>
-              <button
+              {canPerform(currentUser, 'orderflow', 'CREATE') && <button
                 type="submit"
                 className="rounded-xl bg-blue-600 px-8 py-3 text-xs font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] flex items-center justify-center gap-2"
               >
                 Proceed to Review
                 <ArrowRight className="h-4 w-4" />
-              </button>
+              </button>}
             </div>
           </form>
           </div>
@@ -1316,12 +1317,12 @@ export default function ManualOrderEntryPage() {
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-2">
-              <Link
+              {hasAccess(currentUser, 'customers') && <Link
                 href={`/customers/${savedOrder.customerPhone}`}
                 className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
               >
                 Open in Customer 360 ↗
-              </Link>
+              </Link>}
               <button
                 onClick={() => setShowOrderModal(false)}
                 className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
