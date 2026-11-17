@@ -9,7 +9,15 @@ export const WORKSPACE_COLLECTIONS = [
   'seasonalPatterns', 'taskTemplates', 'promotions', 'dailySummaries',
   'importHistory', 'influencers', 'influencerContent', 'sharedAccessLinks',
   'documentTypes', 'storeCategories', 'recurringSchedules', 'workspaceConfig',
+  // November 2026: marketing sends are their own collection, never orders.
+  'marketingSends', 'influencerNiches', 'marketingOptions', 'failureReasons', 'userPreferences',
 ] as const;
+
+/** Shared pick-lists that staff can extend inline and admins manage in Settings. */
+export const LOOKUP_COLLECTIONS = ['influencerNiches', 'marketingOptions', 'failureReasons'] as const;
+export function isLookupCollection(value: unknown): value is typeof LOOKUP_COLLECTIONS[number] {
+  return (LOOKUP_COLLECTIONS as readonly unknown[]).includes(value);
+}
 
 export type WorkspaceCollection = typeof WORKSPACE_COLLECTIONS[number];
 export type WorkspaceRecord = Record<string, any> & { id: string };

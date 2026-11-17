@@ -50,7 +50,7 @@ test('Drive reads require app ownership, supported feature and owner/team data s
   assert.equal(detectGoogleUploadType(Buffer.from('%PDF-1.4'), 'photo.exe'), null);
 });
 
-test('seven report tabs use real rows, zero quantities, blank unknowns, monthly boundaries and RAW formula-safe input', () => {
+test('report tabs use real rows, zero quantities, blank unknowns, monthly boundaries and RAW formula-safe input', () => {
   const db = {
     getFilteredStores: () => [{ id: 'store-1', name: '=IMPORTXML("https://evil.test")', entityType: 'RETAILER', brandsStocked: [], assignedOfficerId: 'staff-1' }],
     getOrders: () => [
@@ -61,7 +61,8 @@ test('seven report tabs use real rows, zero quantities, blank unknowns, monthly 
     getCheques: () => [], getVisits: () => [], getStockCounts: () => [],
   } as unknown as GoogleReportDatabase;
   const tabs = buildGoogleReportTabs(db, '2026-10', new Date('2026-10-26T00:00:00Z'));
-  assert.equal(tabs.length, 7);
+  assert.equal(tabs.length, 8); // seven operational tabs plus the separate Marketing Sends tab
+  assert.equal(tabs.find((tab) => tab.title === 'Marketing Sends')!.values.length, 1);
   const orders = tabs.find((tab) => tab.title === 'Orders-2026-10')!;
   assert.equal(orders.values.length, 2);
   assert.equal(orders.values[1][6], 0);

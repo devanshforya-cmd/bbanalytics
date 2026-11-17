@@ -1,6 +1,6 @@
 import { canPerform, getAssignedBrandCodes, getScope, hasAccess, isSuperAdmin, type FeatureKey } from '../permissions';
 import type { User } from '../types';
-import type { WorkspaceCollection, WorkspaceRecord } from './workspace-types';
+import { isLookupCollection, type WorkspaceCollection, type WorkspaceRecord } from './workspace-types';
 
 export interface StoredWorkspaceRecord {
   collection: WorkspaceCollection;
@@ -25,17 +25,21 @@ const FEATURES: Record<WorkspaceCollection, FeatureKey[]> = {
   influencers: ['marketing'], influencerContent: ['marketing'], sharedAccessLinks: ['settings'],
   documentTypes: ['settings'], storeCategories: ['settings'], recurringSchedules: ['beat_plans'],
   workspaceConfig: ['settings'],
+  marketingSends: ['marketing'], influencerNiches: ['marketing', 'settings'], marketingOptions: ['marketing', 'settings'],
+  failureReasons: ['orderflow', 'settings'], userPreferences: [],
 };
 
 const GLOBAL_CATALOG = new Set<WorkspaceCollection>([
   'products', 'combos', 'reviewCategories', 'holidays', 'seasonalPatterns', 'taskTemplates',
   'promotions', 'documentTypes', 'storeCategories', 'workspaceConfig',
+  'influencerNiches', 'marketingOptions', 'failureReasons',
 ]);
 
 export function collectionFeatures(collection: WorkspaceCollection, read = false): FeatureKey[] {
   if (read && (collection === 'products' || collection === 'combos')) return ['products', 'beat_plans', 'orderflow', 'dispatches'];
   if (read && ['documentTypes', 'storeCategories', 'workspaceConfig', 'promotions'].includes(collection)) return ['settings', 'beat_plans', 'stores', 'document_handover', 'orderflow'];
   if (read && collection === 'holidays') return ['settings', 'beat_plans', 'tasks'];
+  if (read && collection === 'failureReasons') return ['orderflow', 'settings', 'reviews', 'dashboard'];
   if (read && collection === 'stockCounts') return ['beat_plans', 'dispatches'];
   if (read && (collection === 'retailers' || collection === 'branches')) return ['stores', 'beat_plans', 'cheque_tracker', 'shelf_photos', 'call_tracker', 'document_handover', 'dispatches'];
   return FEATURES[collection];
@@ -79,7 +83,16 @@ export function recordBrandCodes(row: StoredWorkspaceRecord, records: StoredWork
   return [];
 }
 
+/** People whose scope decides who may see or change a record. */
+function recordOwners(row: StoredWorkspaceRecord): string[] {
+  if (row.collection === 'orders') return [row.created_by, row.data.assignedToId].filter(Boolean);
+  if (row.collection === 'marketingSends') return [row.created_by, row.data.responsibleId].filter(Boolean);
+  return [recordOwner(row)];
+}
+
 export function canReadWorkspaceRecord(user: User, row: StoredWorkspaceRecord, users: User[], records: StoredWorkspaceRecord[]): boolean {
+  // Personal preferences belong to one account, including for administrators.
+  if (row.collection === 'userPreferences') return row.id === user.id;
   if (isSuperAdmin(user)) return true;
   if (row.collection === 'sharedAccessLinks' || row.collection === 'importHistory') return false;
   if (row.collection === 'notifications') {
@@ -94,7 +107,7 @@ export function canReadWorkspaceRecord(user: User, row: StoredWorkspaceRecord, u
   if (!assigned.includes('ALL') && brands.length && !brands.every((code) => assigned.includes(code))) return false;
   if (!assigned.length && ['products', 'combos', 'orders', 'secondaryOrders', 'retailers', 'branches', 'distributors', 'cheques'].includes(row.collection)) return false;
   if (GLOBAL_CATALOG.has(row.collection)) return true;
-  const owners = row.collection === 'orders' ? [row.created_by, row.data.assignedToId].filter(Boolean) : [recordOwner(row)];
+  const owners = recordOwners(row);
   return features.some((feature) => {
     const scope = getScope(user, feature);
     return scope === 'ALL' || (scope === 'OWN' ? owners.includes(user.id) : owners.some(owner => teamMemberIds(user, users).has(owner)));
@@ -104,12 +117,17 @@ export function canReadWorkspaceRecord(user: User, row: StoredWorkspaceRecord, u
 export function canWriteWorkspaceRecord(user: User, row: StoredWorkspaceRecord, action: 'CREATE' | 'EDIT' | 'DELETE', users: User[], records: StoredWorkspaceRecord[]): boolean {
   // Audit and GPS records have dedicated trusted server writers.
   if (row.collection === 'activityLogs' || row.collection === 'staffLiveLocations') return false;
+  if (row.collection === 'userPreferences') return row.id === user.id && action !== 'DELETE';
   if (isSuperAdmin(user)) return true;
+  // Staff may add to a shared list while filling a form; renaming, merging and archiving are admin work.
+  if (isLookupCollection(row.collection) && action !== 'CREATE' && !canPerform(user, 'settings', 'EDIT')) return false;
+  if (isLookupCollection(row.collection) && action === 'DELETE') return false;
   if (['products', 'combos', 'retailers', 'branches', 'distributors'].includes(row.collection) && action === 'DELETE') return false;
   if (row.collection === 'sharedAccessLinks' || row.collection === 'importHistory') return false;
   if (row.collection === 'notifications') return action !== 'CREATE' && row.data.userId === user.id;
   const writeFeatures = collectionFeatures(row.collection).filter((feature) => canPerform(user, feature, action));
-  const owners = row.collection === 'orders' ? [row.created_by, row.data.assignedToId].filter(Boolean) : [recordOwner(row)];
+  const owners = recordOwners(row);
+  if (isLookupCollection(row.collection)) return writeFeatures.length > 0;
   if (!writeFeatures.some((feature) => {
     const scope = getScope(user, feature);
     return scope === 'ALL' || scope === 'OWN' && owners.includes(user.id) || scope === 'TEAM' && owners.some(owner => teamMemberIds(user, users).has(owner));

@@ -7,6 +7,9 @@ import { createHash } from 'node:crypto';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 import { isSuperAdmin } from '@/lib/permissions';
 import { thresholdAlerts } from '@/lib/alert-rules';
+import { sendIsOverdue } from '@/lib/marketing';
+import { hasAccess } from '@/lib/permissions';
+import { getTodayAd, getTodayBs } from '@/lib/nepali-calendar';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,6 +77,34 @@ export async function GET(request: Request) {
       const { error } = await supabaseAdmin.from('workspace_records').upsert(notifications, { onConflict: 'collection,id', ignoreDuplicates: true });
       if (error) return NextResponse.json({ success: false, error: 'Daily alerts could not be saved.' }, { status: 503 });
     }
+    // Marketing sends whose expected content date has passed with nothing linked:
+    // one amber notification and one follow-up task for the responsible person, raised once per send.
+    const today = getTodayAd();
+    const content = db.getInfluencerContent();
+    const overdueSends = db.getMarketingSends().filter(send => sendIsOverdue(send, content, today) && !send.overdueNotifiedAt);
+    let overdueRaised = 0;
+    for (const send of overdueSends) {
+      const responsible = db.getUsers().find(user => user.id === send.responsibleId && user.active !== false);
+      const recipients = responsible ? [responsible] : administrators;
+      const rows: Record<string, unknown>[] = recipients.map(user => {
+        const id = `send_overdue_${createHash('sha256').update(`${send.id}:${user.id}`).digest('hex')}`;
+        return { collection: 'notifications', id, created_by: actor.id, version: 1, last_mutation_id: id, data: { id, userId: user.id, title: `Content overdue: ${send.sendNumber}`,
+          message: `${send.influencerName} was expected to post by ${send.expectedContentDateAd}. No content is linked to this send yet.`, priority: 'MEDIUM', read: false, entityType: 'marketingSends', entityId: send.id, createdAt: now.toISOString() } };
+      });
+      if (responsible && hasAccess(responsible, 'tasks')) {
+        const id = `task_send_overdue_${send.id}`.slice(0, 170);
+        rows.push({ collection: 'tasks', id, created_by: actor.id, version: 1, last_mutation_id: id, data: { id, title: `Follow up content for ${send.sendNumber} (${send.influencerName})`,
+          description: `Expected by ${send.expectedContentDateAd}. Link the content to the send on the influencer profile to close this.`, assignedTo: responsible.id, assignedToName: responsible.fullName, createdBy: 'System',
+          priority: 'MEDIUM', dueDateAd: today, dueDateBs: getTodayBs(), relatedTo: send.sendNumber, relatedId: send.id, status: 'OPEN', autoCreated: true, autoTriggerType: 'MANUAL', createdAt: now.toISOString() } });
+      }
+      const saved = await supabaseAdmin.from('workspace_records').upsert(rows, { onConflict: 'collection,id', ignoreDuplicates: true });
+      if (saved.error) continue;
+      const version = db.getRecordVersion('marketingSends', send.id);
+      await supabaseAdmin.from('workspace_records').update({ data: { ...send, overdueNotifiedAt: now.toISOString() }, version: version + 1, last_mutation_id: `send_overdue_mark_${send.id}`.slice(0, 170), updated_at: now.toISOString() })
+        .eq('collection', 'marketingSends').eq('id', send.id).eq('version', version);
+      overdueRaised++;
+    }
+    if (overdueSends.length) amberAlerts.push(`${overdueSends.length} marketing send(s) are past their expected content date.`);
     after(async () => {
       for (const user of db.getUsers().filter(user => user.active !== false)) await flushUserPush(user);
       await supabaseAdmin.from('push_deliveries').delete().lt('updated_at', new Date(Date.now() - 7 * 86400000).toISOString());
@@ -97,6 +128,7 @@ export async function GET(request: Request) {
         redAlerts,
         amberAlerts,
       },
+      marketingSendsOverdueRaised: overdueRaised,
       weeklyReport: weeklyReportStatus,
       backup: {
         status: 'Not saved (backup storage is not implemented)',

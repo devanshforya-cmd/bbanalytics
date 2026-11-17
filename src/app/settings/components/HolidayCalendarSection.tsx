@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmAction } from '@/components/common/confirm';
+
 import React, { useState, useEffect } from 'react';
 import { Calendar, Plus, Trash2, Shield, AlertCircle, Sparkles, Check } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -48,8 +50,8 @@ export default function HolidayCalendarSection() {
     reload();
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to remove this holiday?')) {
+  const handleDelete = async (id: string) => {
+    if (await confirmAction({ title: 'Remove this holiday?', confirmLabel: 'Remove holiday', destructive: true })) {
       db.deleteHoliday(id);
       reload();
     }

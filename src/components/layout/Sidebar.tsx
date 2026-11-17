@@ -55,7 +55,7 @@ const menuSections: MenuSection[] = [
     title: 'OVERVIEW',
     items: [
       { label: 'Dashboard', href: '/dashboard', permKey: 'dashboard', icon: LayoutDashboard },
-      { label: 'Products & Combos', href: '/products', permKey: 'products', icon: Package, badge: 'DTP/RPP' },
+      { label: 'Products & Combos', href: '/products', permKey: 'products', icon: Package },
     ],
   },
   {
@@ -75,19 +75,19 @@ const menuSections: MenuSection[] = [
   {
     title: 'ORDERFLOW',
     items: [
-      { label: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles, badge: 'Rule-Engine' },
+      { label: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles },
       { label: 'Manual Order Entry', href: '/orderflow/manual-entry', permKey: 'orderflow', icon: ClipboardPen },
       { label: 'Daily Orders', href: '/orderflow/daily-orders', permKey: 'orderflow', icon: ClipboardCheck, badge: 'Live' },
       { label: 'Monthly Sales Sheet', href: '/orderflow/monthly-sales', permKey: 'orderflow', icon: FileSpreadsheet },
-      { label: 'Delivery Failures', href: '/orderflow/delivery-failures', permKey: 'orderflow', icon: TruckIcon, badge: 'Separated' },
+      { label: 'Delivery Failures', href: '/orderflow/delivery-failures', permKey: 'orderflow', icon: TruckIcon },
     ],
   },
   {
     title: 'REVIEWS & RETURNS',
     items: [
       { label: 'Feedback & Complaints', href: '/reviews/feedback', permKey: 'reviews', icon: MessageSquareHeart },
-      { label: 'Separated Returns', href: '/reviews/returns', permKey: 'reviews', icon: RotateCcw },
-      { label: 'Dynamic Categories', href: '/reviews/categories', permKey: 'reviews', icon: Tags },
+      { label: 'Returns', href: '/reviews/returns', permKey: 'reviews', icon: RotateCcw },
+      { label: 'Issue Categories', href: '/reviews/categories', permKey: 'reviews', icon: Tags },
     ],
   },
   {
@@ -116,7 +116,7 @@ const menuSections: MenuSection[] = [
   {
     title: 'SETTINGS',
     items: [
-      { label: 'System Settings', href: '/settings', permKey: 'settings', icon: Settings, badge: 'Staff/Rules' },
+      { label: 'System Settings', href: '/settings', permKey: 'settings', icon: Settings },
     ],
   },
 ];

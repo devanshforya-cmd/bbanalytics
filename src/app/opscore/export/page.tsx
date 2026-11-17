@@ -63,6 +63,8 @@ export default function SheetsExportPage() {
 
   // Fetch live collections from DB
   const orders = db.getOrders();
+  // Marketing sends are exported on their own tab only. They are never part of the Orders tab.
+  const marketingSends = hasAccess(db.getCurrentUser(), 'marketing') ? db.getMarketingSends() : [];
   const returns = db.getReturns();
   const failures = db.getDeliveryFailures();
   const feedback = db.getFeedback();
@@ -126,16 +128,16 @@ export default function SheetsExportPage() {
         `${sc.beatCompliancePct || 0}%`,
         '85.0%',
         (sc.beatCompliancePct || 0) >= 85 ? 'GOOD' : 'NEEDS_REVIEW',
-        (sc as any).territory || sc.area || 'Assigned Territory',
+        (sc as any).territory || sc.area || '',
       ]),
       generateCsv: () => {
         const rows = [
           ['Sales Officer', 'Metric', 'Actual Value', 'Benchmark', 'Compliance Rating', 'Territory'],
           ...scorecards.flatMap((sc) => [
-            [sc.officerName, 'Stores Visited', String(sc.storesVisited || (sc as any).visitedStores || 0), '50', 'NORMAL', (sc as any).territory || sc.area || 'Nepal'],
-            [sc.officerName, 'Beat Compliance %', `${sc.beatCompliancePct || 0}%`, '85.0%', (sc.beatCompliancePct || 0) >= 85 ? 'GOOD' : 'NEEDS_REVIEW', (sc as any).territory || sc.area || 'Nepal'],
-            [sc.officerName, 'Productive Calls', String((sc as any).productiveCalls || 0), '30', 'NORMAL', (sc as any).territory || sc.area || 'Nepal'],
-            [sc.officerName, 'Cheques Collected', String((sc as any).chequesCollected || 0), '8', 'NORMAL', (sc as any).territory || sc.area || 'Nepal'],
+            [sc.officerName, 'Stores Visited', String(sc.storesVisited || (sc as any).visitedStores || 0), '50', 'NORMAL', (sc as any).territory || sc.area || ''],
+            [sc.officerName, 'Beat Compliance %', `${sc.beatCompliancePct || 0}%`, '85.0%', (sc.beatCompliancePct || 0) >= 85 ? 'GOOD' : 'NEEDS_REVIEW', (sc as any).territory || sc.area || ''],
+            [sc.officerName, 'Productive Calls', String((sc as any).productiveCalls || 0), '30', 'NORMAL', (sc as any).territory || sc.area || ''],
+            [sc.officerName, 'Cheques Collected', String((sc as any).chequesCollected || 0), '8', 'NORMAL', (sc as any).territory || sc.area || ''],
           ]),
         ];
         return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -150,14 +152,14 @@ export default function SheetsExportPage() {
       columns: ['Store ID', 'Store Name', 'Channel Type', 'Area / Hub', 'Address', 'Contact Person', 'Phone', 'Assigned Officer'],
       sampleData: [
         ...distributors.slice(0, 2).map((d) => [d.id, d.name, d.type || 'DISTRIBUTOR', d.city, d.address || d.city, d.contactName, d.contactPhone, 'Management']),
-        ...retailers.slice(0, 3).map((r) => [r.id, r.name, r.type, r.area || r.city, r.address, r.contactName, r.contactPhone, r.assignedOfficerName || 'Field Officer']),
+        ...retailers.slice(0, 3).map((r) => [r.id, r.name, r.type, r.area || r.city, r.address, r.contactName, r.contactPhone, r.assignedOfficerName || '']),
       ],
       generateCsv: () => {
         const header = ['Store ID', 'Store Name', 'Channel Type', 'Area / Hub', 'Address', 'Contact Person', 'Phone', 'Assigned Officer'];
         const rows = [
           header,
           ...distributors.map((d) => [d.id, d.name, d.type || 'DISTRIBUTOR', d.city, d.address || d.city, d.contactName, d.contactPhone, 'Management']),
-          ...branches.map((b) => [b.id, b.name, 'BRANCH', b.address.split(',')[1]?.trim() || 'Kathmandu', b.address, b.contactName, b.contactPhone, b.assignedOfficerName || 'Field Sales']),
+          ...branches.map((b) => [b.id, b.name, 'BRANCH', b.address.split(',')[1]?.trim() || '', b.address, b.contactName, b.contactPhone, b.assignedOfficerName || '']),
           ...retailers.map((r) => [r.id, r.name, r.type, r.area || r.city, r.address, r.contactName, r.contactPhone, r.assignedOfficerName || 'Unassigned']),
         ];
         return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -211,7 +213,7 @@ export default function SheetsExportPage() {
       columns: ['Order #', 'Date BS', 'Customer Name', 'Phone', 'Brand', 'Platform', 'Total NPR', 'Payment Method', 'Status'],
       sampleData: orders.slice(0, 5).map((o) => [
         o.orderNumber || o.id,
-        o.orderDateBs || 'Bhadra 24, 2083',
+        o.orderDateBs || '',
         o.customerName,
         o.customerPhone,
         o.brandCode,
@@ -226,14 +228,14 @@ export default function SheetsExportPage() {
           header,
           ...orders.map((o) => [
             o.orderNumber || o.id,
-            o.orderDateBs || 'Bhadra 24, 2083',
-            o.orderDateAd || '2026-09-08',
+            o.orderDateBs || '',
+            o.orderDateAd || '',
             o.customerName,
             o.customerPhone,
             o.brandCode,
             o.platform,
-            o.province || 'Bagmati',
-            o.district || 'Kathmandu',
+            o.province || '',
+            o.district || '',
             o.totalAmount,
             o.paymentTerms,
             o.status,
@@ -242,6 +244,25 @@ export default function SheetsExportPage() {
         return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
       },
     },
+    ...(hasAccess(db.getCurrentUser(), 'marketing') ? [{
+      id: 'marketing_sends',
+      name: 'Marketing Sends',
+      isPermanent: false,
+      description: 'Products sent to influencers. Kept apart from orders: no price, payment or sales value.',
+      rowCount: marketingSends.length,
+      columns: ['Send #', 'Sent BS', 'Sent AD', 'Influencer', 'Brands', 'Products', 'Units', 'Reach-out', 'Responsible', 'Delivery', 'Content Due AD', 'Status'],
+      sampleData: marketingSends.slice(0, 5).map((send) => [send.sendNumber, send.sentDateBs || '', send.sentDateAd, send.influencerName, send.brandCodes.join(', '),
+        send.items.map((item) => `${item.quantity}x ${item.productName}`).join('; '), String(send.items.reduce((sum, item) => sum + item.quantity, 0)), send.reachOutPlatform, send.responsibleName || '', send.deliveryChannel, send.expectedContentDateAd || '', send.status]),
+      generateCsv: () => {
+        const rows = [
+          ['Send #', 'Sent BS', 'Sent AD', 'Influencer', 'Brands', 'Products', 'Units', 'Reach-out Platform', 'Responsible', 'Delivery Channel', 'Delivery Address', 'Content Due BS', 'Content Due AD', 'Status', 'Notes'],
+          ...marketingSends.map((send) => [send.sendNumber, send.sentDateBs || '', send.sentDateAd, send.influencerName, send.brandCodes.join(', '),
+            send.items.map((item) => `${item.quantity}x ${item.productName}`).join('; '), send.items.reduce((sum, item) => sum + item.quantity, 0), send.reachOutPlatform, send.responsibleName || '',
+            send.deliveryChannel, send.deliveryAddress || '', send.expectedContentDateBs || '', send.expectedContentDateAd || '', send.status, send.notes || '']),
+        ];
+        return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+      },
+    } as TabConfig] : []),
     {
       id: 'returns',
       name: `Returns — [${selectedMonth}]`,
@@ -251,7 +272,7 @@ export default function SheetsExportPage() {
       columns: ['Return ID', 'Date BS', 'Brand', 'Product', 'Customer Name', 'Phone', 'Qty', 'Return Reason', 'Status'],
       sampleData: returns.slice(0, 5).map((r) => [
         r.id,
-        r.dateBs || 'Bhadra 22, 2083',
+        r.dateBs || '',
         r.brandCode,
         r.productName,
         r.customerName,
@@ -266,8 +287,8 @@ export default function SheetsExportPage() {
           header,
           ...returns.map((r) => [
             r.id,
-            r.dateBs || 'Bhadra 22, 2083',
-            r.orderProcessedDateBs || 'Bhadra 10, 2083',
+            r.dateBs || '',
+            r.orderProcessedDateBs || '',
             r.brandCode,
             r.productName,
             r.customerName,
@@ -290,7 +311,7 @@ export default function SheetsExportPage() {
       columns: ['Failure ID', 'Date BS', 'Order #', 'Customer Name', 'Phone', 'Reason', 'Attempts', 'Valley', 'Status'],
       sampleData: failures.slice(0, 5).map((f) => [
         f.id,
-        f.dateBs || 'Bhadra 23, 2083',
+        f.dateBs || '',
         f.orderNumber || f.orderId,
         f.customerName,
         f.customerPhone,
@@ -305,12 +326,12 @@ export default function SheetsExportPage() {
           header,
           ...failures.map((f) => [
             f.id,
-            f.dateBs || 'Bhadra 23, 2083',
+            f.dateBs || '',
             f.orderNumber || f.orderId,
             f.customerName,
             f.customerPhone,
             f.brandCode,
-            f.productName || 'Assorted Items',
+            f.productName || '',
             f.reason,
             f.deliveryMethod || 'Standard',
             f.valley,
@@ -330,11 +351,11 @@ export default function SheetsExportPage() {
       columns: ['Complaint ID', 'Date BS', 'Customer Name', 'Phone', 'Brand', 'Category', 'Severity', 'Status'],
       sampleData: complaints.slice(0, 5).map((c) => [
         c.id,
-        c.dateReceivedBs || 'Bhadra 20, 2083',
+        c.dateReceivedBs || '',
         c.customerName,
         c.customerPhone,
         c.brandCode,
-        c.issueCategories?.join(', ') || 'General Issue',
+        c.issueCategories?.join(', ') || '',
         c.sentiment,
         c.complaintStatus || 'RESOLVED',
       ]),
@@ -344,13 +365,13 @@ export default function SheetsExportPage() {
           header,
           ...complaints.map((c) => [
             c.id,
-            c.dateReceivedBs || 'Bhadra 20, 2083',
+            c.dateReceivedBs || '',
             c.customerName,
             c.customerPhone,
             c.brandCode,
-            c.issueCategories?.join(', ') || 'General Issue',
+            c.issueCategories?.join(', ') || '',
             c.fullText || '',
-            c.resolutionNotes || 'Addressed by care team',
+            c.resolutionNotes || '',
             c.complaintStatus || 'RESOLVED',
           ]),
         ];
@@ -371,7 +392,7 @@ export default function SheetsExportPage() {
         `NPR ${c.amount.toLocaleString()}`,
         c.cashDateBs || c.receivedDateBs,
         c.status,
-        c.handedOverTo || c.officerName || 'In Transit',
+        c.handedOverTo || c.officerName || '',
       ]),
       generateCsv: () => {
         const header = ['Cheque ID', 'Cheque #', 'Bank Name', 'Retailer / Store', 'Amount NPR', 'Collection Date BS', 'Due Date BS', 'Status', 'Collected By', 'Current Custody'];
@@ -387,7 +408,7 @@ export default function SheetsExportPage() {
             c.cashDateBs,
             c.status,
             c.officerName,
-            c.handedOverTo || 'In Field Custody',
+            c.handedOverTo || '',
           ]),
         ];
         return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -402,11 +423,11 @@ export default function SheetsExportPage() {
       columns: ['Call ID', 'Date BS', 'Store Name', 'Sales Officer', 'Call Purpose', 'Outcome', 'Order Booked'],
       sampleData: calls.slice(0, 5).map((cl) => [
         cl.id,
-        cl.dateBs || 'Bhadra 24, 2083',
+        cl.dateBs || '',
         cl.storeName,
-        cl.officerName || 'Field Officer',
-        cl.label || 'Routine Visit',
-        cl.outcome || 'Order Received',
+        cl.officerName || '',
+        cl.label || '',
+        cl.outcome || '',
         cl.createdOrderId ? 'YES' : 'NO',
       ]),
       generateCsv: () => {
@@ -415,12 +436,12 @@ export default function SheetsExportPage() {
           header,
           ...calls.map((cl) => [
             cl.id,
-            cl.dateBs || 'Bhadra 24, 2083',
+            cl.dateBs || '',
             cl.storeName,
-            cl.officerName || 'Field Officer',
-            cl.label || 'Routine Visit',
+            cl.officerName || '',
+            cl.label || '',
             Math.round((cl.durationSeconds || 180) / 60),
-            cl.outcome || 'Routine Visit',
+            cl.outcome || '',
             cl.createdOrderId || 'None',
           ]),
         ];
@@ -436,10 +457,10 @@ export default function SheetsExportPage() {
       columns: ['Visit ID', 'Date BS', 'Store / Entity', 'Officer Name', 'Check-In Time', 'Duration', 'GPS Verified'],
       sampleData: visits.slice(0, 5).map((v) => [
         v.id,
-        v.dateBs || 'Bhadra 24, 2083',
+        v.dateBs || '',
         v.storeName || v.entityId,
-        v.officerName || 'Field Officer',
-        v.checkInTime?.split('T')[1]?.substring(0, 5) || '10:15',
+        v.officerName || '',
+        v.checkInTime?.split('T')[1]?.substring(0, 5) || '',
         `${v.durationMinutes || 25} mins`,
         v.distanceMeters <= 50 ? 'YES' : 'OVERRIDDEN',
       ]),
@@ -458,7 +479,7 @@ export default function SheetsExportPage() {
             v.lng,
             v.distanceMeters || 12,
             v.overrideFlag ? 'TRUE' : 'FALSE',
-            v.notes || 'Routine check-in',
+            v.notes || '',
           ]),
         ];
         return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -486,15 +507,15 @@ export default function SheetsExportPage() {
       ],
       sampleData: dispatches.slice(0, 5).map((d) => [
         d.id,
-        d.dispatchDateBs || 'Bhadra 24, 2083',
-        d.dispatchDateAd || '2026-09-09',
-        d.distributorName || 'Store Outlet',
-        d.branchName || 'Retailer Branch',
+        d.dispatchDateBs || '',
+        d.dispatchDateAd || '',
+        d.distributorName || '',
+        d.branchName || '',
         d.items?.[0]?.brandCode || '',
         String(d.items?.reduce((acc, it) => acc + (it.quantity || it.quantityPcs || 0), 0) || 0),
         `NPR ${(d.amountDue ?? 0).toLocaleString()}`,
-        d.paymentTerms || '30 Days Net',
-        d.paymentDueDateAd || '2026-10-09',
+        d.paymentTerms || '',
+        d.paymentDueDateAd || '',
         d.paymentStatus || 'PENDING',
         String(d.paymentDelayDays || 0),
       ]),
@@ -517,15 +538,15 @@ export default function SheetsExportPage() {
           header,
           ...dispatches.map((d) => [
             d.id,
-            d.dispatchDateBs || 'Bhadra 24, 2083',
-            d.dispatchDateAd || '2026-09-09',
-            d.distributorName || 'Store Outlet',
-            d.branchName || 'Retailer Branch',
+            d.dispatchDateBs || '',
+            d.dispatchDateAd || '',
+            d.distributorName || '',
+            d.branchName || '',
             d.items?.[0]?.brandCode || '',
             d.items?.reduce((acc, it) => acc + (it.quantity || it.quantityPcs || 0), 0) || 0,
             d.amountDue ?? 0,
-            d.paymentTerms || '30 Days Net',
-            d.paymentDueDateAd || '2026-10-09',
+            d.paymentTerms || '',
+            d.paymentDueDateAd || '',
             d.paymentStatus || 'PENDING',
             d.paymentDelayDays || 0,
           ]),
@@ -554,12 +575,12 @@ export default function SheetsExportPage() {
       ],
       sampleData: stockCounts.slice(0, 5).map((s) => [
         s.id,
-        s.dateBs || 'Bhadra 24, 2083',
+        s.dateBs || '',
         s.storeName,
         'Retail Store',
         s.items?.[0]?.brandCode || '',
         s.officerName,
-        s.items?.[0]?.productName || 'General SKU',
+        s.items?.[0]?.productName || '',
         String(s.items?.[0]?.openingQty ?? 0),
         String(s.items?.[0]?.restockedQty ?? 0),
         String(s.items?.[0]?.damagedQty || 0),
@@ -584,7 +605,7 @@ export default function SheetsExportPage() {
           ...stockCounts.flatMap((s) =>
             (s.items || []).map((it) => [
               s.id,
-              s.dateBs || 'Bhadra 24, 2083',
+              s.dateBs || '',
               s.storeName,
               'Retail Store',
               it.brandCode || '',

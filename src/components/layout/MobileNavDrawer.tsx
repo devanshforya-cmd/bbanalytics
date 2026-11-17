@@ -64,7 +64,7 @@ const menuSections: MenuSection[] = [
     title: 'Overview',
     items: [
       { name: 'Dashboard', href: '/dashboard', permKey: 'dashboard', icon: LayoutDashboard },
-      { name: 'Products & Combos', href: '/products', permKey: 'products', icon: Package, badge: 'DTP/RPP' },
+      { name: 'Products & Combos', href: '/products', permKey: 'products', icon: Package },
     ],
   },
   {
@@ -84,19 +84,19 @@ const menuSections: MenuSection[] = [
   {
     title: 'OrderFlow',
     items: [
-      { name: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles, badge: 'Rule-Engine' },
+      { name: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles },
       { name: 'Manual Order Entry', href: '/orderflow/manual-entry', permKey: 'orderflow', icon: ClipboardPen },
       { name: 'Daily Orders', href: '/orderflow/daily-orders', permKey: 'orderflow', icon: ClipboardCheck, badge: 'Live' },
       { name: 'Monthly Sales Sheet', href: '/orderflow/monthly-sales', permKey: 'orderflow', icon: FileSpreadsheet },
-      { name: 'Delivery Failures', href: '/orderflow/delivery-failures', permKey: 'orderflow', icon: TruckIcon, badge: 'Separated' },
+      { name: 'Delivery Failures', href: '/orderflow/delivery-failures', permKey: 'orderflow', icon: TruckIcon },
     ],
   },
   {
     title: 'Reviews & Returns',
     items: [
       { name: 'Feedback & Complaints', href: '/reviews/feedback', permKey: 'reviews', icon: MessageSquareHeart },
-      { name: 'Separated Returns', href: '/reviews/returns', permKey: 'reviews', icon: RotateCcw },
-      { name: 'Dynamic Categories', href: '/reviews/categories', permKey: 'reviews', icon: Tags },
+      { name: 'Returns', href: '/reviews/returns', permKey: 'reviews', icon: RotateCcw },
+      { name: 'Issue Categories', href: '/reviews/categories', permKey: 'reviews', icon: Tags },
     ],
   },
   {
@@ -125,7 +125,7 @@ const menuSections: MenuSection[] = [
   {
     title: 'Administration',
     items: [
-      { name: 'System Settings', href: '/settings', permKey: 'settings', icon: Settings, badge: 'Staff/Rules' },
+      { name: 'System Settings', href: '/settings', permKey: 'settings', icon: Settings },
     ],
   },
 ];

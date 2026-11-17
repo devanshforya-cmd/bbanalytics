@@ -11,7 +11,16 @@ import DynamicCheckboxes from '@/components/common/DynamicCheckboxes';
 import CameraCapture from '@/components/common/CameraCapture';
 import BulkActionBar from '@/components/common/BulkActionBar';
 import { toast } from '@/components/common/Toast';
-import { validateRequired, validateNepaliPhone } from '@/lib/validation';
+import { validateRequired } from '@/lib/validation';
+import CustomerLookup, { customerLookupError, EMPTY_CUSTOMER_LOOKUP, type CustomerLookupValue } from '@/components/common/CustomerLookup';
+import OrderPicker from '@/components/common/OrderPicker';
+import { useSubmitGuard } from '@/hooks/useSubmitGuard';
+import { useCalendarPreference } from '@/lib/hooks/useCalendarPreference';
+import { syncManager } from '@/lib/offline-sync';
+import { displayDocumentId } from '@/lib/document-ids';
+import { phoneDigits } from '@/lib/customer-lookup';
+import { hasAccess } from '@/lib/permissions';
+import type { Order } from '@/lib/types';
 import { compressImage } from '@/lib/file-upload';
 import ConfirmModal from '@/components/common/ConfirmModal';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -70,8 +79,13 @@ function FeedbackContent() {
 
   // Form State
   const [entryType, setEntryType] = useState<FeedbackType>('REVIEW');
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
+  const [lookup, setLookup] = useState<CustomerLookupValue>(EMPTY_CUSTOMER_LOOKUP);
+  const [relatedOrder, setRelatedOrder] = useState<Order | null>(null);
+  const [changeOrderDetails, setChangeOrderDetails] = useState(false);
+  const [needsLinkingOnly, setNeedsLinkingOnly] = useState(false);
+  const [linkLookup, setLinkLookup] = useState<CustomerLookupValue>(EMPTY_CUSTOMER_LOOKUP);
+  const { isSubmitting, guardedSubmit } = useSubmitGuard();
+  const { formatDate } = useCalendarPreference();
   const [brandCode, setBrandCode] = useState<BrandCode>(() => db.getBrands('ACTIVE')[0]?.code || 'ALL');
   const products = db.getProducts();
   const [productId, setProductId] = useState(products[0]?.id || '');
@@ -163,62 +177,99 @@ function FeedbackContent() {
     setUploadedPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
+  /** Choosing a related order fills brand, product, date and source channel from it. */
+  const handleSelectOrder = (order: Order | null) => {
+    setRelatedOrder(order); setChangeOrderDetails(false);
+    if (!order) return;
+    setBrandCode(order.brandCode);
+    const firstProduct = order.items.map((item) => products.find((product) => product.id === item.productId)).find(Boolean);
+    if (firstProduct) setProductId(firstProduct.id);
+    // An order found by its ID also identifies the customer.
+    if (lookup.link !== 'LINKED') {
+      const owner = db.getCustomerByPhone(order.customerPhone);
+      setLookup(owner ? { phone: phoneDigits(owner.phone), name: owner.name, link: 'LINKED', customer: owner } : { phone: phoneDigits(order.customerPhone), name: order.customerName, link: 'NEW' });
+    }
+  };
+
   const handleSaveFeedback = (e: React.FormEvent) => {
     e.preventDefault();
+    void guardedSubmit(async () => {
+      const errors: Record<string, string> = {};
+      const lookupErr = customerLookupError(lookup, { allowNoPhone: true });
+      if (lookupErr) errors.customer = lookupErr;
 
-    const errors: Record<string, string> = {};
-    const nameErr = validateRequired(customerName, 'Customer name');
-    if (nameErr) errors.customerName = nameErr;
+      const textErr = validateRequired(fullText, 'Review or feedback text');
+      if (textErr) errors.fullText = textErr;
 
-    const phoneErr = validateNepaliPhone(customerPhone);
-    if (phoneErr) errors.customerPhone = phoneErr;
+      if (Object.keys(errors).length > 0) {
+        setFormErrors(errors);
+        toast.error('Please fix the highlighted fields', Object.values(errors)[0]);
+        return;
+      }
 
-    const textErr = validateRequired(fullText, 'Review or feedback text');
-    if (textErr) errors.fullText = textErr;
+      const prod = products.find((p) => p.id === productId);
+      const photosToSave = hasScreenshot ? [...uploadedPhotos] : [];
+      const assignee = db.getUsers().find((entry) => entry.id === assignedTo);
+      const unlinked = lookup.link === 'UNLINKED';
+      const phone = unlinked ? '' : phoneDigits(lookup.phone);
+      const name = (unlinked ? lookup.handle || lookup.name : lookup.name).trim() || lookup.customer?.name || '';
 
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      toast.error('Please fix the highlighted errors before submitting.');
-      return;
-    }
+      db.addFeedback({
+        customerName: name,
+        customerPhone: phone,
+        customerLink: lookup.link || 'LINKED',
+        ...(unlinked ? { customerHandle: name } : {}),
+        brandCode,
+        productId,
+        productName: prod?.name || '',
+        type: entryType,
+        channel,
+        ...(relatedOrder ? { orderId: relatedOrder.id, orderNumber: relatedOrder.orderNumber } : {}),
+        dateReceivedAd: getTodayAd(),
+        dateReceivedBs: getTodayBs(),
+        fullText: fullText.trim(),
+        screenshotUrls: photosToSave,
+        issueCategories: selectedCategories,
+        sentiment,
+        hasScreenshot: photosToSave.length > 0,
+        usedInDesign,
+        postedOnWebsite,
+        priority: entryType === 'COMPLAINT' ? priority : undefined,
+        assignedTo: entryType === 'COMPLAINT' ? assignedTo : undefined,
+        assignedToName: entryType === 'COMPLAINT' ? assignee?.fullName : undefined,
+        complaintStatus: entryType === 'COMPLAINT' ? 'OPEN' : undefined,
+      });
+      try { await syncManager.forceSyncNow(); } catch { /* The entry stays in the sync queue. */ }
 
-    const prod = products.find((p) => p.id === productId);
-    const photosToSave = hasScreenshot ? [...uploadedPhotos] : [];
+      refreshList();
+      setShowLogModal(false);
+      setFormErrors({});
+      const label = entryType === 'REVIEW' ? 'Review' : entryType === 'COMPLAINT' ? 'Complaint' : 'Feedback';
+      if (unlinked) toast.info(`${label} saved as Unlinked`, 'Find it under Needs linking to attach a customer later.');
+      else toast.success(`${label} saved`, lookup.link === 'NEW' ? `A customer profile was created for ${phone}.` : `Added to ${name}’s timeline.`,
+        hasAccess(db.getCurrentUser(), 'customers') ? { label: 'View customer', onClick: () => router.push(`/customers/${phone}`) } : undefined);
 
-    db.addFeedback({
-      customerName: customerName.trim(),
-      customerPhone: customerPhone.trim(),
-      brandCode,
-      productId,
-      productName: prod?.name || 'Product',
-      type: entryType,
-      channel,
-      dateReceivedAd: getTodayAd(),
-      dateReceivedBs: getTodayBs(),
-      fullText: fullText.trim(),
-      screenshotUrls: photosToSave,
-      issueCategories: selectedCategories,
-      sentiment,
-      hasScreenshot: photosToSave.length > 0,
-      usedInDesign,
-      postedOnWebsite,
-      priority: entryType === 'COMPLAINT' ? priority : undefined,
-      assignedTo: entryType === 'COMPLAINT' ? assignedTo : undefined,
-      assignedToName: entryType === 'COMPLAINT' ? 'Aayush Shrestha' : undefined,
-      complaintStatus: entryType === 'COMPLAINT' ? 'OPEN' : undefined,
+      // Reset
+      setLookup(EMPTY_CUSTOMER_LOOKUP);
+      setRelatedOrder(null);
+      setChangeOrderDetails(false);
+      setFullText('');
+      setSelectedCategories([]);
+      setUploadedPhotos([]);
     });
+  };
 
-    refreshList();
-    setShowLogModal(false);
-    setFormErrors({});
-    toast.success(`✓ ${entryType} successfully recorded. Customer 360 and Karma updated!`);
-
-    // Reset
-    setCustomerName('');
-    setCustomerPhone('');
-    setFullText('');
-    setSelectedCategories([]);
-    setUploadedPhotos([]);
+  const handleAttachCustomer = () => {
+    if (!selectedEntry) return;
+    const problem = customerLookupError(linkLookup);
+    if (problem) { toast.error(problem); return; }
+    void guardedSubmit(async () => {
+      db.linkFeedbackCustomer(selectedEntry.id, { phone: linkLookup.phone, name: linkLookup.name, isNew: linkLookup.link === 'NEW' });
+      try { await syncManager.forceSyncNow(); } catch { /* Stays queued. */ }
+      setLinkLookup(EMPTY_CUSTOMER_LOOKUP);
+      refreshList();
+      toast.success('Customer attached', 'The entry now appears on their Customer 360 timeline.');
+    });
   };
 
   const handleStatusChange = (status: ComplaintStatus) => {
@@ -244,7 +295,8 @@ function FeedbackContent() {
       f.fullText.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'ALL' || f.type === typeFilter;
     const matchesImage = !filterWithImagesOnly || (f.screenshotUrls && f.screenshotUrls.length > 0);
-    return matchesSearch && matchesType && matchesImage;
+    const matchesLinking = !needsLinkingOnly || f.customerLink === 'UNLINKED';
+    return matchesSearch && matchesType && matchesImage && matchesLinking;
   });
 
   const handleToggleSelect = (id: string, e: React.MouseEvent) => {
@@ -375,6 +427,21 @@ function FeedbackContent() {
           <Camera className="h-3.5 w-3.5 text-amber-500" />
           <span>With Proof Photos ({withImagesCount})</span>
         </button>
+
+        {/* Entries saved with only a name or handle */}
+        {(needsLinkingOnly || feedbackList.some((f) => f.customerLink === 'UNLINKED')) && (
+          <button
+            onClick={() => setNeedsLinkingOnly(!needsLinkingOnly)}
+            aria-pressed={needsLinkingOnly}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              needsLinkingOnly
+                ? 'bg-amber-600 text-white shadow ring-2 ring-amber-400/40'
+                : 'border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
+            }`}
+          >
+            <span>Needs linking ({feedbackList.filter((f) => f.customerLink === 'UNLINKED').length})</span>
+          </button>
+        )}
       </div>
 
       {/* Search Bar */}
@@ -489,6 +556,7 @@ function FeedbackContent() {
                       ) : (
                         <span className="font-bold text-slate-900 text-sm truncate">{item.customerName}</span>
                       )}
+                      {item.customerLink === 'UNLINKED' && <span className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">Unlinked</span>}
                     </div>
                   </div>
                   <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 shrink-0">
@@ -619,7 +687,7 @@ function FeedbackContent() {
                     )}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Phone: {selectedEntry.customerPhone} • Product:{' '}
+                    {selectedEntry.customerPhone ? <>Phone: {selectedEntry.customerPhone}</> : <span className="font-semibold text-amber-700">No customer linked</span>}{selectedEntry.orderNumber ? <> • Order {displayDocumentId(selectedEntry.orderNumber)}</> : null} • Product:{' '}
                     <Link
                       href={`/products/${selectedEntry.productId || encodeURIComponent(selectedEntry.productName)}`}
                       className="font-bold text-slate-700 hover:text-blue-600 hover:underline"
@@ -639,6 +707,18 @@ function FeedbackContent() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+              {selectedEntry.customerLink === 'UNLINKED' && (
+                <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50/60 p-4">
+                  <p className="font-bold text-amber-900">Needs linking</p>
+                  <p className="text-amber-800">This entry was saved with only a name or handle{selectedEntry.customerHandle ? <> (<strong>{selectedEntry.customerHandle}</strong>)</> : null}. Attach the customer once you have their number.</p>
+                  <CustomerLookup value={linkLookup} onChange={setLinkLookup} />
+                  <div className="flex justify-end">
+                    <button type="button" onClick={handleAttachCustomer} disabled={isSubmitting || !linkLookup.link} className="rounded-lg bg-blue-600 px-4 py-2 font-bold text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed">
+                      {isSubmitting ? 'Saving…' : 'Attach customer'}
+                    </button>
+                  </div>
+                </div>
+              )}
               {/* Full Text Quote */}
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-800 leading-relaxed text-sm">
                 &quot;{selectedEntry.fullText}&quot;
@@ -893,79 +973,68 @@ function FeedbackContent() {
                 </div>
               </div>
 
-              {/* Customer & Product */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Customer Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Roshani Maharjan"
-                    value={customerName}
-                    onChange={(e) => {
-                      setCustomerName(e.target.value);
-                      if (formErrors.customerName) setFormErrors((p) => ({ ...p, customerName: '' }));
-                    }}
-                    className={`w-full rounded-lg border px-3 py-2 outline-none transition ${
-                      formErrors.customerName
-                        ? 'border-rose-500 bg-rose-50/20 focus:border-rose-500'
-                        : 'border-slate-300 focus:border-blue-500'
-                    }`}
-                  />
-                  {formErrors.customerName && (
-                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{formErrors.customerName}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Customer Phone *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="+977-98XXXXXXXX"
-                    value={customerPhone}
-                    onChange={(e) => {
-                      setCustomerPhone(e.target.value);
-                      if (formErrors.customerPhone) setFormErrors((p) => ({ ...p, customerPhone: '' }));
-                    }}
-                    className={`w-full rounded-lg border px-3 py-2 outline-none font-mono transition ${
-                      formErrors.customerPhone
-                        ? 'border-rose-500 bg-rose-50/20 focus:border-rose-500'
-                        : 'border-slate-300 focus:border-blue-500'
-                    }`}
-                  />
-                  {formErrors.customerPhone && (
-                    <p className="text-[11px] text-rose-600 mt-1 font-medium">{formErrors.customerPhone}</p>
-                  )}
-                </div>
+              {/* Customer: phone first, so it is clear who this entry attaches to */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                <CustomerLookup value={lookup} onChange={(next) => { setLookup(next); if (next.link !== 'LINKED') setRelatedOrder(null); if (formErrors.customer) setFormErrors((p) => ({ ...p, customer: '' })); }}
+                  allowNoPhone autoFocus error={formErrors.customer} />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Product *</label>
-                  <select
-                    value={productId}
-                    onChange={(e) => {
-                      setProductId(e.target.value);
-                      const p = products.find((x) => x.id === e.target.value);
-                      if (p) setBrandCode(p.brandCode);
-                    }}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
-                  >
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        [{p.brandCode}] {p.name}
-                      </option>
-                    ))}
-                  </select>
+              {/* Related order (optional) */}
+              {lookup.link === 'LINKED' && (
+                <div className="rounded-xl border border-slate-200 p-4">
+                  <OrderPicker compact label="Related order (optional)" customerPhone={lookup.phone} selectedId={relatedOrder?.id || ''} onSelect={handleSelectOrder} />
                 </div>
+              )}
+
+              {relatedOrder && !changeOrderDetails ? (
+                <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-slate-700">Filled from order {displayDocumentId(relatedOrder.orderNumber)}</span>
+                    <button type="button" onClick={() => setChangeOrderDetails(true)} className="font-bold text-blue-700 hover:underline">Change</button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {[['Brand', db.getBrands('ALL').find((brand) => brand.code === brandCode)?.name || brandCode], ['Product', products.find((p) => p.id === productId)?.name || relatedOrder.items[0]?.productName || '—'],
+                      ['Order date', formatDate(relatedOrder.orderDateAd, relatedOrder.orderDateBs)], ['Ordered via', relatedOrder.platform]].map(([term, detail]) => (
+                      <span key={term} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1"><span className="text-slate-500">{term}:</span> <strong className="text-slate-900">{detail}</strong></span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="grid grid-cols-2 gap-3">
+                {(!relatedOrder || changeOrderDetails) && (
+                  <div>
+                    <label htmlFor="feedback-product" className="block font-bold text-slate-700 mb-1">Product *</label>
+                    {products.length === 0 ? <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-slate-500">No products are saved yet.</p> : (
+                      <select
+                        id="feedback-product"
+                        value={productId}
+                        onChange={(e) => {
+                          setProductId(e.target.value);
+                          const p = products.find((x) => x.id === e.target.value);
+                          if (p) setBrandCode(p.brandCode);
+                        }}
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
+                      >
+                        {(relatedOrder ? products.filter((p) => relatedOrder.items.some((item) => item.productId === p.id)).concat(products.filter((p) => !relatedOrder.items.some((item) => item.productId === p.id))) : products).map((p) => (
+                          <option key={p.id} value={p.id}>
+                            [{p.brandCode}] {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )}
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Channel Channel *</label>
+                  <label htmlFor="feedback-channel" className="block font-bold text-slate-700 mb-1">Received through *</label>
                   <select
+                    id="feedback-channel"
                     value={channel}
                     onChange={(e) => setChannel(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
                   >
                     <option>Instagram DM</option>
+                    <option>Instagram Comment</option>
                     <option>WhatsApp</option>
                     <option>Messenger</option>
                     <option>TikTok Comment</option>
@@ -1077,9 +1146,10 @@ function FeedbackContent() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow text-xs"
+                  disabled={isSubmitting}
+                  className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow text-xs disabled:bg-blue-300 disabled:cursor-not-allowed"
                 >
-                  Save Entry
+                  {isSubmitting ? 'Saving…' : 'Save Entry'}
                 </button>
               </div>
             </form>

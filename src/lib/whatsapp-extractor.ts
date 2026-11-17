@@ -18,7 +18,7 @@ export interface ExtractedOrderResult {
   discountPercent?: ExtractedField<number> & { provided?: boolean };
   paymentTerms: ExtractedField<string>; deliveryMethod: ExtractedField<string>;
   orderDateAd: ExtractedField<string>; orderDateBs: ExtractedField<string>;
-  flags: string[]; extractionErrors: string[]; isMarketing?: boolean; influencerId?: string; influencerName?: string; rawText: string;
+  flags: string[]; extractionErrors: string[]; rawText: string;
 }
 export const NEPAL_CITIES = ['Ghorahi','Budhanilkantha','Thecho','Kathmandu','Lalitpur','Bhaktapur','Pokhara','Chitwan','Narayangarh','Biratnagar','Butwal','Dharan','Birgunj','Hetauda','Nepalgunj','Itahari','Dhangadhi','Bhairahawa','Janakpur','Jhapa','Birtamode','Birtamod','Banepa','Dhulikhel','Surkhet'];
 export interface DynamicExtractorOptions { products: Product[]; combos: Combo[]; brands: Brand[]; channels?: string[]; deliveryMethods?: string[]; dateOverride?: string; customSeparator?: string }
@@ -81,7 +81,6 @@ export function parseDiscountPercent(text: string): number | null {
 }
 export function extractedOrderTotal(order: ExtractedOrderResult): number {
   const cents = Math.round(order.products.reduce((sum, item) => sum + (item.saleUnitPrice ?? item.unitPrice) * item.quantity, 0) * 100);
-  if (order.isMarketing) return 0;
   if (order.statedPrice.provided ?? order.statedPrice.value > 0) return order.statedPrice.value;
   if (order.discountPercent?.provided) return Math.round(cents * (1 - order.discountPercent.value / 100)) / 100;
   return cents / 100;
@@ -239,17 +238,16 @@ export function validateExtractedOrder(order: ExtractedOrderResult): string[] {
   const date = new Date(`${order.orderDateAd.value}T12:00:00Z`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(order.orderDateAd.value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0,10) !== order.orderDateAd.value) errors.push('Enter a valid order date.');
   if (!order.address.value.trim()) errors.push('Enter the delivery address.');
-  if (order.isMarketing && !order.influencerId) errors.push('Choose an influencer for the marketing send.');
   if (!order.products.length || order.products.some(item => !item.productId || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || item.quantity > 10000 || item.unitPrice <= 0)) errors.push('Select valid catalogue items and quantities.');
   if (order.products.some(item => item.saleUnitPrice !== undefined && (!Number.isFinite(item.saleUnitPrice) || item.saleUnitPrice < 0 || item.saleUnitPrice > item.unitPrice || Math.abs(item.saleUnitPrice * 100 - Math.round(item.saleUnitPrice * 100)) > 1e-6))) errors.push('Each selling price must be between zero and its catalogue price, with at most two decimal places.');
   if (new Set(order.products.map(item => item.brandCode)).size > 1) errors.push('Split products from different brands into separate orders.');
   if (order.statedPrice.value < 0 || !Number.isFinite(order.statedPrice.value) || Math.abs(order.statedPrice.value * 100 - Math.round(order.statedPrice.value * 100)) > 1e-6) errors.push('Enter a valid stated amount.');
-  if (!order.isMarketing && order.statedPrice.value > order.products.reduce((sum, item) => sum + (item.saleUnitPrice ?? item.unitPrice) * item.quantity, 0) + 0.005) errors.push('The stated amount exceeds the item selling prices; review items or amount.');
+  if (order.statedPrice.value > order.products.reduce((sum, item) => sum + (item.saleUnitPrice ?? item.unitPrice) * item.quantity, 0) + 0.005) errors.push('The stated amount exceeds the item selling prices; review items or amount.');
   if (order.discountPercent?.provided) {
     const pct = order.discountPercent.value;
     if (!Number.isFinite(pct) || pct < 0 || pct > 100 || Math.abs(pct * 100 - Math.round(pct * 100)) > 1e-6) errors.push('Enter a discount between 0 and 100%.');
     const cents = Math.round(order.products.reduce((sum, item) => sum + (item.saleUnitPrice ?? item.unitPrice) * item.quantity, 0) * 100);
-    if (!order.isMarketing && (order.statedPrice.provided ?? order.statedPrice.value > 0) && Math.abs(Math.round(order.statedPrice.value * 100) - Math.round(cents * (1 - pct / 100))) > 0) errors.push('The stated total and percentage discount do not match; correct or clear one.');
+    if ((order.statedPrice.provided ?? order.statedPrice.value > 0) && Math.abs(Math.round(order.statedPrice.value * 100) - Math.round(cents * (1 - pct / 100))) > 0) errors.push('The stated total and percentage discount do not match; correct or clear one.');
     if (order.flags.some(flag => flag.startsWith('Discount scope is unclear'))) errors.push('Review the discount scope; clear the percentage and enter the agreed order total.');
   }
   if (order.flags.some(flag => flag.includes('matches multiple catalogue items') || flag.startsWith('Multiple combos match'))) errors.push('Resolve the ambiguous catalogue match before saving.');
@@ -337,7 +335,7 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
     discountPercent: { value: discount ?? 0, provided: discount !== null, confidence: discount !== null ? 'HIGH' : 'REVIEW' },
     paymentTerms: { value: prepaid ? 'Prepaid' : 'COD', confidence: 'AUTO' }, deliveryMethod: { value: delivery, confidence: delivery ? 'AUTO' : 'REVIEW' },
     orderDateAd: { value: date.value, confidence: date.confidence }, orderDateBs: { value: dateBs(date.value), confidence: date.confidence },
-    flags, extractionErrors: [], isMarketing: false, rawText: text,
+    flags, extractionErrors: [], rawText: text,
   };
   order.totalAmount.value = extractedOrderTotal(order);
   order.extractionErrors = validateExtractedOrder(order); return order;

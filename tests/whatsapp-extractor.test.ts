@@ -174,7 +174,7 @@ test('existing customer is matched across phone formats and updated exactly once
   ws.db.addCustomer({phone:'+977-9841234567',name:'Existing',city:'Kathmandu',province:'Bagmati Province',firstOrderDate:'2026-01-01',lastOrderDate:'2026-01-01',totalOrders:1,totalDelivered:0,totalReturns:0,totalDeliveryFailures:0,totalCancellations:0,totalComplaints:0,totalReviews:0,karmaScore:72,segment:'NEW',activeFlags:[],brandsPurchased:['BRAND']});
   await saveExtractedOrders({orders:[row('ext_12345678-1234-1234-1234-123456789abc')]},ws);
   assert.equal(ws.db.getCustomers().length,1); assert.equal(ws.db.getCustomers()[0].totalOrders,2);
-  const market=workspace(); market.db.addOrder({orderNumber:'TEST-MARKET',brandCode:'BRAND',orderDateAd:'2026-11-16',orderDateBs:'',platform:'WhatsApp',customerName:'Creator',customerPhone:'9812345678',province:'Bagmati',district:'Kathmandu',address:'Thamel',deliveryMethod:'Pathao',paymentTerms:'Advance',orderType:'NEW',items:[{productId:'shampoo',productName:shampoo.name,brandCode:'BRAND',quantity:1,unitPrice:0,totalPrice:0}],totalAmount:0,status:'PENDING',source:'WHATSAPP_EXTRACTOR',isMarketing:true});
+  const market=workspace(); assert.throws(() => market.db.addOrder({orderNumber:'TEST-MARKET',brandCode:'BRAND',orderDateAd:'2026-11-16',orderDateBs:'',platform:'WhatsApp',customerName:'Creator',customerPhone:'9812345678',province:'Bagmati',district:'Kathmandu',address:'Thamel',deliveryMethod:'Pathao',paymentTerms:'Advance',orderType:'NEW',items:[{productId:'shampoo',productName:shampoo.name,brandCode:'BRAND',quantity:1,unitPrice:0,totalPrice:0}],totalAmount:0,status:'PENDING',source:'WHATSAPP_EXTRACTOR',isMarketing:true}), /influencer profile/);
   assert.equal(market.db.getCustomers().length,0);
 });
 

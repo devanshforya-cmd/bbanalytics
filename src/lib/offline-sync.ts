@@ -238,7 +238,7 @@ export class OfflineSyncManager {
           for (const later of this.queue) {
             if (later.type === 'WORKSPACE_MUTATION' && recordKey(later.payload as unknown as WorkspaceMutation) === key) (later.payload as unknown as WorkspaceMutation).expectedVersion = version;
           }
-          if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('bb-workspace-mutation-synced', { detail: { collection: mutation.collection, id: mutation.id, version } }));
+          if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('bb-workspace-mutation-synced', { detail: { collection: mutation.collection, id: mutation.id, version, assigned: result.assigned } }));
         }
         count++; this.saveQueue();
       } catch (error) {

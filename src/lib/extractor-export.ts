@@ -28,7 +28,7 @@ export function extractorCSV(orders: ExtractedOrderResult[], products: Product[]
   const columns = ['S.N.','Order ID','Order Placed Date','Order Type','Order Platform','Customer Name','Customer Phone Number','Alternate Phone Number','Province','Product Category','Product Name','MRP (Rs.)','Quantity Ordered','Discount (Rs.)','Line Revenue (Rs.)','Delivery Status','Remarks','Follow up-1 (21 days)','Follow up-2 (2 months)'];
   let serial = 0;
   const rows = orders.flatMap(order => {
-    const total = order.isMarketing ? 0 : order.totalAmount.value;
+    const total = order.totalAmount.value;
     let allocation: number[] = [];
     try { if (order.products.length) allocation = allocateOrderTotal(order.products.map(item => ({ ...item, unitPrice: item.saleUnitPrice ?? item.unitPrice })), total); } catch { /* Incomplete orders remain explicitly marked for review. */ }
     const followUps = followUpDates(order.orderDateAd.value);

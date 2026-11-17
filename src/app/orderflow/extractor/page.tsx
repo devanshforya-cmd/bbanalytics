@@ -259,7 +259,7 @@ export default function ExtractorPage() {
           clientId: order.id, customerName: order.customerName.value, customerPhone: order.customerPhone.value, alternatePhone: order.alternatePhone.value,
           city: order.city.value, province: order.province.value, address: order.address.value, orderDateAd: order.orderDateAd.value,
           platform: order.salesChannel ?? sourceChannel, deliveryMethod: order.deliveryMethod.value || deliveryMethods[0], paymentTerms: order.paymentTerms.value, assignedToId: order.assignedToId || currentUser.id,
-          statedPrice: order.statedPrice.provided ? order.statedPrice.value : null, discountPercent: order.discountPercent?.provided ? order.discountPercent.value : null, isMarketing: false,
+          statedPrice: order.statedPrice.provided ? order.statedPrice.value : null, discountPercent: order.discountPercent?.provided ? order.discountPercent.value : null,
           items: order.products.map(item => ({ productId: item.productId, quantity: item.quantity, expectedUnitPrice: item.unitPrice, ...(item.saleUnitPrice !== undefined ? { saleUnitPrice: item.saleUnitPrice } : {}) })),
         })) }) });
         const result = await response.json().catch(() => null);

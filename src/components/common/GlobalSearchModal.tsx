@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
+import { displayDocumentId, matchesDocumentId } from '@/lib/document-ids';
 import { Customer, Product, Order, Cheque, Retailer, Branch } from '@/lib/types';
 import { getSessionUser } from '@/lib/auth';
 import { canAccessBrand, getAssignedBrandCodes, getScope, hasAccess } from '@/lib/permissions';
@@ -158,7 +159,8 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
     // 4. Orders: match orderNumber, customerName, customerPhone, or item names
     const matchedOrders = orders.filter((o) => {
-      const orderNumMatch = o.orderNumber.toLowerCase().includes(trimmed);
+      // Short ID with or without the hyphen, any case, digits alone, or the earlier long ID.
+      const orderNumMatch = matchesDocumentId(trimmed, o.orderNumber, o.legacyOrderNumber);
       const nameMatch = o.customerName.toLowerCase().includes(trimmed);
       const phoneMatch = o.customerPhone.toLowerCase().includes(trimmed);
       const itemsMatch = o.items?.some((it) => it.productName.toLowerCase().includes(trimmed));
@@ -253,14 +255,14 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
       items.push({
         id: `order-${o.id}`,
         category: 'ORDERS',
-        title: o.orderNumber,
+        title: displayDocumentId(o.orderNumber),
         subtitle: `${o.customerName} — ${itemDesc}`,
         extraInfo: dateDisplay,
         metaBadge: {
           text: o.status,
           variant: o.status === 'DELIVERED' ? 'green' : o.status === 'FAILED' ? 'red' : 'blue',
         },
-        url: `/customers/${o.customerPhone}`,
+        url: `/orderflow/orders/${o.id}`,
       });
     });
 
@@ -565,7 +567,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                       onClick={() => itemIndex >= 0 && handleSelect(flatResults[itemIndex])}
                       icon={<ShoppingCart className="w-4 h-4 text-indigo-600" />}
                       iconBg="bg-indigo-50"
-                      title={o.orderNumber}
+                      title={displayDocumentId(o.orderNumber)}
                       subtitle={`${o.customerName} — ${firstItem}`}
                       extraInfo={dateStr}
                       badgeText={o.status}

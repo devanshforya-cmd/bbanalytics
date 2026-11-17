@@ -9,7 +9,8 @@ import { canPerform, hasAccess, d2cAssignees } from '@/lib/permissions';
 import { matchingCatalogCombo } from '@/lib/product-catalog';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { activeOrderOptionNames, assertActiveOrderOption } from '@/lib/order-options';
-import { BrandCode, OrderPlatform, DeliveryMethod, InfluencerPlatformType } from '@/lib/types';
+import { BrandCode, OrderPlatform, DeliveryMethod } from '@/lib/types';
+import { displayDocumentId } from '@/lib/document-ids';
 import {
   getTodayAd,
   getTodayBs,
@@ -46,7 +47,6 @@ import {
   Tag,
   FileText,
   AlertTriangle,
-  Gift,
   Search,
 } from 'lucide-react';
 
@@ -104,55 +104,6 @@ export default function ManualOrderEntryPage() {
   const [remarks, setRemarks] = useState('');
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
-  // FIX 60a: Marketing / Influencer Order Classification
-  const [isMarketing, setIsMarketing] = useState(false);
-  const [influencerId, setInfluencerId] = useState('');
-  const [influencerName, setInfluencerName] = useState('');
-  const [influencerPhone, setInfluencerPhone] = useState('');
-  const [influencerPlatform, setInfluencerPlatform] = useState<InfluencerPlatformType>('Instagram');
-  const [influencerHandle, setInfluencerHandle] = useState('');
-  const [influencerNotes, setInfluencerNotes] = useState('');
-
-  const [influencerSearchQuery, setInfluencerSearchQuery] = useState('');
-
-  const existingInfluencers = useMemo(() => db.getInfluencers(), []);
-
-  const filteredExistingInfluencers = useMemo(() => {
-    if (!influencerSearchQuery.trim()) return existingInfluencers;
-    const q = influencerSearchQuery.toLowerCase().trim();
-    return existingInfluencers.filter(
-      (inf) =>
-        inf.name.toLowerCase().includes(q) ||
-        inf.platforms.some((p) => p.handle.toLowerCase().includes(q)) ||
-        inf.category.toLowerCase().includes(q)
-    );
-  }, [existingInfluencers, influencerSearchQuery]);
-
-  const selectedInfluencerObj = useMemo(() => {
-    if (!influencerId) return null;
-    return existingInfluencers.find((inf) => inf.id === influencerId) || null;
-  }, [existingInfluencers, influencerId]);
-
-  const handleSelectExistingInfluencer = (selectedId: string) => {
-    setInfluencerId(selectedId);
-    if (!selectedId) {
-      setInfluencerName('');
-      setInfluencerPhone('');
-      setInfluencerHandle('');
-      return;
-    }
-    const found = existingInfluencers.find((inf) => inf.id === selectedId);
-    if (found) {
-      setInfluencerName(found.name);
-      setInfluencerPhone(found.phone || '');
-      setInfluencerPlatform(found.platforms[0]?.platform || 'Instagram');
-      setInfluencerHandle(found.platforms[0]?.handle || '');
-      if (!customerName) setCustomerName(`${found.name} (PR)`);
-      if (!customerPhone && found.phone) setCustomerPhone(found.phone);
-      if (found.city && !address) setAddress(found.city);
-    }
-  };
-
   // FIX 54d: Auto-save draft every 10s to localStorage
   const { hasDraft, draftTimestamp, resumeDraft, discardDraft, clearDraft } = useAutoSave('manual_order_entry', {
     brandCode,
@@ -189,6 +140,7 @@ export default function ManualOrderEntryPage() {
 
   // 10c: Saved State & Order Modal
   const [savedOrder, setSavedOrder] = useState<{
+    orderId: string;
     orderNumber: string;
     customerName: string;
     customerPhone: string;
@@ -272,7 +224,6 @@ export default function ManualOrderEntryPage() {
 
   // Total amount calculation
   const totalAmount = useMemo(() => {
-    if (isMarketing) return 0;
     if (appliedCombo) {
       return appliedCombo.comboPrice;
     }
@@ -281,7 +232,7 @@ export default function ManualOrderEntryPage() {
       const price = item.overridePrice ?? (prod?.mrp || 0);
       return sum + price * (item.quantity || 1);
     }, 0);
-  }, [orderItems, products, appliedCombo, isMarketing]);
+  }, [orderItems, products, appliedCombo]);
 
   const handleApplyCombo = () => {
     if (detectedCombo) {
@@ -320,7 +271,7 @@ export default function ManualOrderEntryPage() {
 
     const phoneErr = validateNepaliPhone(customerPhone);
     if (phoneErr) errors.customerPhone = phoneErr;
-    if (!isMarketing && !address.trim() && !district.trim()) errors.address = 'Enter a delivery address or city.';
+    if (!address.trim() && !district.trim()) errors.address = 'Enter a delivery address or city.';
 
     if (orderItems.length === 0) {
       errors.orderItems = 'Please add at least one product SKU.';
@@ -340,11 +291,11 @@ export default function ManualOrderEntryPage() {
   const handleConfirmAndSave = () => {
     if (!d2cAssignees(currentUser, db.getUsers(), brandCode).some(user => user.id === assignedToId)) { toast.error('Choose an eligible responsible person for this brand.'); return; }
     try {
-      assertActiveOrderOption(db.getOrderOptions(), 'channels', isMarketing ? influencerPlatform : platform);
+      assertActiveOrderOption(db.getOrderOptions(), 'channels', platform);
       assertActiveOrderOption(db.getOrderOptions(), 'deliveryMethods', deliveryMethod);
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Choose an active channel and delivery method.'); return; }
     guardedSubmit(async () => {
-      const items = appliedCombo && !isMarketing ? [{
+      const items = appliedCombo ? [{
         productId: appliedCombo.id, productName: appliedCombo.name, brandCode,
         quantity: 1, unitPrice: appliedCombo.comboPrice, totalPrice: appliedCombo.comboPrice,
       }] : orderItems.map((item) => {
@@ -355,74 +306,45 @@ export default function ManualOrderEntryPage() {
           productName: p?.name || 'Product',
           brandCode: p?.brandCode || brandCode,
           quantity: item.quantity,
-          unitPrice: isMarketing ? 0 : unitPrice,
-          totalPrice: isMarketing ? 0 : unitPrice * item.quantity,
+          unitPrice,
+          totalPrice: unitPrice * item.quantity,
         };
       });
 
-      const orderNumber = isMarketing ? `BB-MKT-${Date.now().toString().slice(-4)}` : `BB-MAN-${Date.now().toString().slice(-4)}`;
-
-      // 1. Auto-create or resolve Influencer if marketing send
-      let finalInfluencerId = influencerId;
-      if (isMarketing) {
-        if (!finalInfluencerId && influencerName.trim()) {
-          const createdInf = db.createInfluencer({
-            name: influencerName.trim(),
-            phone: influencerPhone.trim() || undefined,
-            platforms: [
-              {
-                platform: influencerPlatform,
-                handle: influencerHandle.trim() || `@${influencerName.toLowerCase().replace(/\s+/g, '')}`,
-              },
-            ],
-            city: district,
-            category: 'Beauty',
-            qualityRating: 'NOT_RATED',
-            notes: influencerNotes.trim() || 'Created from Manual Order Entry',
-            isActive: true,
-          });
-          finalInfluencerId = createdInf.id;
-        }
-      }
-
-      // 2. Add order to database
+      // The server gives the order its short ID (for example FOR-0421) when it saves it.
       const createdOrder = db.addOrder({
-        orderNumber,
         assignedToId,
         brandCode,
         orderDateAd,
         orderDateBs,
-        platform: isMarketing ? influencerPlatform : platform,
-        customerName: customerName.trim() || (isMarketing ? `${influencerName.trim()} (PR)` : 'Customer'),
-        customerPhone: customerPhone.trim() || (isMarketing ? influencerPhone.trim() || '+977-9800000000' : '+977-9800000000'),
+        platform,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
         province,
         district,
         address: address.trim() || district,
         deliveryMethod,
-        paymentTerms: isMarketing ? 'Advance' : paymentTerms,
+        paymentTerms,
         orderType: existingCustomer ? 'REPEAT' : 'NEW',
-        totalAmount: isMarketing ? 0 : totalAmount,
+        totalAmount,
         status: 'PENDING',
         source: 'MANUAL',
-        isMarketing,
-        influencerId: finalInfluencerId || undefined,
-        influencerHandle: influencerHandle.trim() || undefined,
-        notes: `${remarks ? remarks + '. ' : ''}${appliedCombo ? `Combo: ${appliedCombo.name}. ` : ''}${
-          isMarketing ? `[MARKETING SEND to ${influencerName} (${influencerHandle})] ${influencerNotes}` : ''
-        }`,
+        notes: `${remarks ? remarks + '. ' : ''}${appliedCombo ? `Combo: ${appliedCombo.name}. ` : ''}`.trim(),
         items,
       });
 
       try { await syncManager.forceSyncNow(); } catch { /* Keep the local order in the durable sync queue. */ }
       const pending = syncManager.getWorkspaceMutations().some(mutation => mutation.collection === 'orders' && mutation.id === createdOrder.id);
+      const orderNumber = displayDocumentId(db.getOrderById(createdOrder.id)?.orderNumber || createdOrder.orderNumber);
 
       // Save summary state for success UI
       setSavedOrder({
+        orderId: createdOrder.id,
         orderNumber,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         brandCode,
-        totalAmount: isMarketing ? 0 : totalAmount,
+        totalAmount,
         items: items.map((i) => ({
           name: i.productName,
           quantity: i.quantity,
@@ -430,12 +352,12 @@ export default function ManualOrderEntryPage() {
           totalPrice: i.totalPrice,
         })),
         deliveryMethod,
-        paymentTerms: isMarketing ? 'Product Seeding (NPR 0)' : paymentTerms,
+        paymentTerms,
         karmaAwarded: 0,
         pending,
       });
 
-      if (pending) toast.info(`Order ${orderNumber} is pending sync`, 'Check the sync status before relying on it on another device.');
+      if (pending) toast.info('Order saved on this device', 'It gets its order ID when the connection returns. Check Sync status.');
       else toast.success(`Order ${orderNumber} saved successfully!`);
       clearDraft();
       setIsReviewing(false);
@@ -453,12 +375,6 @@ export default function ManualOrderEntryPage() {
     setDistrict('');
     setRemarks('');
     setComboApplied(null);
-    setIsMarketing(false);
-    setInfluencerId('');
-    setInfluencerName('');
-    setInfluencerPhone('');
-    setInfluencerHandle('');
-    setInfluencerNotes('');
     const available = filteredProducts[0] || products[0];
     setOrderItems([{ productId: available?.id || '', quantity: 1 }]);
   };
@@ -514,7 +430,7 @@ export default function ManualOrderEntryPage() {
                   {savedOrder.pending ? 'Order pending sync' : 'Order successfully saved'}
                 </span>
                 <h2 className="text-xl font-black text-slate-900 mt-1">
-                  Order #{savedOrder.orderNumber}
+                  Order {savedOrder.orderNumber}
                 </h2>
                 <p className="text-xs text-slate-600 mt-0.5">
                   Registered for <strong>{savedOrder.customerName}</strong> ({savedOrder.customerPhone}) • Grand Total: <strong className="text-slate-900">NPR {savedOrder.totalAmount.toLocaleString()}</strong>
@@ -527,6 +443,13 @@ export default function ManualOrderEntryPage() {
 
           {/* Action Links */}
           <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-emerald-200/60">
+            <Link
+              href={`/orderflow/orders/${savedOrder.orderId}`}
+              className="rounded-xl bg-white border border-emerald-300 px-4 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 shadow-sm flex items-center gap-1.5"
+            >
+              <FileText className="h-4 w-4" />
+              Open or edit this order
+            </Link>
             <button
               onClick={() => setShowOrderModal(true)}
               className="rounded-xl bg-white border border-emerald-300 px-4 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 shadow-sm flex items-center gap-1.5"
@@ -603,11 +526,11 @@ export default function ManualOrderEntryPage() {
                 {orderItems.map((it, idx) => {
                   const p = products.find((prod) => prod.id === it.productId);
                   const price = it.overridePrice ?? (p?.mrp || 0);
-                  const lineTotal = isMarketing ? 0 : price * it.quantity;
+                  const lineTotal = price * it.quantity;
                   return (
                     <div key={idx} className="flex justify-between items-center text-xs">
                       <span className="text-slate-800 font-medium">
-                        {it.quantity}× {p?.name || 'Item'} — {isMarketing ? 'Product seeding' : `NPR ${price.toLocaleString()} each`}
+                        {it.quantity}× {p?.name || 'Item'} — {`NPR ${price.toLocaleString()} each`}
                       </span>
                       <strong className="font-mono text-slate-900">
                         NPR {lineTotal.toLocaleString()}
@@ -628,14 +551,14 @@ export default function ManualOrderEntryPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-200 pt-3">
               <div>
                 <span className="text-[11px] font-semibold text-slate-500 block">Delivery & Payment:</span>
-                  <strong className="text-slate-900">{deliveryMethod}</strong> • {isMarketing ? 'Product Seeding (NPR 0)' : paymentTerms}
+                  <strong className="text-slate-900">{deliveryMethod}</strong> • {paymentTerms}
                 <div className="text-slate-600 text-[11px] mt-0.5">
                   {address || district}, {district}, {province}
                 </div>
               </div>
               <div>
                 <span className="text-[11px] font-semibold text-slate-500 block">Platform & Date:</span>
-                <strong className="text-slate-900">{isMarketing ? influencerPlatform : platform}</strong>
+                <strong className="text-slate-900">{platform}</strong>
                 <div className="text-slate-600 text-[11px] mt-0.5">
                   {orderDateAd}
                 </div>
@@ -862,7 +785,7 @@ export default function ManualOrderEntryPage() {
                 {orderItems.map((item, idx) => {
                   const prod = products.find((p) => p.id === item.productId);
                   const price = item.overridePrice ?? (prod?.mrp || 0);
-                  const lineTotal = isMarketing ? 0 : price * item.quantity;
+                  const lineTotal = price * item.quantity;
 
                   return (
                     <div
@@ -1013,200 +936,6 @@ export default function ManualOrderEntryPage() {
               </div>
             </div>
 
-            {/* FIX 60a & FIX 71a: ORDER CLASSIFICATION (Marketing / Influencer Send) */}
-            <div className="rounded-2xl border border-purple-200 bg-purple-50/40 p-4 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={isMarketing}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setIsMarketing(checked);
-                      if (checked) {
-                        setDeliveryMethod('Pick-up');
-                      }
-                    }}
-                    className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-slate-300 cursor-pointer"
-                  />
-                  <div className="flex items-center gap-1.5">
-                    <Gift className="w-4 h-4 text-purple-600" />
-                    <span className="font-bold text-xs sm:text-sm text-purple-900">
-                      Marketing / Influencer Send
-                    </span>
-                  </div>
-                </label>
-                <span className="text-[10px] sm:text-[11px] font-semibold text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-full self-start sm:self-center">
-                  Product Seeding (Zero Revenue)
-                </span>
-              </div>
-
-              {isMarketing && (
-                <div className="space-y-3 pt-3 border-t border-purple-200/70 animate-in fade-in slide-in-from-top-1">
-                  {/* Search Directory / Quick Select */}
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-purple-950 uppercase tracking-wider">
-                      Search Directory / Select Influencer
-                    </label>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <div className="relative flex-1">
-                        <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
-                        <input
-                          type="text"
-                          placeholder="Search directory by name, handle, or niche..."
-                          value={influencerSearchQuery}
-                          onChange={(e) => setInfluencerSearchQuery(e.target.value)}
-                          className="w-full pl-8.5 pr-3 py-1.5 border border-purple-200 rounded-xl text-xs bg-white focus:ring-1 focus:ring-purple-500"
-                        />
-                      </div>
-                      <select
-                        value={influencerId}
-                        onChange={(e) => handleSelectExistingInfluencer(e.target.value)}
-                        className="rounded-xl border border-purple-200 px-3 py-1.5 bg-white text-xs font-medium text-slate-800 outline-none focus:border-purple-500 shadow-2xs sm:max-w-[240px]"
-                      >
-                        <option value="">-- Or Select from List ({filteredExistingInfluencers.length}) --</option>
-                        {filteredExistingInfluencers.map((inf) => (
-                          <option key={inf.id} value={inf.id}>
-                            {inf.name} ({inf.platforms[0]?.handle || 'No handle'})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Selected Influencer Rich Preview Card (Fix 71a) */}
-                  {selectedInfluencerObj && (
-                    <div className="p-3 bg-white border border-purple-200 rounded-xl shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-xs text-purple-950">
-                            {selectedInfluencerObj.name}
-                          </span>
-                          <span className="text-[11px] font-mono text-purple-700 font-semibold">
-                            {selectedInfluencerObj.platforms[0]?.handle}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
-                            {selectedInfluencerObj.qualityRating === 'GREAT'
-                              ? '⭐⭐⭐ Great'
-                              : selectedInfluencerObj.qualityRating === 'AVERAGE'
-                              ? '⭐⭐ Good'
-                              : selectedInfluencerObj.qualityRating === 'POOR'
-                              ? '⭐ Poor'
-                              : 'Not Rated'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500 flex-wrap">
-                          <span>
-                            {selectedInfluencerObj.platforms[0]?.platform || 'Instagram'} &bull;{' '}
-                            {selectedInfluencerObj.platforms[0]?.followers
-                              ? `${(selectedInfluencerObj.platforms[0].followers / 1000).toFixed(1)}K followers`
-                              : 'Creator'}
-                          </span>
-                          <span>&bull;</span>
-                          <span>Category: <strong className="text-slate-700">{selectedInfluencerObj.category}</strong></span>
-                          <span>&bull;</span>
-                          <span>
-                            Previous sends: <strong className="text-purple-900">{selectedInfluencerObj.totalSends || 0}</strong>
-                          </span>
-                          <span>&bull;</span>
-                          <span>
-                            Content: <strong className="text-purple-900">{selectedInfluencerObj.totalContent || 0} pieces</strong>
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectExistingInfluencer('')}
-                        className="px-2.5 py-1 text-[11px] font-semibold text-slate-500 hover:text-purple-700 hover:bg-purple-50 rounded-lg border border-slate-200 transition self-start sm:self-center cursor-pointer"
-                      >
-                        Change / New
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Influencer Name <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Shristi Vaidya"
-                        value={influencerName}
-                        onChange={(e) => {
-                          setInfluencerName(e.target.value);
-                          if (!customerName || customerName.includes('(PR)')) setCustomerName(`${e.target.value} (PR)`);
-                        }}
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white text-xs font-medium outline-none focus:border-purple-500"
-                        required={isMarketing}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Influencer Phone (Optional)
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="98XXXXXXXX"
-                        value={influencerPhone}
-                        onChange={(e) => {
-                          setInfluencerPhone(e.target.value);
-                          if (!customerPhone) setCustomerPhone(e.target.value);
-                        }}
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white text-xs font-medium outline-none focus:border-purple-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Content Platform <span className="text-rose-500">*</span>
-                      </label>
-                      <select
-                        value={influencerPlatform}
-                        onChange={(e) => setInfluencerPlatform(e.target.value as any)}
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white text-xs font-medium outline-none focus:border-purple-500"
-                      >
-                        <option value="Instagram">Instagram</option>
-                        <option value="TikTok">TikTok</option>
-                        <option value="YouTube">YouTube</option>
-                        <option value="Facebook">Facebook</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Handle / Username
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="@username"
-                        value={influencerHandle}
-                        onChange={(e) => setInfluencerHandle(e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white text-xs font-medium outline-none focus:border-purple-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Campaign Seeding Notes
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Send 2 Roll-On + 1 Serum for new launch PR review"
-                      value={influencerNotes}
-                      onChange={(e) => setInfluencerNotes(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white text-xs font-medium outline-none focus:border-purple-500"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
             <div>
               <label className="block font-bold text-slate-700 mb-1">
                 Remarks & Delivery Instructions
@@ -1248,7 +977,7 @@ export default function ManualOrderEntryPage() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <span className="text-[10px] font-bold uppercase text-slate-400">Order Invoice</span>
-                <h3 className="text-lg font-black text-slate-900">#{savedOrder.orderNumber}</h3>
+                <h3 className="text-lg font-black text-slate-900">{savedOrder.orderNumber}</h3>
               </div>
               <button
                 onClick={() => setShowOrderModal(false)}

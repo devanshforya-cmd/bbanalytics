@@ -17,6 +17,7 @@ import {
   getBrandEntityCounts,
 } from '@/lib/db/brands-service';
 import { toast } from '@/components/common/Toast';
+import { confirmAction } from '@/components/common/confirm';
 import SubmitButton from '@/components/common/SubmitButton';
 
 export default function BrandSettings() {
@@ -159,9 +160,8 @@ export default function BrandSettings() {
     const isCurrentlyActive = b.isActive !== false && b.status !== 'ARCHIVED';
 
     if (isCurrentlyActive) {
-      const confirmed = window.confirm(
-        `Deactivate "${b.name}"?\n\nIt will be hidden from all forms and filters. Historical data is preserved. You can reactivate anytime.`
-      );
+      const confirmed = await confirmAction({ title: `Deactivate "${b.name}"?`, confirmLabel: 'Deactivate brand',
+        message: 'It will be hidden from all forms and filters. Historical data is preserved. You can reactivate it at any time.' });
       if (!confirmed) return;
     }
 
