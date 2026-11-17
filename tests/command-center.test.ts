@@ -9,9 +9,18 @@ import {
   formatBsDateOnly,
   getTodayBs,
   getTodayAd,
+  shiftAdDate,
   matchesDateCriteria,
   NEPALI_MONTHS,
 } from '../src/lib/nepali-calendar.ts';
+
+test('AD day navigation advances one calendar day across month, year and leap-day boundaries', () => {
+  assert.equal(shiftAdDate('2026-11-17', -1), '2026-11-16');
+  assert.equal(shiftAdDate('2026-11-16', 1), '2026-11-17');
+  assert.equal(shiftAdDate('2026-01-01', -1), '2025-12-31');
+  assert.equal(shiftAdDate('2024-03-01', -1), '2024-02-29');
+  assert.equal(shiftAdDate('2026-02-29', 1), '2026-02-29');
+});
 
 test('Nepali Calendar - accurately converts reference anchor date', () => {
   // Reference: 2081 Baisakh 1 = 2024 April 13

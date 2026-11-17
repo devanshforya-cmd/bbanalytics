@@ -12,6 +12,7 @@ import { getBrands } from '@/lib/db/brands-service';
 import { Order, BrandCode, OrderItem } from '@/lib/types';
 import {
   getTodayAd,
+  shiftAdDate,
   getTodayBs,
   adToBs,
   bsToAd,
@@ -158,10 +159,7 @@ export default function DailyOrdersPage() {
 
   // Quick Day Cycling [ ← ] [ → ]
   const handleShiftDay = (direction: -1 | 1) => {
-    const parts = selectedDateAd.split('-');
-    const current = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-    current.setDate(current.getDate() + direction);
-    setSelectedDateAd(current.toISOString().split('T')[0]);
+    setSelectedDateAd(date => shiftAdDate(date, direction));
   };
 
   // Filtered orders by brand
@@ -365,13 +363,15 @@ export default function DailyOrdersPage() {
                 <ChevronLeft className="w-4 h-4" />
               </button>
 
-              <div className="relative flex items-center gap-2 px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl cursor-pointer transition">
+              <div className="relative flex min-h-[44px] items-center gap-2 px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl cursor-pointer transition focus-within:ring-2 focus-within:ring-blue-500">
                 <Calendar className="w-3.5 h-3.5 text-blue-600" />
                 <span className="text-xs font-bold text-slate-800">{formattedDateAd}</span>
                 <input
                   type="date"
+                  aria-label="Choose order date"
                   value={selectedDateAd}
-                  onChange={(e) => setSelectedDateAd(e.target.value)}
+                  onClick={(e) => { try { e.currentTarget.showPicker?.(); } catch { /* Native date input remains available. */ } }}
+                  onChange={(e) => { if (e.target.value) setSelectedDateAd(e.target.value); }}
                   className="w-full h-full opacity-0 absolute inset-0 cursor-pointer"
                 />
               </div>
