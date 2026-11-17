@@ -1,5 +1,6 @@
 'use client';
 
+import { hasDeliveryOutcome } from '@/lib/order-status';
 import React from 'react';
 import { Order, ReturnEntry, FeedbackEntry } from '@/lib/types';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
@@ -30,9 +31,11 @@ export default function SalesChannelPerformance({
     const orderCount = chOrders.length;
     const pctOfTotal = totalOrders > 0 ? ((orderCount / totalOrders) * 100).toFixed(1) : '0.0';
 
+    // Success is measured over orders whose delivery has an outcome, so pending orders do not read as failures.
     const deliveredCount = chOrders.filter((o) => o.status === 'DELIVERED').length;
+    const outcomes = chOrders.filter((o) => hasDeliveryOutcome(o.status)).length;
     const deliverySuccessRate =
-      orderCount > 0 ? ((deliveredCount / orderCount) * 100).toFixed(1) : '—';
+      outcomes > 0 ? ((deliveredCount / outcomes) * 100).toFixed(1) : '—';
 
     const chReturns = returns.filter((r) => r.platform === ch);
     const returnRate =

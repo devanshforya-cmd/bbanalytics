@@ -24,11 +24,11 @@ export default function SegmentMovement({ segmentMovements }: SegmentMovementPro
               2m
             </span>
             <h2 className="text-base font-bold text-slate-900">
-              30-Day Customer Segment Migration Tracker
+              Customer lifecycle: last 30 days
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Records movement between loyalty segments to verify customer health velocity and early-warning demotions.
+            Worked out from order dates: who became a repeat or loyal buyer, who is slipping away, and who came back. Cancelled orders and exchange replacements are not counted.
           </p>
         </div>
       </div>

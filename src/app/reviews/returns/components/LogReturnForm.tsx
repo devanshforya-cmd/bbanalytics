@@ -23,20 +23,24 @@ const field = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text
 const REASONS: ReturnReason[] = ['Damage', 'Wrong product sent', 'Product not as described', 'Allergic reaction', 'Quality defect', 'Size issue', 'Color mismatch', 'Changed mind'];
 const RESOLUTIONS: ReturnEntry['orderStatus'][] = ['Pending', 'Exchanged', 'Refunded', 'Returned', 'Rejected'];
 
-export interface SavedReturnSummary { customerName: string; customerPhone: string; productId: string; productName: string; isSerialReturner: boolean; timeToReturnDays: number }
-interface LogReturnFormProps { onClose: () => void; onSaved: (summary: SavedReturnSummary) => void; onViewCustomer?: (phone: string) => void }
+export interface SavedReturnSummary { returnId: string; resolution: ReturnEntry['orderStatus']; customerName: string; customerPhone: string; productId: string; productName: string; isSerialReturner: boolean; timeToReturnDays: number }
+interface LogReturnFormProps { onClose: () => void; onSaved: (summary: SavedReturnSummary) => void; onViewCustomer?: (phone: string) => void; initialOrder?: Order | null }
 
 /**
  * Log an actual product return with the same flow as a delivery failure:
  * phone, order, reason. Returns stay separate from delivery failures.
  */
-export default function LogReturnForm({ onClose, onSaved, onViewCustomer }: LogReturnFormProps) {
+export default function LogReturnForm({ onClose, onSaved, onViewCustomer, initialOrder = null }: LogReturnFormProps) {
   const user = db.getCurrentUser();
   const { formatDate } = useCalendarPreference();
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
-  const [customer, setCustomer] = useState<CustomerLookupValue>(EMPTY_CUSTOMER_LOOKUP);
-  const [order, setOrder] = useState<Order | null>(null);
-  const [productId, setProductId] = useState('');
+  const [customer, setCustomer] = useState<CustomerLookupValue>(() => {
+    if (!initialOrder) return EMPTY_CUSTOMER_LOOKUP;
+    const owner = db.getCustomerByPhone(initialOrder.customerPhone);
+    return owner ? { phone: phoneDigits(owner.phone), name: owner.name, link: 'LINKED', customer: owner } : { phone: phoneDigits(initialOrder.customerPhone), name: initialOrder.customerName, link: 'NEW' };
+  });
+  const [order, setOrder] = useState<Order | null>(initialOrder);
+  const [productId, setProductId] = useState(initialOrder?.items.length === 1 ? initialOrder.items[0].productId : '');
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState<ReturnReason | ''>('');
   const [returnAd, setReturnAd] = useState(getTodayAd());
@@ -89,7 +93,7 @@ export default function LogReturnForm({ onClose, onSaved, onViewCustomer }: LogR
     try {
       const days = Math.max(0, Math.round((Date.parse(returnAd) - Date.parse(order.orderDateAd)) / 86400000));
       const recent = db.getReturns('ALL').filter((entry) => phoneDigits(entry.customerPhone) === phoneDigits(order.customerPhone) && Date.parse(entry.dateAd) >= Date.now() - 30 * 86400000).length;
-      db.addReturn({
+      const saved = db.addReturn({
         orderId: order.id, orderNumber: order.orderNumber, brandCode: item.brandCode || order.brandCode, productId: item.productId, productName: item.productName,
         customerName: order.customerName, customerPhone: order.customerPhone, dateAd: returnAd, dateBs: returnBs,
         orderProcessedDateAd: order.orderDateAd, orderProcessedDateBs: order.orderDateBs, platform: order.platform, quantity, reasonCategory: reason,
@@ -98,11 +102,11 @@ export default function LogReturnForm({ onClose, onSaved, onViewCustomer }: LogR
       try { await syncManager.forceSyncNow(); } catch { /* The return stays in the sync queue. */ }
       toast.success(`Return logged for ${displayDocumentId(order.orderNumber)}`, `${quantity}× ${item.productName} · ${reason}`,
         hasAccess(user, 'customers') && onViewCustomer ? { label: 'View customer', onClick: () => onViewCustomer(phoneDigits(order.customerPhone)) } : undefined);
-      onSaved({ customerName: order.customerName, customerPhone: phoneDigits(order.customerPhone), productId: item.productId, productName: item.productName, isSerialReturner: recent + 1 >= 3, timeToReturnDays: days });
+      onSaved({ returnId: saved.id, resolution, customerName: order.customerName, customerPhone: phoneDigits(order.customerPhone), productId: item.productId, productName: item.productName, isSerialReturner: recent + 1 >= 3, timeToReturnDays: days });
     } catch (problem) { toast.error(problem instanceof Error ? problem.message : 'The return could not be saved.'); }
   });
 
-  if (!canPerform(user, 'reviews', 'CREATE')) return null;
+  if (!canPerform(user, 'reviews', 'CREATE') && !canPerform(user, 'order_desk', 'CREATE')) return null;
   const footer = (
     <div className="flex items-center justify-end gap-2">
       <button type="button" onClick={onClose} disabled={isSubmitting} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
@@ -179,6 +183,7 @@ export default function LogReturnForm({ onClose, onSaved, onViewCustomer }: LogR
             <select id="return-resolution" value={resolution} onChange={(event) => setResolution(event.target.value as ReturnEntry['orderStatus'])} className={field}>
               {RESOLUTIONS.map((entry) => <option key={entry} value={entry}>{entry === 'Pending' ? 'Pending — not decided yet' : entry}</option>)}
             </select>
+            {resolution === 'Exchanged' && <p className="mt-1 text-[11px] text-purple-700">After saving you’ll create or link the replacement order.</p>}
           </div>
         </div>
 

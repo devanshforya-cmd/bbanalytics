@@ -74,8 +74,8 @@ function getHistoricalWeeklyTrend(failures: DeliveryFailure[]) {
 
     const rate = attempts > 0 ? Math.round((failCount / attempts) * 1000) / 10 : 0;
     return {
-      week: `W${idx + 1} (${label})`,
-      label: `W${idx + 1}`,
+      week: `Week of ${label}`,
+      label,
       attempts,
       failures: failCount,
       rate,
@@ -302,11 +302,15 @@ export default function DeliveryFailuresPage() {
   };
 
   // SVG dimensions for 6d
-  const chartWidth = 720;
-  const chartHeight = 160;
-  const paddingX = 40;
-  const paddingY = 24;
-  const maxRate = 7.0; // 7% top scale
+  // Drawn at a fixed aspect ratio so text and points never stretch; the scale grows with the data.
+  const chartWidth = 960;
+  const chartHeight = 240;
+  const paddingX = 44;
+  const paddingY = 28;
+  const SLA_RATE = 3.0;
+  const peakRate = Math.max(...HISTORICAL_WEEKLY_TREND.map((item) => item.rate), SLA_RATE);
+  const maxRate = Math.max(5, Math.ceil((peakRate * 1.2) / 5) * 5);
+  const yTicks = [0, maxRate / 2, maxRate];
 
   const points = HISTORICAL_WEEKLY_TREND.map((item, idx) => {
     const x = paddingX + (idx / (HISTORICAL_WEEKLY_TREND.length - 1)) * (chartWidth - paddingX * 2);
@@ -321,7 +325,8 @@ export default function DeliveryFailuresPage() {
   const areaD = `${pathD} L ${points[points.length - 1].x} ${chartHeight - paddingY} L ${points[0].x} ${chartHeight - paddingY} Z`;
 
   // SLA line (3.0%)
-  const slaY = chartHeight - paddingY - (3.0 / maxRate) * (chartHeight - paddingY * 2);
+  const slaY = chartHeight - paddingY - (SLA_RATE / maxRate) * (chartHeight - paddingY * 2);
+  const yOf = (rate: number) => chartHeight - paddingY - (rate / maxRate) * (chartHeight - paddingY * 2);
 
   return (
     <PageGuard feature="orderflow">
@@ -478,12 +483,12 @@ export default function DeliveryFailuresPage() {
               Delivery Failure Rate Trend (Last 3 Months / 12 Weeks)
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Weekly failure rate percentage against total delivery dispatch attempts.
+              Failed deliveries as a share of orders placed each week.
             </p>
           </div>
 
           <div className="flex items-center gap-3 text-xs">
-            <div className="flex items-center gap-1.5 font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1">
+            <div className={`flex items-center gap-1.5 font-medium rounded-lg px-2.5 py-1 border ${currentWeekTrend.rate > 3 ? 'text-rose-700 bg-rose-50 border-rose-200' : 'text-emerald-700 bg-emerald-50 border-emerald-200'}`}>
               {rateChange !== null && rateChange >= 0
                 ? <TrendingDown className="h-3.5 w-3.5" />
                 : <Activity className="h-3.5 w-3.5" />}
@@ -495,7 +500,7 @@ export default function DeliveryFailuresPage() {
             </div>
             <div className="flex items-center gap-1 text-slate-500">
               <span className="h-0.5 w-3 bg-rose-400 border-dashed" />
-              3.0% SLA Target
+              3.0% target
             </div>
           </div>
         </div>
@@ -504,8 +509,9 @@ export default function DeliveryFailuresPage() {
         <div className="relative overflow-x-auto">
           <svg
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-            className="w-full h-44 select-none"
-            preserveAspectRatio="none"
+            className="mx-auto block h-auto w-full max-w-5xl select-none"
+            role="img"
+            aria-label={`Weekly delivery failure rate for the last 12 weeks. ${currentRateSummary}.`}
           >
             <defs>
               <linearGradient id="failureGradient" x1="0" y1="0" x2="0" y2="1">
@@ -514,10 +520,13 @@ export default function DeliveryFailuresPage() {
               </linearGradient>
             </defs>
 
-            {/* Grid lines */}
-            <line x1={paddingX} y1={paddingY} x2={chartWidth - paddingX} y2={paddingY} stroke="#f1f5f9" strokeWidth="1" />
-            <line x1={paddingX} y1={chartHeight / 2} x2={chartWidth - paddingX} y2={chartHeight / 2} stroke="#f1f5f9" strokeWidth="1" />
-            <line x1={paddingX} y1={chartHeight - paddingY} x2={chartWidth - paddingX} y2={chartHeight - paddingY} stroke="#e2e8f0" strokeWidth="1" />
+            {/* Grid lines with rate labels */}
+            {yTicks.map((tick) => (
+              <g key={tick}>
+                <line x1={paddingX} y1={yOf(tick)} x2={chartWidth - paddingX} y2={yOf(tick)} stroke={tick === 0 ? '#e2e8f0' : '#f1f5f9'} strokeWidth="1" />
+                <text x={paddingX - 8} y={yOf(tick) + 4} textAnchor="end" fill="#94a3b8" fontSize="11">{Number.isInteger(tick) ? tick : tick.toFixed(1)}%</text>
+              </g>
+            ))}
 
             {/* SLA Target Line (Dashed) */}
             <line
@@ -529,8 +538,8 @@ export default function DeliveryFailuresPage() {
               strokeWidth="1.5"
               strokeDasharray="4 4"
             />
-            <text x={chartWidth - paddingX - 4} y={slaY - 4} textAnchor="end" fill="#f43f5e" fontSize="9" fontWeight="bold">
-              3.0% SLA Target
+            <text x={chartWidth - paddingX - 4} y={slaY - 6} textAnchor="end" fill="#f43f5e" fontSize="11" fontWeight="600">
+              {SLA_RATE.toFixed(1)}% target
             </text>
 
             {/* Area Fill */}
@@ -544,10 +553,11 @@ export default function DeliveryFailuresPage() {
               const isHovered = hoveredWeekIndex === idx;
               return (
                 <g key={pt.week} className="cursor-pointer" onMouseEnter={() => setHoveredWeekIndex(idx)} onMouseLeave={() => setHoveredWeekIndex(null)}>
+                  <rect x={pt.x - (chartWidth - paddingX * 2) / 22} y={paddingY} width={(chartWidth - paddingX * 2) / 11} height={chartHeight - paddingY * 2} fill="transparent" />
                   <circle
                     cx={pt.x}
                     cy={pt.y}
-                    r={isHovered ? 6 : 3.5}
+                    r={isHovered ? 6 : 4}
                     fill={isHovered ? '#059669' : '#ffffff'}
                     stroke="#10b981"
                     strokeWidth="2.5"
@@ -556,10 +566,10 @@ export default function DeliveryFailuresPage() {
                   {/* X Axis Label */}
                   <text
                     x={pt.x}
-                    y={chartHeight - 6}
+                    y={chartHeight - 8}
                     textAnchor="middle"
                     fill="#64748b"
-                    fontSize="9"
+                    fontSize="11"
                     fontWeight={isHovered ? 'bold' : 'normal'}
                   >
                     {pt.label}

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  ListChecks,
   X,
   Search,
   LayoutDashboard,
@@ -50,6 +51,8 @@ interface MenuItem {
   name: string;
   href: string;
   permKey: string;
+  /** Also shown to people with this permission. */
+  alsoPermKey?: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
 }
@@ -86,6 +89,7 @@ const menuSections: MenuSection[] = [
     items: [
       { name: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles },
       { name: 'Manual Order Entry', href: '/orderflow/manual-entry', permKey: 'orderflow', icon: ClipboardPen },
+      { name: 'All Orders', href: '/orderflow/orders', permKey: 'orderflow', alsoPermKey: 'order_desk', icon: ListChecks },
       { name: 'Daily Orders', href: '/orderflow/daily-orders', permKey: 'orderflow', icon: ClipboardCheck, badge: 'Live' },
       { name: 'Monthly Sales Sheet', href: '/orderflow/monthly-sales', permKey: 'orderflow', icon: FileSpreadsheet },
       { name: 'Delivery Failures', href: '/orderflow/delivery-failures', permKey: 'orderflow', icon: TruckIcon },
@@ -147,7 +151,7 @@ export default function MobileNavDrawer({
   const permittedSections = menuSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => hasAccess(currentUser, item.permKey)),
+      items: section.items.filter((item) => (hasAccess(currentUser, item.permKey) || (!!item.alsoPermKey && hasAccess(currentUser, item.alsoPermKey)))),
     }))
     .filter((section) => section.items.length > 0);
 

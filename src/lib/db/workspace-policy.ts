@@ -16,9 +16,9 @@ const FEATURES: Record<WorkspaceCollection, FeatureKey[]> = {
   facingAudits: ['beat_plans'], distributors: ['distributors'], branches: ['stores', 'distributors'],
   retailers: ['stores'], beatItems: ['beat_plans'], visits: ['beat_plans'], dispatches: ['dispatches'],
   stockCounts: ['beat_plans'], shelfPhotos: ['shelf_photos'], callLogs: ['call_tracker'],
-  cheques: ['cheque_tracker'], documents: ['document_handover'], orders: ['orderflow'],
-  deliveryFailures: ['orderflow'], returns: ['reviews'], reviewCategories: ['reviews'],
-  feedbackEntries: ['reviews'], customers: ['customers', 'orderflow'], tasks: ['tasks'],
+  cheques: ['cheque_tracker'], documents: ['document_handover'], orders: ['orderflow', 'order_desk'],
+  deliveryFailures: ['orderflow', 'order_desk'], returns: ['reviews', 'order_desk'], reviewCategories: ['reviews'],
+  feedbackEntries: ['reviews'], customers: ['customers', 'orderflow', 'order_desk'], tasks: ['tasks'],
   notifications: [], activityLogs: ['activity'], staffLiveLocations: ['gps_tracking'],
   holidays: ['settings'], seasonalPatterns: ['dashboard'], taskTemplates: ['settings'],
   promotions: ['settings'], dailySummaries: ['beat_plans', 'staff_scorecards'], importHistory: ['settings'],
@@ -26,7 +26,7 @@ const FEATURES: Record<WorkspaceCollection, FeatureKey[]> = {
   documentTypes: ['settings'], storeCategories: ['settings'], recurringSchedules: ['beat_plans'],
   workspaceConfig: ['settings'],
   marketingSends: ['marketing'], influencerNiches: ['marketing', 'settings'], marketingOptions: ['marketing', 'settings'],
-  failureReasons: ['orderflow', 'settings'], userPreferences: [],
+  failureReasons: ['orderflow', 'order_desk', 'settings'], userPreferences: [],
 };
 
 const GLOBAL_CATALOG = new Set<WorkspaceCollection>([
@@ -36,10 +36,11 @@ const GLOBAL_CATALOG = new Set<WorkspaceCollection>([
 ]);
 
 export function collectionFeatures(collection: WorkspaceCollection, read = false): FeatureKey[] {
-  if (read && (collection === 'products' || collection === 'combos')) return ['products', 'beat_plans', 'orderflow', 'dispatches'];
-  if (read && ['documentTypes', 'storeCategories', 'workspaceConfig', 'promotions'].includes(collection)) return ['settings', 'beat_plans', 'stores', 'document_handover', 'orderflow'];
+  if (read && (collection === 'products' || collection === 'combos')) return ['products', 'beat_plans', 'orderflow', 'order_desk', 'dispatches'];
+  if (read && collection === 'reviewCategories') return ['reviews', 'order_desk'];
+  if (read && ['documentTypes', 'storeCategories', 'workspaceConfig', 'promotions'].includes(collection)) return ['settings', 'beat_plans', 'stores', 'document_handover', 'orderflow', 'order_desk'];
   if (read && collection === 'holidays') return ['settings', 'beat_plans', 'tasks'];
-  if (read && collection === 'failureReasons') return ['orderflow', 'settings', 'reviews', 'dashboard'];
+  if (read && collection === 'failureReasons') return ['orderflow', 'order_desk', 'settings', 'reviews', 'dashboard'];
   if (read && collection === 'stockCounts') return ['beat_plans', 'dispatches'];
   if (read && (collection === 'retailers' || collection === 'branches')) return ['stores', 'beat_plans', 'cheque_tracker', 'shelf_photos', 'call_tracker', 'document_handover', 'dispatches'];
   return FEATURES[collection];
@@ -125,7 +126,9 @@ export function canWriteWorkspaceRecord(user: User, row: StoredWorkspaceRecord, 
   if (['products', 'combos', 'retailers', 'branches', 'distributors'].includes(row.collection) && action === 'DELETE') return false;
   if (row.collection === 'sharedAccessLinks' || row.collection === 'importHistory') return false;
   if (row.collection === 'notifications') return action !== 'CREATE' && row.data.userId === user.id;
-  const writeFeatures = collectionFeatures(row.collection).filter((feature) => canPerform(user, feature, action));
+  const writeFeatures = collectionFeatures(row.collection).filter((feature) => canPerform(user, feature, action)
+    // The Order Desk works existing orders. The only order it creates is a replacement for an exchange; it never deletes one.
+    && !(feature === 'order_desk' && row.collection === 'orders' && (action === 'DELETE' || (action === 'CREATE' && !row.data.exchangeReturnId))));
   const owners = recordOwners(row);
   if (isLookupCollection(row.collection)) return writeFeatures.length > 0;
   if (!writeFeatures.some((feature) => {

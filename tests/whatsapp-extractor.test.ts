@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractSingleOrder, extractOrdersDynamically, parseStatedPrice, splitMessageBlocks, validateExtractedOrder } from '../src/lib/whatsapp-extractor';
+import { extractSingleOrder, extractedOrderTotal, extractOrdersDynamically, parseStatedPrice, splitMessageBlocks, validateExtractedOrder } from '../src/lib/whatsapp-extractor';
 import { saveExtractedOrders } from '../src/lib/db/extractor-service';
 import { DatabaseService } from '../src/lib/db/db-service';
 import { DEFAULT_SUPER_ADMIN } from './fixtures';
@@ -242,17 +242,20 @@ test('orders can be saved without a city or province and completed later', async
   await assert.rejects(saveExtractedOrders({orders:[{...row('ext_87654321-1234-1234-1234-123456789abc'),city:123}]},workspace()), /city/);
 });
 
-test('order discounts use the current catalogue and reject contradictory totals', async () => {
+test('order discounts use the current catalogue, and a written total wins over the percentage', async () => {
   const base = 'Name: Rina\nPhone: 9800001011\nAddress: Kathmandu Road\nProduct: shampoo 2 pcs';
   const discounted = extractSingleOrder(`${base}\n10% off`, options);
   assert.equal(discounted.discountPercent?.value, 10); assert.equal(discounted.totalAmount.value, 1438.2);
   assert.equal(extractSingleOrder(`${base}\nVAT 13%`, options).totalAmount.value, 1598);
-  assert.match(extractSingleOrder(`${base}\n10% discount\nTotal: Rs 1400`, options).extractionErrors.join(' '), /do not match/);
+  const written = extractSingleOrder(`${base}\n10% discount\nTotal: Rs 1400`, options);
+  assert.equal(written.extractionErrors.length, 0); assert.equal(written.totalAmount.value, 1400);
+  assert.ok(written.flags.some((flag) => /Written price NPR 1,400 is used\. It differs from 10% off/.test(flag)));
   const ws = workspace(); const valid = {...row('ext_12345678-1234-1234-1234-123456789abc'), statedPrice: null, discountPercent: 10};
   await saveExtractedOrders({orders:[valid]}, ws);
   assert.equal(ws.db.getOrders()[0].totalAmount, 1438.2);
   assert.equal(ws.db.getOrders()[0].items.reduce((sum,item)=>sum+Math.round(item.totalPrice*100),0),143820);
-  await assert.rejects(saveExtractedOrders({orders:[{...valid, statedPrice:1400}]}, workspace()), /do not match/);
+  const written2 = workspace(); await saveExtractedOrders({orders:[{...valid, statedPrice:1400}]}, written2);
+  assert.equal(written2.db.getOrders()[0].totalAmount, 1400); assert.equal(written2.db.getOrders()[0].discountPercent, 10); assert.equal(written2.db.getOrders()[0].statedPrice, 1400);
 });
 
 test('newly configured channel and logistics names are recognized in pasted messages', () => {
@@ -282,4 +285,21 @@ test('a named combo and extra products on the same line are retained without dup
   assert.deepEqual(extra.products.map(item=>[item.productId,item.quantity]),[['pair',1],['shampoo',2]]);
   const explanation=extractSingleOrder('Product: hair pair (shampoo + conditioner)',options);
   assert.deepEqual(explanation.products.map(item=>item.productId),['pair']);
+});
+
+test('a written price on its own line wins over the catalogue and the percentage (17 Nov example)', () => {
+  const message = 'Name:Ashu rai\nContact No.:9807952036\nLocation: Birtamode jhapa\nOUTSIDE VALLEY \n\nAqua rollon\n\n5 units\n1895\n5% off\n\nTiktok';
+  const order = extractSingleOrder(message, options);
+  assert.deepEqual(order.products.map((item) => [item.productId, item.quantity]), [['aqua', 5]]);
+  assert.equal(order.statedPrice.value, 1895); assert.equal(order.statedPrice.provided, true);
+  assert.equal(order.discountPercent?.value, 5);
+  assert.equal(extractedOrderTotal(order), 1895);
+  assert.deepEqual(validateExtractedOrder(order), []);
+  assert.ok(order.flags.some((flag) => flag.startsWith('Written price NPR 1,895 is used (5% off')));
+  // A bare amount under one unit is that unit's price; one above every unit price is the order total.
+  assert.equal(extractSingleOrder('Name: Sita\nPhone: 9841234567\nAddress: Thamel Kathmandu\nAqua rollon\n350', options).products[0].saleUnitPrice, 350);
+  const total = extractSingleOrder('Name: Sita\nPhone: 9841234567\nAddress: Thamel Kathmandu\nAqua rollon 2 pcs\n700', options);
+  assert.equal(total.products[0].quantity, 2); assert.equal(extractedOrderTotal(total), 700); assert.deepEqual(validateExtractedOrder(total), []);
+  // More than the items are worth is never guessed.
+  assert.match(validateExtractedOrder(extractSingleOrder('Name: Sita\nPhone: 9841234567\nAddress: Thamel Kathmandu\nAqua rollon\n2 units\n5000', options)).join(' '), /Review the price/);
 });

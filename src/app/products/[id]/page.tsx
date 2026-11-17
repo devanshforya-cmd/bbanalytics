@@ -1,5 +1,6 @@
 'use client';
 
+import { countsAsSale } from '@/lib/order-status';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -67,7 +68,7 @@ export default function Product360Page() {
   }
 
   // Filter orders containing this product
-  const relatedOrders = secondaryOrders.filter(order => order.status === 'DELIVERED').filter((o) =>
+  const relatedOrders = secondaryOrders.filter(order => order.status !== 'CANCELLED').filter((o) =>
     o.items.some((item) => item.productId === product.id)
   );
 
@@ -98,7 +99,7 @@ export default function Product360Page() {
   }
 
   // Channel estimates (Real operational unit metrics from orders)
-  const d2cOrders = db.getOrders().filter(order => order.status === 'DELIVERED');
+  const d2cOrders = db.getOrders().filter(countsAsSale);
   const d2cUnits = d2cOrders.reduce((sum, o) => {
     const matched = (o.items || []).filter(
       (item) => item.productId === product.id

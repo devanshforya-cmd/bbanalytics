@@ -1,5 +1,6 @@
 'use client';
 
+import { hasDeliveryOutcome } from '@/lib/order-status';
 import React, { useState } from 'react';
 import { matchesDocumentId } from '@/lib/document-ids';
 import Link from 'next/link';
@@ -377,10 +378,11 @@ function OrdersByChannelTab({ orders, returns }: { orders: Order[]; returns: Ret
   const channelStats = channels.map((ch) => {
     const chOrders = orders.filter((o) => o.platform === ch);
     const delivered = chOrders.filter((o) => o.status === 'DELIVERED').length;
+    const outcomes = chOrders.filter((o) => hasDeliveryOutcome(o.status)).length;
     const chReturns = returns.filter((r) => r.platform === ch).length;
 
     const deliverySuccessRate =
-      chOrders.length > 0 ? ((delivered / chOrders.length) * 100).toFixed(1) : '—';
+      outcomes > 0 ? ((delivered / outcomes) * 100).toFixed(1) : '—';
     const returnRate =
       chOrders.length > 0 ? ((chReturns / chOrders.length) * 100).toFixed(1) : '0.0';
 

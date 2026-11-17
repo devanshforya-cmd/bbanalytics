@@ -2,6 +2,8 @@
 
 import { failureReasonLabel } from '@/lib/failure-reason';
 import React, { useState, useMemo, useEffect } from 'react';
+import { phoneDigits } from '@/lib/customer-lookup';
+import { cohortRetention, lifecycleMovements } from '@/lib/customer-cohorts';
 import Link from 'next/link';
 import { customerBrandMap } from '@/lib/product-catalog';
 import { db } from '@/lib/db/db-service';
@@ -253,16 +255,8 @@ export default function CustomerInsightsPage() {
   // -------------------------------------------------------------
   // 2f. COHORT ANALYSIS
   // -------------------------------------------------------------
-  const cohortData = useMemo(() => {
-    return [
-      { month: 'Apr 2026 (Baisakh)', size: 18, m1: '66%', m2: '55%', m3: '44%', activePct: '50%', color: 'green' },
-      { month: 'May 2026 (Jestha)', size: 24, m1: '62%', m2: '50%', m3: '41%', activePct: '46%', color: 'green' },
-      { month: 'Jun 2026 (Ashadh)', size: 31, m1: '58%', m2: '45%', m3: '38%', activePct: '42%', color: 'amber' },
-      { month: 'Jul 2026 (Shrawan)', size: 29, m1: '51%', m2: '48%', m3: '34%', activePct: '38%', color: 'amber' },
-      { month: 'Aug 2026 (Bhadra)', size: 35, m1: '60%', m2: '51%', m3: '—', activePct: '57%', color: 'green' },
-      { month: 'Sep 2026 (Current)', size: 16, m1: '75%', m2: '—', m3: '—', activePct: '88%', color: 'green' },
-    ];
-  }, []);
+  // Real cohorts from order dates (first order month), not sample figures.
+  const cohortData = useMemo(() => cohortRetention(orders, getTodayAd()), [orders]);
 
   // -------------------------------------------------------------
   // 2g. CHANNEL LOYALTY
@@ -441,8 +435,8 @@ export default function CustomerInsightsPage() {
   const productAffinity = useMemo(() => {
     const computeTopProductsForSegment = (segmentKey: string) => {
       const segCustomers = customers.filter((c) => c.segment === segmentKey);
-      const segPhones = new Set(segCustomers.map((c) => c.phone));
-      const segOrders = orders.filter((o) => segPhones.has(o.customerPhone));
+      const segPhones = new Set(segCustomers.map((c) => phoneDigits(c.phone)));
+      const segOrders = orders.filter((o) => segPhones.has(phoneDigits(o.customerPhone)));
       const prodMap: Record<string, { count: number; brand: string }> = {};
 
       segOrders.forEach((o) => {
@@ -484,7 +478,7 @@ export default function CustomerInsightsPage() {
         segment: 'New / First-Time Buyers',
         badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
         kpi: 'Low Friction Conversion',
-        topProducts: computeTopProductsForSegment('REGULAR'),
+        topProducts: computeTopProductsForSegment('NEW'),
         strategy: 'Send immediate Day-5 post-delivery usage tips to trigger second conversion.',
       },
       {
@@ -537,16 +531,7 @@ export default function CustomerInsightsPage() {
   // -------------------------------------------------------------
   // 2m. SEGMENT MOVEMENT TRACKER (Last 30 Days)
   // -------------------------------------------------------------
-  const segmentMovements = useMemo(() => {
-    return [
-      { from: 'Regular', to: 'Loyal', count: 4, type: 'PROMOTED', desc: 'Crossed 5 lifetime delivered orders with Karma > 75' },
-      { from: 'Loyal', to: 'VIP', count: 2, type: 'PROMOTED', desc: 'Achieved 10+ orders with zero returns and Karma > 85' },
-      { from: 'Loyal', to: 'At-Risk', count: 2, type: 'WARNING', desc: 'Zero repeat orders placed in the last 45 days' },
-      { from: 'Regular', to: 'At-Risk', count: 3, type: 'WARNING', desc: 'Inactive for 60+ days or missed expected purchase cycle' },
-      { from: 'At-Risk', to: 'Churned', count: 2, type: 'LOST', desc: 'No customer contact or engagement for 90+ days' },
-      { from: 'Any', to: 'Win-Back', count: 1, type: 'RECOVERED', desc: 'Reactivated via WhatsApp promotion sequence' },
-    ];
-  }, []);
+  const segmentMovements = useMemo(() => lifecycleMovements(orders, getTodayAd()), [orders]);
 
   return (
     <PageGuard feature="customers">

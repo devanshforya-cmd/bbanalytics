@@ -221,7 +221,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
       });
       if (ord.status === 'DELIVERED') {
         rawEvents.push({
-          date: ord.orderDateAd || '2026-08-02',
+          date: ord.deliveredDateAd || ord.orderDateAd || '2026-08-02',
           label: `Order #${ord.orderNumber} delivered successfully`,
           points: 1,
           type: 'ORDER_DELIVERED',

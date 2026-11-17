@@ -75,7 +75,7 @@ export async function readWorkspaceContext(): Promise<WorkspaceContext> {
 
 /** Only IDs are sent for cache invalidation; historical snapshots stay server-only. */
 export async function readDeletedProductIds(user: User): Promise<string[]> {
-  if (!['products', 'beat_plans', 'orderflow', 'dispatches'].some(feature => hasAccess(user, feature))) return [];
+  if (!['products', 'beat_plans', 'orderflow', 'order_desk', 'dispatches'].some(feature => hasAccess(user, feature))) return [];
   const assigned = getAssignedBrandCodes(user);
   const ids: string[] = [];
   for (let offset = 0; ; offset += 1000) {
@@ -127,6 +127,7 @@ async function readMutationContext(mutation: WorkspaceMutation, prior: StoredWor
   const config = ['orders', 'deliveryFailures'].includes(mutation.collection) ? await related(['workspaceConfig'], ['workspace']) : [];
   const influencer = ['marketingSends', 'influencerContent'].includes(mutation.collection) && typeof data.influencerId === 'string' ? await related(['influencers'], [data.influencerId]) : [];
   const send = mutation.collection === 'influencerContent' && typeof data.sendId === 'string' && data.sendId ? await related(['marketingSends'], [data.sendId]) : [];
+  const exchangeReturn = mutation.collection === 'orders' && typeof data.exchangeReturnId === 'string' && data.exchangeReturnId ? await related(['returns'], [data.exchangeReturnId]) : [];
   let lookups: StoredWorkspaceRecord[] = [];
   if (isLookupCollection(mutation.collection)) {
     // Lists are small; the whole list is needed to keep names unique and to protect names in use.
@@ -137,7 +138,7 @@ async function readMutationContext(mutation: WorkspaceMutation, prior: StoredWor
   }
   const componentIds = products.filter(row => row.collection === 'combos').flatMap(row => (row.data.items || []).map((item: any) => item.productId)).filter((id: unknown): id is string => typeof id === 'string');
   const components = await related(['products'], componentIds);
-  return { users, brands, records: [...(prior ? [prior] : []), ...stores, ...products, ...components, ...config, ...influencer, ...send, ...lookups.filter(row => !(prior && row.collection === prior.collection && row.id === prior.id))] };
+  return { users, brands, records: [...(prior ? [prior] : []), ...stores, ...products, ...components, ...config, ...influencer, ...send, ...exchangeReturn, ...lookups.filter(row => !(prior && row.collection === prior.collection && row.id === prior.id))] };
 }
 
 export function visibleWorkspace(user: User, context: WorkspaceContext) {
@@ -161,7 +162,7 @@ export function visibleWorkspace(user: User, context: WorkspaceContext) {
     orderflowBrands: getAssignedBrandCodes(entry).includes('ALL') ? getAssignedBrandCodes(user) : getAssignedBrandCodes(entry).filter(code => getAssignedBrandCodes(user).includes('ALL') || getAssignedBrandCodes(user).includes(code)),
   }));
   const assigned = getAssignedBrandCodes(user);
-  const mayReadBrands = ['settings', 'products', 'beat_plans', 'stores', 'distributors', 'dispatches', 'cheque_tracker', 'orderflow', 'reviews', 'marketing', 'dashboard', 'export'].some((feature) => hasAccess(user, feature));
+  const mayReadBrands = ['settings', 'products', 'beat_plans', 'stores', 'distributors', 'dispatches', 'cheque_tracker', 'orderflow', 'order_desk', 'reviews', 'marketing', 'dashboard', 'export'].some((feature) => hasAccess(user, feature));
   const brands = mayReadBrands ? context.brands.filter((brand) => assigned.includes('ALL') || assigned.includes(brand.code.toUpperCase())) : [];
   return { data: { ...snapshot, users: safeUsers, brands }, snapshot, versions };
 }
@@ -277,6 +278,18 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
     const newReason = !prior || prior.data.reason !== data.reason || (Number(data.attempts) || 1) > (Number(prior.data.attempts) || 1);
     if (newReason && isOtherReason(data.reason) && !data.reasonDetail) throw new WorkspaceError(400, 'Write the reason when Other is chosen.');
   }
+  if (mutation.collection === 'orders' && prior && !isSuperAdmin(user) && !canPerform(user, 'orderflow', 'EDIT')) {
+    // Order Desk staff move orders along (status and exchange links); the order's details stay as entered.
+    const locked = EDITABLE_ORDER_FIELDS.filter(field => !ORDER_DESK_FIELDS.includes(field));
+    const changed = locked.find(field => JSON.stringify(data[field] ?? null) !== JSON.stringify(prior.data[field] ?? null));
+    if (changed) throw new WorkspaceError(403, 'The Order Desk can update delivery status and exchanges. Ask someone with OrderFlow edit access to change order details.');
+  }
+  if (mutation.collection === 'orders' && !prior && !isSuperAdmin(user) && !canPerform(user, 'orderflow', 'CREATE')) {
+    // Order Desk staff create an order only as the replacement for a return that exists, for that return's customer.
+    const ret = data.exchangeReturnId && context.records.find(row => row.collection === 'returns' && row.id === data.exchangeReturnId);
+    if (!ret) throw new WorkspaceError(403, 'Only a replacement order for a logged return can be created from the Order Desk.');
+    if (phoneDigits(String(ret.data.customerPhone || '')) !== phoneDigits(String(data.customerPhone || ''))) throw new WorkspaceError(400, 'The replacement order must be for the customer who returned the product.');
+  }
   if (mutation.collection === 'orders') {
     for (const field of ['province', 'district']) {
       if (data[field] != null && (typeof data[field] !== 'string' || data[field].length > 200 || /[\u0000-\u001f\u007f]/.test(data[field]))) throw new WorkspaceError(400, `Invalid ${field}.`);
@@ -286,7 +299,7 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
     const assigneeId = data.assignedToId || previous || user.id;
     if (assigneeId !== (previous || user.id) && (!canPerform(user, 'orderflow', 'EDIT') || !(isSuperAdmin(user) || getScope(user, 'orderflow') === 'ALL' || getScope(user, 'orderflow') === 'TEAM' && teamMemberIds(user, context.users).has(assigneeId)))) throw new WorkspaceError(403, 'You cannot assign this order to that staff member.');
     const assignee = context.users.find(entry => entry.id === assigneeId);
-    if (!assignee || ((!prior || assigneeId !== previous) && (assignee.active === false || !hasAccess(assignee, 'orderflow') || !getAssignedBrandCodes(assignee).some(code => code === 'ALL' || code === String(data.brandCode).toUpperCase())))) throw new WorkspaceError(400, 'Choose an active staff member with access to OrderFlow and this brand.');
+    if (!assignee || ((!prior || assigneeId !== previous) && (assignee.active === false || !(hasAccess(assignee, 'orderflow') || hasAccess(assignee, 'order_desk')) || !getAssignedBrandCodes(assignee).some(code => code === 'ALL' || code === String(data.brandCode).toUpperCase())))) throw new WorkspaceError(400, 'Choose an active staff member with access to OrderFlow and this brand.');
     data.assignedToId = assignee.id;
     data.assignedToName = assignee.fullName;
   }
@@ -395,9 +408,13 @@ async function notifyRecordChange(user: User, mutation: WorkspaceMutation, conte
   }
 }
 
+/** What the Order Desk may change on an existing order. */
+const ORDER_DESK_FIELDS = ['status', 'dispatchedDateAd', 'deliveredDateAd', 'cancelledDateAd', 'exchangeOfOrderId', 'exchangeReturnId'];
+
 /** Fields the order edit form may change. Used to merge a save made against an older version. */
 const EDITABLE_ORDER_FIELDS = ['customerName', 'customerPhone', 'alternatePhone', 'address', 'province', 'district', 'brandCode', 'platform',
-  'orderDateAd', 'orderDateBs', 'paymentTerms', 'deliveryMethod', 'notes', 'items', 'totalAmount', 'statedPrice', 'discountPercent', 'assignedToId', 'status'];
+  'orderDateAd', 'orderDateBs', 'paymentTerms', 'deliveryMethod', 'notes', 'items', 'totalAmount', 'statedPrice', 'discountPercent', 'assignedToId', 'status',
+  'dispatchedDateAd', 'deliveredDateAd', 'cancelledDateAd', 'exchangeOfOrderId', 'exchangeReturnId'];
 
 /**
  * Give a new record its short ID. Runs on the server only, immediately before
