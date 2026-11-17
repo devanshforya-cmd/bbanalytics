@@ -66,6 +66,29 @@ test('generic combo keywords never turn separate dash-quantity products into a b
   assert(!noConditioner.address.value.includes('Conditioner'));
 });
 
+test('a shortened body duo name and a separate roll-on are recognized independently', () => {
+  const wash = product('wash','Exfoliating Body Wash',719);
+  const bodyCombo: Combo = {...pair,id:'body-duo',name:'Brand Body Care Duo',sku:'BD-01',extractorKeywords:['body care duo'],items:[{productId:'wash',productName:wash.name,quantity:1,mrp:719},{productId:'conditioner',productName:conditioner.name,quantity:1,mrp:799}],comboPrice:1366};
+  const current = {...options, products:[...options.products,wash],combos:[bodyCombo],channels:['Instagram','Messenger']};
+  const message = 'Name: Rina\nAddress: Garden Road, near school\nPhone: 9800001011\nInside ringroad\n\nBrand body duo\n\n1 unit\nRs 1366\n\nAqua Rollon\n1 unit\nPaid Fonepay\nMessenger';
+  const result = extractSingleOrder(message,current);
+  assert.deepEqual(result.products.map(item=>[item.productId,item.quantity]),[['body-duo',1],['aqua',1]]);
+  assert.equal(result.paymentTerms.value,'Prepaid'); assert.equal(result.salesChannel,'Messenger');
+  assert.equal(result.statedPrice.provided,false); assert.equal(result.totalAmount.value,1765);
+  assert(result.extractionErrors.some(error=>error.includes('Review the price')));
+  const labelled = extractSingleOrder(message.replace('Rs 1366','Total: Rs 1500'),current);
+  assert.equal(labelled.statedPrice.value,1500); assert.equal(labelled.totalAmount.value,1500);
+  const ambiguous = {...bodyCombo,id:'other-duo',name:'Other Body Care Duo',sku:'BD-02'};
+  const collision = extractSingleOrder('Product: body duo', {...current,combos:[bodyCombo,ambiguous]});
+  assert.equal(collision.products.length,0); assert(collision.flags.some(flag=>flag.includes('multiple catalogue items')));
+  const combined = extractSingleOrder(message.replace('1 unit\nRs 1366','2 units - Rs 1366'),current);
+  assert.equal(combined.products[0].quantity,2);
+  const missing = extractSingleOrder(message.replace('Brand body duo','Unknown hair mask'),current);
+  assert(missing.flags.some(flag=>flag.startsWith('Unrecognized order item: Unknown hair mask')));
+  assert(missing.extractionErrors.some(error=>error.includes('unrecognized item')));
+  assert(!missing.address.value.includes('Unknown hair mask'));
+});
+
 test('unmentioned channels default to Instagram, while explicitly named channels remain distinct', () => {
   assert.equal(extractSingleOrder('Product: shampoo', {...options,channels:['Instagram','WhatsApp']}).salesChannel,'Instagram');
   assert.equal(extractSingleOrder('Product: shampoo\nMessenger', {...options,channels:['Instagram','Messenger']}).salesChannel,'Messenger');

@@ -93,11 +93,19 @@ const aliases: [RegExp, string[]][] = [
 const genericWords = new Set(['forya','brand','product','body','care','underarm','deodorant','roll','with','for','from','the','and','ml','free','fragrance','hair','skin','face']);
 function comboNameAliases(combo: Combo): string[] {
   const heading = combo.name.split(/[–—:]/, 1)[0].trim();
-  const match = /^(.*?)\s+(kit|set|pair|trio|combo)$/i.exec(heading);
+  const match = /^(.*?)\s+(kit|set|pair|trio|duo|combo)$/i.exec(heading);
   if (!match) return [];
   const base = match[1].trim(), type = match[2].toLowerCase();
   const words = base.split(/\s+/); const first = words[0], last = words[words.length - 1];
   const result = [heading];
+  if (type === 'duo' && /\bcare\b/i.test(base)) {
+    const shorter = base.replace(/\bcare\b/gi, '').replace(/\s+/g, ' ').trim();
+    if (shorter) {
+      result.push(`${shorter} duo`);
+      const last = shorter.split(/\s+/).pop();
+      if (last && last.length >= 3) result.push(`${last} duo`);
+    }
+  }
   if (words.length > 1 && !['care', 'hair', 'body', 'full'].includes(last.toLowerCase())) result.push(base, `${last} ${type}`);
   if (type === 'pair' && words.length > 1) result.push(`${first} pair`);
   if (type === 'set') result.push(`${base} combo`);
@@ -123,7 +131,7 @@ function qtyFor(lines: string[], match: Match, text: string): number {
   const suffix = /^\s*(?:[:=\-–—]\s*)?(?:[x×]\s*(\d{1,6})\b|(\d{1,6})\s*(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)\b|(\d{1,6})\s*$)/i.exec(after);
   const prefix = /(?:^|\s)(\d{1,6})\s*(?:(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)\s*(?:of\s*)?|[x×]\s*)?$/i.exec(before);
   const nextLine = lines.slice(match.line + 1, match.line + 5).find(line => line.trim());
-  const next = /^\s*(\d{1,6})\s*(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)\s*$/i.exec(nextLine || '');
+  const next = /^\s*(\d{1,6})\s*(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)(?:\s*[-:,]?\s*(?:rs\.?|npr|₹)\s*[\d,]+(?:\.\d{1,2})?)?\s*$/i.exec(nextLine || '');
   const each = /\b(\d{1,6})\s*(?:units?|pcs?|pieces?)?\s*each\b/i.exec(text);
   const qty = Number(suffix?.[1] || suffix?.[2] || suffix?.[3] || prefix?.[1] || next?.[1] || each?.[1] || 1);
   return qty;
@@ -213,6 +221,7 @@ export function validateExtractedOrder(order: ExtractedOrderResult): string[] {
   }
   if (order.flags.some(flag => flag.includes('matches multiple catalogue items') || flag.startsWith('Multiple combos match'))) errors.push('Resolve the ambiguous catalogue match before saving.');
   if (order.flags.some(flag => flag.startsWith('Unrecognized order item:'))) errors.push('Review the unrecognized item and add the correct catalogue product before saving.');
+  if (order.flags.some(flag => flag.startsWith('Price needs review:'))) errors.push('Review the price before saving this order.');
   return errors;
 }
 export function extractSingleOrder(blockText: string, options: DynamicExtractorOptions): ExtractedOrderResult {
@@ -223,14 +232,24 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
   const phones = phoneNumbers(body);
   const products = options.products.filter(product => product.active !== false);
   const combos = options.combos.filter(combo => isSellableCombo(combo, products));
-  const stated = parseStatedPrice(body);
   const discount = parseDiscountPercent(body);
   let items = matchCatalog(body, products, combos, flags);
-  for (const line of lines) {
+  const priceLine = lines.findIndex(line => parseStatedPrice(line) !== null);
+  const candidatePrice = parseStatedPrice(body);
+  const ambiguousPrice = priceLine >= 0 && !/^\s*(?:total(?:\s+(?:amount|price))?|amount|cod)\b/i.test(lines[priceLine]) && lines.slice(priceLine + 1).some(line => matchCatalog(line, products, combos, []).length > 0);
+  const stated = ambiguousPrice ? null : candidatePrice;
+  if (ambiguousPrice) flags.push(`Price needs review: NPR ${candidatePrice?.toLocaleString()} appears before another item. Confirm the order total below; catalogue prices are used unless you change it.`);
+  const unrecognizedItemLines = new Set<string>();
+  for (const [index, line] of lines.entries()) {
     if (/^\s*(?:name|naam|customer|phone|mobile|contact|address|location|delivery|shipping|payment|total|amount|price|discount|date|platform|channel|note)\b/i.test(line)) continue;
     const quantity = /\b\d{1,6}\s*(?:units?|pcs?|pieces?|bottles?|kits?|sets?|pairs?|combos?)\b/i.exec(line);
-    const before = quantity ? line.slice(0, quantity.index).replace(/[^\p{L}]+/gu, '') : '';
-    if (before && !matchCatalog(line, products, combos, []).length) flags.push(`Unrecognized order item: ${line.slice(0, 160)}. Select the correct product and review.`);
+    const nextIsQuantity = /^\d{1,6}\s*(?:units?|pcs?|pieces?|bottles?|kits?|sets?|pairs?|combos?)\b/i.test(lines[index + 1] || '');
+    const inProductSection = lines.slice(0, index).some(previous => phoneNumbers(previous).length || /^(?:inside|outside)\s+(?:the\s+)?(?:valley|ring\s*road)\b/i.test(previous));
+    const before = (quantity ? line.slice(0, quantity.index) : nextIsQuantity && inProductSection ? line : '').replace(/[^\p{L}]+/gu, '');
+    if (before && !matchCatalog(line, products, combos, []).length) {
+      unrecognizedItemLines.add(line);
+      flags.push(`Unrecognized order item: ${line.slice(0, 160)}. Select the correct product and review.`);
+    }
   }
   items = collapseCombo(items, combos, stated, flags, discount);
   if (discount !== null && items.length > 1 && lines.some(line => parseDiscountPercent(line) !== null && [...products, ...combos].some(item => keywordsFor(item, 'items' in item).some(keyword => expression(keyword).test(line))))) flags.push('Discount scope is unclear because the percentage appears on an item line.');
@@ -248,7 +267,7 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
   // shortcut: without a matching product, only customer lines before a delivery zone or phone are candidates; ambiguous formats need review.
   const addressLines = items.length ? lines : zoneIndex >= 0 ? lines.slice(0, zoneIndex) : phoneIndex >= 0 ? lines.slice(0, phoneIndex) : [];
   const fallbackAddress = !addressLine ? addressLines.filter(line => {
-    if (line === name || phoneNumbers(line).length || optionNames.some(option => option.toLowerCase() === line.toLowerCase())) return false;
+    if (line === name || unrecognizedItemLines.has(line) || phoneNumbers(line).length || optionNames.some(option => option.toLowerCase() === line.toLowerCase())) return false;
     if (/^(?:outside|inside|name|naam|customer|receiver|phone|mobile|contact|ph\s*no|address|location|thau|product|items?|qty|quantity|order|date|payment|paid|unpaid|cod|total|amount|price|discount|sale|platform|channel|courier|delivery|shipping|note|remarks?)\b/i.test(line)) return false;
     if (/^(?:free\s+(?:shipping|delivery)\b|\d+\s*(?:units?|pcs?|pieces?|sets?|kits?|pairs?|combos?|bottles?)\b|\d+(?:\.\d+)?\s*%|(?:rs\.?|npr|₹)\s*\d)/i.test(line)) return false;
     if (/\b\d{1,6}\s*(?:units?|pcs?|pieces?|bottles?|kits?|sets?|pairs?|combos?)\b/i.test(line)) return false;
