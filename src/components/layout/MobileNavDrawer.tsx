@@ -72,7 +72,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: 'Offline Sales (GT/MT)',
+    title: 'Offline sales',
     items: [
       { name: 'Beat Plans & Routes', href: '/offline-sales/beat-plan', permKey: 'beat_plans', icon: Compass },
       { name: 'Stores & Branches', href: '/offline-sales/stores', permKey: 'stores', icon: Store },
@@ -86,7 +86,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: 'OrderFlow',
+    title: 'Online orders',
     items: [
       { name: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles },
       { name: 'Manual Order Entry', href: '/orderflow/manual-entry', permKey: 'orderflow', icon: ClipboardPen },
@@ -97,7 +97,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: 'Reviews & Returns',
+    title: 'Reviews & returns',
     items: [
       { name: 'Feedback & Complaints', href: '/reviews/feedback', permKey: 'reviews', icon: MessageSquareHeart },
       { name: 'Returns', href: '/reviews/returns', permKey: 'reviews', icon: RotateCcw },
@@ -105,7 +105,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: 'Customer Intelligence',
+    title: 'Customers',
     items: [
       { name: 'Customer 360 Directory', href: '/customers', permKey: 'customers', icon: Users },
       { name: 'Cohort Insights', href: '/customers/insights', permKey: 'customers', icon: PieChart },
@@ -119,7 +119,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: 'OpsCore',
+    title: 'Operations',
     items: [
       { name: 'Calendar To-Do', href: '/opscore/calendar-tasks', permKey: 'tasks', icon: Calendar, badge: 'BS/AD' },
       { name: 'Task Management', href: '/opscore/tasks', permKey: 'tasks', icon: CheckSquare },
@@ -128,7 +128,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: 'Administration',
+    title: 'Admin',
     items: [
       { name: 'System Settings', href: '/settings', permKey: 'settings', icon: Settings },
     ],

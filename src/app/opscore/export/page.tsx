@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import { failureReasonLabel } from '@/lib/failure-reason';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -929,10 +930,8 @@ export default function SheetsExportPage() {
               <FileSpreadsheet className="h-5 w-5" />
             </span>
             Reports & Exports
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Export saved operational records to Google Sheets or download CSV and Excel files.
-          </p>
+<InfoTip label="About this page">Export saved operational records to Google Sheets or download CSV and Excel files.</InfoTip></h1>
+          
         </div>
 
         {/* 14b. Export Actions Toolbar */}

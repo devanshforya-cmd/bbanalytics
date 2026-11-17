@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmAction } from '@/components/common/confirm';
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -283,7 +285,8 @@ export default function DeliveryFailuresPage() {
     toast.success('Order marked as delivered successfully.');
   };
 
-  const handleReturnToWarehouse = (item: DeliveryFailure) => {
+  const handleReturnToWarehouse = async (item: DeliveryFailure) => {
+    if (!(await confirmAction({ title: `Return ${item.orderNumber} to the warehouse?`, consequences: ['No more delivery attempts are planned for this order.'], confirmLabel: 'Return to warehouse' }))) return;
     db.updateDeliveryFailure(item.id, {
       status: 'RETURNED_TO_WAREHOUSE',
       remarks: `${item.remarks || ''} (All delivery attempts exhausted. Consignment returned to warehouse)`.trim(),
@@ -292,7 +295,8 @@ export default function DeliveryFailuresPage() {
     toast.info('Consignment returned to warehouse.');
   };
 
-  const handleCancelOrder = (item: DeliveryFailure) => {
+  const handleCancelOrder = async (item: DeliveryFailure) => {
+    if (!(await confirmAction({ title: `Cancel order ${item.orderNumber}?`, consequences: ['The order is cancelled and counted as a cancellation on the customer.'], confirmLabel: 'Cancel order', destructive: true }))) return;
     db.updateDeliveryFailure(item.id, {
       status: 'CANCELLED',
       remarks: `${item.remarks || ''} (Order cancelled upon customer request)`.trim(),
@@ -342,13 +346,11 @@ export default function DeliveryFailuresPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Delivery Failures
-            </h1>
+<InfoTip label="About this page">Tracks courier bottlenecks (&quot;Call not received&quot;, &quot;Address not found&quot;) without muddying product quality metrics.</InfoTip></h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Tracks courier bottlenecks (&quot;Call not received&quot;, &quot;Address not found&quot;) without muddying product quality metrics.
-          </p>
+          
         </div>
 
         <button

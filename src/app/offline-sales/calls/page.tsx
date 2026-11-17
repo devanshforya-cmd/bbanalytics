@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState } from 'react';
 import { db } from '@/lib/db/db-service';
 import { CallLog, CallLabel, CallOutcome, Product } from '@/lib/types';
@@ -159,12 +160,10 @@ export default function CallsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Field Call Tracker
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Logs sales, order-taking, and payment follow-up calls with inline order creation.
-            </p>
+<InfoTip label="About this page">Logs sales, order-taking, and payment follow-up calls with inline order creation.</InfoTip></h1>
+            
           </div>
 
           <button

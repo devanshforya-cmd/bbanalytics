@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -394,13 +395,11 @@ export default function ManualOrderEntryPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Manual Order Entry
-            </h1>
+<InfoTip label="About this page">Book omnichannel direct customer orders across Instagram, TikTok, WhatsApp, Walk-in, and Phone Calls with instant Customer 360 sync.</InfoTip></h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Book omnichannel direct customer orders across Instagram, TikTok, WhatsApp, Walk-in, and Phone Calls with instant Customer 360 sync.
-          </p>
+          
         </div>
 
         {savedOrder && (
@@ -597,7 +596,7 @@ export default function ManualOrderEntryPage() {
               ) : (
                 <Check className="h-4 w-4 stroke-[3]" />
               )}
-              {isSubmitting ? 'Saving Order...' : 'Confirm & Save'}
+              {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving Order…</> : 'Confirm & Save'}
             </button>
           </div>
         </div>

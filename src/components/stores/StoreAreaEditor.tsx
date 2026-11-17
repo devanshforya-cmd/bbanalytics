@@ -41,7 +41,7 @@ export default function StoreAreaEditor({ record, entityType }: { record: Retail
     {canEdit && editing && <form onSubmit={save} className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><label className="font-semibold text-slate-700">City<input value={city} onChange={event => setCity(event.target.value)} required maxLength={100} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white p-2.5 font-normal" /></label><label className="font-semibold text-slate-700">Area / Ward<input value={area} onChange={event => setArea(event.target.value)} required maxLength={100} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white p-2.5 font-normal" /></label></div>
       <p className="text-[11px] text-slate-500">Use the same city and area spelling for stores that should be compared. Branches are compared with branches; retail outlets with retail outlets.</p>
-      <div className="flex gap-2"><button type="submit" disabled={saving} className="min-h-[40px] rounded-lg bg-blue-600 px-4 font-bold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save area'}</button><button type="button" disabled={saving} onClick={() => setEditing(false)} className="min-h-[40px] rounded-lg px-3 font-semibold text-slate-600">Cancel</button></div>
+      <div className="flex gap-2"><button type="submit" disabled={saving} className="min-h-[40px] rounded-lg bg-blue-600 px-4 font-bold text-white disabled:opacity-50">{saving ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save area'}</button><button type="button" disabled={saving} onClick={() => setEditing(false)} className="min-h-[40px] rounded-lg px-3 font-semibold text-slate-600">Cancel</button></div>
     </form>}
   </section>;
 }

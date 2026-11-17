@@ -38,7 +38,6 @@ import {
   ArrowUpRight,
   ShieldCheck,
   Gift,
-  CheckCircle,
   ArrowUp,
   AlertTriangle,
   Star,
@@ -259,124 +258,43 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Executive Overview Hero Card */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 text-white shadow-md border border-slate-800">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[11px] font-bold text-blue-300 border border-blue-400/30">
-                  Command Center v2.0
-                </span>
-                <span className="flex items-center gap-1.5 text-xs text-slate-300">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  Live Operations • {activeBrand === 'ALL' ? 'All Portfolio Brands' : activeBrand}
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-2">
-                Executive Command Center
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
-                Unified multi-brand distribution, field sales force tracking, and online order intelligence across Nepal.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2.5 flex-wrap">
-              {canSee('beat_plans') && (
-                <Link
-                  href="/offline-sales/beat-plan"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-xs transition"
-                >
-                  <Compass className="w-4 h-4" />
-                  <span>Beat Routes</span>
-                </Link>
-              )}
-              {canSee('tasks') && (
-                <Link
-                  href="/opscore/tasks"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 text-xs font-bold transition backdrop-blur-sm"
-                >
-                  <CheckCircle className="w-4 h-4 text-emerald-300" />
-                  <span>Task Board</span>
-                </Link>
-              )}
-            </div>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p suppressHydrationWarning className="text-[13px] font-medium text-slate-500">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+            <h1 suppressHydrationWarning className="mt-0.5 text-[28px] font-semibold leading-tight text-slate-900">
+              {(() => { const hour = new Date().getHours(); return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'; })()}{currentUser.fullName ? `, ${currentUser.fullName.split(' ')[0]}` : ''}
+            </h1>
           </div>
+          {activeBrand !== 'ALL' && <span className="rounded-full bg-white px-3 py-1 text-[13px] font-medium text-slate-600 shadow-xs ring-1 ring-black/[0.06]">{activeBrand}</span>}
         </div>
 
         {/* Advanced Filter Bar with Slide-Out Drawer Mode */}
         <AdvancedFilterBar
           criteria={filterCriteria}
           onChange={setFilterCriteria}
-          title="Dashboard Multi-Dimensional Slicer"
+          title="Filters"
           drawerMode={true}
         />
 
-        {/* Dedicated Dashboard Selector: D2C Online Dashboard vs Offline Retail Dashboard */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-700">Dashboard View:</span>
-              <div className="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-medium gap-1">
-                {canSee('orderflow') && <button
-                  type="button"
-                  onClick={() => setSalesMode('D2C')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
-                    salesMode === 'D2C'
-                      ? 'bg-white text-emerald-700 font-bold shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <ShoppingBag className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>D2C Online Dashboard</span>
-                </button>}
-                {(canSee('beat_plans') || canSee('stores')) && <button
-                  type="button"
-                  onClick={() => setSalesMode('B2B')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
-                    salesMode === 'B2B'
-                      ? 'bg-white text-blue-700 font-bold shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Store className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Offline Retail Dashboard</span>
-                </button>}
-                {canSee('orderflow') && (canSee('beat_plans') || canSee('stores')) && <button
-                  type="button"
-                  onClick={() => setSalesMode('ALL')}
-                  className={`px-3 py-1.5 rounded-lg transition-all ${
-                    salesMode === 'ALL'
-                      ? 'bg-white text-indigo-700 font-bold shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  All Combined
-                </button>}
-              </div>
+        {/* Which sales to show: a segmented control, as on iOS */}
+        {(() => {
+          const options = [
+            canSee('orderflow') && { id: 'D2C' as const, label: 'Online' },
+            (canSee('beat_plans') || canSee('stores')) && { id: 'B2B' as const, label: 'Offline' },
+            canSee('orderflow') && (canSee('beat_plans') || canSee('stores')) && { id: 'ALL' as const, label: 'All' },
+          ].filter(Boolean) as { id: DashboardSalesMode; label: string }[];
+          if (options.length < 2) return null;
+          return (
+            <div role="tablist" aria-label="Sales to show" className="inline-flex rounded-[10px] bg-black/[0.06] p-0.5">
+              {options.map((option) => (
+                <button key={option.id} type="button" role="tab" aria-selected={salesMode === option.id} onClick={() => setSalesMode(option.id)}
+                  className={`min-w-[84px] rounded-[8px] px-4 py-1.5 text-[13px] font-medium transition ${salesMode === option.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+                  {option.label}
+                </button>
+              ))}
             </div>
-
-          </div>
-
-          <div className="flex items-center gap-2">
-            {salesMode === 'D2C' && (
-              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                Dedicated Online Mode (Social &amp; Web D2C)
-              </span>
-            )}
-            {salesMode === 'B2B' && (
-              <span className="text-[11px] font-semibold text-blue-800 bg-blue-50 px-3 py-1 rounded-full border border-blue-200 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                Dedicated Offline Mode (GT / MT &amp; Rep Beats)
-              </span>
-            )}
-            {salesMode === 'ALL' && (
-              <span className="text-[11px] font-semibold text-indigo-800 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
-                Combined Portfolio Overview
-              </span>
-            )}
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Fix 36a: Comparison Mode Toggle */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">

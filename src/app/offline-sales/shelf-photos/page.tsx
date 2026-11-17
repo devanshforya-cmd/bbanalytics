@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/db/db-service';
 import { ShelfPhoto, FilterCriteria, Retailer, Branch } from '@/lib/types';
@@ -150,10 +151,8 @@ export default function ShelfPhotosPage() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
             <Camera className="w-6 h-6 text-brand-600" />
             <span>Shelf Share & Planogram Audit Archive</span>
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Multi-angle Before & After shelf photos across multiple racks and gondolas per store visit.
-          </p>
+<InfoTip label="About this page">Multi-angle Before & After shelf photos across multiple racks and gondolas per store visit.</InfoTip></h1>
+          
         </div>
 
         <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -465,12 +466,10 @@ export default function StoresPage() {
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Stores &amp; Distribution Hierarchy
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Distributors &rarr; Chain Stores &rarr; Standalone GT Retailers across Nepal.
-            </p>
+<InfoTip label="About this page">Distributors &rarr; Chain Stores &rarr; Standalone GT Retailers across Nepal.</InfoTip></h1>
+            
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -1348,7 +1347,7 @@ export default function StoresPage() {
                     {isSubmitting && (
                       <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
                     )}
-                    {isSubmitting ? 'Creating...' : 'Create Store Entity'}
+                    {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Creating…</> : 'Create Store Entity'}
                   </button>
                 </div>
               </form>
@@ -1613,7 +1612,7 @@ export default function StoresPage() {
                     {isSubmitting && (
                       <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
                     )}
-                    {isSubmitting ? 'Saving...' : 'Save Terms'}
+                    {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save Terms'}
                   </button>
                 </div>
               </form>

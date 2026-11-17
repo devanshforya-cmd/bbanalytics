@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -473,10 +474,8 @@ export default function CalendarTasksPage() {
               <CalendarIcon className="w-5 h-5" />
             </span>
             <span>Calendar-Based Operational To-Do List</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Dual BS/AD synchronized schedule tracking system auto-tasks, retail store beat visits, and cheque clearance deadlines.
-          </p>
+<InfoTip label="About this page">Dual BS/AD synchronized schedule tracking system auto-tasks, retail store beat visits, and cheque clearance deadlines.</InfoTip></h1>
+          
         </div>
 
         {/* Action Button: Create Task */}

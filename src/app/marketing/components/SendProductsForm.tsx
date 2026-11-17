@@ -136,7 +136,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
     <div className="flex items-center justify-end gap-2">
       <button type="button" onClick={() => setStep('FORM')} disabled={isSubmitting} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Back to edit</button>
       <button type="button" onClick={save} disabled={isSubmitting} className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-300">
-        <Check className="h-3.5 w-3.5" /> {isSubmitting ? 'Saving…' : 'Confirm and save send'}
+        <Check className="h-3.5 w-3.5" /> {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Confirm and save send'}
       </button>
     </div>
   );

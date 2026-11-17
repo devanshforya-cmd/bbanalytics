@@ -73,6 +73,6 @@ export default function PushSettings({ userId }: { userId: string }) {
     <h3 className="text-sm font-bold flex items-center gap-2"><Bell className="h-4 w-4 text-blue-600" />Push notifications</h3>
     <p className="text-xs text-slate-600" role="status">{message}</p>
     <p className="text-xs text-slate-500">Task assignments and operations alerts can appear while the app is closed. Lock-screen messages contain no business details.</p>
-    {available && <div className="flex gap-2"><button type="button" disabled={busy} onClick={toggle} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{busy ? 'Working…' : enabled ? 'Disable on this device' : 'Enable on this device'}</button>{enabled && <button type="button" disabled={busy} onClick={test} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold disabled:opacity-50">Send test push</button>}</div>}
+    {available && <div className="flex gap-2"><button type="button" disabled={busy} onClick={toggle} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{busy ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Working…</> : enabled ? 'Disable on this device' : 'Enable on this device'}</button>{enabled && <button type="button" disabled={busy} onClick={test} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold disabled:opacity-50">Send test push</button>}</div>}
   </section>;
 }

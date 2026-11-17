@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAction } from '@/components/common/confirm';
 import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db/db-service';
 import { syncManager } from '@/lib/offline-sync';
@@ -68,6 +69,7 @@ export default function SharedAccessSettings() {
   };
 
   const handleDeactivate = async (id: string) => {
+    if (!(await confirmAction({ title: 'Revoke this shared link?', consequences: ['Anyone using the link loses access straight away. You can create a new link later.'], confirmLabel: 'Revoke link', destructive: true }))) return;
     if (saving) return;
     setSaving(true);
     try {
@@ -560,7 +562,7 @@ export default function SharedAccessSettings() {
                     disabled={saving}
                     className="px-5 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold shadow"
                   >
-                    {saving ? 'Saving...' : 'Generate Secure Link'}
+                    {saving ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Generate Secure Link'}
                   </button>
                 </div>
               </form>

@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -163,12 +164,10 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
             Customers
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Unique customer profiles unified by phone number with auto-calculated Karma Scores (0-100).
-          </p>
+<InfoTip label="About this page">Unique customer profiles unified by phone number with auto-calculated Karma Scores (0-100).</InfoTip></h1>
+          
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">

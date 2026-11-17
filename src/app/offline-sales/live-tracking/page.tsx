@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db/db-service';
 import { fetchLatestPingsFromSupabase, recordGpsPing } from '@/lib/db/gps-service';
@@ -225,10 +226,8 @@ export default function LiveStaffTrackingPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Navigation className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 animate-pulse" />
             <span>Real-Time Field Force GPS &amp; Activity Tracking</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Monitor on-duty sales officers, live store dwell times, transit corridors, and route breadcrumbs.
-          </p>
+<InfoTip label="About this page">Monitor on-duty sales officers, live store dwell times, transit corridors, and route breadcrumbs.</InfoTip></h1>
+          
         </div>
 
         {/* Live Controls */}

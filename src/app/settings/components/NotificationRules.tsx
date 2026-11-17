@@ -124,7 +124,7 @@ export default function NotificationRules() {
             type="submit" disabled={saving}
             className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition"
           >
-            {saving ? 'Saving…' : 'Save Notification Thresholds'}
+            {saving ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save Notification Thresholds'}
           </button>
         </div>
       </div>

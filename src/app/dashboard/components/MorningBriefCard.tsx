@@ -13,7 +13,6 @@ import {
   CreditCard,
   Calendar,
   X,
-  ArrowRight,
   ShieldCheck,
 } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -66,6 +65,9 @@ export default function MorningBriefCard() {
   const isOfficer = canSeeBeatPlans && getScope(user, 'beat_plans') === 'OWN';
   const hasAttentionData = canSeeCheques || canSeeBeatPlans || hasAccess(user, 'settings');
 
+  // Nothing new to say: the KPI cards already show the numbers.
+  if (!isOfficer && !hasAttentionData) return null;
+
   return (
     <div className="mb-6 rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white p-5 sm:p-6 shadow-md shadow-amber-500/5 relative animate-fade-in">
       {/* Top row */}
@@ -100,7 +102,9 @@ export default function MorningBriefCard() {
       </div>
 
       {/* Main Grid Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 py-4">
+      <div className={`grid grid-cols-1 gap-5 py-4 ${isOfficer && hasAttentionData ? 'md:grid-cols-2' : ''}`}>
+        {/* Yesterday's summary: only for field officers; managers see these numbers in the KPI cards below */}
+        {isOfficer && (<>
         {/* Yesterday's Summary */}
         <div className="space-y-3 bg-white/70 p-4 rounded-2xl border border-amber-100">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -168,6 +172,7 @@ export default function MorningBriefCard() {
             </div>
           )}
         </div>
+        </>)}
 
         {/* Today's Attention Required */}
         {hasAttentionData && <div className="space-y-3 bg-white/70 p-4 rounded-2xl border border-amber-100">
@@ -191,7 +196,7 @@ export default function MorningBriefCard() {
             {canSeeBeatPlans && <div className="flex items-start gap-2 text-amber-800 bg-amber-50 p-2 rounded-xl border border-amber-200">
               <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 mt-1.5" />
               <span>
-                <strong>Beat Plan Active:</strong> {briefData.todayAttention.todayBeatCount} stores queued for check-in today across Kathmandu Valley.
+                <strong>Beat Plan Active:</strong> {briefData.todayAttention.todayBeatCount} stores to visit today.
               </span>
             </div>}
 
@@ -212,18 +217,9 @@ export default function MorningBriefCard() {
         <button
           type="button"
           onClick={handleDismiss}
-          className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl hover:bg-amber-100/50 transition-colors"
+          className="rounded-full px-4 py-1.5 text-xs font-medium text-slate-600 hover:bg-black/[0.04] hover:text-slate-900"
         >
-          Dismiss for Today
-        </button>
-
-        <button
-          type="button"
-          onClick={handleDismiss}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
-        >
-          <span>View Dashboard</span>
-          <ArrowRight className="w-3.5 h-3.5" />
+          Hide for today
         </button>
       </div>
     </div>

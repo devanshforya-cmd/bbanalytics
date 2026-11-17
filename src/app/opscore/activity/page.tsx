@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useMemo } from 'react';
 import { db } from '@/lib/db/db-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -335,13 +336,11 @@ export default function ActivityTrailPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+            <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-black tracking-tight text-slate-900">
               System Activity Trail &amp; Audit Log
-            </h1>
+<InfoTip label="About this page">Real-time chronological audit trail of all store visits, cheque custody transitions, order creations, and system overrides.</InfoTip></h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Real-time chronological audit trail of all store visits, cheque custody transitions, order creations, and system overrides.
-          </p>
+          
         </div>
 
         {/* 4d. Export Button */}
