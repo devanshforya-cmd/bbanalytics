@@ -1,5 +1,6 @@
 'use client';
 
+import BrandLogo from './BrandLogo';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -76,7 +77,7 @@ const menuSections: MenuSection[] = [
       { name: 'Beat Plans & Routes', href: '/offline-sales/beat-plan', permKey: 'beat_plans', icon: Compass },
       { name: 'Stores & Branches', href: '/offline-sales/stores', permKey: 'stores', icon: Store },
       { name: 'Distributor Dispatches', href: '/offline-sales/dispatch', permKey: 'dispatches', icon: Truck },
-      { name: 'Live GPS Tracking', href: '/offline-sales/live-tracking', permKey: 'gps_tracking', icon: Navigation, badge: 'Live' },
+      { name: 'Live GPS Tracking', href: '/offline-sales/live-tracking', permKey: 'gps_tracking', icon: Navigation },
       { name: 'Shelf Photos', href: '/offline-sales/shelf-photos', permKey: 'shelf_photos', icon: Camera },
       { name: 'Call Tracker', href: '/offline-sales/calls', permKey: 'call_tracker', icon: Phone },
       { name: 'Cheque Tracker', href: '/offline-sales/cheques', permKey: 'cheque_tracker', icon: CreditCard },
@@ -90,7 +91,7 @@ const menuSections: MenuSection[] = [
       { name: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles },
       { name: 'Manual Order Entry', href: '/orderflow/manual-entry', permKey: 'orderflow', icon: ClipboardPen },
       { name: 'All Orders', href: '/orderflow/orders', permKey: 'orderflow', alsoPermKey: 'order_desk', icon: ListChecks },
-      { name: 'Daily Orders', href: '/orderflow/daily-orders', permKey: 'orderflow', icon: ClipboardCheck, badge: 'Live' },
+      { name: 'Daily Orders', href: '/orderflow/daily-orders', permKey: 'orderflow', icon: ClipboardCheck },
       { name: 'Monthly Sales Sheet', href: '/orderflow/monthly-sales', permKey: 'orderflow', icon: FileSpreadsheet },
       { name: 'Delivery Failures', href: '/orderflow/delivery-failures', permKey: 'orderflow', icon: TruckIcon },
     ],
@@ -178,7 +179,7 @@ export default function MobileNavDrawer({
           <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
-              <span className="font-bold text-slate-900 text-sm tracking-tight">Navigation</span>
+              <BrandLogo variant="full" className="h-7" />
             </div>
             <button
               type="button"

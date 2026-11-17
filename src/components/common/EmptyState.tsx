@@ -116,7 +116,7 @@ export default function EmptyState({
 
     case 'complaints':
       DefaultIcon = Sparkles;
-      title = 'Zero complaints this week ✨';
+      title = 'Zero complaints this week ';
       description =
         customMessage ||
         customDescription ||

@@ -93,7 +93,7 @@ export default function CheckOutSummary({
         {/* Incomplete task reasons */}
         {pending.length > 0 && (
           <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4 shadow-xs">
-            <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-1">⚠ Incomplete Tasks</p>
+            <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-1">Incomplete Tasks</p>
             {pending.map((p) => (
               <div key={p.label} className="mt-3">
                 <p className="text-xs text-amber-900 font-semibold mb-2">&ldquo;{p.label}&rdquo; was not completed. What happened?</p>

@@ -164,100 +164,50 @@ export default function ReturnsPage() {
 
   return (
     <PageGuard feature="reviews">
-      <div className="space-y-6 pb-20 max-w-7xl mx-auto">
+      <div className="mx-auto max-w-7xl space-y-5 pb-20">
       {/* 7f: Breadcrumbs */}
       <Breadcrumbs
         items={[
-          { label: 'Reviews & Quality', href: '/reviews/feedback' },
-          { label: 'Product Returns Register' },
+          { label: 'Reviews & Returns', href: '/reviews/feedback' },
+          { label: 'Returns' },
         ]}
       />
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              Actual Product Returns Register
-            </h1>
-            <span className="rounded-full bg-rose-100 text-rose-800 text-xs font-bold px-2.5 py-0.5">
-              Quality & RMA Ledger
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Log and manage confirmed product returns (damaged goods, wrong shades, quality defects). Dispatched parcels rejected before delivery are recorded under Delivery Failures.
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Returns</h1>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Products that came back after delivery. Parcels that never arrived are logged in{' '}
+            <Link href="/orderflow/delivery-failures" className="font-semibold text-blue-700 hover:underline">Delivery failures</Link>.
           </p>
         </div>
-
         <button
-          onClick={() => {
-            setShowLogModal(true);
-            setSaveSuccess(null);
-          }}
-          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-700 self-start sm:self-auto transition-all"
+          type="button"
+          onClick={() => { setShowLogModal(true); setSaveSuccess(null); }}
+          className="inline-flex items-center gap-1.5 self-start rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 sm:self-auto"
         >
-          <Plus className="h-4 w-4" />
-          Log Product Return
+          <Plus className="h-4 w-4" /> Log return
         </button>
       </div>
 
-      {/* 11a: Clear Separation Header Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Card 1: Actual Product Returns */}
-        <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/70 p-5 shadow-sm space-y-3 relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="rounded-full bg-emerald-200 text-emerald-900 font-bold px-2.5 py-0.5 text-[11px] uppercase tracking-wider">
-              🟢 Genuine Quality Returns
-            </span>
-            <span className="text-[11px] font-semibold text-emerald-800">
-              {actualReturnsPct}% of orders
-            </span>
-          </div>
-          <div>
-            <div className="text-2xl sm:text-3xl font-black text-slate-900">
-              Actual Product Returns: {actualReturnsCount}{' '}
-              <span className="text-sm font-normal text-slate-600">({actualReturnsPct}%)</span>
-            </div>
-            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-              Items where the customer successfully received and unboxed the parcel, but initiated a return due to verified damage, wrong shade, leakage, or adverse reaction.
-            </p>
-          </div>
-          <div className="text-[11px] text-emerald-800 font-medium pt-1">
-            Impact: Manufacturer defect tracking, batch quarantine, replacement dispatch & customer karma penalty (-3).
-          </div>
-        </div>
-
-        {/* Card 2: Delivery Failures (Separated with direct link) */}
-        <div className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm space-y-3 relative">
-          <div className="flex items-center justify-between">
-            <span className="rounded-full bg-rose-100 text-rose-800 font-bold px-2.5 py-0.5 text-[11px] uppercase tracking-wider">
-              🔴 Logistics Non-Deliveries
-            </span>
-            <span className="text-[11px] font-semibold text-rose-700">
-              {deliveryFailuresPct}% of orders
-            </span>
-          </div>
-          <div>
-            <div className="text-2xl sm:text-3xl font-black text-slate-900">
-              Delivery Failures: {deliveryFailuresCount}{' '}
-              <span className="text-sm font-normal text-slate-600">({deliveryFailuresPct}%)</span>
-            </div>
-            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-              Dispatched parcels that were <strong>never delivered</strong> to the recipient (phone unreachable, invalid address, customer unavailable, rider RTS).
-            </p>
-          </div>
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] text-slate-500 italic">
-              Tracked separately — does not taint product quality.
-            </span>
-            <Link
-              href="/orderflow/delivery-failures"
-              className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline"
-            >
-              Go to Delivery Failures Register →
-            </Link>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { label: 'Returns', value: String(actualReturnsCount), hint: `${actualReturnsPct}% of orders` },
+          { label: 'Exchanged · refunded', value: `${returnsList.filter((entry) => entry.orderStatus === 'Exchanged').length} · ${returnsList.filter((entry) => entry.orderStatus === 'Refunded').length}`, hint: 'resolution so far' },
+          { label: 'Awaiting decision', value: String(returnsList.filter((entry) => entry.orderStatus === 'Pending').length), hint: 'resolution pending', tone: returnsList.some((entry) => entry.orderStatus === 'Pending') ? 'text-amber-700' : 'text-slate-900' },
+          { label: 'Delivery failures', value: String(deliveryFailuresCount), hint: `${deliveryFailuresPct}% of orders · tracked separately`, href: '/orderflow/delivery-failures' },
+        ].map((tile) => {
+          const body = (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{tile.label}</p>
+              <p className={`mt-1 text-2xl font-black tabular-nums ${tile.tone || 'text-slate-900'}`}>{tile.value}</p>
+              <p className="mt-0.5 truncate text-[11px] text-slate-500">{tile.hint}</p>
+            </>
+          );
+          return tile.href
+            ? <Link key={tile.label} href={tile.href} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs transition hover:border-blue-300">{body}</Link>
+            : <div key={tile.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">{body}</div>;
+        })}
       </div>
 
       {unlinkedExchanges.length > 0 && (
@@ -291,7 +241,7 @@ export default function ReturnsPage() {
           {saveSuccess.isSerialReturner && (
             <div className="rounded-xl border border-amber-300 bg-amber-100 p-2.5 text-xs text-amber-900 flex items-center gap-2 font-semibold">
               <AlertTriangle className="h-4 w-4 text-amber-700 shrink-0" />
-              <span>⚠️ Serial Returner Alert: This customer has logged 3+ product returns within 30 days. The &quot;Serial Returner&quot; security flag has been activated in Customer 360.</span>
+              <span>Serial Returner Alert: This customer has logged 3+ product returns within 30 days. The &quot;Serial Returner&quot; security flag has been activated in Customer 360.</span>
             </div>
           )}
           <div className="flex items-center gap-3 pt-2 text-xs">
@@ -374,14 +324,14 @@ export default function ReturnsPage() {
                     className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
                 </th>
-                <th className="py-3 px-4">Brand & Product</th>
-                <th className="py-3 px-4">Customer & Karma</th>
-                <th className="py-3 px-4">Return Reason</th>
-                <th className="py-3 px-4">Resolution Status</th>
-                <th className="py-3 px-4">Timeline (BS/AD)</th>
-                <th className="py-3 px-4">Channel & Territory</th>
-                <th className="py-3 px-4 text-center">Proof Photo</th>
-                <th className="py-3 px-4">Issue Tags & Remarks</th>
+                <th className="py-3 px-4">Product</th>
+                <th className="py-3 px-4">Customer</th>
+                <th className="py-3 px-4">Reason</th>
+                <th className="py-3 px-4">Resolution</th>
+                <th className="py-3 px-4">Returned</th>
+                <th className="py-3 px-4">Channel</th>
+                <th className="py-3 px-4 text-center">Photo</th>
+                <th className="py-3 px-4">Notes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
@@ -403,7 +353,7 @@ export default function ReturnsPage() {
                             (1000 * 60 * 60 * 24)
                         )
                       )
-                    : 4;
+                    : null;
 
                   const isSelected = selectedIds.includes(ret.id);
 
@@ -458,52 +408,44 @@ export default function ReturnsPage() {
                         </span>
                       </td>
 
-                      {/* Resolution */}
+                      {/* Resolution: one control that shows the current value and changes it */}
                       <td className="py-3.5 px-4">
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold inline-block ${
-                            ret.orderStatus === 'Exchanged'
-                              ? 'bg-blue-100 text-blue-800'
-                              : ret.orderStatus === 'Refunded'
-                              ? 'bg-purple-100 text-purple-800'
-                              : ret.orderStatus === 'Pending'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-100 text-slate-700'
-                          }`}
-                        >
-                          {ret.orderStatus}
-                        </span>
-                        {canEditReturns && (
-                          <select aria-label={`Change resolution for ${ret.productName}`} value="" onClick={(event) => event.stopPropagation()}
-                            onChange={(event) => { const value = event.target.value as ReturnEntry['orderStatus']; if (value) setResolution(ret, value); }}
-                            className="ml-1.5 rounded-md border border-slate-200 bg-white px-1 py-0.5 text-[10px] font-semibold text-slate-600">
-                            <option value="">Change…</option>
-                            {RETURN_RESOLUTIONS.filter((entry) => entry !== ret.orderStatus).map((entry) => <option key={entry} value={entry}>{entry}</option>)}
-                          </select>
-                        )}
+                        {(() => {
+                          const tone = ret.orderStatus === 'Exchanged' ? 'border-purple-200 bg-purple-50 text-purple-800'
+                            : ret.orderStatus === 'Refunded' ? 'border-sky-200 bg-sky-50 text-sky-800'
+                            : ret.orderStatus === 'Pending' ? 'border-amber-200 bg-amber-50 text-amber-800'
+                            : 'border-slate-200 bg-slate-50 text-slate-700';
+                          return canEditReturns ? (
+                            <select aria-label={`Resolution for ${ret.productName}`} value={ret.orderStatus} onClick={(event) => event.stopPropagation()}
+                              onChange={(event) => setResolution(ret, event.target.value as ReturnEntry['orderStatus'])}
+                              className={`cursor-pointer rounded-full border py-0.5 pl-2.5 pr-6 text-[11px] font-bold ${tone}`}>
+                              {RETURN_RESOLUTIONS.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
+                            </select>
+                          ) : <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${tone}`}>{ret.orderStatus}</span>;
+                        })()}
                         {ret.orderStatus === 'Exchanged' && (() => {
                           const replacement = ret.exchangeOrderId ? db.getOrderById(ret.exchangeOrderId) : undefined;
                           if (replacement) return (
-                            <Link href={`/orderflow/orders/${replacement.id}`} onClick={(event) => event.stopPropagation()} className="mt-1 flex items-center gap-1.5 text-[10px] font-bold text-purple-700 hover:underline">
-                              ↪ {displayDocumentId(replacement.orderNumber)} <OrderStatusBadge status={replacement.status} />
+                            <Link href={`/orderflow/orders/${replacement.id}`} onClick={(event) => event.stopPropagation()} className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-purple-700 hover:underline">
+                              ↪ <span className="font-mono">{displayDocumentId(replacement.orderNumber)}</span> <OrderStatusBadge status={replacement.status} />
                             </Link>
                           );
                           return canEditReturns ? (
-                            <button type="button" onClick={(event) => { event.stopPropagation(); setExchangeFor(ret); }} className="mt-1 block rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 hover:bg-amber-100">Link replacement order</button>
-                          ) : <span className="mt-1 block text-[10px] font-semibold text-amber-700">Replacement not linked</span>;
+                            <button type="button" onClick={(event) => { event.stopPropagation(); setExchangeFor(ret); }} className="mt-1.5 block text-[11px] font-bold text-amber-700 hover:underline">+ Link replacement order</button>
+                          ) : <span className="mt-1.5 block text-[11px] font-semibold text-amber-700">Replacement not linked</span>;
                         })()}
                       </td>
 
                       {/* Timeline */}
                       <td className="py-3.5 px-4 text-[11px]">
-                        <div className="font-semibold text-slate-800 font-mono">{ret.dateAd}</div>
-                        <div className="text-slate-400">{daysToReturn} days after delivery</div>
+                        <div className="font-semibold text-slate-800">{ret.dateAd}</div>
+                        <div className="text-slate-400">{daysToReturn === null ? 'Order date unknown' : daysToReturn === 0 ? 'Same day as order' : `${daysToReturn} day${daysToReturn === 1 ? '' : 's'} after order`}</div>
                       </td>
 
                       {/* Territory & Platform */}
                       <td className="py-3.5 px-4 text-[11px]">
                         <div className="font-semibold text-slate-800">{ret.platform}</div>
-                        <div className="text-slate-400">{ret.valley} Valley</div>
+                        <div className="text-slate-400">{ret.valley === 'Inside' ? 'Inside valley' : 'Outside valley'}</div>
                       </td>
 
                       {/* Evidence Photo Lightbox */}

@@ -397,9 +397,6 @@ export default function ManualOrderEntryPage() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Manual Order Entry
             </h1>
-            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-              Master Order Entry (D2C)
-            </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Book omnichannel direct customer orders across Instagram, TikTok, WhatsApp, Walk-in, and Phone Calls with instant Customer 360 sync.
@@ -690,7 +687,7 @@ export default function ManualOrderEntryPage() {
                 {/* 10a: Karma badge based on existing phone */}
                 {existingCustomer ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 font-bold px-3 py-1 text-[11px] border border-emerald-200">
-                    <span>🟢</span> Returning customer — Karma: {existingCustomer.karmaScore}
+                    Returning customer — Karma: {existingCustomer.karmaScore}
                   </span>
                 ) : customerPhone.length >= 8 ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 text-blue-800 font-semibold px-2.5 py-0.5 text-[10px]">

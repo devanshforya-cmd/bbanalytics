@@ -68,7 +68,7 @@ export default function InlinePhoneInput({
       statusMessage = (
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold animate-slide-in-right">
           <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Returning: {customer.name} · Karma: {customer.karmaScore} 🟢</span>
+          <span>Returning: {customer.name} · Karma: {customer.karmaScore} </span>
         </div>
       );
     } else {

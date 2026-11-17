@@ -674,7 +674,7 @@ export default function CalendarTasksPage() {
               }`}
             >
               <Zap className="h-3 w-3" />
-              ⚡ System Auto-Tasks ({autoTasksCount})
+              System Auto-Tasks ({autoTasksCount})
             </button>
 
             <button
@@ -686,7 +686,7 @@ export default function CalendarTasksPage() {
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              👤 Manual Tasks
+              Manual Tasks
             </button>
 
             <button
@@ -698,7 +698,7 @@ export default function CalendarTasksPage() {
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              🏪 Store Beats ({allBeats.length})
+              Store Beats ({allBeats.length})
             </button>
 
             <button
@@ -710,7 +710,7 @@ export default function CalendarTasksPage() {
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              💳 Cheques Due ({allCheques.length})
+              Cheques Due ({allCheques.length})
             </button>
           </div>
 

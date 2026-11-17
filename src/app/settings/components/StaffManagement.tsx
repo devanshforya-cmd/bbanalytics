@@ -512,28 +512,28 @@ export default function StaffManagement() {
                     onClick={() => applyTemplate(FIELD_SALES_OFFICER_TEMPLATE, 'Field Sales Officer')}
                     className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors"
                   >
-                    📋 Field Sales Officer
+                    Field Sales Officer
                   </button>
                   <button
                     type="button"
                     onClick={() => applyTemplate(OFFICE_STAFF_TEMPLATE, 'Office Staff')}
                     className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-colors"
                   >
-                    📋 Office Staff
+                    Office Staff
                   </button>
                   <button
                     type="button"
                     onClick={() => applyTemplate(MANAGER_TEMPLATE, 'Manager')}
                     className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-colors"
                   >
-                    📋 Manager
+                    Manager
                   </button>
                   <button
                     type="button"
                     onClick={() => applyTemplate(VIEWER_TEMPLATE, 'Viewer')}
                     className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-colors"
                   >
-                    📋 Viewer
+                    Viewer
                   </button>
                 </div>
               </div>

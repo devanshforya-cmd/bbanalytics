@@ -135,15 +135,15 @@ export default function CustomersPage() {
   const getSegmentBadge = (segment: CustomerSegment) => {
     switch (segment) {
       case 'VIP':
-        return <span className="rounded-full bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 text-[10px]">👑 VIP</span>;
+        return <span className="rounded-full bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 text-[10px]">VIP</span>;
       case 'LOYAL':
         return <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 text-[10px]">⭐ Loyal</span>;
       case 'REGULAR':
         return <span className="rounded-full bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 text-[10px]">Regular</span>;
       case 'AT_RISK':
-        return <span className="rounded-full bg-rose-100 text-rose-800 font-bold px-2.5 py-0.5 text-[10px]">⚠️ At Risk</span>;
+        return <span className="rounded-full bg-rose-100 text-rose-800 font-bold px-2.5 py-0.5 text-[10px]">At Risk</span>;
       case 'BLACKLISTED':
-        return <span className="rounded-full bg-slate-900 text-white font-bold px-2.5 py-0.5 text-[10px]">🚫 Blacklisted</span>;
+        return <span className="rounded-full bg-slate-900 text-white font-bold px-2.5 py-0.5 text-[10px]">Blacklisted</span>;
       default:
         return <span className="rounded-full bg-slate-100 text-slate-700 font-medium px-2 py-0.5 text-[10px]">New</span>;
     }
@@ -164,7 +164,7 @@ export default function CustomersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            Customer 360 Directory
+            Customers
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Unique customer profiles unified by phone number with auto-calculated Karma Scores (0-100).

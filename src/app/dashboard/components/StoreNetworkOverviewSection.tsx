@@ -284,9 +284,9 @@ export default function StoreNetworkOverviewSection() {
                       ) : store.score.paymentDiscipline >= 20 ? (
                         <span className="text-emerald-700 font-medium">✓ 100% On-Time</span>
                       ) : store.score.paymentDiscipline >= 10 ? (
-                        <span className="text-amber-700 font-medium">⚠️ Minor Delay</span>
+                        <span className="text-amber-700 font-medium">Minor Delay</span>
                       ) : (
-                        <span className="text-rose-700 font-medium font-bold">🔴 Overdue / Alert</span>
+                        <span className="text-rose-700 font-medium font-bold">Overdue / Alert</span>
                       )}
                     </td>
                     <td className="py-3.5 px-3 text-slate-500">
@@ -361,7 +361,7 @@ export default function StoreNetworkOverviewSection() {
                         {bc.count > 0 ? (
                           <span className="text-emerald-600 font-bold">✓ Covered ({bc.count})</span>
                         ) : (
-                          <span className="text-rose-500">✗ No presence (0)</span>
+                          <span className="text-rose-500">No presence (0)</span>
                         )}
                       </td>
                     ))}

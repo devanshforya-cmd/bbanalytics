@@ -44,10 +44,13 @@ interface DualDateFieldProps {
  * calendar, and the other calendar's date is always shown underneath.
  */
 export default function DualDateField({ id, label, valueAd, onChange, required, minAd, maxAd, error, helper, allowClear }: DualDateFieldProps) {
-  const { preference } = useCalendarPreference();
-  const [mode, setMode] = useState<'BS' | 'AD'>('BS');
+  const { preference, scope } = useCalendarPreference();
+  // Online (D2C) and marketing forms use AD only; both dates are still stored for exports and BS views.
+  const adOnly = scope === 'D2C';
+  const [chosenMode, setMode] = useState<'BS' | 'AD'>('BS');
   const [touchedMode, setTouchedMode] = useState(false);
   useEffect(() => { if (!touchedMode) setMode(preference === 'AD' ? 'AD' : 'BS'); }, [preference, touchedMode]);
+  const mode: 'BS' | 'AD' = adOnly ? 'AD' : chosenMode;
 
   const bs = useMemo(() => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(valueAd || '')) return null;
@@ -71,14 +74,14 @@ export default function DualDateField({ id, label, valueAd, onChange, required, 
         <label htmlFor={`${id}-${mode === 'AD' ? 'ad' : 'bs-day'}`} className="block text-xs font-bold text-slate-700">
           {label} {required && <span className="text-rose-500">*</span>}
         </label>
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[10px] font-bold" role="group" aria-label={`${label} calendar`}>
+        {!adOnly && <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[10px] font-bold" role="group" aria-label={`${label} calendar`}>
           {(['BS', 'AD'] as const).map((option) => (
             <button key={option} type="button" aria-pressed={mode === option} onClick={() => { setMode(option); setTouchedMode(true); }}
               className={`rounded-md px-2 py-0.5 transition ${mode === option ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}>
               {option}
             </button>
           ))}
-        </div>
+        </div>}
       </div>
       {mode === 'AD' ? (
         <input id={`${id}-ad`} type="date" value={valueAd} min={minAd} max={maxAd} required={required}
@@ -102,7 +105,7 @@ export default function DualDateField({ id, label, valueAd, onChange, required, 
       <div className="mt-1 flex items-center justify-between gap-2 text-[11px]">
         <span className={error || outOfRange ? 'font-medium text-rose-600' : 'text-slate-500'}>
           {error || (outOfRange ? (minAd && valueAd < minAd ? `Cannot be earlier than ${mode === 'BS' ? bsLabel(minAd) : adLabel(minAd)}.` : 'Cannot be in the future.')
-            : valueAd ? (mode === 'BS' ? `AD: ${adLabel(valueAd)}` : `BS: ${bsLabel(valueAd)}`) : helper || 'No date chosen')}
+            : valueAd ? (adOnly ? helper || adLabel(valueAd) : mode === 'BS' ? `AD: ${adLabel(valueAd)}` : `BS: ${bsLabel(valueAd)}`) : helper || 'No date chosen')}
         </span>
         {allowClear && valueAd && <button type="button" onClick={() => onChange('', '')} className="font-semibold text-slate-500 hover:text-rose-600">Clear</button>}
       </div>

@@ -211,10 +211,10 @@ export default function SheetsExportPage() {
       isPermanent: false,
       description: 'All D2C and omnichannel orders across platforms with customer details and line items.',
       rowCount: orders.length,
-      columns: ['Order #', 'Date BS', 'Customer Name', 'Phone', 'Brand', 'Platform', 'Total NPR', 'Payment Method', 'Status'],
+      columns: ['Order #', 'Date', 'Customer Name', 'Phone', 'Brand', 'Platform', 'Total NPR', 'Payment Method', 'Status'],
       sampleData: orders.slice(0, 5).map((o) => [
         o.orderNumber || o.id,
-        o.orderDateBs || '',
+        o.orderDateAd || '',
         o.customerName,
         o.customerPhone,
         o.brandCode,
@@ -224,12 +224,11 @@ export default function SheetsExportPage() {
         o.status,
       ]),
       generateCsv: () => {
-        const header = ['Order #', 'Date BS', 'Date AD', 'Customer Name', 'Phone', 'Brand', 'Platform', 'Province', 'District', 'Total NPR', 'Payment Terms', 'Status'];
+        const header = ['Order #', 'Date (AD)', 'Customer Name', 'Phone', 'Brand', 'Platform', 'Province', 'District', 'Total NPR', 'Payment Terms', 'Status'];
         const rows = [
           header,
           ...orders.map((o) => [
             o.orderNumber || o.id,
-            o.orderDateBs || '',
             o.orderDateAd || '',
             o.customerName,
             o.customerPhone,
@@ -251,15 +250,15 @@ export default function SheetsExportPage() {
       isPermanent: false,
       description: 'Products sent to influencers. Kept apart from orders: no price, payment or sales value.',
       rowCount: marketingSends.length,
-      columns: ['Send #', 'Sent BS', 'Sent AD', 'Influencer', 'Brands', 'Products', 'Units', 'Reach-out', 'Responsible', 'Delivery', 'Content Due AD', 'Status'],
-      sampleData: marketingSends.slice(0, 5).map((send) => [send.sendNumber, send.sentDateBs || '', send.sentDateAd, send.influencerName, send.brandCodes.join(', '),
+      columns: ['Send #', 'Sent (AD)', 'Influencer', 'Brands', 'Products', 'Units', 'Reach-out', 'Responsible', 'Delivery', 'Content Due AD', 'Status'],
+      sampleData: marketingSends.slice(0, 5).map((send) => [send.sendNumber, send.sentDateAd, send.influencerName, send.brandCodes.join(', '),
         send.items.map((item) => `${item.quantity}x ${item.productName}${item.isCombo ? " (combo)" : ""}`).join('; '), String(send.items.reduce((sum, item) => sum + item.quantity, 0)), send.reachOutPlatform, send.responsibleName || '', send.deliveryChannel, send.expectedContentDateAd || '', send.status]),
       generateCsv: () => {
         const rows = [
-          ['Send #', 'Sent BS', 'Sent AD', 'Influencer', 'Brands', 'Products', 'Units', 'Reach-out Platform', 'Responsible', 'Delivery Channel', 'Delivery Address', 'Content Due BS', 'Content Due AD', 'Status', 'Notes'],
-          ...marketingSends.map((send) => [send.sendNumber, send.sentDateBs || '', send.sentDateAd, send.influencerName, send.brandCodes.join(', '),
+          ['Send #', 'Sent (AD)', 'Influencer', 'Brands', 'Products', 'Units', 'Reach-out Platform', 'Responsible', 'Delivery Channel', 'Delivery Address', 'Content Due (AD)', 'Status', 'Notes'],
+          ...marketingSends.map((send) => [send.sendNumber, send.sentDateAd, send.influencerName, send.brandCodes.join(', '),
             send.items.map((item) => `${item.quantity}x ${item.productName}${item.isCombo ? " (combo)" : ""}`).join('; '), send.items.reduce((sum, item) => sum + item.quantity, 0), send.reachOutPlatform, send.responsibleName || '',
-            send.deliveryChannel, send.deliveryAddress || '', send.expectedContentDateBs || '', send.expectedContentDateAd || '', send.status, send.notes || '']),
+            send.deliveryChannel, send.deliveryAddress || '', send.expectedContentDateAd || '', send.status, send.notes || '']),
         ];
         return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
       },
@@ -270,10 +269,10 @@ export default function SheetsExportPage() {
       isPermanent: false,
       description: 'Genuine product quality returns only (excluding separated courier delivery failures).',
       rowCount: returns.length,
-      columns: ['Return ID', 'Date BS', 'Brand', 'Product', 'Customer Name', 'Phone', 'Qty', 'Return Reason', 'Status'],
+      columns: ['Return ID', 'Date', 'Brand', 'Product', 'Customer Name', 'Phone', 'Qty', 'Return Reason', 'Status'],
       sampleData: returns.slice(0, 5).map((r) => [
         r.id,
-        r.dateBs || '',
+        r.dateAd || '',
         r.brandCode,
         r.productName,
         r.customerName,
@@ -283,13 +282,13 @@ export default function SheetsExportPage() {
         r.orderStatus,
       ]),
       generateCsv: () => {
-        const header = ['Return ID', 'Date BS', 'Original Order Date', 'Brand', 'Product Name', 'Customer Name', 'Phone', 'Quantity', 'Return Reason', 'Valley', 'Order Status'];
+        const header = ['Return ID', 'Date (AD)', 'Original Order Date (AD)', 'Brand', 'Product Name', 'Customer Name', 'Phone', 'Quantity', 'Return Reason', 'Valley', 'Order Status'];
         const rows = [
           header,
           ...returns.map((r) => [
             r.id,
-            r.dateBs || '',
-            r.orderProcessedDateBs || '',
+            r.dateAd || '',
+            r.orderProcessedDateAd || '',
             r.brandCode,
             r.productName,
             r.customerName,
@@ -309,10 +308,10 @@ export default function SheetsExportPage() {
       isPermanent: false,
       description: 'Separated courier non-deliveries ("Call not received", "Address incomplete", "Refused COD").',
       rowCount: failures.length,
-      columns: ['Failure ID', 'Date BS', 'Order #', 'Customer Name', 'Phone', 'Reason', 'Attempts', 'Valley', 'Status'],
+      columns: ['Failure ID', 'Date', 'Order #', 'Customer Name', 'Phone', 'Reason', 'Attempts', 'Valley', 'Status'],
       sampleData: failures.slice(0, 5).map((f) => [
         f.id,
-        f.dateBs || '',
+        f.dateAd || '',
         f.orderNumber || f.orderId,
         f.customerName,
         f.customerPhone,
@@ -322,12 +321,12 @@ export default function SheetsExportPage() {
         f.status || 'FAILED',
       ]),
       generateCsv: () => {
-        const header = ['Failure ID', 'Date BS', 'Order #', 'Customer Name', 'Phone', 'Brand', 'Product', 'Failure Reason', 'Delivery Method', 'Valley', 'Attempts', 'Status'];
+        const header = ['Failure ID', 'Date (AD)', 'Order #', 'Customer Name', 'Phone', 'Brand', 'Product', 'Failure Reason', 'Delivery Method', 'Valley', 'Attempts', 'Status'];
         const rows = [
           header,
           ...failures.map((f) => [
             f.id,
-            f.dateBs || '',
+            f.dateAd || '',
             f.orderNumber || f.orderId,
             f.customerName,
             f.customerPhone,
@@ -396,7 +395,7 @@ export default function SheetsExportPage() {
         c.handedOverTo || c.officerName || '',
       ]),
       generateCsv: () => {
-        const header = ['Cheque ID', 'Cheque #', 'Bank Name', 'Retailer / Store', 'Amount NPR', 'Collection Date BS', 'Due Date BS', 'Status', 'Collected By', 'Current Custody'];
+        const header = ['Cheque ID', 'Cheque #', 'Bank Name', 'Retailer / Store', 'Amount NPR', 'Collection Date (BS)', 'Collection Date (AD)', 'Due Date (BS)', 'Due Date (AD)', 'Status', 'Collected By', 'Current Custody'];
         const rows = [
           header,
           ...cheques.map((c) => [
@@ -406,7 +405,9 @@ export default function SheetsExportPage() {
             c.storeName,
             c.amount,
             c.receivedDateBs,
+            c.receivedDateAd || '',
             c.cashDateBs,
+            c.cashDateAd || '',
             c.status,
             c.officerName,
             c.handedOverTo || '',
@@ -432,16 +433,17 @@ export default function SheetsExportPage() {
         cl.createdOrderId ? 'YES' : 'NO',
       ]),
       generateCsv: () => {
-        const header = ['Call ID', 'Date BS', 'Store Name', 'Sales Officer', 'Call Purpose', 'Duration Minutes', 'Outcome', 'Order Booked ID'];
+        const header = ['Call ID', 'Date (BS)', 'Date (AD)', 'Store Name', 'Sales Officer', 'Call Purpose', 'Duration Minutes', 'Outcome', 'Order Booked ID'];
         const rows = [
           header,
           ...calls.map((cl) => [
             cl.id,
             cl.dateBs || '',
+            cl.dateAd || '',
             cl.storeName,
             cl.officerName || '',
             cl.label || '',
-            Math.round((cl.durationSeconds || 180) / 60),
+            cl.durationSeconds ? Math.round(cl.durationSeconds / 60) : '',
             cl.outcome || '',
             cl.createdOrderId || 'None',
           ]),
@@ -462,23 +464,25 @@ export default function SheetsExportPage() {
         v.storeName || v.entityId,
         v.officerName || '',
         v.checkInTime?.split('T')[1]?.substring(0, 5) || '',
-        `${v.durationMinutes || 25} mins`,
+        v.durationMinutes ? `${v.durationMinutes} mins` : '—',
         v.distanceMeters <= 50 ? 'YES' : 'OVERRIDDEN',
       ]),
       generateCsv: () => {
-        const header = ['Visit ID', 'Store Name', 'Officer Name', 'Check-In Time', 'Check-Out Time', 'Duration Minutes', 'GPS Latitude', 'GPS Longitude', 'Distance Meters', 'Override Flag', 'Notes'];
+        const header = ['Visit ID', 'Date (BS)', 'Date (AD)', 'Store Name', 'Officer Name', 'Check-In Time', 'Check-Out Time', 'Duration Minutes', 'GPS Latitude', 'GPS Longitude', 'Distance Meters', 'Override Flag', 'Notes'];
         const rows = [
           header,
           ...visits.map((v) => [
             v.id,
+            v.dateBs || '',
+            v.dateAd || '',
             v.storeName,
             v.officerName,
             v.checkInTime || '',
             v.checkOutTime || '',
-            v.durationMinutes || 25,
+            v.durationMinutes ?? '',
             v.lat,
             v.lng,
-            v.distanceMeters || 12,
+            v.distanceMeters ?? '',
             v.overrideFlag ? 'TRUE' : 'FALSE',
             v.notes || '',
           ]),
@@ -590,7 +594,8 @@ export default function SheetsExportPage() {
       generateCsv: () => {
         const header = [
           'Audit ID',
-          'Date BS',
+          'Date (BS)',
+          'Date (AD)',
           'Store Name',
           'Store Type',
           'Brand',
@@ -607,6 +612,7 @@ export default function SheetsExportPage() {
             (s.items || []).map((it) => [
               s.id,
               s.dateBs || '',
+              s.dateAd || '',
               s.storeName,
               'Retail Store',
               it.brandCode || '',

@@ -439,8 +439,8 @@ export default function FeatureFlagsSettings() {
                     onChange={(e) => setIsEnabled(e.target.value === 'ENABLED')}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white font-bold"
                   >
-                    <option value="ENABLED">🟢 Enabled</option>
-                    <option value="DISABLED">🔴 Disabled</option>
+                    <option value="ENABLED">Enabled</option>
+                    <option value="DISABLED">Disabled</option>
                   </select>
                 </div>
               </div>

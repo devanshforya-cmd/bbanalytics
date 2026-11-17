@@ -282,20 +282,20 @@ export default function ExtractorPage() {
       case 'AUTO':
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
-            <span>🟢</span> Confident
+            Confident
           </span>
         );
       case 'REVIEW':
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 border border-amber-200">
-            <span>🟡</span> Needs Review
+            Needs Review
           </span>
         );
       case 'FAILED':
       default:
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700 border border-rose-200">
-            <span>🔴</span> Incomplete
+            Incomplete
           </span>
         );
     }
@@ -320,9 +320,6 @@ export default function ExtractorPage() {
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
                   WhatsApp Order Extractor
                 </h1>
-                <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-                  Dynamic Catalog Engine
-                </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
                 Reads products, combos, keywords, and prices directly from catalog. Adapts automatically to catalog updates with zero code changes.
@@ -333,7 +330,7 @@ export default function ExtractorPage() {
           {/* Catalog Synced Status Bar (Fix 67g, 72e) */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-xs text-slate-600">
             <div className="flex items-center gap-2">
-              <span className="text-sm">📚</span>
+              
               <span>
                 <strong>Available catalogue:</strong> {activeCatalogProducts.length} active products · {activeCatalogCombos.length} active combos across {catalogStatus.brands} brands
               </span>
@@ -541,7 +538,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         </span>
                         {ord.combo.value !== 'None (Standard SKU)' && (
                           <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                            🎁 Combo: {ord.combo.value}
+                            Combo: {ord.combo.value}
                           </span>
                         )}
                       </div>

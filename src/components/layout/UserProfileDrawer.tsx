@@ -90,7 +90,7 @@ export default function UserProfileDrawer({
   const [users, setUsers] = useState<User[]>([]);
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
-  const { preference: calendarPref, setPreference: setCalendarPref } = useCalendarPreference();
+  const { userPreference: calendarPref, setPreference: setCalendarPref } = useCalendarPreference();
 
   useEffect(() => {
     setUsers(db.getUsers());
@@ -457,7 +457,7 @@ export default function UserProfileDrawer({
               className="flex items-center justify-center gap-2 w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition active:scale-98"
             >
               <LogOut className="h-4 w-4" />
-              <span>Sign Out of Command Center</span>
+              <span>Sign out</span>
             </button>
           </div>
         </div>

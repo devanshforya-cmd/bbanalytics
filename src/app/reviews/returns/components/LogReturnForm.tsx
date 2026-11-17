@@ -3,7 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { AlertTriangle, Camera } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
-import { canPerform, hasAccess } from '@/lib/permissions';
+import { canPerform, canWorkOrders, hasAccess } from '@/lib/permissions';
 import type { Order, ReturnEntry, ReturnReason } from '@/lib/types';
 import { getTodayAd, getTodayBs } from '@/lib/nepali-calendar';
 import { phoneDigits } from '@/lib/customer-lookup';
@@ -132,7 +132,11 @@ export default function LogReturnForm({ onClose, onSaved, onViewCustomer, initia
           <>
             {order.status !== 'DELIVERED' && order.status !== 'RETURNED' && order.status !== 'EXCHANGED' && (
               <p className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900" role="alert"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span><strong>This order is not marked Delivered.</strong> If the parcel never reached the customer, log a delivery failure instead.</span></p>
+                <span className="flex-1"><strong>This order is not marked Delivered.</strong> If the customer received it, mark it delivered first. If the parcel never reached them, log a delivery failure instead.</span>
+                {canWorkOrders(user) && order.status !== 'CANCELLED' && (
+                  <button type="button" onClick={() => { try { const updated = db.setOrderStatus(order.id, 'DELIVERED'); if (updated) { setOrder(updated); toast.success(`${displayDocumentId(order.orderNumber)} marked delivered`); } } catch (problem) { toast.error('Status not changed', problem instanceof Error ? problem.message : undefined); } }}
+                    className="shrink-0 self-center rounded-lg border border-amber-400 bg-white px-2.5 py-1 text-[11px] font-bold text-amber-900 hover:bg-amber-100">Mark delivered</button>
+                )}</p>
             )}
             <section>
               <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">From the order</p>

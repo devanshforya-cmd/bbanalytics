@@ -78,7 +78,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             BB
           </div>
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-          <span className="text-xs font-semibold tracking-wide text-slate-500">Initializing Command Center...</span>
+          <span className="text-xs font-semibold tracking-wide text-slate-500">Loading…</span>
         </div>
       </div>
     );

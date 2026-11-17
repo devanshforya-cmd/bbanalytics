@@ -19,16 +19,16 @@ const Tile = ({ label, value, hint, tone = 'slate' }: { label: string; value: st
 
 /** Exchange and refund analysis for the returns currently in view (filters apply). */
 export default function ExchangeAnalysisPanel({ returns }: { returns: ReturnEntry[] }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const a = useMemo(() => exchangeAnalysis(returns, db.getOrders('ALL')), [returns]);
   if (!a.returns) return null;
   const days = (value: number | null) => value === null ? '—' : `${value} day${value === 1 ? '' : 's'}`;
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-slate-50/60 shadow-xs" aria-labelledby="exchange-analysis">
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-xs" aria-labelledby="exchange-analysis">
       <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between px-5 py-3 text-left">
         <span id="exchange-analysis" className="flex items-center gap-2 text-sm font-bold text-slate-900"><Repeat className="h-4 w-4 text-purple-600" /> Returns, exchanges and refunds</span>
-        <span className="flex items-center gap-2 text-[11px] text-slate-500">{a.returns} returns · {a.units} units <ChevronDown className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} /></span>
+        <span className="flex items-center gap-2 text-[11px] text-slate-500"><span className="hidden sm:inline">Exchange rate {a.exchangeRate}% · refund rate {a.refundRate}% · {a.units} unit{a.units === 1 ? '' : 's'}</span> <span className="font-semibold text-blue-700">{open ? 'Hide' : 'Show analysis'}</span> <ChevronDown className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} /></span>
       </button>
       {open && (
         <div className="space-y-4 border-t border-slate-200 p-5">

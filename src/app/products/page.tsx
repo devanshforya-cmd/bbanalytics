@@ -484,9 +484,6 @@ export default function ProductsPage() {
               <Package className="w-6 h-6 text-brand-600" />
               <span>Products, Combos &amp; Performance</span>
             </h1>
-            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 font-bold border border-brand-200">
-              Catalog Directory
-            </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Master SKU catalog, D2C social promotional kits, warehouse inventory, and sales telemetry.
@@ -1094,7 +1091,7 @@ export default function ProductsPage() {
                           </div>
                           <div className="text-[11px] text-amber-800 font-semibold">
                             {m.isLowStock
-                              ? `⚠️ Below threshold (${selectedPerfProduct.thresholdQty} units)`
+                              ? `Below threshold (${selectedPerfProduct.thresholdQty} units)`
                               : 'Sufficient beat buffer'}
                           </div>
                         </div>
@@ -1395,7 +1392,7 @@ export default function ProductsPage() {
                 className="px-2.5 py-1 bg-white hover:bg-blue-100 border border-blue-300 text-blue-700 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs transition cursor-pointer"
               >
                 <Sparkles className="w-3 h-3 text-blue-600" />
-                🔄 Auto-Suggest
+                Auto-Suggest
               </button>
             </div>
 
@@ -1675,7 +1672,7 @@ export default function ProductsPage() {
                 className="px-2.5 py-1 bg-white hover:bg-purple-100 border border-purple-300 text-purple-700 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs transition cursor-pointer"
               >
                 <Sparkles className="w-3 h-3 text-purple-600" />
-                🔄 Auto-Suggest
+                Auto-Suggest
               </button>
             </div>
 

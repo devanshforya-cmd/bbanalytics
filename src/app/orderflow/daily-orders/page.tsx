@@ -281,17 +281,17 @@ export default function DailyOrdersPage() {
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-                  Daily Orders Cross-Check
+                  Daily Orders
                 </h1>
                 {/* Live indicator badge */}
                 {isToday ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    LIVE · {onlineStaffCount} Online
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700" title="New orders appear as they are saved, and the list refreshes every minute">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                    Today{onlineStaffCount > 0 ? ` · ${onlineStaffCount} online` : ''}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                    <Clock className="w-3.5 h-3.5" /> Historical Archive
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
+                    <Clock className="h-3 w-3" /> Past day
                   </span>
                 )}
               </div>

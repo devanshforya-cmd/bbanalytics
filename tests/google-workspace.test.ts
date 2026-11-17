@@ -65,9 +65,13 @@ test('report tabs use real rows, zero quantities, blank unknowns, monthly bounda
   assert.equal(tabs.find((tab) => tab.title === 'Marketing Sends')!.values.length, 1);
   const orders = tabs.find((tab) => tab.title === 'Orders-2026-10')!;
   assert.equal(orders.values.length, 2);
-  assert.equal(orders.values[1][6], 0);
-  assert.equal(orders.values[1][8], 0);
-  assert.equal(orders.values[1][9], '');
+  // Online orders are AD only; offline tabs carry BS next to AD.
+  assert.deepEqual(orders.values[0].slice(0, 2), ['Order ID', 'Order Date (AD)']);
+  assert.equal(orders.values[1][5], 0);
+  assert.equal(orders.values[1][7], 0);
+  assert.equal(orders.values[1][8], '');
+  assert.deepEqual(tabs.find((tab) => tab.title === 'Visits')!.values[0].slice(0, 2), ['Date (BS)', 'Date (AD)']);
+  assert.ok(tabs.find((tab) => tab.title === 'Cheques')!.values[0].includes('Received Date (BS)'));
   assert.equal(tabs.find((tab) => tab.title === 'Stores Directory')!.values[1][7], '');
   const request = googleReportValueRequest(tabs);
   assert.equal(request.valueInputOption, 'RAW');

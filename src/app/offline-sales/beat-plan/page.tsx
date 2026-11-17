@@ -595,7 +595,7 @@ export default function BeatPlanPage() {
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100 transition shadow-2xs"
                 >
                   <UserCheck className="w-3.5 h-3.5 text-amber-600" />
-                  <span>🌴 Staff Leave & Reassign</span>
+                  <span>Staff Leave & Reassign</span>
                 </button>
 
                 <button

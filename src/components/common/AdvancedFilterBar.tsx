@@ -339,9 +339,9 @@ export default function AdvancedFilterBar({
                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                 }`}
               >
-                <option value="ALL">📍 Territory: All Nepal</option>
-                <option value="Inside">📍 Inside Valley</option>
-                <option value="Outside">📍 Outside Valley</option>
+                <option value="ALL">Territory: All Nepal</option>
+                <option value="Inside">Inside Valley</option>
+                <option value="Outside">Outside Valley</option>
               </select>
               <ChevronDown className="pointer-events-none absolute right-2 top-2.5 h-3.5 w-3.5 text-slate-400" />
             </div>
@@ -359,10 +359,10 @@ export default function AdvancedFilterBar({
                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                 }`}
               >
-                <option value="">👤 Field Rep: All</option>
+                <option value="">Field Rep: All</option>
                 {salesOfficers.map((o) => (
                   <option key={o.id} value={o.id}>
-                    👤 {o.fullName}
+                    {o.fullName}
                   </option>
                 ))}
               </select>

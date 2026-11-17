@@ -45,7 +45,7 @@ export default function NotificationRules() {
           <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/40 space-y-2">
             <div className="flex items-center gap-2 text-rose-900 font-bold">
               <ShieldAlert className="w-4 h-4 text-rose-600" />
-              <span>🔴 Red Tier — Priority operations alerts</span>
+              <span>Red Tier — Priority operations alerts</span>
             </div>
             <p className="text-slate-600">
               Daily checks cover bounced cheques, customer karma below 20, urgent unassigned complaints and the thresholds below. Task assignments also send a push when saved. Device settings control lock-screen display.
@@ -56,7 +56,7 @@ export default function NotificationRules() {
           <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 space-y-3">
             <div className="flex items-center gap-2 text-amber-900 font-bold">
               <AlertTriangle className="w-4 h-4 text-amber-600" />
-              <span>🟡 Amber Tier — App Open Warning &amp; Digest</span>
+              <span>Amber Tier — App Open Warning &amp; Digest</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">

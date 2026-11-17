@@ -374,7 +374,7 @@ export default function DocumentsPage() {
               </div>
               <div>
                 <h3 className="font-bold text-amber-900 text-sm flex items-center gap-2">
-                  ⚠️ {overdueDocs.length} document{overdueDocs.length > 1 ? 's' : ''} collected in field but not yet handed to office
+                  {overdueDocs.length} document{overdueDocs.length > 1 ? 's' : ''} collected in field but not yet handed to office
                 </h3>
                 <p className="text-xs text-amber-800 mt-0.5">
                   These documents were collected over 2 days ago and remain in officer field custody. Physical handover is required for accounting audit compliance.
@@ -783,7 +783,7 @@ export default function DocumentsPage() {
                       <div className="flex items-center justify-between text-xs mb-1.5">
                         <span className="text-slate-500 font-medium">Current Custody:</span>
                         <span className="font-bold text-slate-800 flex items-center gap-1">
-                          👤 {doc.currentHolder || doc.handedToUserName || `${doc.officerName} (Field)`}
+                          {doc.currentHolder || doc.handedToUserName || `${doc.officerName} (Field)`}
                         </span>
                       </div>
                       {doc.notes && (
@@ -1062,7 +1062,7 @@ export default function DocumentsPage() {
               <div className="text-slate-400">
                 Holder: <span className="text-white font-semibold">{lightboxDoc.currentHolder || lightboxDoc.officerName}</span>
                 {lightboxDoc.filedLocation && (
-                  <span className="ml-3 text-emerald-400 font-mono">📁 {lightboxDoc.filedLocation}</span>
+                  <span className="ml-3 text-emerald-400 font-mono">{lightboxDoc.filedLocation}</span>
                 )}
               </div>
 

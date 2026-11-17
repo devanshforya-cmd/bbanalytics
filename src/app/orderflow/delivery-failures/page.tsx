@@ -343,11 +343,8 @@ export default function DeliveryFailuresPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              Delivery Failures Register
+              Delivery Failures
             </h1>
-            <span className="rounded-full bg-rose-100 text-rose-800 text-xs font-bold px-2.5 py-0.5">
-              Separated from Product Returns
-            </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Tracks courier bottlenecks (&quot;Call not received&quot;, &quot;Address not found&quot;) without muddying product quality metrics.
@@ -681,7 +678,7 @@ export default function DeliveryFailuresPage() {
           <table className="w-full text-left text-xs min-w-[1100px]">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
               <tr>
-                <th className="py-3 px-3">Date (BS/AD)</th>
+                <th className="py-3 px-3">Date</th>
                 <th className="py-3 px-3">Order #</th>
                 <th className="py-3 px-3">Customer</th>
                 <th className="py-3 px-3">Phone</th>
@@ -738,7 +735,7 @@ export default function DeliveryFailuresPage() {
                                 className="mt-1 flex items-center gap-1 rounded bg-rose-50 border border-rose-200 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
                               >
                                 <Camera className="w-3 h-3 text-rose-600" />
-                                <span>⚠️ Fraud Warning (POD on file)</span>
+                                <span>Fraud Warning (POD on file)</span>
                               </button>
                             );
                           }
@@ -1050,7 +1047,7 @@ export default function DeliveryFailuresPage() {
                 className="max-h-full max-w-full object-contain"
               />
               <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded font-mono">
-                📸 Handover Evidence Verified
+                Handover Evidence Verified
               </div>
             </div>
 
@@ -1062,7 +1059,7 @@ export default function DeliveryFailuresPage() {
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Delivery Date</span>
                 <span className="font-semibold text-slate-800 font-mono">
-                  {selectedPodProof.proof.deliveryDateBs} ({selectedPodProof.proof.deliveryDateAd})
+                  {selectedPodProof.proof.deliveryDateAd}
                 </span>
               </div>
             </div>

@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import { canPerform, d2cAssignees, hasAccess } from '@/lib/permissions';
-import type { Order, OrderItem } from '@/lib/types';
+import type { Order, OrderItem, ReturnEntry } from '@/lib/types';
 import { activeOrderOptionNames } from '@/lib/order-options';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { useSubmitGuard } from '@/hooks/useSubmitGuard';
@@ -23,7 +23,10 @@ import CustomerLookup, { customerLookupError, type CustomerLookupValue } from '@
 import DualDateField, { bsLabel } from '@/components/common/DualDateField';
 import { toast } from '@/components/common/Toast';
 import OrderStatusControl from '@/components/orders/OrderStatusControl';
-import { AlertCircle, AlertTriangle, ArrowLeft, ArrowRight, Check, History, Layers, Minus, Plus, Search, Trash2, X } from 'lucide-react';
+import ExchangePanel from '@/components/orders/ExchangePanel';
+import LogFailureForm from '@/app/orderflow/delivery-failures/components/LogFailureForm';
+import LogReturnForm from '@/app/reviews/returns/components/LogReturnForm';
+import { AlertCircle, AlertTriangle, ArrowLeft, ArrowRight, Check, History, Layers, Minus, PackageX, Plus, Search, Trash2, Undo2, X } from 'lucide-react';
 
 const field = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500';
 const PAYMENT = ['COD', 'Prepaid', 'Advance', 'Credit 15 days', 'Credit 30 days'] as const;
@@ -66,6 +69,8 @@ export default function OrderPage() {
   const [showPicker, setShowPicker] = useState(false);
   const loadedVersion = useRef<string>('');
   const [changedElsewhere, setChangedElsewhere] = useState(false);
+  const [panel, setPanel] = useState<'FAILURE' | 'RETURN' | null>(null);
+  const [exchangeFor, setExchangeFor] = useState<ReturnEntry | null>(null);
 
   const order = db.getOrderById(orderId);
   const user = db.getCurrentUser();
@@ -253,8 +258,22 @@ export default function OrderPage() {
             <h2 id="order-status" className="text-sm font-bold text-slate-900">Delivery status</h2>
             <p className="mt-0.5 text-[11px] text-slate-500">Pending → Dispatched → Delivered. A failed attempt is logged in Delivery Failures; returns and exchanges in Returns.</p>
           </div>
-          <OrderStatusControl order={order} onChanged={() => setVersion((value) => value + 1)} />
+          <div className="flex flex-col items-start gap-3 sm:items-end">
+            <OrderStatusControl order={order} onChanged={() => setVersion((value) => value + 1)} />
+            <div className="flex flex-wrap gap-2">
+              {(canPerform(user, 'orderflow', 'CREATE') || canPerform(user, 'order_desk', 'CREATE')) && !['DELIVERED', 'CANCELLED', 'RETURNED', 'EXCHANGED'].includes(order.status) && (
+                <button type="button" onClick={() => setPanel('FAILURE')} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50"><PackageX className="h-3.5 w-3.5" /> Log failed delivery</button>
+              )}
+              {(canPerform(user, 'reviews', 'CREATE') || canPerform(user, 'order_desk', 'CREATE')) && order.status !== 'CANCELLED' && (
+                <button type="button" onClick={() => setPanel('RETURN')} className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-amber-800 hover:bg-amber-50"><Undo2 className="h-3.5 w-3.5" /> Log return or exchange</button>
+              )}
+            </div>
+          </div>
         </section>
+        {panel === 'FAILURE' && <LogFailureForm initialOrder={order} onClose={() => setPanel(null)} onSaved={() => { setPanel(null); setVersion((value) => value + 1); }} />}
+        {panel === 'RETURN' && <LogReturnForm initialOrder={order} onClose={() => setPanel(null)}
+          onSaved={(summary) => { setPanel(null); setVersion((value) => value + 1); if (summary.resolution === 'Exchanged') { const saved = db.getReturns('ALL').find((entry) => entry.id === summary.returnId); if (saved) setExchangeFor(saved); } }} />}
+        {exchangeFor && <ExchangePanel ret={exchangeFor} onClose={() => setExchangeFor(null)} onDone={() => setVersion((value) => value + 1)} />}
 
         {!canEdit && <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">You can view this order. Editing needs the OrderFlow edit permission.</p>}
         {changedElsewhere && (
