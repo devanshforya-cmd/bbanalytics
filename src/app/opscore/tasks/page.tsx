@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmAction } from '@/components/common/confirm';
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -115,7 +117,8 @@ export default function TasksPage() {
     setSelectedIds([]);
   };
 
-  const handleBulkReassign = (officerId: string) => {
+  const handleBulkReassign = async (officerId: string) => {
+    if (!(await confirmAction({ title: `Reassign ${selectedIds.length} task${selectedIds.length === 1 ? '' : 's'}?`, consequences: ['The new owner is notified and the tasks leave the current owner’s list.'], confirmLabel: 'Reassign' }))) return;
     if (selectedIds.length === 0) return;
     const officer = db.getUsers().find((u) => u.id === officerId);
     const officerName = officer?.fullName || 'Assigned Officer';
@@ -127,7 +130,8 @@ export default function TasksPage() {
     refreshTasks();
   };
 
-  const handleBulkComplete = () => {
+  const handleBulkComplete = async () => {
+    if (!(await confirmAction({ title: `Complete ${selectedIds.length} task${selectedIds.length === 1 ? '' : 's'}?`, confirmLabel: 'Complete tasks' }))) return;
     if (selectedIds.length === 0) return;
     selectedIds.forEach((id) => {
       db.updateTaskStatus(id, 'COMPLETED');
@@ -233,12 +237,10 @@ export default function TasksPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Task Assignment & Work Management (OpsCore)
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Manual and auto-generated action items for field follow-ups, overdue cheques, and store visits.
-            </p>
+<InfoTip label="About this page">Manual and auto-generated action items for field follow-ups, overdue cheques, and store visits.</InfoTip></h1>
+            
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">

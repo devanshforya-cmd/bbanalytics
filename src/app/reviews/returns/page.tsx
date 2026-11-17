@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAction } from '@/components/common/confirm';
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -107,9 +108,10 @@ export default function ReturnsPage() {
     setSelectedIds([]);
   };
 
-  const handleBulkSetResolution = (
+  const handleBulkSetResolution = async (
     newResolution: 'Exchanged' | 'Refunded' | 'Pending' | 'Rejected'
   ) => {
+    if (!(await confirmAction({ title: `Set ${selectedIds.length} return${selectedIds.length === 1 ? '' : 's'} to ${newResolution}?`, consequences: newResolution === 'Exchanged' ? ['Each one then needs its replacement order linked.'] : [], confirmLabel: 'Update returns' }))) return;
     if (selectedIds.length === 0) return;
     selectedIds.forEach((id) => {
       db.updateReturnResolution(id, newResolution);

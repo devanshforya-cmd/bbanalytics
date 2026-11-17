@@ -67,7 +67,7 @@ export default function SharedAccessPortalPage() {
         <label className="block text-sm" htmlFor="shared-passcode">Access passcode</label>
         <input id="shared-passcode" type="password" autoComplete="off" required value={passcode} onChange={event => setPasscode(event.target.value)} className="w-full rounded-xl border border-slate-600 bg-slate-900 p-3" />
         {error && <p role="alert" className="text-sm text-rose-400">{error}</p>}
-        <button disabled={loading} className="w-full rounded-xl bg-blue-600 p-3 font-bold disabled:opacity-50">{loading ? 'Verifying…' : 'Unlock shared view'}</button>
+        <button disabled={loading} className="w-full rounded-xl bg-blue-600 p-3 font-bold disabled:opacity-50">{loading ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Verifying…</> : 'Unlock shared view'}</button>
       </form>
     </main>
   );

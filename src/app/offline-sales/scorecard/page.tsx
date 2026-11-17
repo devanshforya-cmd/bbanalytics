@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -288,15 +289,11 @@ function ScorecardContent() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+            <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-black tracking-tight text-slate-900">
               {isOfficer ? 'My Performance Scorecard' : 'Sales Force Scorecards — Side-by-Side'}
-            </h1>
+<InfoTip label="About this page">{isOfficer ? 'Your activity metrics, beat compliance, and collections for the selected operational period.' : 'Direct side-by-side benchmarking across all 3 field officers on visit discipline, conversion, and cheque custody.'}</InfoTip></h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            {isOfficer
-              ? 'Your activity metrics, beat compliance, and collections for the selected operational period.'
-              : 'Direct side-by-side benchmarking across all 3 field officers on visit discipline, conversion, and cheque custody.'}
-          </p>
+          
         </div>
 
         {/* Period Selector Controls */}

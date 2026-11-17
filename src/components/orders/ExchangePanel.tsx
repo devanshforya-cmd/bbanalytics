@@ -80,7 +80,7 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
     <div className="flex items-center justify-end gap-2">
       <button type="button" onClick={onClose} disabled={isSubmitting} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Later</button>
       <button type="button" onClick={save} disabled={isSubmitting} className="rounded-xl bg-purple-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700 disabled:bg-purple-300">
-        {isSubmitting ? 'Saving…' : mode === 'CREATE' ? 'Create replacement order' : 'Link order'}
+        {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : mode === 'CREATE' ? 'Create replacement order' : 'Link order'}
       </button>
     </div>
   );

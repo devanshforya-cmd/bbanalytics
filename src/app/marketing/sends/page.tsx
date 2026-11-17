@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -74,8 +75,9 @@ export default function MarketingSendsPage() {
 
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-center">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Marketing Sends</h1>
-            <p className="mt-1 text-xs text-slate-500 sm:text-sm">History of products sent to influencers. Never counted in orders, sales or delivery numbers.</p>
+            <h1 className="flex items-center gap-1.5 text-2xl font-bold tracking-tight text-slate-900">Marketing Sends
+<InfoTip label="About this page">History of products sent to influencers. Never counted in orders, sales or delivery numbers.</InfoTip></h1>
+            
           </div>
           <Link href="/marketing/influencers" className="inline-flex items-center gap-1.5 self-start rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700"><Users className="h-3.5 w-3.5" /> Choose an influencer to send</Link>
         </div>

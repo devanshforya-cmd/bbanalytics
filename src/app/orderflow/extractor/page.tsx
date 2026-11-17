@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { isSellableCombo } from '@/lib/product-catalog';
@@ -317,13 +318,11 @@ export default function ExtractorPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
                   WhatsApp Order Extractor
-                </h1>
+<InfoTip label="About this page">Reads products, combos, keywords, and prices directly from catalog. Adapts automatically to catalog updates with zero code changes.</InfoTip></h1>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Reads products, combos, keywords, and prices directly from catalog. Adapts automatically to catalog updates with zero code changes.
-              </p>
+              
             </div>
           </div>
 
@@ -795,7 +794,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                             ) : (
                               <Check className="w-3.5 h-3.5" />
                             )}
-                            {isSubmitting ? 'Pushing...' : 'Push This Order'}
+                            {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Pushing…</> : 'Push This Order'}
                           </button>
                         )}
                       </div>}
@@ -946,7 +945,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                   {isSubmitting && (
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
                   )}
-                  {isSubmitting ? 'Pushing Orders...' : 'Confirm & Push Orders'}
+                  {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Pushing Orders…</> : 'Confirm & Push Orders'}
                 </button>
               </div>
             </div>

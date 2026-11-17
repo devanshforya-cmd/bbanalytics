@@ -64,6 +64,7 @@ export default function SubmitButton({
       type={type}
       onClick={handleClick}
       disabled={isSubmitting || disabled}
+      aria-busy={isSubmitting || undefined}
       className={`${baseStyles} ${variantStyles[variant]} ${widthStyle} ${className}`}
     >
       {isSubmitting && (

@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -267,13 +268,11 @@ export default function ReviewCategoriesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Dynamic Issue Categories Governance
-            </h1>
+<InfoTip label="About this page">Admin oversight for dynamic tags logged across Customer Feedback and Product Returns. Rename typos, consolidate duplicates, and analyze defect trends.</InfoTip></h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Admin oversight for dynamic tags logged across Customer Feedback and Product Returns. Rename typos, consolidate duplicates, and analyze defect trends.
-          </p>
+          
         </div>
 
         {/* 12d: Create New Category */}

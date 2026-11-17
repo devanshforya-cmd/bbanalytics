@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import { failureReasonLabel } from '@/lib/failure-reason';
 import React, { useState, useMemo, useEffect } from 'react';
 import { phoneDigits } from '@/lib/customer-lookup';
@@ -556,13 +557,11 @@ export default function CustomerInsightsPage() {
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+                <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-black tracking-tight text-slate-900">
                   Customer Intelligence & Cohort Analytics
-                </h1>
+<InfoTip label="About this page">Deterministic analytics layer per PRD 7.3: Churn forecasting, revenue concentration, brand synergy, and karma trajectories.</InfoTip></h1>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                Deterministic analytics layer per PRD 7.3: Churn forecasting, revenue concentration, brand synergy, and karma trajectories.
-              </p>
+              
             </div>
           </div>
         </div>

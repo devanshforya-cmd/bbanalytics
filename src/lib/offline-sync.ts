@@ -100,6 +100,8 @@ export class OfflineSyncManager {
     return this.queue.length || this.storageError || this.refreshError ? 'PENDING' : 'SYNCED';
   }
   public getPendingCount() { return this.queue.length; }
+  /** True while changes are being sent to the server. */
+  public isSending() { return !!this.syncing && this.queue.length > 0; }
   public getQueue() { return clone(this.queue); }
   public getErrors() { return [...(this.storageError ? [this.storageError] : []), ...(this.refreshError ? [this.refreshError] : []), ...this.queue.filter((item) => item.lastError).map((item) => item.lastError!)]; }
   public getQueueBreakdown() {
@@ -182,6 +184,7 @@ export class OfflineSyncManager {
     const generation = this.generation;
     const run = this.runSync(generation, ignoreBackoff);
     this.syncing = run;
+    if (this.queue.length) this.notify(); // lets the progress bar show while a save is in flight
     try { return await run; }
     finally {
       if (generation === this.generation) {

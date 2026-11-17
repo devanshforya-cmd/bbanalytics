@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -118,8 +119,9 @@ export default function AllOrdersPage() {
         <Breadcrumbs items={[{ label: 'Orderflow', href: '/orderflow/orders' }, { label: 'All Orders' }]} />
         <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">All Orders</h1>
-            <p className="mt-0.5 text-xs text-slate-500">Find any order, then mark it dispatched or delivered, or log a failed delivery, a return or an exchange.</p>
+            <h1 className="flex items-center gap-1.5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">All Orders
+<InfoTip label="About this page">Find any order, then mark it dispatched or delivered, or log a failed delivery, a return or an exchange.</InfoTip></h1>
+            
           </div>
         </div>
 

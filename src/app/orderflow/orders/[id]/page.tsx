@@ -466,7 +466,7 @@ export default function OrderPage() {
               <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3">
                 <button type="button" onClick={() => setConfirming(false)} disabled={isSubmitting} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Keep editing</button>
                 <button type="button" onClick={save} disabled={isSubmitting || (needsReason && !reason.trim())} className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
-                  <Check className="h-3.5 w-3.5" /> {isSubmitting ? 'Saving…' : 'Save changes'}
+                  <Check className="h-3.5 w-3.5" /> {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save changes'}
                 </button>
               </div>
             </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import { countsAsSale } from '@/lib/order-status';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -228,12 +229,10 @@ export default function Product360Page() {
                 <ProductActions product={product} onChanged={() => { if (!db.getProductById(product.id)) router.push('/products'); }} />
                 <span className="text-xs text-slate-500">&bull; {product.category}</span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1.5">
+              <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1.5">
                 {product.name}
-              </h1>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Master Master Packaging: {product.caseSize || 24} units per corrugated box carton
-              </p>
+<InfoTip label="About this page">Master Master Packaging: {product.caseSize || 24} units per corrugated box carton</InfoTip></h1>
+              
             </div>
           </div>
 

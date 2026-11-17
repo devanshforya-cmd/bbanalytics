@@ -107,7 +107,7 @@ export default function ContentPieceForm({ influencer, content, sendId, onClose,
     <div className="flex items-center justify-end gap-2">
       <button type="button" onClick={onClose} disabled={isSubmitting} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
       <button type="button" onClick={save} disabled={isSubmitting} className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
-        {isSubmitting ? 'Saving…' : content ? 'Save changes' : 'Save content'}
+        {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : content ? 'Save changes' : 'Save content'}
       </button>
     </div>
   );

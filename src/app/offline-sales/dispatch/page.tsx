@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState } from 'react';
 import { db } from '@/lib/db/db-service';
 import { Dispatch, DispatchItem, BrandCode } from '@/lib/types';
@@ -124,12 +125,10 @@ export default function DispatchPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Distributor Dispatches (Manual Entry)
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Bulk dispatches to distributor chains with 2-step confirmation and audit trail.
-            </p>
+<InfoTip label="About this page">Bulk dispatches to distributor chains with 2-step confirmation and audit trail.</InfoTip></h1>
+            
           </div>
 
           <button
@@ -515,7 +514,7 @@ export default function DispatchPage() {
                 {isSubmitting && (
                   <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
                 )}
-                {isSubmitting ? 'Saving...' : 'Save & Update Inventory'}
+                {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save & Update Inventory'}
               </button>
             </div>
           </div>

@@ -3,16 +3,7 @@
 import BrandLogo from '@/components/layout/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Lock,
-  Mail,
-  Phone,
-  AlertCircle,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  ShieldCheck,
-} from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Lock, Mail, Phone } from 'lucide-react';
 import { loginWithMobile, getSessionUser, getRedirectPathForUser } from '@/lib/auth';
 
 export default function LoginPage() {
@@ -35,7 +26,7 @@ export default function LoginPage() {
     e.preventDefault();
     if (loading) return;
     if (!identifier.trim() || !password.trim()) {
-      setError('Please provide your email/phone and password.');
+      setError('Enter your email or mobile number, and your password.');
       return;
     }
 
@@ -45,7 +36,7 @@ export default function LoginPage() {
     try {
       const res = await loginWithMobile(identifier, password);
       if (!res.success || !res.user) {
-        setError(res.error || 'Invalid credentials. Please verify your email/phone and password.');
+        setError(res.error || 'That email or number and password don’t match. Check both and try again.');
         setLoading(false);
       } else {
         const dest = getRedirectPathForUser(res.user);
@@ -60,116 +51,58 @@ export default function LoginPage() {
   const isEmail = identifier.includes('@') || /[a-zA-Z]/.test(identifier);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 text-slate-800 flex flex-col justify-between p-4 sm:p-6 selection:bg-blue-600 selection:text-white">
-      {/* Top Header */}
-      <div className="flex items-center justify-between max-w-md mx-auto w-full pt-4">
-        <h1 className="mx-auto">
-          <BrandLogo variant="full" priority className="h-11 sm:h-12" />
-        </h1>
-      </div>
+    <main className="flex min-h-dvh flex-col bg-[#f5f5f7] text-slate-900">
+      <div className="flex flex-1 flex-col items-center justify-center px-5 py-12">
+        <BrandLogo variant="full" priority className="h-12 sm:h-14" />
+        <h1 className="mt-10 text-center text-[28px] font-semibold leading-tight text-slate-900 sm:text-[32px]">Sign in</h1>
+        <p className="mt-2 text-center text-[15px] text-slate-500">Use your work email or mobile number.</p>
+        
 
-      {/* Main Login Card */}
-      <div className="max-w-md mx-auto w-full my-auto py-6 sm:py-8">
-        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-slate-300/40">
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold mb-3 border border-slate-200/60">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-              <span>Team sign-in</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 mb-1.5">
-              Sign In
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              Use your work email or mobile number.
-            </p>
-          </div>
-
+        <form onSubmit={handleLogin} className="mt-8 w-full max-w-[380px]" noValidate>
           {error && (
-            <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2.5 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-              <span className="font-medium leading-relaxed">{error}</span>
-            </div>
+            <p role="alert" className="mb-4 flex items-start gap-2 rounded-xl bg-rose-50 px-3.5 py-3 text-[13px] text-rose-700">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> <span>{error}</span>
+            </p>
           )}
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            {/* Email / Mobile Identifier */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Email or Mobile Number
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  {isEmail ? <Mail className="w-4 h-4 text-blue-600" /> : <Phone className="w-4 h-4 text-blue-600" />}
-                </div>
-                <input
-                  type="text"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="name@brandbucket.com or 98XXXXXXXX"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-semibold tracking-wide transition-all"
-                  required
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Lock className="w-4 h-4 text-slate-500" />
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full pl-10 pr-11 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium transition-all"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-700 transition-colors"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-sm tracking-wide shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 active:scale-[0.99] transition-all disabled:opacity-60 cursor-pointer"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <span>Sign in</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Secure sign-in · 24-hour session</span>
-            <span className="font-mono">v2.1</span>
+          <div className="overflow-hidden rounded-2xl border border-black/[0.08] bg-white shadow-sm focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/15">
+            <label className="flex items-center gap-3 px-4">
+              <span className="sr-only">Email or mobile number</span>
+              {isEmail ? <Mail className="h-[18px] w-[18px] shrink-0 text-slate-400" aria-hidden="true" /> : <Phone className="h-[18px] w-[18px] shrink-0 text-slate-400" aria-hidden="true" />}
+              <input
+                type="text" inputMode="email" autoComplete="username" autoCapitalize="none" spellCheck={false}
+                value={identifier} onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="Email or mobile number"
+                className="h-[52px] w-full bg-transparent text-[16px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:shadow-none"
+                required autoFocus
+              />
+            </label>
+            <div className="ml-11 h-px bg-black/[0.08]" />
+            <label className="flex items-center gap-3 px-4">
+              <span className="sr-only">Password</span>
+              <Lock className="h-[18px] w-[18px] shrink-0 text-slate-400" aria-hidden="true" />
+              <input
+                type={showPassword ? 'text' : 'password'} autoComplete="current-password"
+                value={password} onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                className="h-[52px] w-full bg-transparent text-[16px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:shadow-none"
+                required
+              />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="-mr-1 rounded-full p-1.5 text-slate-400 hover:bg-black/[0.04] hover:text-slate-700">
+                {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
+              </button>
+            </label>
           </div>
-        </div>
 
+          <button type="submit" disabled={loading} aria-busy={loading}
+            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[15px] font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-70">
+            {loading ? <><span className="bb-spinner" aria-hidden="true" /> Signing in…</> : 'Sign in'}
+          </button>
+          <p className="mt-4 text-center text-[12px] text-slate-400">You stay signed in for 24 hours on this device.</p>
+        </form>
       </div>
 
-      {/* Bottom Footer */}
-      <div className="text-center text-[11px] text-slate-400 max-w-md mx-auto w-full pb-3">
-        <p>Brand Bucket Nepal Pvt. Ltd. &bull; Kathmandu, Nepal</p>
-      </div>
-    </div>
+      <footer className="pb-6 text-center text-[12px] text-slate-400">Brand Bucket Nepal Pvt. Ltd. · Kathmandu</footer>
+    </main>
   );
 }

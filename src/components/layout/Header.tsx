@@ -1,6 +1,7 @@
 'use client';
 
 import BrandLogo from './BrandLogo';
+import SavingBar from './SavingBar';
 import Link from 'next/link';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -156,10 +157,11 @@ export default function Header() {
       <header
         className={`sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b px-3 sm:px-6 transition-all duration-200 ${
           isGlassVariant
-            ? 'border-slate-200/70 bg-white/85 shadow-[0_4px_25px_-5px_rgba(0,0,0,0.04)] backdrop-blur-xl'
-            : 'border-slate-200 bg-white/95 shadow-2xs backdrop-blur-md'
+            ? 'border-black/[0.06] bg-white/70 backdrop-blur-xl backdrop-saturate-150'
+            : 'border-black/[0.06] bg-white/80 backdrop-blur-xl backdrop-saturate-150'
         }`}
       >
+        <SavingBar />
         {/* Left: Hamburger (mobile/tablet) + Clean Brand Dropdown */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Hamburger Menu Trigger for <lg (touch target >= 44px on mobile) */}

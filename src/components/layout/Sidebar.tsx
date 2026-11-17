@@ -56,14 +56,14 @@ interface MenuSection {
 
 const menuSections: MenuSection[] = [
   {
-    title: 'OVERVIEW',
+    title: 'Overview',
     items: [
       { label: 'Dashboard', href: '/dashboard', permKey: 'dashboard', icon: LayoutDashboard },
       { label: 'Products & Combos', href: '/products', permKey: 'products', icon: Package },
     ],
   },
   {
-    title: 'OFFLINE SALES (GT/MT)',
+    title: 'Offline sales',
     items: [
       { label: 'Beat Plans & Routes', href: '/offline-sales/beat-plan', permKey: 'beat_plans', icon: Compass },
       { label: 'Stores & Branches', href: '/offline-sales/stores', permKey: 'stores', icon: Store },
@@ -77,7 +77,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: 'ORDERFLOW',
+    title: 'Online orders',
     items: [
       { label: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles },
       { label: 'Manual Order Entry', href: '/orderflow/manual-entry', permKey: 'orderflow', icon: ClipboardPen },
@@ -88,7 +88,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: 'REVIEWS & RETURNS',
+    title: 'Reviews & returns',
     items: [
       { label: 'Feedback & Complaints', href: '/reviews/feedback', permKey: 'reviews', icon: MessageSquareHeart },
       { label: 'Returns', href: '/reviews/returns', permKey: 'reviews', icon: RotateCcw },
@@ -96,21 +96,21 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: 'CUSTOMER INTELLIGENCE',
+    title: 'Customers',
     items: [
       { label: 'Customer 360 Directory', href: '/customers', permKey: 'customers', icon: Users },
       { label: 'Cohort Insights', href: '/customers/insights', permKey: 'customers', icon: PieChart },
     ],
   },
   {
-    title: 'MARKETING',
+    title: 'Marketing',
     items: [
       { label: 'Influencer Directory', href: '/marketing/influencers', permKey: 'marketing', icon: Megaphone },
       { label: 'Marketing Sends', href: '/marketing/sends', permKey: 'marketing', icon: Gift },
     ],
   },
   {
-    title: 'OPSCORE',
+    title: 'Operations',
     items: [
       { label: 'Calendar To-Do', href: '/opscore/calendar-tasks', permKey: 'tasks', icon: Calendar, badge: 'BS/AD' },
       { label: 'Task Management', href: '/opscore/tasks', permKey: 'tasks', icon: CheckSquare },
@@ -119,7 +119,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: 'SETTINGS',
+    title: 'Admin',
     items: [
       { label: 'System Settings', href: '/settings', permKey: 'settings', icon: Settings },
     ],
@@ -138,26 +138,26 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <aside className="hidden lg:flex w-64 flex-col border-r border-slate-200 bg-white text-slate-700">
+    <aside className="hidden w-64 flex-col border-r border-black/[0.06] bg-white/80 text-slate-700 backdrop-blur-xl lg:flex">
       {/* Brand Header */}
-      <div className="flex h-16 items-center border-b border-slate-200/80 px-5">
+      <div className="flex h-16 items-center px-5">
         <Link href="/dashboard" aria-label="Brand Bucket home" className="rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500">
           <BrandLogo variant="full" priority className="h-8" />
         </Link>
       </div>
 
       {/* Nav List Filtered Strictly by Permissions */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+      <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-3 pb-4 pt-1">
         {menuSections.map((section) => {
           const visibleItems = section.items.filter((item) => (hasAccess(currentUser, item.permKey) || (!!item.alsoPermKey && hasAccess(currentUser, item.alsoPermKey))));
           if (visibleItems.length === 0) return null;
 
           return (
             <div key={section.title}>
-              <div className="px-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+              <div className="px-2.5 text-[11px] font-semibold text-slate-500">
                 {section.title}
               </div>
-              <div className="mt-1.5 space-y-0.5">
+              <div className="mt-1 space-y-px">
                 {visibleItems.map((item) => {
                   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                   const Icon = item.icon;
@@ -165,19 +165,20 @@ export default function Sidebar() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`group flex items-center justify-between rounded-r-xl px-3 py-2 text-xs transition-all duration-150 ${
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`group flex items-center justify-between rounded-lg px-2.5 py-[7px] text-[13px] transition-colors duration-150 ${
                         isActive
-                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50/40 text-blue-700 font-bold border-l-[3px] border-blue-600 shadow-2xs'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-l-[3px] border-transparent font-medium'
+                          ? 'bg-blue-600/10 font-semibold text-blue-700'
+                          : 'font-medium text-slate-700 hover:bg-black/[0.04]'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
                         <Icon
-                          className={`h-4 w-4 shrink-0 transition-transform group-hover:scale-105 ${
-                            isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
+                          className={`h-[18px] w-[18px] shrink-0 ${
+                            isActive ? 'text-blue-600' : 'text-slate-500'
                           }`}
                         />
-                        <span className={isActive ? 'text-blue-700 font-bold' : 'text-slate-600 group-hover:text-slate-900'}>
+                        <span>
                           {item.label}
                         </span>
                       </div>
@@ -199,13 +200,13 @@ export default function Sidebar() {
             </div>
           );
         })}
-      </div>
+      </nav>
 
       {/* Footer User Info */}
-      <div className="border-t border-slate-200/80 p-3.5 bg-slate-50/30">
-        <div className="flex items-center gap-3 p-2 rounded-xl border border-slate-200/60 bg-white shadow-2xs">
+      <div className="border-t border-black/[0.06] p-3">
+        <div className="flex items-center gap-3 rounded-xl p-2">
           <div className="relative">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 font-bold text-white text-xs shadow-2xs">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
               {currentUser.fullName ? currentUser.fullName.charAt(0) : 'U'}
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />

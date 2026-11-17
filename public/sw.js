@@ -3,7 +3,7 @@
  * Provides offline caching for static assets, app shell, and background sync integration.
  */
 
-const CACHE_NAME = 'bb-command-center-v9-brand-logo';
+const CACHE_NAME = 'bb-command-center-v10-apple-theme';
 // Install: Precache core app shell & static routes
 self.addEventListener('install', (event) => {
   self.skipWaiting();

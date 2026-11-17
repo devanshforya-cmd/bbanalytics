@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmAction } from '@/components/common/confirm';
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -217,7 +219,8 @@ function ChequesContent() {
     setSelectedIds([]);
   };
 
-  const handleBulkMarkCashed = () => {
+  const handleBulkMarkCashed = async () => {
+    if (!(await confirmAction({ title: `Mark ${selectedIds.length} cheque${selectedIds.length === 1 ? '' : 's'} as cashed?`, consequences: ['Each cheque leaves the pending list and counts as collected.'], confirmLabel: 'Mark cashed' }))) return;
     if (selectedIds.length === 0) return;
     guardedSubmit(async () => {
       selectedIds.forEach((id) => {
@@ -231,7 +234,8 @@ function ChequesContent() {
     });
   };
 
-  const handleBulkEscalate = () => {
+  const handleBulkEscalate = async () => {
+    if (!(await confirmAction({ title: `Mark ${selectedIds.length} cheque${selectedIds.length === 1 ? '' : 's'} as bounced?`, consequences: ['Each store is flagged and the cheques move to incidents.'], confirmLabel: 'Mark bounced', destructive: true }))) return;
     if (selectedIds.length === 0) return;
     guardedSubmit(async () => {
       selectedIds.forEach((id) => {
@@ -285,12 +289,10 @@ function ChequesContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
             Cheque Tracker (Two-Step Handover)
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Tracks physical custody: Field Collection → Office Handover → Bank Clearing with overdue alerts.
-          </p>
+<InfoTip label="About this page">Tracks physical custody: Field Collection → Office Handover → Bank Clearing with overdue alerts.</InfoTip></h1>
+          
         </div>
 
         <button
@@ -854,7 +856,7 @@ function ChequesContent() {
                 {isSubmitting && (
                   <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
                 )}
-                {isSubmitting ? 'Saving...' : 'Save Cheque'}
+                {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save Cheque'}
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { confirmAction } from '@/components/common/confirm';
 import React, { useState, useEffect, useRef } from 'react';
 import { syncManager, SyncState } from '@/lib/offline-sync';
 import {
@@ -67,7 +68,9 @@ export default function SyncStatusDropdown() {
     }
   };
 
-  const handleToggleOffline = () => {
+  const handleToggleOffline = async () => {
+    // Pausing means nothing is saved to the server until it is turned back on.
+    if (!syncManager.isSimulated() && !(await confirmAction({ title: 'Pause saving to the server?', consequences: ['Changes stay on this device only until you resume.', 'Other people will not see them meanwhile.'], confirmLabel: 'Pause saving' }))) return;
     syncManager.toggleSimulatedOffline();
   };
 

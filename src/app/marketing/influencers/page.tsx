@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -89,8 +90,9 @@ export default function InfluencerDirectoryPage() {
 
         <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Influencers</h1>
-            <p className="mt-1 text-xs text-slate-500 sm:text-sm">Open a profile to send products or add content. Every send starts from an influencer.</p>
+            <h1 className="flex items-center gap-1.5 text-2xl font-bold tracking-tight text-slate-900">Influencers
+<InfoTip label="About this page">Open a profile to send products or add content. Every send starts from an influencer.</InfoTip></h1>
+            
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/marketing/sends" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><History className="h-3.5 w-3.5" /> Send history</Link>

@@ -113,7 +113,7 @@ export default function LogFailureForm({ onClose, onSaved, onViewCustomer, initi
       <div className="flex gap-2">
         <button type="button" onClick={onClose} disabled={isSubmitting} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
         <button type="button" onClick={save} disabled={isSubmitting} className="rounded-xl bg-rose-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300">
-          {isSubmitting ? 'Saving…' : openFailure ? `Add attempt ${nextAttempt}` : 'Log delivery failure'}
+          {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : openFailure ? `Add attempt ${nextAttempt}` : 'Log delivery failure'}
         </button>
       </div>
     </div>

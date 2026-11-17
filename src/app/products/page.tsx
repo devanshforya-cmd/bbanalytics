@@ -1,5 +1,6 @@
 'use client';
 
+import InfoTip from '@/components/common/InfoTip';
 import { countsAsSale } from '@/lib/order-status';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -483,11 +484,9 @@ export default function ProductsPage() {
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
               <Package className="w-6 h-6 text-brand-600" />
               <span>Products, Combos &amp; Performance</span>
-            </h1>
+<InfoTip label="About this page">Master SKU catalog, D2C social promotional kits, warehouse inventory, and sales telemetry.</InfoTip></h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Master SKU catalog, D2C social promotional kits, warehouse inventory, and sales telemetry.
-          </p>
+          
         </div>
 
         {/* Action Buttons */}

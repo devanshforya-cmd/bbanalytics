@@ -1,5 +1,7 @@
 'use client';
 
+import { confirmAction } from '@/components/common/confirm';
+import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -318,7 +320,8 @@ function FeedbackContent() {
     setSelectedIds([]);
   };
 
-  const handleBulkSetStatus = (newStatus: ComplaintStatus) => {
+  const handleBulkSetStatus = async (newStatus: ComplaintStatus) => {
+    if (!(await confirmAction({ title: `Change status of ${selectedIds.length} entr${selectedIds.length === 1 ? 'y' : 'ies'} to ${newStatus.replace('_', ' ').toLowerCase()}?`, confirmLabel: 'Change status' }))) return;
     if (selectedIds.length === 0) return;
     selectedIds.forEach((id) => {
       db.updateComplaintStatus(id, newStatus, 'Bulk status update');
@@ -328,7 +331,8 @@ function FeedbackContent() {
     refreshList();
   };
 
-  const handleBulkAssign = (officerId: string) => {
+  const handleBulkAssign = async (officerId: string) => {
+    if (!(await confirmAction({ title: `Assign ${selectedIds.length} entr${selectedIds.length === 1 ? 'y' : 'ies'}?`, consequences: ['The assignee is notified.'], confirmLabel: 'Assign' }))) return;
     if (selectedIds.length === 0) return;
     const user = db.getUsers().find((u) => u.id === officerId);
     const officerName = user?.fullName || 'Assigned Officer';
@@ -353,12 +357,10 @@ function FeedbackContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
             Feedback & Complaints
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Omnichannel feedback stream with dynamic issue classification, marketing design tagging, and complaint resolution tracking.
-          </p>
+<InfoTip label="About this page">Omnichannel feedback stream with dynamic issue classification, marketing design tagging, and complaint resolution tracking.</InfoTip></h1>
+          
         </div>
 
         <button
@@ -712,7 +714,7 @@ function FeedbackContent() {
                   <CustomerLookup value={linkLookup} onChange={setLinkLookup} />
                   <div className="flex justify-end">
                     <button type="button" onClick={handleAttachCustomer} disabled={isSubmitting || !linkLookup.link} className="rounded-lg bg-blue-600 px-4 py-2 font-bold text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed">
-                      {isSubmitting ? 'Saving…' : 'Attach customer'}
+                      {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Attach customer'}
                     </button>
                   </div>
                 </div>
@@ -1147,7 +1149,7 @@ function FeedbackContent() {
                   disabled={isSubmitting}
                   className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow text-xs disabled:bg-blue-300 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? 'Saving…' : 'Save Entry'}
+                  {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save Entry'}
                 </button>
               </div>
             </form>
