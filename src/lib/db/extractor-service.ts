@@ -49,29 +49,31 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     if (row.isMarketing && !influencer) throw new ExtractorInputError(`${label} needs an existing influencer.`);
     if (!Array.isArray(row.items) || row.items.length === 0 || row.items.length > 50) throw new ExtractorInputError(`${label} needs catalogue items.`);
     const products = db.getProducts(), combos = db.getCombos();
-    const items: { productId: string; productName: string; brandCode: string; quantity: number; unitPrice: number; totalPrice: number }[] = (row.items as any[]).map((item: any) => {
+    const items: { productId: string; productName: string; brandCode: string; quantity: number; unitPrice: number; totalPrice: number; catalogUnitPrice: number }[] = (row.items as any[]).map((item: any) => {
       if (!item || typeof item.productId !== 'string' || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || item.quantity > 10000) throw new ExtractorInputError(`${label} has an invalid item quantity.`);
       const product = products.find(candidate => candidate.id === item.productId && candidate.active !== false);
       const combo = combos.find(candidate => candidate.id === item.productId && isSellableCombo(candidate, products));
       const selected = product || combo; if (!selected || !canAccessBrand(actor, selected.brandCode)) throw new ExtractorInputError(`${label} contains an unavailable item. Refresh and extract again.`, 409);
       const price = product ? product.mrp : combo!.comboPrice || combo!.comboMrp || 0;
       if (!Number.isFinite(price) || price <= 0 || typeof item.expectedUnitPrice !== 'number' || !Number.isFinite(item.expectedUnitPrice) || Math.abs(item.expectedUnitPrice - price) > 0.005) throw new ExtractorInputError(`${label} has a changed or invalid catalogue price. Refresh and extract again.`, 409);
-      return { productId: selected.id, productName: selected.name, brandCode: selected.brandCode, quantity: item.quantity, unitPrice: price, totalPrice: money(price * item.quantity) };
+      const salePrice = item.saleUnitPrice == null ? price : item.saleUnitPrice;
+      if (typeof salePrice !== 'number' || !Number.isFinite(salePrice) || salePrice < 0 || salePrice > price || Math.abs(salePrice * 100 - Math.round(salePrice * 100)) > 1e-6) throw new ExtractorInputError(`${label} item selling price must be between zero and the catalogue price.`);
+      return { productId: selected.id, productName: selected.name, brandCode: selected.brandCode, quantity: item.quantity, catalogUnitPrice: price, unitPrice: salePrice, totalPrice: money(salePrice * item.quantity) };
     });
     if (new Set(items.map(item => item.brandCode)).size !== 1) throw new ExtractorInputError(`${label} contains multiple brands; split it into separate orders.`);
     const brandCode = items[0].brandCode;
     if (!db.getBrands('ACTIVE').some(brand => brand.code === brandCode)) throw new ExtractorInputError(`${label} brand is no longer active.`, 409);
     const catalogCents = items.reduce((sum,item) => sum + Math.round(item.totalPrice * 100), 0);
-    if (!Number.isSafeInteger(catalogCents) || catalogCents <= 0) throw new ExtractorInputError(`${label} catalogue total is too large.`);
+    if (!Number.isSafeInteger(catalogCents) || catalogCents < 0) throw new ExtractorInputError(`${label} item total is too large.`);
     const stated = row.statedPrice == null ? null : Number(row.statedPrice);
     const discount = row.discountPercent == null ? null : Number(row.discountPercent);
-    if (stated !== null && (!Number.isFinite(stated) || stated < 0 || Math.abs(stated * 100 - Math.round(stated * 100)) > 1e-6 || !Number.isSafeInteger(Math.round(stated * 100)) || stated * 100 > catalogCents + 0.5)) throw new ExtractorInputError(`${label} stated amount cannot exceed the catalogue total.`);
+    if (stated !== null && (!Number.isFinite(stated) || stated < 0 || Math.abs(stated * 100 - Math.round(stated * 100)) > 1e-6 || !Number.isSafeInteger(Math.round(stated * 100)) || stated * 100 > catalogCents + 0.5)) throw new ExtractorInputError(`${label} stated amount cannot exceed the item selling prices.`);
     if (discount !== null && (!Number.isFinite(discount) || discount < 0 || discount > 100 || Math.abs(discount * 100 - Math.round(discount * 100)) > 1e-6)) throw new ExtractorInputError(`${label} discount must be between 0 and 100%.`);
     const discountedCents = discount === null ? catalogCents : Math.round(catalogCents * (1 - discount / 100));
     if (!row.isMarketing && stated !== null && discount !== null && Math.round(stated * 100) !== discountedCents) throw new ExtractorInputError(`${label} stated amount and discount do not match.`);
     const targetCents = row.isMarketing ? 0 : stated === null ? discountedCents : Math.round(stated * 100);
     const totals = allocateOrderTotal(items, targetCents / 100);
-    const adjusted: OrderItem[] = items.map((item,i) => ({ ...item, catalogUnitPrice: item.unitPrice, totalPrice: totals[i], unitPrice: totals[i] / item.quantity, discountAmount: money(item.totalPrice - totals[i]) }));
+    const adjusted: OrderItem[] = items.map((item,i) => ({ ...item, totalPrice: totals[i], unitPrice: totals[i] / item.quantity, discountAmount: money(item.catalogUnitPrice * item.quantity - totals[i]) }));
     const bs = adToBs(date);
     const order: Omit<Order,'id'|'createdAt'> = { orderNumber, extractorRequestHash: requestHash, brandCode, orderDateAd, orderDateBs: `${bs.monthName} ${bs.day}, ${bs.year}`,
       platform, customerName, customerPhone, ...(alternatePhone ? { alternatePhone } : {}), province, district, address, deliveryMethod, ...(row.assignedToId ? { assignedToId: required(row.assignedToId, `${label} responsible person`) } : {}),
