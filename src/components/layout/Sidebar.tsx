@@ -78,6 +78,7 @@ const menuSections: MenuSection[] = [
       { label: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles, badge: 'Rule-Engine' },
       { label: 'Manual Order Entry', href: '/orderflow/manual-entry', permKey: 'orderflow', icon: ClipboardPen },
       { label: 'Daily Orders', href: '/orderflow/daily-orders', permKey: 'orderflow', icon: ClipboardCheck, badge: 'Live' },
+      { label: 'Monthly Sales Sheet', href: '/orderflow/monthly-sales', permKey: 'orderflow', icon: FileSpreadsheet },
       { label: 'Delivery Failures', href: '/orderflow/delivery-failures', permKey: 'orderflow', icon: TruckIcon, badge: 'Separated' },
     ],
   },
