@@ -1,5 +1,6 @@
 'use client';
 
+import { failureReasonLabel } from '@/lib/failure-reason';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -252,12 +253,12 @@ export default function SheetsExportPage() {
       rowCount: marketingSends.length,
       columns: ['Send #', 'Sent BS', 'Sent AD', 'Influencer', 'Brands', 'Products', 'Units', 'Reach-out', 'Responsible', 'Delivery', 'Content Due AD', 'Status'],
       sampleData: marketingSends.slice(0, 5).map((send) => [send.sendNumber, send.sentDateBs || '', send.sentDateAd, send.influencerName, send.brandCodes.join(', '),
-        send.items.map((item) => `${item.quantity}x ${item.productName}`).join('; '), String(send.items.reduce((sum, item) => sum + item.quantity, 0)), send.reachOutPlatform, send.responsibleName || '', send.deliveryChannel, send.expectedContentDateAd || '', send.status]),
+        send.items.map((item) => `${item.quantity}x ${item.productName}${item.isCombo ? " (combo)" : ""}`).join('; '), String(send.items.reduce((sum, item) => sum + item.quantity, 0)), send.reachOutPlatform, send.responsibleName || '', send.deliveryChannel, send.expectedContentDateAd || '', send.status]),
       generateCsv: () => {
         const rows = [
           ['Send #', 'Sent BS', 'Sent AD', 'Influencer', 'Brands', 'Products', 'Units', 'Reach-out Platform', 'Responsible', 'Delivery Channel', 'Delivery Address', 'Content Due BS', 'Content Due AD', 'Status', 'Notes'],
           ...marketingSends.map((send) => [send.sendNumber, send.sentDateBs || '', send.sentDateAd, send.influencerName, send.brandCodes.join(', '),
-            send.items.map((item) => `${item.quantity}x ${item.productName}`).join('; '), send.items.reduce((sum, item) => sum + item.quantity, 0), send.reachOutPlatform, send.responsibleName || '',
+            send.items.map((item) => `${item.quantity}x ${item.productName}${item.isCombo ? " (combo)" : ""}`).join('; '), send.items.reduce((sum, item) => sum + item.quantity, 0), send.reachOutPlatform, send.responsibleName || '',
             send.deliveryChannel, send.deliveryAddress || '', send.expectedContentDateBs || '', send.expectedContentDateAd || '', send.status, send.notes || '']),
         ];
         return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -315,7 +316,7 @@ export default function SheetsExportPage() {
         f.orderNumber || f.orderId,
         f.customerName,
         f.customerPhone,
-        f.reason,
+        failureReasonLabel(f),
         `${f.attempts || 1} attempts`,
         f.valley,
         f.status || 'FAILED',
@@ -332,7 +333,7 @@ export default function SheetsExportPage() {
             f.customerPhone,
             f.brandCode,
             f.productName || '',
-            f.reason,
+            failureReasonLabel(f),
             f.deliveryMethod || 'Standard',
             f.valley,
             f.attempts || 1,

@@ -131,7 +131,7 @@ export default function MarketingSendsPage() {
                         <td className="whitespace-nowrap px-3 py-3 text-slate-600">{formatDate(send.sentDateAd, send.sentDateBs)}</td>
                         <td className="px-3 py-3 font-bold text-blue-700">{send.influencerName}</td>
                         <td className="px-3 py-3"><span className="flex flex-wrap gap-1">{send.brandCodes.map((code) => <span key={code} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">{brandName(code)}</span>)}</span></td>
-                        <td className="max-w-xs px-3 py-3 text-slate-700">{send.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')}</td>
+                        <td className="max-w-xs px-3 py-3 text-slate-700">{send.items.map((item) => `${item.quantity}× ${item.productName}${item.isCombo ? " (combo)" : ""}`).join(', ')}</td>
                         <td className="whitespace-nowrap px-3 py-3 text-slate-600">{send.responsibleName || '—'}</td>
                         <td className="whitespace-nowrap px-3 py-3 text-slate-600">{send.expectedContentDateAd ? formatDate(send.expectedContentDateAd, send.expectedContentDateBs) : '—'}</td>
                         <td className="whitespace-nowrap px-3 py-3"><span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLE[label]}`}>{label}</span></td>

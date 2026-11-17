@@ -1,5 +1,6 @@
 'use client';
 
+import { failureReasonLabel } from '@/lib/failure-reason';
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { customerBrandMap } from '@/lib/product-catalog';
@@ -120,7 +121,7 @@ export default function CustomerInsightsPage() {
           recommendedAction = 'Supervisor courtesy call + gift voucher';
         } else if (custFailures.length > 0) {
           lastExpType = 'FAILURE';
-          lastExpText = `Delivery Failure (${custFailures[0].reason})`;
+          lastExpText = `Delivery Failure (${failureReasonLabel(custFailures[0])})`;
           recommendedAction = 'Offer prepaid order with free priority shipping';
         } else if (c.totalOrders >= 5) {
           recommendedAction = 'VIP concierge check-in + complimentary sample kit';

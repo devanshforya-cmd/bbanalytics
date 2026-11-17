@@ -1,3 +1,4 @@
+import { failureReasonLabel } from '../../../../lib/failure-reason';
 import type { DatabaseService } from '@/lib/db/db-service';
 import type { SharedAccessLink } from '@/lib/types';
 import { validDateAd } from '../../_workspace';
@@ -56,7 +57,7 @@ export function projectSharedPortal(db: DatabaseService, link: SharedAccessLink)
   const result: SharedPortalData = { link: { name: link.name, allowedPages, brandScope: scope, expiresAt: link.expiresAt, dateRangeType: link.dateRangeType, dateFrom: link.dateFrom, dateTo: link.dateTo } };
   if (allowedPages.includes('dashboard')) result.summary = { totalOrders: orders.length, failureCount: failures.length, returnCount: returns.length, productCount: products.length };
   if (allowedPages.includes('products')) result.products = products.map(product => ({ id: product.id, name: link.showProductNames === true ? product.name : 'Hidden product', brandCode: product.brandCode, category: product.category, sku: link.showProductNames === true ? product.sku : 'Hidden', orderCount: orders.filter(order => order.items.some(item => item.productId === product.id)).length, returnCount: returns.filter(entry => entry.productId === product.id).length }));
-  if (allowedPages.includes('delivery-failures')) result.deliveryFailures = link.showOrderRows === true ? failures.map(failure => ({ id: failure.id, orderNumber: orderNumberOf(failure.orderId, failure.orderNumber), dateAd: failure.dateAd, dateBs: failure.dateBs, brandCode: failure.brandCode, customerName: customerName(failure.customerName), customerPhone: customerPhone(failure.customerPhone), valley: failure.valley, reason: failure.reason, status: failure.status || 'FAILED' })) : [];
+  if (allowedPages.includes('delivery-failures')) result.deliveryFailures = link.showOrderRows === true ? failures.map(failure => ({ id: failure.id, orderNumber: orderNumberOf(failure.orderId, failure.orderNumber), dateAd: failure.dateAd, dateBs: failure.dateBs, brandCode: failure.brandCode, customerName: customerName(failure.customerName), customerPhone: customerPhone(failure.customerPhone), valley: failure.valley, reason: failureReasonLabel(failure), status: failure.status || 'FAILED' })) : [];
   if (allowedPages.includes('returns')) result.returns = link.showOrderRows === true ? returns.map(entry => ({ id: entry.id, orderNumber: orderNumberOf(entry.orderId, entry.orderNumber), dateAd: entry.dateAd, dateBs: entry.dateBs, brandCode: entry.brandCode, productName: link.showProductNames === true ? entry.productName : 'Hidden product', customerName: customerName(entry.customerName), customerPhone: customerPhone(entry.customerPhone), reasonCategory: entry.reasonCategory, orderStatus: entry.orderStatus })) : [];
   return result;
 }

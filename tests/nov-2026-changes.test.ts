@@ -15,6 +15,7 @@ import { buildMonthlySalesReport } from '../src/lib/monthly-sales-report.ts';
 import { buildGoogleReportTabs } from '../src/lib/google-workspace-reports.ts';
 import { projectSharedPortal } from '../src/app/api/shared/[token]/projection.ts';
 import { visibleOrders } from '../src/app/api/_workspace.ts';
+import { failureReasonLabel, isOtherReason } from '../src/lib/failure-reason.ts';
 
 const admin: any = { id: 'admin', fullName: 'Devansh', email: '', phone: '', role: 'SUPER_ADMIN', isSuperAdmin: true, active: true, assignedBrands: ['ALL'], permissions: {}, customPermissions: {} };
 // A role with no built-in template, so only the saved permissions below apply.
@@ -512,4 +513,63 @@ test('shared agency links show the order’s current short ID on failure and ret
   assert.equal(portal.returns![0].orderNumber, 'FOR-0099');
   // Customer details stay hidden when the link does not allow them.
   assert.equal(portal.deliveryFailures![0].customerPhone, 'Hidden');
+});
+
+// ---------------------------------------------------------------------------------------------
+// 17 November follow-ups: combos on sends, a written reason for "Other"
+// ---------------------------------------------------------------------------------------------
+
+test('a marketing send can include a combo alongside products, and never changes sales numbers', () => {
+  const db = new DatabaseService({ server: true });
+  db.replaceBrands([{ id: 'b1', code: 'FORYA', name: 'Forya', color: '#000', description: '' } as any]); db.replaceUsers([admin]);
+  const combo = { id: 'cmb1', brandCode: 'FORYA', name: 'Fresh Duo', sku: 'DUO', description: '', items: [{ productId: 'p1', productName: product.name, quantity: 1, mrp: 500 }, { productId: 'p2', productName: product2.name, quantity: 1, mrp: 800 }],
+    totalOriginalMrp: 1300, comboPrice: 1100, savingsPct: 15, active: true, createdAt: '' };
+  db.hydrateSnapshot({ products: [product, product2] as any, combos: [combo] as any, orders: [orderData('o1', { orderNumber: 'FOR-0001' })] as any,
+    influencers: [{ id: 'inf1', name: 'Aashika', platforms: [], qualityRating: 'NOT_RATED', totalSends: 0, totalContent: 0, isActive: true, createdAt: '' }] as any }, admin);
+  const ordersBefore = db.getOrders().length;
+  const send = db.createMarketingSend({ influencerId: 'inf1', brandCodes: ['FORYA'], reachOutPlatform: 'Instagram DM', responsibleId: 'admin', sentDateAd: '2026-11-17', sentDateBs: '',
+    items: [{ productId: 'p1', productName: product.name, brandCode: 'FORYA', quantity: 2 }, { productId: 'cmb1', productName: 'Fresh Duo', brandCode: 'FORYA', quantity: 1, isCombo: true }], deliveryChannel: 'Pathao' });
+  assert.equal(send.items[1].isCombo, true);
+  assert.equal(send.items[0].isCombo, undefined); // product lines carry no combo flag
+  assert.equal(db.getOrders().length, ordersBefore);
+  const tab = buildGoogleReportTabs(db, '2026-11', new Date('2026-11-17T06:00:00Z')).find((entry) => entry.title === 'Marketing Sends')!;
+  assert.match(String(tab.values[1][5]), /1x Fresh Duo \(combo\)/);
+  // The server accepts a combo line and still refuses any price on it.
+  assert.doesNotThrow(() => validateWorkspaceMutation(mutation('marketingSends', { ...send, id: 'send_x' })));
+  assert.throws(() => validateWorkspaceMutation(mutation('marketingSends', { ...send, id: 'send_y', items: [{ ...send.items[1], unitPrice: 1100 }] })), /price, payment or order/);
+});
+
+test('a delivery failure with reason Other needs a written reason, which shows wherever the reason does', () => {
+  const db = new DatabaseService({ server: true }); db.replaceBrands([{ id: 'b1', code: 'FORYA', name: 'Forya' } as any]); db.replaceUsers([admin]);
+  db.hydrateSnapshot({ products: [product] as any, orders: [orderData('o1', { orderNumber: 'FOR-0001' })] as any }, admin);
+  const base = { orderId: 'o1', orderNumber: 'FOR-0001', brandCode: 'FORYA', customerName: 'Sita', customerPhone: '9841234567', deliveryMethod: 'Pathao' as any, dateAd: '2026-11-17', dateBs: '', valley: 'Inside' as const };
+  assert.throws(() => db.addDeliveryFailure({ ...base, reason: 'Other' }), /Write the reason/);
+  assert.throws(() => db.addDeliveryFailure({ ...base, reason: 'other', reasonDetail: '   ' }), /Write the reason/);
+  const failure = db.addDeliveryFailure({ ...base, reason: 'Other', reasonDetail: 'Rider could not reach, road closed' });
+  // The reason stays "Other" so the reason chart keeps one bucket; the text travels with it.
+  assert.equal(failure.reason, 'Other');
+  assert.equal(failureReasonLabel(failure), 'Other: Rider could not reach, road closed');
+  assert.equal(failure.attemptLog![0].reasonDetail, 'Rider could not reach, road closed');
+  // A later attempt with a different reason drops the old explanation; another "Other" needs its own.
+  assert.throws(() => db.addDeliveryAttempt(failure.id, { dateAd: '2026-11-18', dateBs: '', reason: 'Other' }), /Write the reason/);
+  db.addDeliveryAttempt(failure.id, { dateAd: '2026-11-18', dateBs: '', reason: 'Call not received' });
+  assert.equal(db.getDeliveryFailures('ALL')[0].reasonDetail, undefined);
+  assert.equal(db.getDeliveryFailures('ALL')[0].attemptLog![0].reasonDetail, 'Rider could not reach, road closed'); // history keeps it
+  // Shared agency links show the written reason.
+  const link: any = { id: 'l', token: 't', name: 'Agency', isActive: true, brandScope: 'ALL', brandFilter: [], allowedPages: ['delivery-failures'], dateRangeType: 'LIVE', showCustomerDetails: false, showStaffDetails: false, showOrderRows: true, showProductNames: false, showComboDetails: false, accessCount: 0, createdAt: '' };
+  const other = new DatabaseService({ server: true }); other.replaceBrands([{ id: 'b1', code: 'FORYA', name: 'Forya' } as any]); other.replaceUsers([admin]);
+  other.hydrateSnapshot({ orders: [orderData('o1', { orderNumber: 'FOR-0001' })] as any, deliveryFailures: [{ ...base, id: 'f1', reason: 'Other', reasonDetail: 'Gate locked', createdAt: '' }] as any }, admin);
+  assert.equal(projectSharedPortal(other, link).deliveryFailures![0].reason, 'Other: Gate locked');
+});
+
+test('the server refuses a new "Other" failure without a written reason but still updates older ones', () => {
+  const context: any = { users: [admin], brands: [{ code: 'FORYA' }], records: [] };
+  const row = { id: 'df_new', orderId: 'o1', orderNumber: 'FOR-0001', brandCode: 'FORYA', customerName: 'Sita', customerPhone: '9841234567', deliveryMethod: 'Pathao', dateAd: '2026-11-17', dateBs: '', reason: 'Other', valley: 'Inside', attempts: 1, status: 'FAILED', createdAt: '' };
+  assert.throws(() => prepareRecordData(admin, mutation('deliveryFailures', row) as any, null, context), /Write the reason/);
+  assert.doesNotThrow(() => prepareRecordData(admin, mutation('deliveryFailures', { ...row, reasonDetail: ' Gate locked ' }) as any, null, context));
+  assert.throws(() => prepareRecordData(admin, mutation('deliveryFailures', { ...row, reasonDetail: 'x'.repeat(301) }) as any, null, context), /under 300/);
+  // A failure saved as "Other" before this rule can still have its status changed.
+  const prior: any = { collection: 'deliveryFailures', id: 'df_new', data: row, created_by: 'admin', version: 1 };
+  assert.doesNotThrow(() => prepareRecordData(admin, mutation('deliveryFailures', { ...row, status: 'DELIVERED' }, 1) as any, prior, context));
+  assert.equal(isOtherReason('Others'), true); assert.equal(isOtherReason('Other courier'), false);
 });

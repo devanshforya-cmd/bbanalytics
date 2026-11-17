@@ -1,3 +1,4 @@
+import { isOtherReason, REASON_DETAIL_MAX } from '../failure-reason';
 import { STORE_COLLECTIONS, storeDeletionPlan } from '../store-deletion';
 import { readWorkspaceResetState } from './workspace-reset-server';
 import { createHash } from 'node:crypto';
@@ -268,6 +269,13 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
       if (mutation.collection === 'orders') assertActiveOrderOption(options, 'channels', data.platform, prior?.data.platform);
       if (mutation.collection === 'orders' || data.deliveryMethod) assertActiveOrderOption(options, 'deliveryMethods', data.deliveryMethod, prior?.data.deliveryMethod);
     } catch (error) { throw new WorkspaceError(400, error instanceof Error ? error.message : 'Choose an active channel and delivery method.'); }
+  }
+  if (mutation.collection === 'deliveryFailures') {
+    if (data.reasonDetail != null && (typeof data.reasonDetail !== 'string' || data.reasonDetail.length > REASON_DETAIL_MAX || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(data.reasonDetail))) throw new WorkspaceError(400, `Keep the written reason under ${REASON_DETAIL_MAX} characters.`);
+    if (typeof data.reasonDetail === 'string') { data.reasonDetail = data.reasonDetail.trim(); if (!data.reasonDetail) delete data.reasonDetail; }
+    // A new failure or attempt marked "Other" must say why. Older "Other" rows saved before this rule can still be updated.
+    const newReason = !prior || prior.data.reason !== data.reason || (Number(data.attempts) || 1) > (Number(prior.data.attempts) || 1);
+    if (newReason && isOtherReason(data.reason) && !data.reasonDetail) throw new WorkspaceError(400, 'Write the reason when Other is chosen.');
   }
   if (mutation.collection === 'orders') {
     for (const field of ['province', 'district']) {
