@@ -64,7 +64,7 @@ export default function BeatRouteList({
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 transition shadow-2xs self-start sm:self-auto disabled:opacity-50"
           >
             <Sparkles className="w-4 h-4 text-blue-600" />
-            <span>{isOptimizing ? 'Optimizing Route...' : '⚡ Optimize Route Sequence'}</span>
+            <span>{isOptimizing ? 'Optimizing Route...' : 'Optimize Route Sequence'}</span>
           </button>
         </div>
 

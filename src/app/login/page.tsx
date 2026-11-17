@@ -1,5 +1,6 @@
 'use client';
 
+import BrandLogo from '@/components/layout/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -62,17 +63,9 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 text-slate-800 flex flex-col justify-between p-4 sm:p-6 selection:bg-blue-600 selection:text-white">
       {/* Top Header */}
       <div className="flex items-center justify-between max-w-md mx-auto w-full pt-4">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/25 font-black text-white text-base tracking-tight ring-4 ring-blue-50">
-            BB
-          </div>
-          <div>
-            <h1 className="font-black text-base leading-tight tracking-tight text-slate-900">
-              Brand Bucket Command Center
-            </h1>
-            <p className="text-[11px] text-slate-500 font-medium">Enterprise Field Operations &bull; Secondary Sales Telemetry</p>
-          </div>
-        </div>
+        <h1 className="mx-auto">
+          <BrandLogo variant="full" priority className="h-11 sm:h-12" />
+        </h1>
       </div>
 
       {/* Main Login Card */}
@@ -81,13 +74,13 @@ export default function LoginPage() {
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold mb-3 border border-slate-200/60">
               <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-              <span>Secure Operations Portal</span>
+              <span>Team sign-in</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 mb-1.5">
               Sign In
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              Enter your authorized credentials to access the command center.
+              Use your work email or mobile number.
             </p>
           </div>
 
@@ -158,7 +151,7 @@ export default function LoginPage() {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>Sign In to Command Center</span>
+                  <span>Sign in</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -171,9 +164,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="mt-5 text-center text-xs text-slate-500 font-medium">
-          Operational Intelligence &bull; FMCG / D2C Multi-Brand Telemetry
-        </div>
       </div>
 
       {/* Bottom Footer */}

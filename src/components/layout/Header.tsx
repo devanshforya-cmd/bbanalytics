@@ -1,5 +1,7 @@
 'use client';
 
+import BrandLogo from './BrandLogo';
+import Link from 'next/link';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
@@ -169,6 +171,7 @@ export default function Header() {
           >
             <Menu className="h-5 w-5" />
           </button>
+          <Link href="/dashboard" aria-label="Brand Bucket home" className="shrink-0 lg:hidden"><BrandLogo variant="mark" className="h-8 w-8" /></Link>
 
           {/* Clean Brand Selector Dropdown (No bulky BB square logo, no clutter) */}
           <BrandDropdown

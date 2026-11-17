@@ -119,7 +119,7 @@ export default function PWAInstallBanner() {
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <h2 className="text-xs font-bold text-slate-900">Brand Bucket Command Center</h2>
+            <h2 className="text-xs font-bold text-slate-900">Install Brand Bucket</h2>
             <span className="text-[9px] bg-blue-100 text-blue-700 font-semibold px-1.5 py-0.2 rounded-full">
               PWA
             </span>

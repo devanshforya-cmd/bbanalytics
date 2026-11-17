@@ -120,7 +120,7 @@ function FeedbackContent() {
     setEscalateNote('');
     refreshList();
     toast.error(
-      '🚨 Complaint Escalated to URGENT',
+      'Complaint Escalated to URGENT',
       `Assigned to ${escalateAssignee}. 24-hour resolution SLA activated.`
     );
   };
@@ -354,7 +354,7 @@ function FeedbackContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            Reviews, Feedback & Complaints Hub
+            Feedback & Complaints
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Omnichannel feedback stream with dynamic issue classification, marketing design tagging, and complaint resolution tracking.
@@ -390,7 +390,7 @@ function FeedbackContent() {
               : 'border border-slate-200 bg-white text-emerald-700 hover:bg-emerald-50'
           }`}
         >
-          <span>🟢</span> Customer Reviews ({feedbackList.filter((f) => f.type === 'REVIEW').length})
+          Customer Reviews ({feedbackList.filter((f) => f.type === 'REVIEW').length})
         </button>
         <button
           onClick={() => setTypeFilter('FEEDBACK')}
@@ -400,7 +400,7 @@ function FeedbackContent() {
               : 'border border-slate-200 bg-white text-blue-700 hover:bg-blue-50'
           }`}
         >
-          <span>🔵</span> General Feedback ({feedbackList.filter((f) => f.type === 'FEEDBACK').length})
+          General Feedback ({feedbackList.filter((f) => f.type === 'FEEDBACK').length})
         </button>
         <button
           onClick={() => setTypeFilter('COMPLAINT')}
@@ -410,7 +410,7 @@ function FeedbackContent() {
               : 'border border-slate-200 bg-white text-rose-700 hover:bg-rose-50'
           }`}
         >
-          <span>🔴</span> Active Complaints ({feedbackList.filter((f) => f.type === 'COMPLAINT').length})
+          Active Complaints ({feedbackList.filter((f) => f.type === 'COMPLAINT').length})
         </button>
 
         <div className="h-4 w-px bg-slate-200 hidden sm:block" />
@@ -542,9 +542,7 @@ function FeedbackContent() {
                       className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
                     />
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                      <span className="text-base shrink-0">
-                        {isReview ? '🟢' : isComplaint ? '🔴' : '🔵'}
-                      </span>
+                      <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${isReview ? 'bg-emerald-500' : isComplaint ? 'bg-rose-500' : 'bg-blue-500'}`} />
                       {item.customerPhone ? (
                         <Link
                           href={`/customers/${encodeURIComponent(item.customerPhone)}`}
@@ -668,10 +666,10 @@ function FeedbackContent() {
               <div className="flex items-center gap-2">
                 <span className="text-base">
                   {selectedEntry.type === 'REVIEW'
-                    ? '🟢'
+                    ? ''
                     : selectedEntry.type === 'COMPLAINT'
-                    ? '🔴'
-                    : '🔵'}
+                    ? ''
+                    : ''}
                 </span>
                 <div>
                   <h3 className="font-bold text-slate-900 text-base">
@@ -859,7 +857,7 @@ function FeedbackContent() {
                         onClick={() => setShowEscalateModal(true)}
                         className="rounded-lg bg-rose-700 hover:bg-rose-800 text-white px-3 py-1 text-xs font-bold shadow-xs transition flex items-center gap-1"
                       >
-                        🚨 Escalate to Urgent
+                        Escalate to Urgent
                       </button>
                     )}
                   </div>
@@ -935,7 +933,7 @@ function FeedbackContent() {
                         : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    <span className="text-lg mb-1">🟢</span>
+                    
                     Review (Positive)
                   </button>
 
@@ -951,7 +949,7 @@ function FeedbackContent() {
                         : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    <span className="text-lg mb-1">🔵</span>
+                    
                     Feedback (Suggestion)
                   </button>
 
@@ -967,7 +965,7 @@ function FeedbackContent() {
                         : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    <span className="text-lg mb-1">🔴</span>
+                    
                     Complaint (Action Req.)
                   </button>
                 </div>
@@ -1244,9 +1242,9 @@ function FeedbackContent() {
       {/* FIX 50c: Context-Rich Complaint Escalation Modal */}
       <ConfirmModal
         isOpen={showEscalateModal}
-        title="🚨 Escalate Complaint to Urgent Priority?"
+        title="Escalate Complaint to Urgent Priority?"
         variant="danger"
-        confirmLabel="🚨 Escalate Now"
+        confirmLabel="Escalate Now"
         cancelLabel="Cancel"
         details={selectedEntry ? [
           { label: 'Customer', value: `${selectedEntry.customerName} (${selectedEntry.customerPhone})` },

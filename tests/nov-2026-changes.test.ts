@@ -20,6 +20,7 @@ import { exchangeAnalysis, exchangeNeedsLink } from '../src/lib/exchange.ts';
 import { getRedirectPathForUser } from '../src/lib/auth.ts';
 import { cohortRetention, lifecycleMovements } from '../src/lib/customer-cohorts.ts';
 import { countsAsSale } from '../src/lib/order-status.ts';
+import { calendarScopeForPath, scopedDate } from '../src/lib/calendar-scope.ts';
 
 const admin: any = { id: 'admin', fullName: 'Devansh', email: '', phone: '', role: 'SUPER_ADMIN', isSuperAdmin: true, active: true, assignedBrands: ['ALL'], permissions: {}, customPermissions: {} };
 // A role with no built-in template, so only the saved permissions below apply.
@@ -537,7 +538,8 @@ test('a marketing send can include a combo alongside products, and never changes
   assert.equal(send.items[0].isCombo, undefined); // product lines carry no combo flag
   assert.equal(db.getOrders().length, ordersBefore);
   const tab = buildGoogleReportTabs(db, '2026-11', new Date('2026-11-17T06:00:00Z')).find((entry) => entry.title === 'Marketing Sends')!;
-  assert.match(String(tab.values[1][5]), /1x Fresh Duo \(combo\)/);
+  assert.match(String(tab.values[1][4]), /1x Fresh Duo \(combo\)/);
+  assert.equal(tab.values[0][1], 'Sent Date (AD)');
   // The server accepts a combo line and still refuses any price on it.
   assert.doesNotThrow(() => validateWorkspaceMutation(mutation('marketingSends', { ...send, id: 'send_x' })));
   assert.throws(() => validateWorkspaceMutation(mutation('marketingSends', { ...send, id: 'send_y', items: [{ ...send.items[1], unitPrice: 1100 }] })), /price, payment or order/);
@@ -698,4 +700,16 @@ test('cancelling after a failed delivery cancels the order and counts it on the 
   assert.equal(db.getOrderById('o1')!.status, 'CANCELLED');
   assert.equal(db.getCustomers()[0].totalCancellations, 1);
   assert.equal(countsAsSale(db.getOrderById('o1')!), false);
+});
+
+test('online and marketing screens use AD; offline field sales show BS and AD; elsewhere the user decides', () => {
+  assert.equal(calendarScopeForPath('/orderflow/orders'), 'D2C');
+  assert.equal(calendarScopeForPath('/reviews/returns'), 'D2C');
+  assert.equal(calendarScopeForPath('/marketing/influencers/inf1'), 'D2C');
+  assert.equal(calendarScopeForPath('/customers/9841234567'), 'D2C');
+  assert.equal(calendarScopeForPath('/offline-sales/cheques'), 'B2B');
+  assert.equal(calendarScopeForPath('/dashboard'), 'USER');
+  assert.equal(calendarScopeForPath('/orderflowx'), 'USER');
+  assert.equal(scopedDate('D2C', '2026-11-17', 'Kartik 30, 2083'), '2026-11-17');
+  assert.equal(scopedDate('B2B', '2026-11-17', 'Kartik 30, 2083'), 'Kartik 30, 2083 (2026-11-17)');
 });

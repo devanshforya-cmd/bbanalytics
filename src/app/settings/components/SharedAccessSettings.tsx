@@ -388,7 +388,7 @@ export default function SharedAccessSettings() {
 
                 {passcode && (
                   <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 font-medium">
-                    ⚠️ Required Passcode: <strong className="font-mono text-amber-900">{passcode}</strong>
+                    Required Passcode: <strong className="font-mono text-amber-900">{passcode}</strong>
                   </div>
                 )}
 

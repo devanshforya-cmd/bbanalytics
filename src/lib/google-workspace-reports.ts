@@ -1,4 +1,11 @@
+import { adToBs } from './nepali-calendar';
 import type { DatabaseService } from './db/db-service';
+
+/** Offline (B2B) tabs carry BS next to AD; online and marketing tabs are AD only. */
+function bsFromAd(dateAd?: string): string {
+  if (!dateAd || !/^\d{4}-\d{2}-\d{2}/.test(dateAd)) return '';
+  try { const bs = adToBs(new Date(`${dateAd.slice(0, 10)}T12:00:00`)); return `${bs.monthName} ${bs.day}, ${bs.year}`; } catch { return ''; }
+}
 
 export type GoogleReportCell = string | number | boolean;
 export interface GoogleReportTab { title: string; values: GoogleReportCell[][] }
@@ -45,25 +52,25 @@ export function buildGoogleReportTabs(db: GoogleReportDatabase, month = nepalRep
     // One row per order, keyed by its short ID. The whole tab is rewritten on every export,
     // so an edited order updates its row and can never appear twice.
     ...[month, ...movedMonths].map((tabMonth) => ({ title: `Orders-${tabMonth}`, values: [
-      ['Order ID', 'Order Date (BS)', 'Order Date (AD)', 'Brand', 'Customer', 'Products', 'Qty', 'Type', 'Total Amount', 'Status', 'Earlier ID'],
-      ...allOrders.filter((order) => order.orderDateAd?.slice(0, 7) === tabMonth).map((order) => [order.orderNumber || order.id, order.orderDateBs || '', order.orderDateAd || '', order.brandCode || '', order.customerName || '', (order.items || []).map((item) => item.productName).join('; '), (order.items || []).reduce((sum, item) => sum + (item.quantity ?? 0), 0), order.orderType || '', order.totalAmount ?? '', order.status || '', order.legacyOrderNumber || '']),
+      ['Order ID', 'Order Date (AD)', 'Brand', 'Customer', 'Products', 'Qty', 'Type', 'Total Amount', 'Status', 'Earlier ID'],
+      ...allOrders.filter((order) => order.orderDateAd?.slice(0, 7) === tabMonth).map((order) => [order.orderNumber || order.id, order.orderDateAd || '', order.brandCode || '', order.customerName || '', (order.items || []).map((item) => item.productName).join('; '), (order.items || []).reduce((sum, item) => sum + (item.quantity ?? 0), 0), order.orderType || '', order.totalAmount ?? '', order.status || '', order.legacyOrderNumber || '']),
     ] as GoogleReportCell[][] })),
     // Marketing sends have their own tab and never appear on an Orders tab.
     { title: 'Marketing Sends', values: [
-      ['Send ID', 'Sent Date (BS)', 'Sent Date (AD)', 'Influencer', 'Brands', 'Products', 'Units', 'Reach-out Platform', 'Responsible', 'Delivery Channel', 'Content Due (AD)', 'Status'],
-      ...sends.map((send) => [send.sendNumber, send.sentDateBs || '', send.sentDateAd || '', send.influencerName || '', (send.brandCodes || []).join(', '), (send.items || []).map((item) => `${item.quantity}x ${item.productName}${item.isCombo ? " (combo)" : ""}`).join('; '), (send.items || []).reduce((sum, item) => sum + (item.quantity ?? 0), 0), send.reachOutPlatform || '', send.responsibleName || '', send.deliveryChannel || '', send.expectedContentDateAd || '', send.status || '']),
+      ['Send ID', 'Sent Date (AD)', 'Influencer', 'Brands', 'Products', 'Units', 'Reach-out Platform', 'Responsible', 'Delivery Channel', 'Content Due (AD)', 'Status'],
+      ...sends.map((send) => [send.sendNumber, send.sentDateAd || '', send.influencerName || '', (send.brandCodes || []).join(', '), (send.items || []).map((item) => `${item.quantity}x ${item.productName}${item.isCombo ? " (combo)" : ""}`).join('; '), (send.items || []).reduce((sum, item) => sum + (item.quantity ?? 0), 0), send.reachOutPlatform || '', send.responsibleName || '', send.deliveryChannel || '', send.expectedContentDateAd || '', send.status || '']),
     ] },
     { title: `Stock Counts-${month}`, values: [
-      ['Date (AD)', 'Store', 'Entity Type', 'Officer', 'Product', 'Shelf Qty', 'Previous Qty', 'Flagged Drop'],
-      ...stockCounts.flatMap((stock) => (stock.items || []).map((item) => [stock.dateAd || '', stock.storeName || '', stock.entityType, stock.officerName || '', item.productName || item.productId, item.shelfQty ?? '', item.previousQty ?? '', item.flaggedDrop])),
+      ['Date (BS)', 'Date (AD)', 'Store', 'Entity Type', 'Officer', 'Product', 'Shelf Qty', 'Previous Qty', 'Flagged Drop'],
+      ...stockCounts.flatMap((stock) => (stock.items || []).map((item) => [bsFromAd(stock.dateAd), stock.dateAd || '', stock.storeName || '', stock.entityType, stock.officerName || '', item.productName || item.productId, item.shelfQty ?? '', item.previousQty ?? '', item.flaggedDrop])),
     ] },
     { title: 'Cheques', values: [
-      ['Cheque #', 'Store', 'Amount (Rs)', 'Bank', 'Collected By', 'Received Date (AD)', 'Cash Date (AD)', 'Status'],
-      ...cheques.map((cheque) => [cheque.chequeNumber || '', cheque.storeName || '', cheque.amount ?? '', cheque.bankName || '', cheque.officerName || '', cheque.receivedDateAd || '', cheque.cashDateAd || '', cheque.status || '']),
+      ['Cheque #', 'Store', 'Amount (Rs)', 'Bank', 'Collected By', 'Received Date (BS)', 'Received Date (AD)', 'Cash Date (BS)', 'Cash Date (AD)', 'Status'],
+      ...cheques.map((cheque) => [cheque.chequeNumber || '', cheque.storeName || '', cheque.amount ?? '', cheque.bankName || '', cheque.officerName || '', bsFromAd(cheque.receivedDateAd), cheque.receivedDateAd || '', bsFromAd(cheque.cashDateAd), cheque.cashDateAd || '', cheque.status || '']),
     ] },
     { title: 'Visits', values: [
-      ['Date (AD)', 'Officer', 'Store', 'Check-in', 'Check-out', 'Duration (Min)', 'GPS Override'],
-      ...visits.map((visit) => [visit.dateAd || '', visit.officerName || '', visit.storeName || '', visit.checkInTime || '', visit.checkOutTime || '', visit.durationMinutes ?? '', visit.overrideFlag]),
+      ['Date (BS)', 'Date (AD)', 'Officer', 'Store', 'Check-in', 'Check-out', 'Duration (Min)', 'GPS Override'],
+      ...visits.map((visit) => [bsFromAd(visit.dateAd), visit.dateAd || '', visit.officerName || '', visit.storeName || '', visit.checkInTime || '', visit.checkOutTime || '', visit.durationMinutes ?? '', visit.overrideFlag]),
     ] },
     { title: 'Staff Scorecard', values: [
       ['Staff Name', 'Role', 'Active', 'Territory', 'Stores Assigned', 'Cheques Collected', 'Visits Recorded'],

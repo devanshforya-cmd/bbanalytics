@@ -172,7 +172,7 @@ export default function StoresPage() {
           if (pos.coords.accuracy > 200) { toast.error('GPS accuracy is too low. Move outdoors and retry.'); return; }
           setFieldLat(pos.coords.latitude);
           setFieldLng(pos.coords.longitude);
-          toast.success(`📍 Captured GPS: ${pos.coords.latitude.toFixed(4)}°N, ${pos.coords.longitude.toFixed(4)}°E`);
+          toast.success(`Captured GPS: ${pos.coords.latitude.toFixed(4)}°N, ${pos.coords.longitude.toFixed(4)}°E`);
         },
         (err) => {
           toast.error('Device GPS is unavailable. Allow location and retry; no location was invented.');
@@ -914,7 +914,7 @@ export default function StoresPage() {
                       className="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center gap-1 shadow-xs hover:bg-blue-700 min-h-[40px]"
                     >
                       <MapPin className="w-3.5 h-3.5" />
-                      <span>{fieldLat ? '📍 Re-Pin GPS' : '📍 Pin Location'}</span>
+                      <span>{fieldLat ? 'Re-Pin GPS' : 'Pin Location'}</span>
                     </button>
                   </div>
 
@@ -1437,7 +1437,7 @@ export default function StoresPage() {
                         <div>
                           <strong className="text-sm font-bold text-slate-900">{item.entityName}</strong>
                           <div className="text-xs text-slate-700 mt-0.5">
-                            {item.contact.name} ({item.contact.role}) — ☎ {item.contact.phone}
+                            {item.contact.name} ({item.contact.role}) — {item.contact.phone}
                           </div>
                         </div>
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">

@@ -211,7 +211,7 @@ export default function AllOrdersPage() {
                                 {canFail && !['DELIVERED', 'CANCELLED', 'RETURNED', 'EXCHANGED'].includes(order.status) && (
                                   <button role="menuitem" type="button" onClick={() => { setMenuFor(null); setFailureFor(order); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50"><PackageX className="h-3.5 w-3.5" /> {openFailure ? 'Log another failed attempt' : 'Log failed delivery'}</button>
                                 )}
-                                {canReturn && order.status === 'DELIVERED' && (
+                                {canReturn && order.status !== 'CANCELLED' && (
                                   <button role="menuitem" type="button" onClick={() => { setMenuFor(null); setReturnFor(order); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-50"><Undo2 className="h-3.5 w-3.5" /> Log return or exchange</button>
                                 )}
                                 {unlinked && canReturn && (

@@ -327,7 +327,7 @@ export default function DashboardPage() {
                   }`}
                 >
                   <ShoppingBag className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>🛍️ D2C Online Dashboard</span>
+                  <span>D2C Online Dashboard</span>
                 </button>}
                 {(canSee('beat_plans') || canSee('stores')) && <button
                   type="button"
@@ -339,7 +339,7 @@ export default function DashboardPage() {
                   }`}
                 >
                   <Store className="w-3.5 h-3.5 text-blue-600" />
-                  <span>🏪 Offline Retail Dashboard</span>
+                  <span>Offline Retail Dashboard</span>
                 </button>}
                 {canSee('orderflow') && (canSee('beat_plans') || canSee('stores')) && <button
                   type="button"

@@ -1,5 +1,6 @@
 'use client';
 
+import BrandLogo from './BrandLogo';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -67,7 +68,7 @@ const menuSections: MenuSection[] = [
       { label: 'Beat Plans & Routes', href: '/offline-sales/beat-plan', permKey: 'beat_plans', icon: Compass },
       { label: 'Stores & Branches', href: '/offline-sales/stores', permKey: 'stores', icon: Store },
       { label: 'Distributor Dispatches', href: '/offline-sales/dispatch', permKey: 'dispatches', icon: Truck },
-      { label: 'Live GPS Tracking', href: '/offline-sales/live-tracking', permKey: 'gps_tracking', icon: Navigation, badge: 'Live' },
+      { label: 'Live GPS Tracking', href: '/offline-sales/live-tracking', permKey: 'gps_tracking', icon: Navigation },
       { label: 'Shelf Photos', href: '/offline-sales/shelf-photos', permKey: 'shelf_photos', icon: Camera },
       { label: 'Call Tracker', href: '/offline-sales/calls', permKey: 'call_tracker', icon: Phone },
       { label: 'Cheque Tracker', href: '/offline-sales/cheques', permKey: 'cheque_tracker', icon: CreditCard },
@@ -81,7 +82,7 @@ const menuSections: MenuSection[] = [
       { label: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles },
       { label: 'Manual Order Entry', href: '/orderflow/manual-entry', permKey: 'orderflow', icon: ClipboardPen },
       { label: 'All Orders', href: '/orderflow/orders', permKey: 'orderflow', alsoPermKey: 'order_desk', icon: ListChecks },
-      { label: 'Daily Orders', href: '/orderflow/daily-orders', permKey: 'orderflow', icon: ClipboardCheck, badge: 'Live' },
+      { label: 'Daily Orders', href: '/orderflow/daily-orders', permKey: 'orderflow', icon: ClipboardCheck },
       { label: 'Monthly Sales Sheet', href: '/orderflow/monthly-sales', permKey: 'orderflow', icon: FileSpreadsheet },
       { label: 'Delivery Failures', href: '/orderflow/delivery-failures', permKey: 'orderflow', icon: TruckIcon },
     ],
@@ -139,19 +140,10 @@ export default function Sidebar() {
   return (
     <aside className="hidden lg:flex w-64 flex-col border-r border-slate-200 bg-white text-slate-700">
       {/* Brand Header */}
-      <div className="flex h-16 items-center px-5 border-b border-slate-200/80 bg-slate-50/40">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-500 shadow-xs shadow-blue-500/20 text-white font-black text-sm tracking-tight">
-            BB
-          </div>
-          <div className="overflow-hidden">
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold tracking-tight text-sm text-slate-900">Brand Bucket</span>
-              <span className="rounded-full bg-blue-100 px-1.5 py-0.2 text-[9px] font-black tracking-wide text-blue-700">PRO</span>
-            </div>
-            <p className="text-[10px] font-medium text-slate-500 tracking-wide">COMMAND CENTER</p>
-          </div>
-        </div>
+      <div className="flex h-16 items-center border-b border-slate-200/80 px-5">
+        <Link href="/dashboard" aria-label="Brand Bucket home" className="rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500">
+          <BrandLogo variant="full" priority className="h-8" />
+        </Link>
       </div>
 
       {/* Nav List Filtered Strictly by Permissions */}

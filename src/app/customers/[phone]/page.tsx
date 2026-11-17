@@ -412,10 +412,10 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
             </div>
             <div className="text-[10px] text-slate-500 mt-0.5">
               {customer.karmaScore >= 70
-                ? '🟢 Clean Track Record'
+                ? 'Clean Track Record'
                 : customer.karmaScore >= 40
-                ? '🟡 Monitored'
-                : '🔴 COD Block Advised'}
+                ? 'Monitored'
+                : 'COD Block Advised'}
             </div>
           </div>
 
@@ -573,7 +573,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
         {activeFlags.length === 0 ? (
           <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200/80 px-4 py-3 text-emerald-800 text-xs font-semibold">
             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>✅ No active flags — clean customer record. Eligible for all payment terms & express dispatch.</span>
+            <span>No active flags — clean customer record. Eligible for all payment terms & express dispatch.</span>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -721,7 +721,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                             Order #{ord.orderNumber} Placed ({ord.brandCode})
                           </div>
                           <div className="text-slate-500 text-[11px] mt-0.5">
-                            {ord.orderDateBs} ({ord.orderDateAd}) • Platform: <strong>{ord.platform}</strong> • Total: <strong className="text-slate-800">NPR {ord.totalAmount?.toLocaleString()}</strong>
+                            {ord.orderDateAd} • Platform: <strong>{ord.platform}</strong> • Total: <strong className="text-slate-800">NPR {ord.totalAmount?.toLocaleString()}</strong>
                           </div>
                         </div>
                         <span className="rounded-full bg-blue-100 text-blue-800 font-bold px-2 py-0.5 text-[10px]">
@@ -773,7 +773,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                             Delivery Failure: {failureReasonLabel(df)} (Order #{df.orderNumber})
                           </div>
                           <div className="text-slate-500 text-[11px] mt-0.5">
-                            {df.dateBs} ({df.dateAd}) • Courier Territory: <strong>{df.valley} Valley</strong>
+                            {df.dateAd} • Courier Territory: <strong>{df.valley} Valley</strong>
                           </div>
                         </div>
                         <span className="rounded-full bg-rose-100 text-rose-800 font-bold px-2 py-0.5 text-[10px]">
@@ -822,7 +822,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                             ({ret.brandCode})
                           </div>
                           <div className="text-slate-500 text-[11px] mt-0.5">
-                            {ret.dateBs} ({ret.dateAd}) • Status: <strong>{ret.orderStatus || 'Returned'}</strong> • Reason: <strong>{ret.reasonCategory}</strong>
+                            {ret.dateAd} • Status: <strong>{ret.orderStatus || 'Returned'}</strong> • Reason: <strong>{ret.reasonCategory}</strong>
                           </div>
                         </div>
                         <span className="rounded-full bg-amber-100 text-amber-800 font-bold px-2 py-0.5 text-[10px]">

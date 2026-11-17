@@ -291,9 +291,6 @@ function ScorecardContent() {
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
               {isOfficer ? 'My Performance Scorecard' : 'Sales Force Scorecards — Side-by-Side'}
             </h1>
-            <span className="rounded-full bg-blue-100 text-blue-800 text-[11px] font-bold px-2.5 py-0.5 border border-blue-200">
-              PRD 4.7 Standard
-            </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             {isOfficer

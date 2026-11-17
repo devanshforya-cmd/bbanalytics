@@ -275,7 +275,7 @@ export default function DispatchPage() {
                     }}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none bg-white text-xs font-medium"
                   >
-                    <optgroup label="🏢 Distributor Chains & Central Warehouses">
+                    <optgroup label="Distributor Chains & Central Warehouses">
                       {unifiedStores
                         .filter((s) => s.storeType === 'DISTRIBUTOR')
                         .map((d) => (
@@ -284,7 +284,7 @@ export default function DispatchPage() {
                           </option>
                         ))}
                     </optgroup>
-                    <optgroup label="🏪 Modern Trade / Chain Stores">
+                    <optgroup label="Modern Trade / Chain Stores">
                       {unifiedStores
                         .filter((s) => s.storeType === 'CHAIN_STORE')
                         .map((c) => (
@@ -293,7 +293,7 @@ export default function DispatchPage() {
                           </option>
                         ))}
                     </optgroup>
-                    <optgroup label="🏬 Standalone Retail Stores">
+                    <optgroup label="Standalone Retail Stores">
                       {unifiedStores
                         .filter((s) => s.storeType === 'STANDALONE_RETAILER')
                         .map((r) => (

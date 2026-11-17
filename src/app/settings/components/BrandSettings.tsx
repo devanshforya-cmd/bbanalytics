@@ -614,7 +614,7 @@ export default function BrandSettings() {
               </button>
               <SubmitButton
                 onClick={handlePermanentDelete}
-                label="🗑️ Delete Forever"
+                label="Delete Forever"
                 loadingLabel="Deleting..."
                 variant="danger"
                 disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}

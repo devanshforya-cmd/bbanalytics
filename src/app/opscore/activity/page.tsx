@@ -338,9 +338,6 @@ export default function ActivityTrailPage() {
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
               System Activity Trail &amp; Audit Log
             </h1>
-            <span className="rounded-full bg-blue-100 text-blue-800 text-[11px] font-bold px-2.5 py-0.5 border border-blue-200">
-              Immutable Log
-            </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Real-time chronological audit trail of all store visits, cheque custody transitions, order creations, and system overrides.

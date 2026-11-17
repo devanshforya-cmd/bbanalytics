@@ -255,7 +255,7 @@ export default function TasksPage() {
               className="flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100 transition shadow-2xs"
             >
               <UserCheck className="h-3.5 w-3.5 text-amber-600" />
-              🌴 Staff Leave &amp; Reassign
+              Staff Leave &amp; Reassign
             </button>
 
             <button

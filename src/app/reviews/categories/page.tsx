@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
-import { getTodayBs } from '@/lib/nepali-calendar';
 import { ReviewCategory, BrandCode } from '@/lib/types';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
@@ -271,9 +270,6 @@ export default function ReviewCategoriesPage() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Dynamic Issue Categories Governance
             </h1>
-            <span className="rounded-full bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-0.5">
-              Organic Taxonomy Engine
-            </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Admin oversight for dynamic tags logged across Customer Feedback and Product Returns. Rename typos, consolidate duplicates, and analyze defect trends.
@@ -485,12 +481,12 @@ export default function ReviewCategoriesPage() {
 
                       {/* Created By */}
                       <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
-                        {cat.createdBy || 'Devansh Agarwal (Admin)'}
+                        {cat.createdBy || '—'}
                       </td>
 
                       {/* Created Date */}
                       <td className="py-3 px-4 text-slate-500 whitespace-nowrap">
-                        {cat.createdAt || getTodayBs()}
+                        {cat.createdAt ? cat.createdAt.slice(0, 10) : '—'}
                       </td>
 
                       {/* Times Used (All Time) */}
@@ -502,7 +498,7 @@ export default function ReviewCategoriesPage() {
 
                       {/* Last Used */}
                       <td className="py-3 px-4 text-slate-500 whitespace-nowrap">
-                        {cat.lastUsedDate || getTodayBs()}
+                        {cat.lastUsedDate ? cat.lastUsedDate.slice(0, 10) : 'Not used yet'}
                       </td>
 
                       {/* Status */}
@@ -847,7 +843,7 @@ export default function ReviewCategoriesPage() {
       {/* FIX 50d: Archive Category Confirmation Modal */}
       <ConfirmModal
         isOpen={showArchiveModal}
-        title={`📁 Archive "${categoryToArchive?.name}" category?`}
+        title={`Archive "${categoryToArchive?.name}" category?`}
         variant="warning"
         confirmLabel="Archive Category"
         cancelLabel="Cancel"

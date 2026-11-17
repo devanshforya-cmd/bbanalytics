@@ -559,9 +559,6 @@ export default function CustomerInsightsPage() {
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
                   Customer Intelligence & Cohort Analytics
                 </h1>
-                <span className="rounded-full bg-blue-100 text-blue-800 text-[11px] font-bold px-2.5 py-0.5 border border-blue-200">
-                  13 Core Vectors
-                </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
                 Deterministic analytics layer per PRD 7.3: Churn forecasting, revenue concentration, brand synergy, and karma trajectories.

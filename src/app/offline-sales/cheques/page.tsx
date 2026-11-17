@@ -239,7 +239,7 @@ function ChequesContent() {
           notes: 'Bulk escalation / flagged by ' + currentUser.fullName,
         });
       });
-      toast.error(`🚨 Escalated ${selectedIds.length} cheques as Bounced / Incident.`);
+      toast.error(`Escalated ${selectedIds.length} cheques as Bounced / Incident.`);
       handleClearSelection();
       refreshCheques();
     });
@@ -374,7 +374,7 @@ function ChequesContent() {
             <option value="PENDING">Pending Cash Date</option>
             <option value="CASHED">Cashed ✓</option>
             <option value="DELAYED">Delayed</option>
-            <option value="BOUNCED">Bounced 🚨</option>
+            <option value="BOUNCED">Bounced </option>
             <option value="LOST">Lost</option>
           </select>
         </div>
@@ -595,7 +595,7 @@ function ChequesContent() {
                     onClick={() => handleUpdateStatus('BOUNCED')}
                     className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 font-semibold text-rose-800 hover:bg-rose-100"
                   >
-                    Mark Bounced 🚨
+                    Mark Bounced 
                   </button>
                 </div>
               </div>
