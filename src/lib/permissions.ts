@@ -14,6 +14,7 @@ export type FeatureKey =
   | 'dashboard'
   | 'settings'
   | 'orderflow'
+  | 'order_desk'
   | 'reviews'
   | 'customers'
   | 'marketing'
@@ -48,6 +49,7 @@ export const ALL_FEATURE_KEYS: FeatureKey[] = [
   'dashboard',
   'settings',
   'orderflow',
+  'order_desk',
   'reviews',
   'customers',
   'marketing',
@@ -71,6 +73,7 @@ export const FEATURE_METADATA: Record<FeatureKey, { label: string; group: 'OFFLI
   dashboard: { label: 'Dashboard', group: 'PLATFORM', description: 'Executive operational KPIs and multi-brand metrics' },
   settings: { label: 'System Settings', group: 'PLATFORM', description: 'Staff onboarding, permissions, holiday calendar, categories' },
   orderflow: { label: 'OrderFlow (Online)', group: 'PLATFORM', description: 'WhatsApp Extractor, manual entry, daily orders, delivery failures' },
+  order_desk: { label: 'Order Desk (All Orders)', group: 'PLATFORM', description: 'Search every order, update delivery status, log failures, returns and exchanges. No sales metrics' },
   reviews: { label: 'Reviews & Feedback', group: 'PLATFORM', description: 'Customer complaints, separated returns, dynamic categories' },
   customers: { label: 'Customer Intelligence', group: 'PLATFORM', description: 'Customer 360 directory, Karma score, cohort insights' },
   marketing: { label: 'Marketing & Influencers', group: 'PLATFORM', description: 'Influencer directory, seeding sends, collaboration metrics' },
@@ -95,6 +98,7 @@ export const FIELD_SALES_OFFICER_TEMPLATE: UserCustomPermissions = {
   dashboard: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
   settings: { access: 'HIDDEN', scope: null, actions: [] },
   orderflow: { access: 'HIDDEN', scope: null, actions: [] },
+  order_desk: { access: 'HIDDEN', scope: null, actions: [] },
   reviews: { access: 'HIDDEN', scope: null, actions: [] },
   customers: { access: 'HIDDEN', scope: null, actions: [] },
   marketing: { access: 'HIDDEN', scope: null, actions: [] },
@@ -107,6 +111,7 @@ export const FIELD_SALES_OFFICER_TEMPLATE: UserCustomPermissions = {
 export const D2C_OFFICER_TEMPLATE: UserCustomPermissions = {
   ...Object.fromEntries(ALL_FEATURE_KEYS.map(key => [key, { access: 'HIDDEN', scope: null, actions: [] }])),
   orderflow: { access: 'FULL', scope: 'OWN', actions: ['VIEW', 'CREATE', 'EDIT'] },
+  order_desk: { access: 'FULL', scope: 'OWN', actions: ['VIEW', 'CREATE', 'EDIT'] },
   products: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
 } as UserCustomPermissions;
 
@@ -124,6 +129,7 @@ export const OFFICE_STAFF_TEMPLATE: UserCustomPermissions = {
   dashboard: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
   settings: { access: 'HIDDEN', scope: null, actions: [] },
   orderflow: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT'] },
+  order_desk: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT'] },
   reviews: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT'] },
   customers: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
   marketing: { access: 'HIDDEN', scope: null, actions: [] },
@@ -147,6 +153,7 @@ export const MANAGER_TEMPLATE: UserCustomPermissions = {
   dashboard: { access: 'FULL', scope: 'ALL', actions: ['VIEW'] },
   settings: { access: 'HIDDEN', scope: null, actions: [] },
   orderflow: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT'] },
+  order_desk: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT'] },
   reviews: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT'] },
   customers: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT'] },
   marketing: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT'] },
@@ -170,6 +177,7 @@ export const VIEWER_TEMPLATE: UserCustomPermissions = {
   dashboard: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
   settings: { access: 'HIDDEN', scope: null, actions: [] },
   orderflow: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
+  order_desk: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
   reviews: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
   customers: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
   marketing: { access: 'VIEW_ONLY', scope: 'ALL', actions: ['VIEW'] },
@@ -193,6 +201,7 @@ export const SUPER_ADMIN_TEMPLATE: UserCustomPermissions = {
   dashboard: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
   settings: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
   orderflow: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
+  order_desk: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
   reviews: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
   customers: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
   marketing: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] },
@@ -412,4 +421,9 @@ export function isRecordVisibleToUser(
     return allTeam.includes(recordOwnerId);
   }
   return false;
+}
+
+/** Updating orders (status, failures, returns, exchanges) is allowed from OrderFlow or the Order Desk. */
+export function canWorkOrders(user: UserWithPermissions, action: ActionPermission = 'EDIT'): boolean {
+  return canPerform(user, 'orderflow', action) || canPerform(user, 'order_desk', action);
 }

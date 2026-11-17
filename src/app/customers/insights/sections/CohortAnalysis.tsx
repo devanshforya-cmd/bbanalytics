@@ -171,14 +171,21 @@ export default function CohortAnalysis({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
+              {cohortData.length === 0 && (
+                <tr><td colSpan={6} className="py-8 text-center text-xs text-slate-500">No first orders in the last 6 months yet. Cohorts appear as orders come in.</td></tr>
+              )}
               {cohortData.map((row) => (
                 <tr key={row.month} className="hover:bg-slate-50 transition">
                   <td className="py-3 px-3 font-bold text-slate-900">{row.month}</td>
                   <td className="py-3 px-3 text-center font-bold text-slate-700">{row.size} users</td>
                   <td className="py-3 px-3 text-center">
-                    <span className="rounded bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[10px] border border-emerald-200">
-                      {row.m1}
-                    </span>
+                    {row.m1 !== '—' ? (
+                      <span className="rounded bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[10px] border border-emerald-200">
+                        {row.m1}
+                      </span>
+                    ) : (
+                      <span className="text-slate-300 font-bold">—</span>
+                    )}
                   </td>
                   <td className="py-3 px-3 text-center">
                     {row.m2 !== '—' ? (

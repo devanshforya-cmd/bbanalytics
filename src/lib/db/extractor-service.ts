@@ -68,7 +68,7 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     if (stated !== null && (!Number.isFinite(stated) || stated < 0 || Math.abs(stated * 100 - Math.round(stated * 100)) > 1e-6 || !Number.isSafeInteger(Math.round(stated * 100)) || stated * 100 > catalogCents + 0.5)) throw new ExtractorInputError(`${label} stated amount cannot exceed the item selling prices.`);
     if (discount !== null && (!Number.isFinite(discount) || discount < 0 || discount > 100 || Math.abs(discount * 100 - Math.round(discount * 100)) > 1e-6)) throw new ExtractorInputError(`${label} discount must be between 0 and 100%.`);
     const discountedCents = discount === null ? catalogCents : Math.round(catalogCents * (1 - discount / 100));
-    if (stated !== null && discount !== null && Math.round(stated * 100) !== discountedCents) throw new ExtractorInputError(`${label} stated amount and discount do not match.`);
+    // A written price wins over a percentage; the percentage is kept as a record of the offer.
     const targetCents = stated === null ? discountedCents : Math.round(stated * 100);
     const totals = allocateOrderTotal(items, targetCents / 100);
     const adjusted: OrderItem[] = items.map((item,i) => ({ ...item, totalPrice: totals[i], unitPrice: totals[i] / item.quantity, discountAmount: money(item.catalogUnitPrice * item.quantity - totals[i]) }));

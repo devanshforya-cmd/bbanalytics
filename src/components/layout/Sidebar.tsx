@@ -8,6 +8,7 @@ import { getSessionUser } from '@/lib/auth';
 import { User } from '@/lib/types';
 import { hasAccess, isSuperAdmin } from '@/lib/permissions';
 import {
+  ListChecks,
   LayoutDashboard,
   Compass,
   Store,
@@ -41,6 +42,8 @@ interface MenuItem {
   label: string;
   href: string;
   permKey: string;
+  /** Also shown to people with this permission. */
+  alsoPermKey?: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
 }
@@ -77,6 +80,7 @@ const menuSections: MenuSection[] = [
     items: [
       { label: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles },
       { label: 'Manual Order Entry', href: '/orderflow/manual-entry', permKey: 'orderflow', icon: ClipboardPen },
+      { label: 'All Orders', href: '/orderflow/orders', permKey: 'orderflow', alsoPermKey: 'order_desk', icon: ListChecks },
       { label: 'Daily Orders', href: '/orderflow/daily-orders', permKey: 'orderflow', icon: ClipboardCheck, badge: 'Live' },
       { label: 'Monthly Sales Sheet', href: '/orderflow/monthly-sales', permKey: 'orderflow', icon: FileSpreadsheet },
       { label: 'Delivery Failures', href: '/orderflow/delivery-failures', permKey: 'orderflow', icon: TruckIcon },
@@ -153,7 +157,7 @@ export default function Sidebar() {
       {/* Nav List Filtered Strictly by Permissions */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
         {menuSections.map((section) => {
-          const visibleItems = section.items.filter((item) => hasAccess(currentUser, item.permKey));
+          const visibleItems = section.items.filter((item) => (hasAccess(currentUser, item.permKey) || (!!item.alsoPermKey && hasAccess(currentUser, item.alsoPermKey))));
           if (visibleItems.length === 0) return null;
 
           return (

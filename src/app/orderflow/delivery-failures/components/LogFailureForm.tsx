@@ -23,18 +23,22 @@ const field = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text
 const INSIDE_VALLEY = ['kathmandu', 'lalitpur', 'bhaktapur', 'kirtipur', 'madhyapur thimi', 'patan'];
 export const valleyOf = (district?: string): 'Inside' | 'Outside' => INSIDE_VALLEY.some((name) => (district || '').toLowerCase().includes(name)) ? 'Inside' : 'Outside';
 
-interface LogFailureFormProps { onClose: () => void; onSaved: () => void; onViewCustomer?: (phone: string) => void }
+interface LogFailureFormProps { onClose: () => void; onSaved: () => void; onViewCustomer?: (phone: string) => void; initialOrder?: Order | null }
 
 /**
  * Log a delivery failure with three inputs: phone, order, reason.
  * Everything else comes from the order and is shown read-only.
  */
-export default function LogFailureForm({ onClose, onSaved, onViewCustomer }: LogFailureFormProps) {
+export default function LogFailureForm({ onClose, onSaved, onViewCustomer, initialOrder = null }: LogFailureFormProps) {
   const user = db.getCurrentUser();
   const { formatDate } = useCalendarPreference();
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
-  const [customer, setCustomer] = useState<CustomerLookupValue>(EMPTY_CUSTOMER_LOOKUP);
-  const [order, setOrder] = useState<Order | null>(null);
+  const [customer, setCustomer] = useState<CustomerLookupValue>(() => {
+    if (!initialOrder) return EMPTY_CUSTOMER_LOOKUP;
+    const owner = db.getCustomerByPhone(initialOrder.customerPhone);
+    return owner ? { phone: phoneDigits(owner.phone), name: owner.name, link: 'LINKED', customer: owner } : { phone: phoneDigits(initialOrder.customerPhone), name: initialOrder.customerName, link: 'NEW' };
+  });
+  const [order, setOrder] = useState<Order | null>(initialOrder);
   const [reasonId, setReasonId] = useState<string[]>([]);
   const [reasonDetail, setReasonDetail] = useState('');
   const [dateAd, setDateAd] = useState(getTodayAd());
@@ -101,7 +105,7 @@ export default function LogFailureForm({ onClose, onSaved, onViewCustomer }: Log
     } catch (problem) { toast.error(problem instanceof Error ? problem.message : 'The failure could not be saved.'); }
   });
 
-  if (!canPerform(user, 'orderflow', 'CREATE')) return null;
+  if (!canPerform(user, 'orderflow', 'CREATE') && !canPerform(user, 'order_desk', 'CREATE')) return null;
   const ready = !!order && !!reason && (!needsDetail || !!detail);
   const footer = (
     <div className="flex items-center justify-between gap-2">

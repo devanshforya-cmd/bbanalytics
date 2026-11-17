@@ -16,6 +16,10 @@ import { buildGoogleReportTabs } from '../src/lib/google-workspace-reports.ts';
 import { projectSharedPortal } from '../src/app/api/shared/[token]/projection.ts';
 import { visibleOrders } from '../src/app/api/_workspace.ts';
 import { failureReasonLabel, isOtherReason } from '../src/lib/failure-reason.ts';
+import { exchangeAnalysis, exchangeNeedsLink } from '../src/lib/exchange.ts';
+import { getRedirectPathForUser } from '../src/lib/auth.ts';
+import { cohortRetention, lifecycleMovements } from '../src/lib/customer-cohorts.ts';
+import { countsAsSale } from '../src/lib/order-status.ts';
 
 const admin: any = { id: 'admin', fullName: 'Devansh', email: '', phone: '', role: 'SUPER_ADMIN', isSuperAdmin: true, active: true, assignedBrands: ['ALL'], permissions: {}, customPermissions: {} };
 // A role with no built-in template, so only the saved permissions below apply.
@@ -572,4 +576,126 @@ test('the server refuses a new "Other" failure without a written reason but stil
   const prior: any = { collection: 'deliveryFailures', id: 'df_new', data: row, created_by: 'admin', version: 1 };
   assert.doesNotThrow(() => prepareRecordData(admin, mutation('deliveryFailures', { ...row, status: 'DELIVERED' }, 1) as any, prior, context));
   assert.equal(isOtherReason('Others'), true); assert.equal(isOtherReason('Other courier'), false);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Order status, exchanges and the Order Desk (17 November, second round)
+// ---------------------------------------------------------------------------------------------
+
+const customerRow = (extra: Record<string, unknown> = {}) => ({ id: 'c1', phone: '9841234567', name: 'Sita Gurung', city: '', province: '', totalOrders: 1, totalDelivered: 0, totalReturns: 0, totalDeliveryFailures: 0, totalCancellations: 0, totalComplaints: 0, totalReviews: 0, karmaScore: 72, segment: 'NEW', activeFlags: [], brandsPurchased: ['FORYA'], ...extra });
+function statusWorkspace(user: any = admin) {
+  const db = new DatabaseService({ server: true }); db.replaceBrands([{ id: 'b1', code: 'FORYA', name: 'Forya' } as any]); db.replaceUsers([admin, user]);
+  db.hydrateSnapshot({ products: [product, product2] as any, orders: [orderData('o1', { orderNumber: 'FOR-0001', status: 'PENDING' })] as any, customers: [customerRow()] as any }, user);
+  return db;
+}
+
+test('orders can be marked dispatched and delivered, which updates the customer once and closes an open failure', () => {
+  const db = statusWorkspace();
+  db.setOrderStatus('o1', 'DISPATCHED', { dateAd: '2026-11-17' });
+  assert.equal(db.getOrderById('o1')!.status, 'DISPATCHED'); assert.equal(db.getOrderById('o1')!.dispatchedDateAd, '2026-11-17');
+  const failure = db.addDeliveryFailure({ orderId: 'o1', orderNumber: 'FOR-0001', brandCode: 'FORYA', customerName: 'Sita', customerPhone: '9841234567', deliveryMethod: 'Pathao', dateAd: '2026-11-18', dateBs: '', reason: 'Call not received', valley: 'Inside' });
+  assert.equal(db.getOrderById('o1')!.status, 'FAILED');
+  const before = db.getCustomers()[0].karmaScore;
+  db.setOrderStatus('o1', 'DELIVERED', { dateAd: '2026-11-19' });
+  const order = db.getOrderById('o1')!;
+  assert.equal(order.status, 'DELIVERED'); assert.equal(order.deliveredDateAd, '2026-11-19');
+  assert.equal(db.getCustomers()[0].totalDelivered, 1); assert.equal(db.getCustomers()[0].karmaScore, before + 1);
+  assert.equal(db.getDeliveryFailures('ALL').find((entry) => entry.id === failure.id)!.status, 'DELIVERED');
+  // Undoing a wrong click takes the count and point back; the history keeps both changes.
+  db.setOrderStatus('o1', 'DISPATCHED');
+  assert.equal(db.getCustomers()[0].totalDelivered, 0); assert.equal(db.getCustomers()[0].karmaScore, before);
+  assert.ok((db.getOrderById('o1')!.editHistory || []).some((entry: any) => entry.field === 'Status'));
+  assert.throws(() => db.setOrderStatus('o1', 'CANCELLED'), /reason/);
+  db.setOrderStatus('o1', 'CANCELLED', { reason: 'Customer changed mind' });
+  assert.equal(db.getCustomers()[0].totalCancellations, 1);
+});
+
+test('marking a delivery failure delivered now delivers the order and applies karma (it was computed and dropped before)', () => {
+  const db = statusWorkspace();
+  const failure = db.addDeliveryFailure({ orderId: 'o1', orderNumber: 'FOR-0001', brandCode: 'FORYA', customerName: 'Sita', customerPhone: '9841234567', deliveryMethod: 'Pathao', dateAd: '2026-11-18', dateBs: '', reason: 'Call not received', valley: 'Inside' });
+  const before = { ...db.getCustomers()[0] };
+  db.updateDeliveryFailure(failure.id, { status: 'DELIVERED' });
+  assert.equal(db.getOrderById('o1')!.status, 'DELIVERED');
+  assert.equal(db.getCustomers()[0].totalDelivered, before.totalDelivered + 1);
+  assert.equal(db.getCustomers()[0].karmaScore, before.karmaScore + 1);
+});
+
+test('a return resolved as an exchange creates or links the replacement order, which never adds sales and feeds the analysis', () => {
+  const db = statusWorkspace();
+  db.setOrderStatus('o1', 'DELIVERED', { dateAd: '2026-11-17' });
+  const ret = db.addReturn({ orderId: 'o1', orderNumber: 'FOR-0001', brandCode: 'FORYA', productId: 'p1', productName: product.name, customerName: 'Sita Gurung', customerPhone: '9841234567', dateAd: '2026-11-18', dateBs: '', orderProcessedDateAd: '2026-11-17', platform: 'WhatsApp' as any, quantity: 1, reasonCategory: 'Damage' as any, orderStatus: 'Exchanged', valley: 'Inside', issueCategories: [] });
+  assert.equal(exchangeAnalysis(db.getReturns('ALL'), db.getOrders('ALL')).unlinked, 1);
+  const karma = db.getCustomers()[0].karmaScore;
+  const replacement = db.createExchangeOrder(ret.id, { items: [{ productId: 'p2', productName: product2.name, brandCode: 'FORYA', quantity: 1 }], amountToCollect: 300 });
+  assert.equal(replacement.totalAmount, 300); assert.equal(replacement.items.reduce((sum, item) => sum + item.totalPrice, 0), 300);
+  assert.equal(replacement.exchangeReturnId, ret.id); assert.equal(replacement.exchangeOfOrderId, 'o1'); assert.equal(replacement.address, 'Thamel');
+  assert.equal(db.getCustomers()[0].karmaScore, karma); // no "order placed" karma for a replacement
+  const saved = db.getReturns('ALL').find((entry) => entry.id === ret.id)!;
+  assert.equal(saved.exchangeOrderId, replacement.id); assert.equal(exchangeNeedsLink(saved), false);
+  assert.throws(() => db.createExchangeOrder(ret.id, { items: [{ productId: 'p1', productName: product.name, brandCode: 'FORYA', quantity: 1 }], amountToCollect: 0 }), /already has a replacement/);
+  db.setOrderStatus(replacement.id, 'DELIVERED', { dateAd: '2026-11-21' });
+  const a = exchangeAnalysis(db.getReturns('ALL'), db.getOrders('ALL'));
+  assert.equal(a.byResolution.Exchanged, 1); assert.equal(a.linked, 1); assert.equal(a.unlinked, 0); assert.equal(a.replacementsDelivered, 1);
+  assert.equal(a.differenceCollected, 300); assert.equal(a.medianDaysReturnToReplacementDelivered, 3);
+  assert.deepEqual(a.swaps, [{ from: product.name, to: product2.name, count: 1 }]);
+  // Changing the resolution away from Exchanged unlinks both sides.
+  db.updateReturnResolution(ret.id, 'Refunded');
+  assert.equal(db.getReturns('ALL').find((entry) => entry.id === ret.id)!.exchangeOrderId, undefined);
+  assert.equal(db.getOrderById(replacement.id)!.exchangeReturnId, undefined);
+  // Linking: same customer only, never the returned order itself.
+  assert.throws(() => db.linkExchangeOrder(ret.id, 'o1'), /not the order that was returned/);
+  db.linkExchangeOrder(ret.id, replacement.id);
+  assert.equal(db.getReturns('ALL').find((entry) => entry.id === ret.id)!.orderStatus, 'Exchanged');
+});
+
+test('the Order Desk works orders and returns without OrderFlow, but cannot change order details or create ordinary orders', () => {
+  const desk: any = { id: 'desk', fullName: 'Desk Staff', email: '', phone: '', role: 'CUSTOM', active: true, assignedBrands: ['ALL'], permissions: {},
+    customPermissions: { order_desk: { access: 'FULL', scope: 'ALL', actions: ['VIEW', 'CREATE', 'EDIT'] } } };
+  const stored = (collection: string, data: any): StoredWorkspaceRecord => ({ collection: collection as any, id: data.id, data, created_by: 'admin', version: 1 });
+  const order = stored('orders', orderData('o1', { orderNumber: 'FOR-0001' }));
+  assert.equal(canReadWorkspaceRecord(desk, order, [admin, desk], []), true);
+  assert.equal(canWriteWorkspaceRecord(desk, order, 'EDIT', [admin, desk], []), true);
+  assert.equal(canWriteWorkspaceRecord(desk, order, 'DELETE', [admin, desk], []), false);
+  assert.equal(canWriteWorkspaceRecord(desk, stored('orders', orderData('o2')), 'CREATE', [admin, desk], []), false);
+  assert.equal(canWriteWorkspaceRecord(desk, stored('orders', orderData('o3', { exchangeReturnId: 'ret_1' })), 'CREATE', [admin, desk], []), true);
+  assert.equal(canWriteWorkspaceRecord(desk, stored('returns', { id: 'ret_1', brandCode: 'FORYA', customerPhone: '9841234567' }), 'CREATE', [admin, desk], []), true);
+  assert.equal(canReadWorkspaceRecord(desk, stored('marketingSends', { id: 's1', brandCodes: ['FORYA'] }), [admin, desk], []), false);
+  // On the server: status changes pass, detail changes do not.
+  const context: any = { users: [admin, desk], brands: [{ code: 'FORYA' }], records: [{ collection: 'products', id: 'p1', data: product, created_by: 'admin', version: 1 }] };
+  assert.doesNotThrow(() => prepareRecordData(desk, mutation('orders', { ...order.data, status: 'DELIVERED', deliveredDateAd: '2026-11-17' }, 1) as any, order, context));
+  assert.throws(() => prepareRecordData(desk, mutation('orders', { ...order.data, address: 'Somewhere else' }, 1) as any, order, context), /delivery status and exchanges/);
+  assert.throws(() => prepareRecordData(desk, mutation('orders', orderData('o9', { assignedToId: 'desk' })) as any, null, context), /replacement order for a logged return/);
+  // Desk-only staff land on All Orders after signing in.
+  assert.equal(getRedirectPathForUser(desk), '/orderflow/orders');
+});
+
+test('customer cohorts and lifecycle moves come from real order dates, with phones normalised', () => {
+  const o = (id: string, phone: string, date: string, extra: Record<string, unknown> = {}) => orderData(id, { customerPhone: phone, orderDateAd: date, ...extra }) as any;
+  const orders = [
+    o('a1', '9841000001', '2026-09-03'), o('a2', '+977-9841000001', '2026-10-10'), // same person, two formats
+    o('b1', '9841000002', '2026-09-20'),
+    o('c1', '9841000003', '2026-10-05'), o('c2', '9841000003', '2026-11-10'),
+    o('d1', '9841000004', '2026-06-01'), o('d2', '9841000004', '2026-11-12'), // won back after a long gap
+    o('x1', '9841000005', '2026-11-01', { status: 'CANCELLED' }), // not a purchase
+    o('r1', '9841000006', '2026-11-02', { exchangeReturnId: 'ret_1' }), // a replacement, not a purchase
+  ];
+  const rows = cohortRetention(orders, '2026-11-17');
+  const sep = rows.find((row) => row.month.startsWith('Sep 2026'))!;
+  assert.equal(sep.size, 2); assert.equal(sep.m1, '50%'); assert.equal(sep.m2, '0%'); assert.equal(sep.m3, '—');
+  const oct = rows.find((row) => row.month.startsWith('Oct 2026'))!;
+  assert.equal(oct.size, 1); assert.equal(oct.m1, '100%');
+  assert.equal(rows.some((row) => row.month.startsWith('Nov 2026')), false); // cancelled and replacement orders start no cohort
+  const moves = Object.fromEntries(lifecycleMovements(orders, '2026-11-17').map((move) => [move.to, move.count]));
+  assert.equal(moves.Repeat, 2); // c (Nov 10) and d (Nov 12)
+  assert.equal(moves['Won back'], 1);
+  assert.equal(moves.Lapsed, 0);
+});
+
+test('cancelling after a failed delivery cancels the order and counts it on the customer', () => {
+  const db = statusWorkspace();
+  const failure = db.addDeliveryFailure({ orderId: 'o1', orderNumber: 'FOR-0001', brandCode: 'FORYA', customerName: 'Sita', customerPhone: '9841234567', deliveryMethod: 'Pathao', dateAd: '2026-11-18', dateBs: '', reason: 'Customer refused', valley: 'Inside' });
+  db.updateDeliveryFailure(failure.id, { status: 'CANCELLED' });
+  assert.equal(db.getOrderById('o1')!.status, 'CANCELLED');
+  assert.equal(db.getCustomers()[0].totalCancellations, 1);
+  assert.equal(countsAsSale(db.getOrderById('o1')!), false);
 });

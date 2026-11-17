@@ -712,6 +712,13 @@ export interface Order {
   contentReceived?: boolean;
   /** The ID this order carried before short IDs. Searchable, never shown as the main ID. */
   legacyOrderNumber?: string;
+  /** Set when staff mark the order Dispatched, Delivered or Cancelled (AD dates). */
+  dispatchedDateAd?: string;
+  deliveredDateAd?: string;
+  cancelledDateAd?: string;
+  /** A replacement order sent for a return: the original order and the return it settles. */
+  exchangeOfOrderId?: string;
+  exchangeReturnId?: string;
   /** Written by the server only. Each entry is one changed field. */
   editHistory?: OrderEditEntry[];
   createdAt: string;
@@ -829,6 +836,11 @@ export interface ReturnEntry {
   issueCategories: string[];
   evidenceUrl?: string;
   remarks?: string;
+  /** Exchange resolution: the replacement order sent for this return. */
+  exchangeOrderId?: string;
+  exchangeOrderNumber?: string;
+  /** When the resolution was last decided (AD). */
+  resolvedDateAd?: string;
   createdAt: string;
 }
 

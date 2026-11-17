@@ -133,7 +133,9 @@ function qtyFor(lines: string[], match: Match, text: string): number {
   const nextLine = lines.slice(match.line + 1, match.line + 5).find(line => line.trim());
   const next = /^\s*(\d{1,6})\s*(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)(?:\s*[-:,]?\s*(?:rs\.?|npr|₹)\s*[\d,]+(?:\.\d{1,2})?)?\s*$/i.exec(nextLine || '');
   const each = /\b(\d{1,6})\s*(?:units?|pcs?|pieces?)?\s*each\b/i.exec(text);
-  const qty = Number(suffix?.[1] || suffix?.[2] || suffix?.[3] || prefix?.[1] || next?.[1] || each?.[1] || 1);
+  // "Aqua rollon 2 pcs": a few more words of the product name before a quantity with a unit.
+  const later = /^(?![^\n]*?\b(?:and|with)\b)[^\d\n+,&/;|]{1,24}?(\d{1,6})\s*(?:units?|pcs?|pieces?|sets?|trios?|kits?|pairs?|combos?|bottles?)\b/i.exec(after);
+  const qty = Number(suffix?.[1] || suffix?.[2] || suffix?.[3] || prefix?.[1] || later?.[1] || next?.[1] || each?.[1] || 1);
   return qty;
 }
 function matchCatalog(text: string, products: Product[], combos: Combo[], flags: string[]): ExtractedProductItem[] {
@@ -203,8 +205,10 @@ function extractPrices(lines: string[], items: ExtractedProductItem[], flags: st
   let stated: number | null = null;
   const priced = new Set<string>();
   for (const [index, line] of lines.entries()) {
-    const amount = parseStatedPrice(line);
-    if (amount === null) continue;
+    // A line that is only an amount ("1895", "Rs 1895/-") is the price the team wrote for this order.
+    const bare = /^\s*(?:(?:rs\.?|npr|₹)\s*)?(\d{1,3}(?:,\d{3})+|\d{2,6})(?:\.\d{1,2})?\s*(?:\/-|rs\.?|npr)?\s*$/i.exec(line);
+    const amount = parseStatedPrice(line) ?? (bare ? Number(line.replace(/[^\d.]/g, '')) : null);
+    if (amount === null || !Number.isFinite(amount)) continue;
     const isTotal = /^\s*(?:(?:grand\s+)?total(?:\s+(?:amount|price))?|(?:order|final)\s+(?:total|amount)|amount|cod|paid)\b/i.test(line);
     if (isTotal) {
       if (stated !== null) flags.push('Price needs review: Multiple order totals were mentioned. Choose the correct total.');
@@ -220,7 +224,12 @@ function extractPrices(lines: string[], items: ExtractedProductItem[], flags: st
     const explicitUnit = /\b(?:each|per\s*(?:unit|piece)|unit\s*price)\b/i.test(line);
     const followedByItem = items.some(other => other.sourceLine !== undefined && other.sourceLine > index);
     const clearScope = item && (item.quantity === 1 || explicitUnit) && (sameLine.length === 1 || followedByItem || items.length === 1 || explicitUnit);
-    if (!clearScope || !item?.productId || priced.has(item.productId)) {
+    if (!clearScope || !item?.productId || priced.has(item.productId) || amount > item.unitPrice + 0.005) {
+      // A selling price can never be above the catalogue price, so an amount larger than any single
+      // item's price (and not more than the items' total) can only be the order total.
+      const subtotal = items.reduce((sum, entry) => sum + entry.totalPrice, 0);
+      const highestUnit = Math.max(0, ...items.map((entry) => entry.unitPrice));
+      if (stated === null && items.length && items.every((entry) => entry.productId) && amount > highestUnit && amount <= subtotal + 0.005) { stated = amount; continue; }
       flags.push(`Price needs review: NPR ${amount.toLocaleString()} could be an item price or an order total. Enter the agreed price below.`);
       continue;
     }
@@ -246,8 +255,6 @@ export function validateExtractedOrder(order: ExtractedOrderResult): string[] {
   if (order.discountPercent?.provided) {
     const pct = order.discountPercent.value;
     if (!Number.isFinite(pct) || pct < 0 || pct > 100 || Math.abs(pct * 100 - Math.round(pct * 100)) > 1e-6) errors.push('Enter a discount between 0 and 100%.');
-    const cents = Math.round(order.products.reduce((sum, item) => sum + (item.saleUnitPrice ?? item.unitPrice) * item.quantity, 0) * 100);
-    if ((order.statedPrice.provided ?? order.statedPrice.value > 0) && Math.abs(Math.round(order.statedPrice.value * 100) - Math.round(cents * (1 - pct / 100))) > 0) errors.push('The stated total and percentage discount do not match; correct or clear one.');
     if (order.flags.some(flag => flag.startsWith('Discount scope is unclear'))) errors.push('Review the discount scope; clear the percentage and enter the agreed order total.');
   }
   if (order.flags.some(flag => flag.includes('matches multiple catalogue items') || flag.startsWith('Multiple combos match'))) errors.push('Resolve the ambiguous catalogue match before saving.');
@@ -320,7 +327,12 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
   const prepaid = !/\b(?:unpaid|not\s+paid)\b/i.test(body) && /\b(?:paid|prepaid|esewa|khalti|fonepay|bank transfer)\b/i.test(body);
   const delivery = options.deliveryMethods?.slice().sort((a,b) => b.length - a.length).find(value => expression(value).test(body)) || (/\bpathao\b/i.test(body) ? 'Pathao' : /\bindrive\b/i.test(body) ? 'InDrive' : '');
   if (!items.length) flags.push('No catalogue item recognized; add the correct product or combo.');
-  if (stated !== null && itemSubtotal > 0 && stated !== itemSubtotal) flags.push(`Stated total NPR ${stated.toLocaleString()} differs from item prices total NPR ${itemSubtotal.toLocaleString()}; review before saving.`);
+  if (stated !== null && discount !== null && itemSubtotal > 0) {
+    // Both a written price and a percentage: the written price is what the customer agreed to pay.
+    const expected = Math.round(itemSubtotal * (100 - discount)) / 100;
+    if (Math.abs(stated - expected) > Math.max(5, expected * 0.01)) flags.push(`Written price NPR ${stated.toLocaleString()} is used. It differs from ${discount}% off (NPR ${expected.toLocaleString()}); check the price.`);
+    else flags.push(`Written price NPR ${stated.toLocaleString()} is used (${discount}% off NPR ${itemSubtotal.toLocaleString()}).`);
+  } else if (stated !== null && itemSubtotal > 0 && stated !== itemSubtotal) flags.push(`Stated total NPR ${stated.toLocaleString()} differs from item prices total NPR ${itemSubtotal.toLocaleString()}; review before saving.`);
   const comboNames = items.filter(item => item.isCombo).map(item => item.name);
   const order: ExtractedOrderResult = {
     id: `ext_${globalThis.crypto.randomUUID()}`, salesChannel: platform,

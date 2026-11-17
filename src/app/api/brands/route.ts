@@ -108,7 +108,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, canDelete, counts });
   }
 
-  if (!['settings', 'products', 'beat_plans', 'dashboard', 'orderflow', 'dispatches', 'reviews', 'marketing', 'stores', 'distributors', 'cheque_tracker', 'document_handover', 'shelf_photos', 'call_tracker'].some((feature) => hasAccess(auth.user, feature))) {
+  if (!['settings', 'products', 'beat_plans', 'dashboard', 'orderflow', 'order_desk', 'dispatches', 'reviews', 'marketing', 'stores', 'distributors', 'cheque_tracker', 'document_handover', 'shelf_photos', 'call_tracker'].some((feature) => hasAccess(auth.user, feature))) {
     return NextResponse.json({ success: false, error: 'Not found.' }, { status: 404 });
   }
   if (!isConfigured()) return unavailable();

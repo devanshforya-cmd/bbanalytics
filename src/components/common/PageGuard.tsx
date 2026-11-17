@@ -8,7 +8,8 @@ import { db } from '@/lib/db/db-service';
 import { FeatureKey, hasAccess, isSuperAdmin } from '@/lib/permissions';
 
 interface PageGuardProps {
-  feature?: FeatureKey | string;
+  /** One feature, or several of which any one is enough. */
+  feature?: FeatureKey | string | (FeatureKey | string)[];
   allowedRoles?: any[]; // Deprecated, ignored
   children: React.ReactNode;
   fallbackMessage?: string;
@@ -33,7 +34,7 @@ export default function PageGuard({
   }, []);
 
   const hasPermission = Boolean(
-    user && (isSuperAdmin(user) || !feature || hasAccess(user, feature))
+    user && (isSuperAdmin(user) || !feature || (Array.isArray(feature) ? feature.some((key) => hasAccess(user, key)) : hasAccess(user, feature)))
   );
 
   useEffect(() => {

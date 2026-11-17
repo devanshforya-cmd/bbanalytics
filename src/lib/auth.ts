@@ -118,6 +118,7 @@ export function getRedirectPathForUser(user: any): string {
   if (hasAccess(user, 'dashboard')) return '/dashboard';
   if (hasAccess(user, 'beat_plans')) return '/offline-sales/beat-plan';
   if (hasAccess(user, 'orderflow')) return '/orderflow/manual-entry';
+  if (hasAccess(user, 'order_desk')) return '/orderflow/orders';
   if (hasAccess(user, 'stores')) return '/offline-sales/stores';
   if (hasAccess(user, 'products')) return '/products';
   if (hasAccess(user, 'tasks')) return '/opscore/tasks';

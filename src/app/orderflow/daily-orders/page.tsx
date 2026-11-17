@@ -7,6 +7,7 @@ import { syncManager } from '@/lib/offline-sync';
 import { canPerform, hasAccess } from '@/lib/permissions';
 import { dayNumbers, displayDocumentId, matchesDocumentId } from '@/lib/document-ids';
 import { phoneDigits } from '@/lib/customer-lookup';
+import OrderStatusControl from '@/components/orders/OrderStatusControl';
 import { useCalendarPreference } from '@/lib/hooks/useCalendarPreference';
 import { bsLabel } from '@/components/common/DualDateField';
 import { getBrands } from '@/lib/db/brands-service';
@@ -568,9 +569,7 @@ export default function DailyOrdersPage() {
                             </span>
                           </td>
                           <td className="py-3 px-3">
-                            <span className="text-[11px] font-semibold text-slate-600">
-                              {ord.status}
-                            </span>
+                            <OrderStatusControl order={ord} compact />
                           </td>
                           <td className="py-3 px-3 text-[11px] text-slate-500">
                             {ord.source === 'WHATSAPP_EXTRACTOR' ? 'Extractor' : ord.source === 'MANUAL' ? 'Manual' : 'Field'}

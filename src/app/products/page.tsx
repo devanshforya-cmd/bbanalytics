@@ -1,5 +1,6 @@
 'use client';
 
+import { countsAsSale } from '@/lib/order-status';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -227,7 +228,8 @@ export default function ProductsPage() {
     let mtUnits = 0;
     const storeIds = new Set<string>();
 
-    secondaryOrders.filter(order => order.status === 'DELIVERED').forEach((o) => {
+    // Field orders have no delivery step in the app yet, so every order that was not cancelled counts.
+    secondaryOrders.filter(order => order.status !== 'CANCELLED').forEach((o) => {
       const item = o.items.find(
         (i) =>
           i.productId === prod.id
@@ -249,7 +251,7 @@ export default function ProductsPage() {
 
     // Direct / Online Orders
     let onlineUnits = 0;
-    orders.filter(order => order.status === 'DELIVERED').forEach((o) => {
+    orders.filter(countsAsSale).forEach((o) => {
       const item = o.items.find(
         (i) =>
           i.productId === prod.id
@@ -871,7 +873,7 @@ export default function ProductsPage() {
             const kitsStock = c.stockQty;
             const currentMrp = c.items.reduce((sum, part) => sum + (products.find(product => product.id === part.productId)?.mrp ?? part.mrp) * part.quantity, 0);
             const currentSavings = currentMrp > 0 ? Math.max(0, Math.round((1 - c.comboPrice / currentMrp) * 1000) / 10) : 0;
-            const comboOrders = orders.filter(order => order.status === 'DELIVERED');
+            const comboOrders = orders.filter(countsAsSale);
             const comboLines = comboOrders.flatMap(order => order.items).filter(item => item.productId === c.id);
             const kitsSold = comboLines.reduce((sum, item) => sum + item.quantity, 0);
             const comboRevenue = comboLines.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);

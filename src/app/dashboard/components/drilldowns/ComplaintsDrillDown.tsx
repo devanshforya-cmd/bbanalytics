@@ -15,6 +15,17 @@ interface ComplaintsDrillDownProps {
   onClose: () => void;
 }
 
+/** Average days from logging to the first Resolved/Closed status, from each complaint's status history. */
+function resolutionStats(complaints: FeedbackEntry[]) {
+  const resolutionDays = complaints.flatMap((entry) => {
+    const done = (entry.history || []).find((step) => step.newStatus === 'RESOLVED' || step.newStatus === 'CLOSED');
+    if (!done) return [];
+    const days = (Date.parse(done.timestamp) - Date.parse(entry.createdAt)) / 86400000;
+    return Number.isFinite(days) && days >= 0 ? [days] : [];
+  });
+  return { resolutionDays, avgResolution: resolutionDays.length ? `${(resolutionDays.reduce((sum, value) => sum + value, 0) / resolutionDays.length).toFixed(1)} days` : '—' };
+}
+
 export default function ComplaintsDrillDown({
   feedback,
   orders,
@@ -26,6 +37,7 @@ export default function ComplaintsDrillDown({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const complaints = feedback.filter((f) => f.type === 'COMPLAINT');
+  const { avgResolution } = resolutionStats(complaints);
   const unresolved = complaints.filter(
     (c) => c.complaintStatus !== 'RESOLVED' && c.complaintStatus !== 'CLOSED'
   ).length;
@@ -77,7 +89,7 @@ export default function ComplaintsDrillDown({
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
               Avg Resolution SLA
             </div>
-            <div className="text-xl font-black text-emerald-600 mt-1">1.5 Days</div>
+            <div className="text-xl font-black text-emerald-600 mt-1">{avgResolution}</div>
           </div>
         </div>
 
@@ -315,20 +327,21 @@ function ComplaintsResolutionMetricsTab({
   orders: Order[];
 }) {
   const complaints = feedback.filter((f) => f.type === 'COMPLAINT');
-  const resolved = complaints.filter((c) => c.complaintStatus === 'RESOLVED').length;
-  const resolutionRate = complaints.length > 0 ? ((resolved / complaints.length) * 100).toFixed(0) : '100';
+  const { resolutionDays, avgResolution } = resolutionStats(complaints);
+  const resolved = complaints.filter((c) => c.complaintStatus === 'RESOLVED' || c.complaintStatus === 'CLOSED').length;
+  const resolutionRate = complaints.length > 0 ? ((resolved / complaints.length) * 100).toFixed(0) : '—';
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-bold uppercase text-slate-500">Avg Resolution Time</div>
-          <div className="text-2xl font-black text-slate-900 mt-1">1.5 days</div>
-          <div className="text-[10px] text-emerald-600 mt-0.5">Target &lt; 2.0 days</div>
+          <div className="text-2xl font-black text-slate-900 mt-1">{avgResolution}</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">{resolutionDays.length ? `Over ${resolutionDays.length} resolved complaint${resolutionDays.length === 1 ? '' : 's'} · target under 2 days` : 'No resolved complaints yet'}</div>
         </div>
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-bold uppercase text-slate-500">Resolution Rate</div>
-          <div className="text-2xl font-black text-blue-600 mt-1">{resolutionRate}%</div>
+          <div className="text-2xl font-black text-blue-600 mt-1">{resolutionRate}{resolutionRate === '—' ? '' : '%'}</div>
           <div className="text-[10px] text-slate-500 mt-0.5">{resolved} of {complaints.length} closed</div>
         </div>
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
@@ -336,7 +349,7 @@ function ComplaintsResolutionMetricsTab({
           <div className="text-2xl font-black text-rose-600 mt-1">
             {orders.length > 0 ? ((complaints.length / orders.length) * 100).toFixed(1) : 0}%
           </div>
-          <div className="text-[10px] text-rose-700 mt-0.5">Industry benchmark &lt; 3%</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Complaints logged ÷ orders</div>
         </div>
       </div>
 

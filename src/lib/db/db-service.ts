@@ -1,3 +1,4 @@
+import { MANUAL_ORDER_STATUSES, type ManualOrderStatus } from '../order-status';
 import { isOtherReason, failureReasonLabel } from '../failure-reason';
 import { normalizePhoneNumber } from '../auth-utils';
 import { installWorkspaceFetch } from '../workspace-reset-client';
@@ -5,6 +6,7 @@ import { validGpsCoordinates } from '../gps-validation';
 import {
   getScope,
   canPerform,
+  canWorkOrders,
 } from '../permissions';
 import { WORKSPACE_COLLECTIONS, WorkspaceCollection, WorkspaceMutation, WorkspaceSnapshot, WorkspaceVersions } from './workspace-types';
 import { canReadWorkspaceRecord, canWriteWorkspaceRecord, StoredWorkspaceRecord } from './workspace-policy';
@@ -94,7 +96,7 @@ export interface RecurringScheduleEntry {
 
 import { syncManager } from '../offline-sync';
 import { applyKarmaEvent, KARMA_RULES } from '../karma-calculator';
-import { getTodayBs } from '../nepali-calendar';
+import { getTodayAd, getTodayBs } from '../nepali-calendar';
 
 export interface OrderRealtimeEvent {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -2506,7 +2508,7 @@ export class DatabaseService {
 
   /** The customer to update alongside another record, or undefined when this account may not change customers (so no save gets stuck). */
   private editableCustomer(phone: string): Customer | undefined {
-    if (!this.server && !canPerform(this.currentUser, 'customers', 'EDIT') && !canPerform(this.currentUser, 'orderflow', 'EDIT')) return undefined;
+    if (!this.server && !canPerform(this.currentUser, 'customers', 'EDIT') && !canWorkOrders(this.currentUser)) return undefined;
     return this.findCustomer(phone);
   }
 
@@ -2537,13 +2539,11 @@ export class DatabaseService {
       if (!customer.brandsPurchased.includes(newOrder.brandCode)) {
         customer.brandsPurchased.push(newOrder.brandCode);
       }
-      const { updatedCustomer } = applyKarmaEvent(
-        customer,
-        'ORDER_PLACED',
-        KARMA_RULES.ORDER_PLACED,
-        'Order placed'
-      );
-      Object.assign(customer, updatedCustomer);
+      // A replacement for an exchange is not a new purchase, so it earns no order karma.
+      if (!newOrder.exchangeReturnId) {
+        const { updatedCustomer } = applyKarmaEvent(customer, 'ORDER_PLACED', KARMA_RULES.ORDER_PLACED, 'Order placed');
+        Object.assign(customer, updatedCustomer);
+      }
     } else {
       const newCust: Customer = {
         id: this.generateId('cust'),
@@ -2618,6 +2618,61 @@ export class DatabaseService {
     });
 
     return this.orders[idx];
+  }
+
+  /**
+   * Move an order along: Pending -> Dispatched -> Delivered, or Cancelled. Keeps the order's history,
+   * the customer's delivered/cancelled counts and karma in step, and closes an open delivery failure
+   * when the parcel finally arrives. Undoing a status (a wrong click) reverses its customer effects.
+   * Failed, Returned and Exchanged are set by their own forms, not here.
+   */
+  public setOrderStatus(id: string, status: ManualOrderStatus, options: { dateAd?: string; reason?: string; fromFailureId?: string } = {}): Order | null {
+    if (!canWorkOrders(this.currentUser)) throw new Error('You do not have permission to change order status.');
+    if (!MANUAL_ORDER_STATUSES.includes(status)) throw new Error('Choose Pending, Dispatched, Delivered or Cancelled.');
+    const order = this.getOrderById(id);
+    if (!order) return null;
+    if (order.status === status) return order;
+    if (status === 'CANCELLED' && !options.reason?.trim()) throw new Error('Give a short reason for cancelling.');
+    const previous = order.status;
+    const dateAd = options.dateAd || getTodayAd();
+    const updates: Partial<Order> = { status };
+    if (status === 'DISPATCHED') updates.dispatchedDateAd = order.dispatchedDateAd || dateAd;
+    if (status === 'DELIVERED') { updates.deliveredDateAd = dateAd; if (!order.dispatchedDateAd) updates.dispatchedDateAd = dateAd; }
+    if (status === 'CANCELLED') updates.cancelledDateAd = dateAd;
+    const updated = this.updateOrder(id, updates, undefined, options.reason || (previous === 'DELIVERED' || previous === 'CANCELLED' ? `Status corrected from ${previous.toLowerCase()}` : undefined));
+    if (!updated) return null;
+
+    const customer = this.editableCustomer(order.customerPhone);
+    if (customer) {
+      const ref = `Order #${order.orderNumber}`;
+      let next = customer;
+      if (status === 'DELIVERED') {
+        next = { ...next, totalDelivered: (next.totalDelivered || 0) + 1 };
+        next = applyKarmaEvent(next, 'ORDER_DELIVERED', KARMA_RULES.ORDER_DELIVERED, `Delivered: ${ref}`).updatedCustomer;
+      } else if (previous === 'DELIVERED') {
+        next = { ...next, totalDelivered: Math.max(0, (next.totalDelivered || 0) - 1) };
+        next = applyKarmaEvent(next, 'CORRECTION', -KARMA_RULES.ORDER_DELIVERED, `Delivery undone: ${ref}`).updatedCustomer;
+      }
+      if (status === 'CANCELLED') {
+        next = { ...next, totalCancellations: (next.totalCancellations || 0) + 1 };
+        next = applyKarmaEvent(next, 'ORDER_CANCELLATION', KARMA_RULES.ORDER_CANCELLATION, `Cancelled: ${ref} (${options.reason!.trim()})`).updatedCustomer;
+      } else if (previous === 'CANCELLED') {
+        next = { ...next, totalCancellations: Math.max(0, (next.totalCancellations || 0) - 1) };
+        next = applyKarmaEvent(next, 'CORRECTION', -KARMA_RULES.ORDER_CANCELLATION, `Cancellation undone: ${ref}`).updatedCustomer;
+      }
+      if (next !== customer) Object.assign(customer, next);
+    }
+
+    // The parcel arrived after a failed attempt: the open failure is resolved with it.
+    if (status === 'DELIVERED') {
+      for (const failure of this.deliveryFailures) {
+        if (failure.orderId !== id || failure.id === options.fromFailureId) continue;
+        if (['FAILED', 'REATTEMPT_SCHEDULED', undefined].includes(failure.status as any)) failure.status = 'DELIVERED';
+      }
+    }
+    this.logActivity('SETTING_CHANGED', 'ORDER', id, { action: `ORDER_${status}`, orderNumber: order.orderNumber, previous });
+    this.persistState();
+    return updated;
   }
 
   public deleteOrder(id: string): boolean {
@@ -2719,7 +2774,7 @@ export class DatabaseService {
 
     // The order itself shows as Failed. This is a delivery failure, not a return.
     const order = this.orders.find((o) => o.id === newDf.orderId);
-    if (order && order.status !== 'DELIVERED' && canPerform(this.currentUser, 'orderflow', 'EDIT')) order.status = 'FAILED';
+    if (order && order.status !== 'DELIVERED' && canWorkOrders(this.currentUser)) order.status = 'FAILED';
 
     const customer = this.editableCustomer(newDf.customerPhone);
     if (customer) {
@@ -2754,7 +2809,7 @@ export class DatabaseService {
       ...(attempt.remarks ? { remarks: attempt.remarks } : {}),
       ...(attempt.reattemptDateAd ? { reattemptDateAd: attempt.reattemptDateAd, reattemptDateBs: attempt.reattemptDateBs } : {}) });
     const order = this.orders.find((o) => o.id === failure.orderId);
-    if (order && order.status !== 'DELIVERED' && canPerform(this.currentUser, 'orderflow', 'EDIT')) order.status = 'FAILED';
+    if (order && order.status !== 'DELIVERED' && canWorkOrders(this.currentUser)) order.status = 'FAILED';
     const customer = this.editableCustomer(failure.customerPhone);
     if (customer) {
       customer.totalDeliveryFailures += 1;
@@ -2779,14 +2834,10 @@ export class DatabaseService {
         orderNumber: failure.orderNumber,
         customer: failure.customerName,
       });
-      const customer = this.findCustomer(failure.customerPhone);
-      if (customer) {
-        applyKarmaEvent(
-          customer,
-          'ORDER_DELIVERED',
-          KARMA_RULES.ORDER_DELIVERED,
-          `Delivery reattempt delivered successfully: Order #${failure.orderNumber}`
-        );
+      // The order becomes Delivered too; that also updates the customer's count and karma once.
+      const order = this.getOrderById(failure.orderId);
+      if (order && order.status !== 'DELIVERED' && canWorkOrders(this.currentUser)) {
+        this.setOrderStatus(order.id, 'DELIVERED', { dateAd: updates.dateAd, fromFailureId: failure.id });
       }
     } else if (updates.status === 'REATTEMPT_SCHEDULED') {
       this.logActivity('TASK_CREATED', 'ORDER', failure.orderId, {
@@ -2801,10 +2852,15 @@ export class DatabaseService {
         orderNumber: failure.orderNumber,
       });
     } else if (updates.status === 'CANCELLED') {
-      this.logActivity('CHEQUE_BOUNCED', 'ORDER', failure.orderId, {
+      this.logActivity('SETTING_CHANGED', 'ORDER', failure.orderId, {
         action: 'DELIVERY_CANCELLED_BY_CUSTOMER',
         orderNumber: failure.orderNumber,
       });
+      // The order itself is cancelled too, so it leaves the open-orders list and the customer's record shows it.
+      const order = this.getOrderById(failure.orderId);
+      if (order && order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && canWorkOrders(this.currentUser)) {
+        this.setOrderStatus(order.id, 'CANCELLED', { reason: 'Cancelled after a failed delivery' });
+      }
     }
 
     this.persistState();
@@ -2864,11 +2920,83 @@ export class DatabaseService {
   ): ReturnEntry | null {
     const ret = this.returns.find((r) => r.id === returnId);
     if (!ret) return null;
+    if (ret.orderStatus === resolution) return ret;
 
     ret.orderStatus = resolution;
+    ret.resolvedDateAd = getTodayAd();
+    // No longer an exchange: the replacement order stays (it may already be on its way) but is unlinked.
+    if (resolution !== 'Exchanged' && ret.exchangeOrderId) this.unlinkExchange(ret);
 
     this.persistState();
     return ret;
+  }
+
+  private unlinkExchange(ret: ReturnEntry) {
+    const order = this.orders.find((entry) => entry.id === ret.exchangeOrderId);
+    if (order && order.exchangeReturnId === ret.id) this.updateOrder(order.id, { exchangeReturnId: undefined, exchangeOfOrderId: undefined }, undefined, 'Exchange unlinked from return');
+    delete ret.exchangeOrderId; delete ret.exchangeOrderNumber;
+  }
+
+  private canWorkReturns(action: 'CREATE' | 'EDIT' = 'EDIT') {
+    return canPerform(this.currentUser, 'reviews', action) || canPerform(this.currentUser, 'order_desk', action);
+  }
+
+  /** Link a return resolved as Exchanged to the replacement order that was already created. */
+  public linkExchangeOrder(returnId: string, orderId: string): ReturnEntry {
+    if (!this.canWorkReturns()) throw new Error('You do not have permission to update returns.');
+    const ret = this.returns.find((entry) => entry.id === returnId);
+    if (!ret) throw new Error('This return no longer exists.');
+    const order = this.getOrderById(orderId);
+    if (!order) throw new Error('Choose an order that still exists.');
+    if (order.id === ret.orderId) throw new Error('Choose the replacement order, not the order that was returned.');
+    if (phoneDigits(order.customerPhone) !== phoneDigits(ret.customerPhone)) throw new Error('The replacement order must be for the same customer.');
+    const other = this.returns.find((entry) => entry.id !== ret.id && entry.exchangeOrderId === order.id);
+    if (other) throw new Error(`This order is already the exchange for another return (${other.productName}).`);
+    if (ret.exchangeOrderId && ret.exchangeOrderId !== order.id) this.unlinkExchange(ret);
+    Object.assign(ret, { orderStatus: 'Exchanged' as const, exchangeOrderId: order.id, exchangeOrderNumber: order.orderNumber, resolvedDateAd: ret.resolvedDateAd || getTodayAd() });
+    if (canWorkOrders(this.currentUser) && order.exchangeReturnId !== ret.id) this.updateOrder(order.id, { exchangeReturnId: ret.id, exchangeOfOrderId: ret.orderId }, undefined, 'Linked as exchange');
+    this.persistState();
+    return ret;
+  }
+
+  /**
+   * Create the replacement order for an exchange, pre-filled from the original order: same customer,
+   * address, brand and channel. It is priced at the difference to collect (often NPR 0), so it never
+   * inflates sales, and it is linked to the return both ways.
+   */
+  public createExchangeOrder(returnId: string, input: { items: { productId: string; productName: string; brandCode: string; quantity: number }[]; amountToCollect: number; deliveryMethod?: string; notes?: string }): Order {
+    if (!this.canWorkReturns() || !canWorkOrders(this.currentUser, 'CREATE')) throw new Error('You do not have permission to create a replacement order.');
+    const ret = this.returns.find((entry) => entry.id === returnId);
+    if (!ret) throw new Error('This return no longer exists.');
+    if (ret.exchangeOrderId && this.getOrderById(ret.exchangeOrderId)) throw new Error('This return already has a replacement order.');
+    const original = ret.orderId ? this.getOrderById(ret.orderId) : undefined;
+    if (!original) throw new Error('The original order could not be found, so the replacement cannot be pre-filled. Link an existing order instead.');
+    if (!input.items.length || input.items.some((item) => !Number.isSafeInteger(item.quantity) || item.quantity < 1)) throw new Error('Add at least one product to send.');
+    const amount = Math.max(0, Math.round((Number(input.amountToCollect) || 0) * 100) / 100);
+    const units = input.items.reduce((sum, item) => sum + item.quantity, 0);
+    const today = getTodayAd();
+    const order = this.addOrder({
+      brandCode: original.brandCode, orderDateAd: today, orderDateBs: getTodayBs(), platform: original.platform,
+      customerName: original.customerName, customerPhone: original.customerPhone, ...(original.alternatePhone ? { alternatePhone: original.alternatePhone } : {}),
+      province: original.province, district: original.district, address: original.address,
+      deliveryMethod: (input.deliveryMethod || original.deliveryMethod) as Order['deliveryMethod'],
+      paymentTerms: amount > 0 ? 'COD' : 'Prepaid', orderType: 'REPEAT',
+      // The amount to collect is spread over the lines so line totals add up to the order total.
+      items: (() => {
+        let left = amount;
+        return input.items.map((item, index) => {
+          const total = index === input.items.length - 1 ? Math.round(left * 100) / 100 : Math.round((amount * item.quantity / units) * 100) / 100;
+          left -= total;
+          return { productId: item.productId, productName: item.productName, brandCode: item.brandCode, quantity: item.quantity, unitPrice: Math.round((total / item.quantity) * 100) / 100, totalPrice: total };
+        });
+      })(),
+      totalAmount: amount, status: 'PENDING', source: 'MANUAL', assignedToId: this.currentUser.id,
+      exchangeReturnId: ret.id, exchangeOfOrderId: original.id,
+      notes: [`Exchange for ${original.orderNumber}: ${ret.quantity}× ${ret.productName} returned (${ret.reasonCategory}).`, input.notes?.trim()].filter(Boolean).join(' '),
+    });
+    Object.assign(ret, { orderStatus: 'Exchanged' as const, exchangeOrderId: order.id, exchangeOrderNumber: order.orderNumber, resolvedDateAd: ret.resolvedDateAd || today });
+    this.persistState();
+    return order;
   }
 
   // Dynamic Checkbox Categories
@@ -4021,7 +4149,9 @@ export class DatabaseService {
       ...proof,
       uploadedAt: proof.uploadedAt || new Date().toISOString(),
     };
-    order.status = 'DELIVERED';
+    // Through the shared status change, so the customer's delivered count and karma follow.
+    if (order.status !== 'DELIVERED' && canWorkOrders(this.currentUser)) this.setOrderStatus(order.id, 'DELIVERED', { dateAd: proof.deliveryDateAd });
+    else order.status = 'DELIVERED';
     this.persistState();
 
     this.logActivity('Uploaded Proof of Delivery', 'ORDER', order.id, {
