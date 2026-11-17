@@ -577,6 +577,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           </div>
                         ))}
                         {ord.flags.some(flag => flag.includes('matches multiple catalogue items') || flag.startsWith('Multiple combos match') || flag.startsWith('Unrecognized order item:')) && <button type="button" className="mt-2 rounded-lg border border-amber-400 bg-white px-3 py-2 font-semibold text-amber-900" onClick={() => setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, flags: order.flags.filter(flag => !flag.includes('matches multiple catalogue items') && !flag.startsWith('Multiple combos match') && !flag.startsWith('Unrecognized order item:')) }) : order))}>I reviewed and selected the correct items</button>}
+                        {ord.flags.some(flag => flag.startsWith('Price needs review:')) && <button type="button" className="mt-2 rounded-lg border border-amber-400 bg-white px-3 py-2 font-semibold text-amber-900" onClick={() => setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, flags: order.flags.filter(flag => !flag.startsWith('Price needs review:')) }) : order))}>I reviewed the price</button>}
                       </div>
                     )}
 
