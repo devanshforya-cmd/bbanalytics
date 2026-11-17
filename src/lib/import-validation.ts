@@ -83,7 +83,7 @@ export function validateCsvImport(input: CsvImportInput, catalog: ImportCatalog,
       const quantity = number(row, 'Quantity', true);
       if (input.sourceType === 'ORDERS') {
         const reference = required(row, 'Order Number').toUpperCase(); const normalized = reference;
-        if (seen.has(normalized) || catalog.orders.some((order) => order.orderNumber.trim().toUpperCase() === normalized)) throw new ImportValidationError(`Order Number "${reference}" already exists or is repeated in this file.`);
+        if (seen.has(normalized) || catalog.orders.some((order) => order.orderNumber.trim().toUpperCase() === normalized || (order.legacyOrderNumber || '').trim().toUpperCase() === normalized)) throw new ImportValidationError(`Order Number "${reference}" already exists or is repeated in this file.`);
         seen.add(normalized);
         const phone = required(row, 'Phone'); if (!/^\+?[0-9 ()-]+$/.test(phone) || phone.replace(/\D/g, '').length < 7 || phone.replace(/\D/g, '').length > 15) throw new ImportValidationError('Phone must contain a real 7–15 digit customer phone number.');
         const matchingCustomers = catalog.customers.filter((customer) => normalizePhoneNumber(customer.phone) === normalizePhoneNumber(phone));

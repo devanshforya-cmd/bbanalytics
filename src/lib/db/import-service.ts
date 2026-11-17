@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { DatabaseService } from './db-service';
 import { validateCsvImport, ImportValidationError, type CsvImportInput } from '../import-validation';
 
-export interface ImportWorkspace { db: DatabaseService; commit(): Promise<void> }
+export interface ImportWorkspace { db: DatabaseService; commit(): Promise<void | Record<string, string>> }
 
 export async function processCsvImport(input: CsvImportInput, workspace: ImportWorkspace, action: 'preview' | 'commit') {
   if (!input || typeof input.csv !== 'string' || input.csv.length > 300000) throw new ImportValidationError('Choose a CSV file smaller than 300 KB.');

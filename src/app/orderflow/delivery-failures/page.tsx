@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useCalendarPreference } from '@/lib/hooks/useCalendarPreference';
 import { db } from '@/lib/db/db-service';
 import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { activeOrderOptionNames, assertActiveOrderOption } from '@/lib/order-options';
@@ -11,7 +13,8 @@ import PageGuard from '@/components/common/PageGuard';
 import { DeliveryFailure, BrandCode, DeliveryFailureStatus, Order } from '@/lib/types';
 import { getTodayAd, getTodayBs } from '@/lib/nepali-calendar';
 import { toast } from '@/components/common/Toast';
-import { validateRequired, validateNepaliPhone } from '@/lib/validation';
+import LogFailureForm from './components/LogFailureForm';
+import { displayDocumentId, matchesDocumentId } from '@/lib/document-ids';
 import CameraCapture from '@/components/common/CameraCapture';
 import {
   TruckIcon,
@@ -45,7 +48,7 @@ import {
 
 function getHistoricalWeeklyTrend(failures: DeliveryFailure[]) {
   const now = new Date();
-  const allOrders = db.getOrders().filter((order) => !order.isMarketing);
+  const allOrders = db.getOrders();
   const currentWeekStart = new Date(now);
   currentWeekStart.setHours(0, 0, 0, 0);
   currentWeekStart.setDate(currentWeekStart.getDate() - ((currentWeekStart.getDay() + 6) % 7));
@@ -81,6 +84,8 @@ function getHistoricalWeeklyTrend(failures: DeliveryFailure[]) {
 }
 
 export default function DeliveryFailuresPage() {
+  const router = useRouter();
+  const { formatDate } = useCalendarPreference();
   const orderOptions = useOrderOptions();
   const deliveryMethods = activeOrderOptionNames(orderOptions, 'deliveryMethods');
   const [failures, setFailures] = useState<DeliveryFailure[]>(() => db.getDeliveryFailures());
@@ -141,20 +146,6 @@ export default function DeliveryFailuresPage() {
     );
   };
 
-  // Form State for new failure
-  const products = db.getProducts();
-  const [orderNumber, setOrderNumber] = useState('');
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [productName, setProductName] = useState(products[0]?.name || '');
-  const [brandCode, setBrandCode] = useState<BrandCode>('');
-  const [deliveryMethod, setDeliveryMethod] = useState<string>(() => deliveryMethods[0]);
-  useEffect(() => { const methods = activeOrderOptionNames(orderOptions, 'deliveryMethods'); if (!methods.includes(deliveryMethod)) setDeliveryMethod(methods[0]); }, [orderOptions, deliveryMethod]);
-  const [reason, setReason] = useState<DeliveryFailure['reason']>('Call not received');
-  const [valley, setValley] = useState<'Inside' | 'Outside'>('Outside');
-  const [remarks, setRemarks] = useState('');
-  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
-
   // Days since calculation
   const getDaysSince = (dateAd: string) => {
     try {
@@ -172,12 +163,15 @@ export default function DeliveryFailuresPage() {
 
   // 6b. Reason breakdown counts & percentages
   const reasonBreakdown = useMemo(() => {
-    const reasonsList: { reason: DeliveryFailure['reason']; label: string; color: string; bg: string; border: string }[] = [
-      { reason: 'Call not received', label: 'Call Not Received', color: 'text-amber-700', bg: 'bg-amber-500', border: 'border-amber-300' },
-      { reason: 'Address not found', label: 'Address Not Found', color: 'text-blue-700', bg: 'bg-blue-500', border: 'border-blue-300' },
-      { reason: 'Customer refused delivery', label: 'Customer Refused', color: 'text-rose-700', bg: 'bg-rose-500', border: 'border-rose-300' },
-      { reason: 'Customer unavailable', label: 'Customer Unavailable', color: 'text-purple-700', bg: 'bg-purple-500', border: 'border-purple-300' },
+    // Every configured reason, plus any older label still present on saved failures.
+    const palette = [
+      { color: 'text-amber-700', bg: 'bg-amber-500', border: 'border-amber-300' }, { color: 'text-blue-700', bg: 'bg-blue-500', border: 'border-blue-300' },
+      { color: 'text-rose-700', bg: 'bg-rose-500', border: 'border-rose-300' }, { color: 'text-purple-700', bg: 'bg-purple-500', border: 'border-purple-300' },
+      { color: 'text-emerald-700', bg: 'bg-emerald-500', border: 'border-emerald-300' }, { color: 'text-slate-700', bg: 'bg-slate-500', border: 'border-slate-300' },
     ];
+    const names = [...new Set([...db.getFailureReasons().map((entry) => entry.name), ...failures.map((failure) => failure.reason)])]
+      .filter((name) => failures.some((failure) => failure.reason === name) || db.getFailureReasons().some((entry) => entry.name === name));
+    const reasonsList = names.map((name, index) => ({ reason: name, label: name, ...palette[index % palette.length] }));
 
     const total = failures.length;
     return reasonsList.map((item) => {
@@ -241,7 +235,7 @@ export default function DeliveryFailuresPage() {
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
         const matches =
-          f.orderNumber.toLowerCase().includes(q) ||
+          matchesDocumentId(q, f.orderNumber) ||
           f.customerName.toLowerCase().includes(q) ||
           f.customerPhone.includes(q) ||
           (f.productName && f.productName.toLowerCase().includes(q)) ||
@@ -304,51 +298,6 @@ export default function DeliveryFailuresPage() {
     });
     setFailures([...db.getDeliveryFailures()]);
     toast.info('Order marked as cancelled.');
-  };
-
-  const handleSaveNewFailure = (e: React.FormEvent) => {
-    e.preventDefault();
-    const errors: { [key: string]: string } = {};
-    const orderErr = validateRequired(orderNumber, 'Order number');
-    if (orderErr) errors.orderNumber = orderErr;
-
-    const phoneErr = validateNepaliPhone(customerPhone);
-    if (phoneErr) errors.customerPhone = phoneErr;
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      toast.error('Please fix the validation errors before submitting.');
-      return;
-    }
-    setFormErrors({});
-
-    try { assertActiveOrderOption(db.getOrderOptions(), 'deliveryMethods', deliveryMethod); } catch (error) { toast.error(error instanceof Error ? error.message : 'Choose an active delivery method.'); return; }
-    db.addDeliveryFailure({
-      orderId: `ord_${Date.now()}`,
-      orderNumber,
-      brandCode,
-      customerName: customerName || 'Customer',
-      customerPhone,
-      productName,
-      deliveryMethod,
-      dateAd: getTodayAd(),
-      dateBs: getTodayBs(),
-      reason,
-      valley,
-      attempts: 1,
-      status: 'FAILED',
-      remarks,
-    });
-
-    setFailures([...db.getDeliveryFailures()]);
-    setShowLogModal(false);
-    toast.success('Delivery failure logged successfully.');
-
-    // Reset Form
-    setOrderNumber('');
-    setCustomerName('');
-    setCustomerPhone('');
-    setRemarks('');
   };
 
   // SVG dimensions for 6d
@@ -752,16 +701,18 @@ export default function DeliveryFailuresPage() {
                     <tr key={df.id} className="hover:bg-slate-50/70 transition-colors">
                       {/* Date (AD) */}
                       <td className="py-3 px-3 whitespace-nowrap text-slate-600">
-                        <div className="font-semibold text-slate-900 font-mono text-xs">{df.dateAd}</div>
+                        <div className="font-semibold text-slate-900 text-xs">{formatDate(df.dateAd, df.dateBs)}</div>
                       </td>
 
                       {/* Order # & Proof of Delivery Fraud Warning (Fix 41) */}
                       <td className="py-3 px-3 whitespace-nowrap">
-                        <div className="font-mono font-bold text-blue-600">{df.orderNumber}</div>
+                        {(() => { const linked = db.getOrders('ALL').find((o) => o.id === df.orderId || o.orderNumber === df.orderNumber);
+                          return linked ? <Link href={`/orderflow/orders/${linked.id}`} className="font-mono font-bold text-blue-600 hover:underline">{displayDocumentId(linked.orderNumber)}</Link>
+                            : <div className="font-mono font-bold text-slate-700">{displayDocumentId(df.orderNumber)}</div>; })()}
                         {(() => {
                           const order = db
-                            .getOrders()
-                            .find((o) => o.id === df.orderNumber || o.orderNumber === df.orderNumber);
+                            .getOrders('ALL')
+                            .find((o) => o.id === df.orderId || o.id === df.orderNumber || o.orderNumber === df.orderNumber);
                           if (order?.deliveryProof) {
                             return (
                               <button
@@ -1048,170 +999,9 @@ export default function DeliveryFailuresPage() {
         </div>
       )}
 
-      {/* Log Failure Modal */}
       {showLogModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <form
-            onSubmit={handleSaveNewFailure}
-            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-3.5 text-xs max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="font-bold text-slate-900 text-base">Log Delivery Failure</h3>
-                <p className="text-slate-500 text-xs mt-0.5">
-                  Record logistical delivery bottleneck without impacting product quality return metrics.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowLogModal(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Order Number *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. BB-ORD-2083-9912"
-                  value={orderNumber}
-                  onChange={(e) => {
-                    setOrderNumber(e.target.value);
-                    if (formErrors.orderNumber) setFormErrors((prev) => ({ ...prev, orderNumber: '' }));
-                  }}
-                  className={`w-full rounded-lg border ${formErrors.orderNumber ? 'border-red-500 bg-red-50/20' : 'border-slate-300'} px-3 py-2 outline-none font-mono focus:border-rose-500`}
-                />
-                {formErrors.orderNumber && (
-                  <p className="mt-1 text-xs text-red-500">{formErrors.orderNumber}</p>
-                )}
-              </div>
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Brand *</label>
-                <select
-                  value={brandCode}
-                  onChange={(e) => setBrandCode(e.target.value as BrandCode)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-rose-500"
-                >
-                  <option value="">Select brand</option>
-                  {getBrands('ACTIVE').map((b) => (
-                    <option key={b.code} value={b.code}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Customer Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Pratima KC"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-rose-500"
-                />
-              </div>
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Customer Phone *</label>
-                <input
-                  type="text"
-                  placeholder="+977-98XXXXXXXX"
-                  value={customerPhone}
-                  onChange={(e) => {
-                    setCustomerPhone(e.target.value);
-                    if (formErrors.customerPhone) setFormErrors((prev) => ({ ...prev, customerPhone: '' }));
-                  }}
-                  className={`w-full rounded-lg border ${formErrors.customerPhone ? 'border-red-500 bg-red-50/20' : 'border-slate-300'} px-3 py-2 outline-none font-mono focus:border-rose-500`}
-                />
-                {formErrors.customerPhone && (
-                  <p className="mt-1 text-xs text-red-500">{formErrors.customerPhone}</p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Product SKU Description</label>
-              <input
-                type="text"
-                placeholder="Product names from the order"
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-rose-500"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Failure Reason *</label>
-                <select
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value as DeliveryFailure['reason'])}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none font-semibold text-rose-700"
-                >
-                  <option value="Call not received">Call not received</option>
-                  <option value="Address not found">Address not found</option>
-                  <option value="Customer refused delivery">Customer refused delivery</option>
-                  <option value="Customer unavailable">Customer unavailable</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Delivery Method</label>
-                <select
-                  value={deliveryMethod}
-                  onChange={(e) => setDeliveryMethod(e.target.value as any)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
-                >
-                  {deliveryMethods.map(method => <option key={method} value={method}>{method}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Territory</label>
-                <select
-                  value={valley}
-                  onChange={(e) => setValley(e.target.value as any)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
-                >
-                  <option value="Outside">Outside Valley</option>
-                  <option value="Inside">Inside Valley</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">Courier Remarks</label>
-              <textarea
-                rows={2}
-                placeholder="e.g. Rider tried 3 times across 2 days. Returned to parcel hub."
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-rose-500"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setShowLogModal(false)}
-                className="rounded-lg border border-slate-200 px-4 py-2 font-semibold text-slate-600 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="rounded-lg bg-rose-600 px-5 py-2 font-semibold text-white hover:bg-rose-700 shadow"
-              >
-                Record Delivery Failure
-              </button>
-            </div>
-          </form>
-        </div>
+        <LogFailureForm onClose={() => setShowLogModal(false)} onViewCustomer={(phone) => router.push(`/customers/${phone}`)}
+          onSaved={() => { setFailures([...db.getDeliveryFailures()]); setShowLogModal(false); }} />
       )}
 
       {/* Proof of Delivery Lightbox / Fraud Alert Modal (Fix 41) */}

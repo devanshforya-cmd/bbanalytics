@@ -119,7 +119,10 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
     }
   };
 
+  const finalizing = React.useRef(false);
   const handleFinalizeSetup = async () => {
+    if (finalizing.current) return; // One click, one set of records.
+    finalizing.current = true;
     try {
       // 1. Save Brands
       const persistedBrandIds = new Map<string, string>();
@@ -191,14 +194,13 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
         });
       });
 
-      localStorage.setItem('bb_setup_wizard_completed', 'true');
       toast.success(isBrandStorageLocalPreview()
         ? 'Preview setup saved in this browser only. Connect Supabase to share it.'
         : 'Workspace successfully configured with your custom setup!');
       onComplete();
     } catch (e: any) {
       toast.error('Setup failed: ' + (e?.message || 'Unknown error'));
-    }
+    } finally { finalizing.current = false; }
   };
 
   const steps = [

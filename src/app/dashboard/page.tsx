@@ -19,11 +19,11 @@ import ThirtyDayTrendCharts from './components/ThirtyDayTrendCharts';
 import MorningBriefCard from './components/MorningBriefCard';
 import SeasonalInsightsSection from './components/SeasonalInsightsSection';
 import StoreNetworkOverviewSection from './components/StoreNetworkOverviewSection';
-import SetupWizard from './components/SetupWizard';
+import SetupWizard from '@/components/dashboard/SetupWizard';
 import PageGuard from '@/components/common/PageGuard';
 import { useExperiment } from '@/hooks/useExperiment';
 import { getSessionUser } from '@/lib/auth';
-import { FeatureKey, hasAccess } from '@/lib/permissions';
+import { FeatureKey, hasAccess, isSuperAdmin } from '@/lib/permissions';
 import {
   ShoppingBag,
   RotateCcw,
@@ -71,7 +71,6 @@ export default function DashboardPage() {
   const [salesMode, setSalesMode] = useState<DashboardSalesMode>(() =>
     hasAccess(getSessionUser() || db.getCurrentUser(), 'orderflow') ? 'D2C' : 'B2B'
   );
-  const [includeMarketing, setIncludeMarketing] = useState(false);
   const [dbVersion, setDbVersion] = useState(0);
 
   useEffect(() => {
@@ -101,21 +100,17 @@ export default function DashboardPage() {
   const branches = db.getBranches();
   const retailers = db.getRetailers();
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isCompleted = localStorage.getItem('bb_setup_wizard_completed');
-      const isEmpty = products.length === 0 || distributors.length === 0;
-      if (!isCompleted && isEmpty) {
-        setShowSetupWizard(true);
-      }
-    }
-  }, [products.length, distributors.length, dbVersion]);
+  // First-time setup guide. It shows only when all of these hold:
+  //   the first server refresh has finished (so an unloaded screen is never mistaken for an empty one),
+  //   the user is the Super Admin, no brand exists yet, and this account has not dismissed it.
+  // Dismissal is saved on the account, so it survives reloads, other devices and new logins.
+  const setupUser = getSessionUser() || db.getCurrentUser();
+  const setupGuideDue = db.isWorkspaceLoaded() && isSuperAdmin(setupUser) && db.getBrands('ALL').length === 0 && !db.getMyPreferences().setupGuideDismissedAt;
+  useEffect(() => { setShowSetupWizard(setupGuideDue); }, [setupGuideDue]);
+  const closeSetupWizard = () => { setShowSetupWizard(false); db.setMyPreferences({ setupGuideDismissedAt: new Date().toISOString() }); };
 
   // Apply Territorial, Channel, D2C/B2B & Marketing Filters
   const orders = rawOrders.filter((o) => {
-    // Fix 60c: Filter out marketing orders unless explicitly included
-    if (!includeMarketing && o.isMarketing) return false;
-
     // Fix 62: Segment D2C vs B2B
     if (salesMode === 'D2C') {
       const d2cPlatforms = ['Instagram', 'Messenger', 'WhatsApp', 'Website', 'TikTok', 'Pathao Bazaar', 'YouTube', 'Facebook'];
@@ -360,20 +355,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {canSee('marketing') && salesMode !== 'B2B' && (
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer bg-purple-50 hover:bg-purple-100/70 border border-purple-200 px-3 py-1.5 rounded-xl transition-colors">
-                <input
-                  type="checkbox"
-                  checked={includeMarketing}
-                  onChange={(e) => setIncludeMarketing(e.target.checked)}
-                  className="rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5"
-                />
-                <span className="flex items-center gap-1 text-purple-900">
-                  <Gift className="w-3.5 h-3.5 text-purple-600" />
-                  Include marketing sends
-                </span>
-              </label>
-            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -1185,11 +1166,8 @@ export default function DashboardPage() {
         calendarMode={filterCriteria.calendarMode || 'BS'}
       />
 
-      {showSetupWizard && canSee('settings') && (
-        <SetupWizard
-          onComplete={() => setShowSetupWizard(false)}
-          onDismiss={() => setShowSetupWizard(false)}
-        />
+      {showSetupWizard && setupGuideDue && (
+        <SetupWizard onComplete={closeSetupWizard} onDismiss={closeSetupWizard} />
       )}
       </div>
     </PageGuard>

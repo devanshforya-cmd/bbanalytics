@@ -23,6 +23,7 @@ import {
   getFlagAnalytics,
 } from '@/lib/db/feature-flags-service';
 import { toast } from '@/components/common/Toast';
+import { confirmAction } from '@/components/common/confirm';
 import SubmitButton from '@/components/common/SubmitButton';
 
 export default function FeatureFlagsSettings() {
@@ -138,7 +139,7 @@ export default function FeatureFlagsSettings() {
     await applyFlagChange(() => updateFeatureFlag(f.id, { variant: next }), `Variant for "${f.name}" set to ${next}.`);
   };
   const handleDelete = async (f: FeatureFlag) => {
-    if (!window.confirm(`Delete feature flag "${f.name}" permanently?`)) return;
+    if (!(await confirmAction({ title: `Delete feature flag "${f.name}"?`, message: 'This cannot be undone.', confirmLabel: 'Delete flag', destructive: true }))) return;
     await applyFlagChange(() => deleteFeatureFlag(f.id), `Feature flag "${f.name}" deleted.`);
   };
 

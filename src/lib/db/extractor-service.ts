@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { DatabaseService } from './db-service';
 import type { Order, OrderItem } from '../types';
-import { canAccessBrand, hasAccess } from '../permissions';
+import { canAccessBrand } from '../permissions';
 import { normalizePhoneNumber } from '../auth-utils';
 import { isSellableCombo } from '../product-catalog';
 import { activeOrderOptionNames } from '../order-options';
@@ -15,17 +15,18 @@ const required = (value: unknown, label: string, max = 200) => {
 };
 const optional = (value: unknown, label: string, max = 200) => value == null || typeof value === 'string' && !value.trim() ? '' : required(value, label, max);
 const money = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
-export async function saveExtractedOrders(input: any, workspace: { db: DatabaseService; commit(): Promise<void> }) {
+export async function saveExtractedOrders(input: any, workspace: { db: DatabaseService; commit(): Promise<void | Record<string, string>> }) {
   if (!Array.isArray(input?.orders) || input.orders.length < 1 || input.orders.length > 50) throw new ExtractorInputError('Save between 1 and 50 orders at a time.');
   const { db } = workspace; const actor = db.getCurrentUser(); const seen = new Set<string>();
-  const pending: { existing: Order | null; order: Omit<Order, 'id' | 'createdAt'> | null; orderNumber: string }[] = (input.orders as any[]).map((row: any, index: number) => {
+  const pending: { existing: Order | null; order: (Omit<Order, 'id' | 'createdAt'> & { id: string }) | null; orderNumber: string }[] = (input.orders as any[]).map((row: any, index: number) => {
     const label = `Order ${index + 1}`;
     const clientId = required(row?.clientId, `${label} identifier`, 100);
     if (!/^ext_[a-z0-9_-]{8,90}$/i.test(clientId) || seen.has(clientId)) throw new ExtractorInputError(`${label} has an invalid or duplicate identifier.`);
     seen.add(clientId);
     const orderNumber = `BB-WA-${clientId.slice(4).toUpperCase()}`;
     const requestHash = createHash('sha256').update(JSON.stringify(row)).digest('hex');
-    const existing = db.getOrders().find(order => order.orderNumber === orderNumber);
+    // The extractor's own reference is kept as the legacy ID; the server gives the order its short ID.
+    const existing = db.getOrders().find(order => order.legacyOrderNumber === orderNumber || order.orderNumber === orderNumber);
     if (existing) {
       if (existing.extractorRequestHash !== requestHash) throw new ExtractorInputError(`${label} was already saved with different details.`, 409);
       return { existing, order: null, orderNumber };
@@ -34,7 +35,7 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     const customerPhone = normalizePhoneNumber(required(row.customerPhone, `${label} phone`));
     if (!/^9[678]\d{8}$/.test(customerPhone)) throw new ExtractorInputError(`${label} needs a valid Nepal mobile number.`);
     if (db.getCustomers().filter(customer => normalizePhoneNumber(customer.phone) === customerPhone).length > 1) throw new ExtractorInputError(`${label} matches duplicate customer profiles. Resolve them before saving.`, 409);
-    if (typeof row.isMarketing !== 'boolean') throw new ExtractorInputError(`${label} needs a valid order type.`);
+    if (row.isMarketing) throw new ExtractorInputError('Marketing sends are created from the influencer profile. The extractor saves customer orders only.');
     const alternatePhone = row.alternatePhone ? normalizePhoneNumber(required(row.alternatePhone, `${label} alternate phone`)) : '';
     if (alternatePhone && !/^9[678]\d{8}$/.test(alternatePhone)) throw new ExtractorInputError(`${label} alternate phone is invalid.`);
     const province = optional(row.province, `${label} province`), district = optional(row.city, `${label} city`), address = required(row.address, `${label} address`, 500);
@@ -44,9 +45,6 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     const platform = required(row.platform, `${label} sales channel`, 100), deliveryMethod = required(row.deliveryMethod, `${label} logistics`, 100);
     if (!activeOrderOptionNames(db.getOrderOptions(),'channels').includes(platform) || !activeOrderOptionNames(db.getOrderOptions(),'deliveryMethods').includes(deliveryMethod)) throw new ExtractorInputError(`${label} needs an active sales channel and logistics option.`);
     if (!['COD','Prepaid'].includes(row.paymentTerms)) throw new ExtractorInputError(`${label} payment must be COD or Prepaid.`);
-    if (row.isMarketing && !hasAccess(actor,'marketing')) throw new ExtractorInputError('Marketing access is required for influencer sends.', 403);
-    const influencer = row.isMarketing && row.influencerId ? db.getInfluencers().find(person => person.id === row.influencerId) : undefined;
-    if (row.isMarketing && !influencer) throw new ExtractorInputError(`${label} needs an existing influencer.`);
     if (!Array.isArray(row.items) || row.items.length === 0 || row.items.length > 50) throw new ExtractorInputError(`${label} needs catalogue items.`);
     const products = db.getProducts(), combos = db.getCombos();
     const items: { productId: string; productName: string; brandCode: string; quantity: number; unitPrice: number; totalPrice: number; catalogUnitPrice: number }[] = (row.items as any[]).map((item: any) => {
@@ -70,19 +68,19 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     if (stated !== null && (!Number.isFinite(stated) || stated < 0 || Math.abs(stated * 100 - Math.round(stated * 100)) > 1e-6 || !Number.isSafeInteger(Math.round(stated * 100)) || stated * 100 > catalogCents + 0.5)) throw new ExtractorInputError(`${label} stated amount cannot exceed the item selling prices.`);
     if (discount !== null && (!Number.isFinite(discount) || discount < 0 || discount > 100 || Math.abs(discount * 100 - Math.round(discount * 100)) > 1e-6)) throw new ExtractorInputError(`${label} discount must be between 0 and 100%.`);
     const discountedCents = discount === null ? catalogCents : Math.round(catalogCents * (1 - discount / 100));
-    if (!row.isMarketing && stated !== null && discount !== null && Math.round(stated * 100) !== discountedCents) throw new ExtractorInputError(`${label} stated amount and discount do not match.`);
-    const targetCents = row.isMarketing ? 0 : stated === null ? discountedCents : Math.round(stated * 100);
+    if (stated !== null && discount !== null && Math.round(stated * 100) !== discountedCents) throw new ExtractorInputError(`${label} stated amount and discount do not match.`);
+    const targetCents = stated === null ? discountedCents : Math.round(stated * 100);
     const totals = allocateOrderTotal(items, targetCents / 100);
     const adjusted: OrderItem[] = items.map((item,i) => ({ ...item, totalPrice: totals[i], unitPrice: totals[i] / item.quantity, discountAmount: money(item.catalogUnitPrice * item.quantity - totals[i]) }));
     const bs = adToBs(date);
-    const order: Omit<Order,'id'|'createdAt'> = { orderNumber, extractorRequestHash: requestHash, brandCode, orderDateAd, orderDateBs: `${bs.monthName} ${bs.day}, ${bs.year}`,
+    // A fixed record ID per extracted message means a double submit can never save the order twice.
+    const order: Omit<Order,'id'|'createdAt'> & { id: string } = { id: `ord_${clientId}`, orderNumber, extractorRequestHash: requestHash, brandCode, orderDateAd, orderDateBs: `${bs.monthName} ${bs.day}, ${bs.year}`,
       platform, customerName, customerPhone, ...(alternatePhone ? { alternatePhone } : {}), province, district, address, deliveryMethod, ...(row.assignedToId ? { assignedToId: required(row.assignedToId, `${label} responsible person`) } : {}),
-      paymentTerms: row.isMarketing ? 'Advance' : row.paymentTerms, orderType: 'NEW', items: adjusted, totalAmount: targetCents / 100,
-      ...(stated !== null ? { statedPrice: stated } : {}), ...(discount !== null ? { discountPercent: discount } : {}), status: 'PENDING', source: 'WHATSAPP_EXTRACTOR',
-      ...(row.isMarketing ? { isMarketing: true, influencerId: influencer!.id, influencerHandle: influencer!.name } : {}), notes: 'Extracted and reviewed from WhatsApp.' };
+      paymentTerms: row.paymentTerms, orderType: 'NEW', items: adjusted, totalAmount: targetCents / 100,
+      ...(stated !== null ? { statedPrice: stated } : {}), ...(discount !== null ? { discountPercent: discount } : {}), status: 'PENDING', source: 'WHATSAPP_EXTRACTOR', notes: 'Extracted and reviewed from WhatsApp.' };
     return { existing: null, order, orderNumber };
   });
   for (const entry of pending) if (entry.order) db.addOrder(entry.order);
-  if (pending.some(entry => entry.order)) await workspace.commit();
-  return { orderNumbers: pending.map(entry => entry.orderNumber), alreadySaved: pending.filter(entry => entry.existing).length };
+  const assigned = pending.some(entry => entry.order) ? await workspace.commit() || {} : {};
+  return { orderNumbers: pending.map(entry => entry.existing?.orderNumber || (entry.order && assigned[entry.order.id]) || entry.orderNumber), alreadySaved: pending.filter(entry => entry.existing).length };
 }

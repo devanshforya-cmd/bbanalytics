@@ -1045,7 +1045,7 @@ export default function StoreDetailPage() {
                 <div key={ord.id} className="rounded-xl border border-slate-200 bg-white p-4 text-xs space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="font-bold text-slate-900">{ord.orderNumber}</span>
+                      <span className="font-bold text-slate-900">{/^PENDING-/i.test(ord.orderNumber) ? 'Awaiting ID' : ord.orderNumber}</span>
                       <span className="text-slate-400 ml-1 text-[11px]">({ord.orderDateBs})</span>
                     </div>
                     <div className="font-black text-slate-900 text-sm">

@@ -76,7 +76,6 @@ export default function CallsPage() {
       const prod = products.find((p) => p.id === orderProductId);
       if (!prod) { toast.error('Choose an active product first.'); return; }
       const newOrder = db.addOrder({
-        orderNumber: `BB-FLD-${Date.now().toString().slice(-4)}`,
         brandCode: prod.brandCode,
         orderDateAd: getTodayAd(),
         orderDateBs: getTodayBs(),

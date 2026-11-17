@@ -309,7 +309,9 @@ export interface SecondaryOrderItem {
 
 export interface SecondaryOrder {
   id: string;
+  /** Short ID, SO-0108. Assigned by the server. */
   orderNumber: string;
+  legacyOrderNumber?: string;
   beatId?: string;
   officerId: string;
   officerName: string;
@@ -438,6 +440,8 @@ export interface DispatchItem {
 
 export interface Dispatch {
   id: string;
+  /** Short ID, DP-0045. Assigned by the server. */
+  dispatchNumber?: string;
   distributorId: string;
   distributorName: string;
   branchId?: string;
@@ -706,7 +710,10 @@ export interface Order {
   influencerId?: string;
   influencerHandle?: string;
   contentReceived?: boolean;
-  editHistory?: { timestamp: string; changedBy: string; note: string }[];
+  /** The ID this order carried before short IDs. Searchable, never shown as the main ID. */
+  legacyOrderNumber?: string;
+  /** Written by the server only. Each entry is one changed field. */
+  editHistory?: OrderEditEntry[];
   createdAt: string;
   deliveryProof?: {
     photoUrl: string;
@@ -718,6 +725,20 @@ export interface Order {
     notes?: string;
     uploadedAt?: string;
   };
+}
+
+export interface OrderEditEntry {
+  timestamp: string;
+  changedBy: string;
+  changedById?: string;
+  /** Legacy free-text entries only have a note. */
+  note?: string;
+  field?: string;
+  oldValue?: string;
+  newValue?: string;
+  reason?: string;
+  /** Set when this save replaced a version the editor had not seen. */
+  overwroteVersionBy?: string;
 }
 
 export type DeliveryFailureStatus =
@@ -738,14 +759,39 @@ export interface DeliveryFailure {
   deliveryMethod?: DeliveryMethod;
   dateAd: string;
   dateBs: string;
-  reason: 'Call not received' | 'Address not found' | 'Customer refused delivery' | 'Customer unavailable';
+  /** Reasons are managed in Settings; historical labels are kept as saved. */
+  reason: string;
   valley: 'Inside' | 'Outside';
   attempts?: number;
+  attemptLog?: DeliveryAttempt[];
+  address?: string;
+  district?: string;
+  platform?: OrderPlatform;
+  orderDateAd?: string;
+  products?: { productName: string; quantity: number }[];
   status?: DeliveryFailureStatus;
   reattemptDateAd?: string;
   reattemptDateBs?: string;
   assignedTo?: string;
   remarks?: string;
+  createdAt: string;
+}
+
+export interface DeliveryAttempt {
+  attempt: number;
+  dateAd: string;
+  dateBs: string;
+  reason: string;
+  remarks?: string;
+  loggedBy: string;
+  loggedAt: string;
+}
+
+export interface FailureReason {
+  id: string;
+  name: string;
+  isArchived: boolean;
+  createdBy?: string;
   createdAt: string;
 }
 
@@ -818,6 +864,11 @@ export interface FeedbackEntry {
   type: FeedbackType;
   channel: string;
   orderId?: string;
+  orderNumber?: string;
+  /** LINKED to an existing customer, NEW profile created from this entry, or UNLINKED (no phone yet). */
+  customerLink?: 'LINKED' | 'NEW' | 'UNLINKED';
+  /** Name or social handle, kept when no phone number was available. */
+  customerHandle?: string;
   dateReceivedAd: string;
   dateReceivedBs: string;
   fullText: string;
@@ -1134,7 +1185,8 @@ export interface DataImportRecord {
 }
 
 // Influencer & Marketing Tracking Types (Fix 60 & 61)
-export type InfluencerPlatformType = 'Instagram' | 'TikTok' | 'YouTube' | 'Facebook' | 'Other';
+/** Platform names come from the content-platform list managed in Settings. */
+export type InfluencerPlatformType = string;
 
 export interface InfluencerPlatform {
   platform: InfluencerPlatformType;
@@ -1144,22 +1196,42 @@ export interface InfluencerPlatform {
 
 export type InfluencerQualityRating = 'GREAT' | 'AVERAGE' | 'POOR' | 'NOT_RATED';
 
-export type InfluencerCategory =
-  | 'Beauty'
-  | 'Lifestyle'
-  | 'Health'
-  | 'Food'
-  | 'Tech'
-  | 'General';
+/** Legacy single category. Kept only so older records still read correctly. */
+export type InfluencerCategory = string;
+
+/** A niche can be attached to any number of influencers. Managed in Settings. */
+export interface InfluencerNiche {
+  id: string;
+  name: string;
+  isArchived: boolean;
+  mergedIntoId?: string;
+  createdBy?: string;
+  createdAt: string;
+}
+
+/** Two separate lists: where we reached out, and where content is posted. */
+export type MarketingOptionList = 'REACH_OUT' | 'CONTENT_PLATFORM';
+export interface MarketingOption {
+  id: string;
+  list: MarketingOptionList;
+  name: string;
+  isArchived: boolean;
+  createdBy?: string;
+  createdAt: string;
+}
 
 export interface Influencer {
   id: string;
   name: string;
   phone?: string;
   email?: string;
+  /** Parcels need an address. */
+  address?: string;
   platforms: InfluencerPlatform[];
   city?: string;
-  category: InfluencerCategory;
+  /** Legacy single category; replaced by nicheIds. */
+  category?: InfluencerCategory;
+  nicheIds?: string[];
   qualityRating: InfluencerQualityRating;
   totalSends: number;
   totalContent: number;
@@ -1172,6 +1244,47 @@ export interface Influencer {
   createdAt: string;
 }
 
+export interface MarketingSendItem {
+  productId: string;
+  productName: string;
+  brandCode: BrandCode;
+  quantity: number;
+}
+
+export type MarketingSendStatus = 'SENT' | 'CONTENT_RECEIVED' | 'CANCELLED';
+
+/**
+ * A marketing send is NOT an order. It lives in its own collection and
+ * deliberately has no price, payment, total or order-type fields.
+ */
+export interface MarketingSend {
+  id: string;
+  /** Short ID, MS-0012. Assigned by the server. */
+  sendNumber: string;
+  influencerId: string;
+  influencerName: string;
+  brandCodes: BrandCode[];
+  reachOutPlatform: string;
+  responsibleId: string;
+  responsibleName: string;
+  sentDateAd: string;
+  sentDateBs: string;
+  expectedContentDateAd?: string;
+  expectedContentDateBs?: string;
+  items: MarketingSendItem[];
+  deliveryChannel: string;
+  deliveryAddress?: string;
+  deliveryPhone?: string;
+  notes?: string;
+  status: MarketingSendStatus;
+  /** Set by the overdue reminder so it is raised once. */
+  overdueNotifiedAt?: string;
+  /** The order ID this send had when it was stored as a flagged order. */
+  legacyOrderNumber?: string;
+  createdAt: string;
+  createdById?: string;
+}
+
 export type InfluencerContentType =
   | 'REEL'
   | 'STORY'
@@ -1181,18 +1294,47 @@ export type InfluencerContentType =
   | 'BLOG'
   | 'OTHER';
 
+export interface ContentPlatformLink {
+  platform: string;
+  url: string;
+  /** Only when this platform went up on a different day from the piece. */
+  datePostedAd?: string;
+  datePostedBs?: string;
+}
+
+export type ContentPostStatus = 'LIVE' | 'REMOVED' | 'UNKNOWN';
+
+/** One content piece is one piece of work (a single reel), possibly posted on several platforms. */
 export interface InfluencerContent {
   id: string;
   influencerId: string;
-  url: string;
-  platform: string;
   contentType: InfluencerContentType;
-  brandCode?: BrandCode;
-  productName?: string;
+  links?: ContentPlatformLink[];
+  /** Google Drive backup of the clip. */
+  driveUrl?: string;
   datePostedAd: string;
   datePostedBs?: string;
+  productIds?: string[];
+  productNames?: string[];
+  brandCodes?: BrandCode[];
+  sendId?: string;
+  postStatus?: ContentPostStatus;
+  postStatusCheckedAd?: string;
+  postStatusCheckedBs?: string;
   notes?: string;
   createdAt: string;
+  /** Legacy single-link fields, read through normalizeContent(). */
+  url?: string;
+  platform?: string;
+  brandCode?: BrandCode;
+  productName?: string;
+}
+
+/** Per-user choices saved on the account rather than in one browser. */
+export interface UserPreferenceRecord {
+  id: string;
+  setupGuideDismissedAt?: string;
+  updatedAt?: string;
 }
 
 // Custom Shared Access Link Types (Fix 63)

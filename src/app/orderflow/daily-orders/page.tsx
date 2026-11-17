@@ -3,13 +3,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db, OrderRealtimeEvent } from '@/lib/db/db-service';
-import NepalLocationFields from '@/components/common/NepalLocationFields';
 import { syncManager } from '@/lib/offline-sync';
-import { canPerform, hasAccess, d2cAssignees } from '@/lib/permissions';
-import { useOrderOptions } from '@/hooks/useOrderOptions';
-import { activeOrderOptionNames } from '@/lib/order-options';
+import { canPerform, hasAccess } from '@/lib/permissions';
+import { dayNumbers, displayDocumentId, matchesDocumentId } from '@/lib/document-ids';
+import { phoneDigits } from '@/lib/customer-lookup';
+import { useCalendarPreference } from '@/lib/hooks/useCalendarPreference';
+import { bsLabel } from '@/components/common/DualDateField';
 import { getBrands } from '@/lib/db/brands-service';
-import { Order, BrandCode, OrderItem } from '@/lib/types';
+import { Order, BrandCode } from '@/lib/types';
 import {
   getTodayAd,
   shiftAdDate,
@@ -41,13 +42,17 @@ import {
   AlertTriangle,
   FileSpreadsheet,
   Calendar,
+  Search,
 } from 'lucide-react';
 
 export default function DailyOrdersPage() {
-  const orderOptions = useOrderOptions();
+  const { preference } = useCalendarPreference();
+  const [sortOrder, setSortOrder] = useState<'OLDEST' | 'NEWEST'>('OLDEST');
   const [selectedDateAd, setSelectedDateAd] = useState<string>(getTodayAd());
   const [brandFilter, setBrandFilter] = useState<BrandCode>('ALL');
   const [activeTab, setActiveTab] = useState<'ORDERS' | 'BREAKDOWN'>('ORDERS');
+  // Find a row by short ID (0421, for0421, FOR-0421, or the old long ID), phone or name. Counts are not affected.
+  const [findQuery, setFindQuery] = useState('');
 
   // Real-time order collection
   const [orders, setOrders] = useState<Order[]>([]);
@@ -58,41 +63,19 @@ export default function DailyOrdersPage() {
   const onlineStaffCount = db.getUsers().filter((u) => u.dutyStatus === 'ONLINE').length;
   const [connectionStatus, setConnectionStatus] = useState<'CONNECTED' | 'RECONNECTING' | 'OFFLINE'>('CONNECTED');
 
-  // Editing order modal state
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-  const [editAssignee, setEditAssignee] = useState('');
-  const [editCustomerName, setEditCustomerName] = useState('');
-  const [editCustomerPhone, setEditCustomerPhone] = useState('');
-  const [editAddress, setEditAddress] = useState('');
-  const [editCity, setEditCity] = useState('');
-  const [editProvince, setEditProvince] = useState('');
-  const [savingEdit, setSavingEdit] = useState(false);
-  const [editPaymentTerms, setEditPaymentTerms] = useState<any>('COD');
-  const [editDeliveryMethod, setEditDeliveryMethod] = useState<any>('Pathao');
-  const [editItems, setEditItems] = useState<OrderItem[]>([]);
-  const [editNote, setEditNote] = useState('');
-
   // Delete modal state
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
 
   // Active brands
   const brands = useMemo(() => db.getBrands('ACTIVE'), []);
 
-  // Formatted Gregorian AD date for social media / online orderflow
+  // The selected day, shown in the user's chosen calendar. Both calendars are stored on every order.
   const formattedDateAd = useMemo(() => {
-    try {
-      const parts = selectedDateAd.split('-');
-      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-      return d.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    } catch {
-      return selectedDateAd;
-    }
-  }, [selectedDateAd]);
+    const [y, m, d] = selectedDateAd.split('-').map(Number);
+    const ad = new Date(y, m - 1, d).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    const bs = bsLabel(selectedDateAd);
+    return preference === 'AD' ? ad : preference === 'BOTH' ? `${bs} (${ad})` : bs;
+  }, [selectedDateAd, preference]);
 
   const isToday = selectedDateAd === getTodayAd();
 
@@ -136,9 +119,10 @@ export default function DailyOrdersPage() {
         }
       } else if (event.eventType === 'UPDATE' && event.new) {
         const updated = event.new;
-        setOrders((prev) =>
-          prev.map((o) => (o.id === updated.id ? updated : o))
-        );
+        // An edited order whose date moved to another day leaves this list; one moved onto this day joins it.
+        setOrders((prev) => updated.orderDateAd !== selectedDateAd
+          ? prev.filter((o) => o.id !== updated.id)
+          : prev.some((o) => o.id === updated.id) ? prev.map((o) => (o.id === updated.id ? updated : o)) : [updated, ...prev]);
         setRecentlyUpdatedIds((prev) => new Set(prev).add(updated.id));
         setTimeout(() => {
           setRecentlyUpdatedIds((prev) => {
@@ -162,24 +146,33 @@ export default function DailyOrdersPage() {
     setSelectedDateAd(date => shiftAdDate(date, direction));
   };
 
-  // Filtered orders by brand
-  const filteredOrders = useMemo(() => {
-    if (brandFilter === 'ALL') return orders;
-    return orders.filter((o) => o.brandCode === brandFilter);
-  }, [orders, brandFilter]);
+  // Day numbers: 1 for the first order created that day, counted across every brand.
+  // Display only, so the team can cross-check message by message against the order group.
+  const dayNumberOf = useMemo(() => dayNumbers(orders), [orders]);
 
-  // Split commercial orders from marketing sends (Fix 71c)
-  const commercialOrders = useMemo(() => filteredOrders.filter((o) => !o.isMarketing), [filteredOrders]);
-  const marketingSends = useMemo(() => filteredOrders.filter((o) => !!o.isMarketing), [filteredOrders]);
+  // Filtered orders by brand, in day-number order.
+  const filteredOrders = useMemo(() => {
+    const list = brandFilter === 'ALL' ? orders : orders.filter((o) => o.brandCode === brandFilter);
+    return [...list].sort((a, b) => ((dayNumberOf.get(a.id) || 0) - (dayNumberOf.get(b.id) || 0)) * (sortOrder === 'OLDEST' ? 1 : -1));
+  }, [orders, brandFilter, dayNumberOf, sortOrder]);
+
+  // Marketing sends are not orders and never reach this page (see db.getOrders).
+  const commercialOrders = filteredOrders;
+  const visibleOrders = useMemo(() => {
+    const term = findQuery.trim();
+    if (!term) return filteredOrders;
+    const digits = phoneDigits(term);
+    const text = term.toLowerCase();
+    return filteredOrders.filter((o) => matchesDocumentId(term, o.orderNumber, o.legacyOrderNumber, o.id)
+      || (digits.length >= 4 && /^[\d\s+()-]+$/.test(term) && phoneDigits(o.customerPhone).includes(digits))
+      || (/[a-z]/i.test(text) && (o.customerName || '').toLowerCase().includes(text)));
+  }, [filteredOrders, findQuery]);
+  const comboIds = useMemo(() => new Set(db.getCombos('ALL').map((combo) => combo.id)), [orders]);
 
   // Brand count stats
   const brandStats = useMemo(() => {
     const stats: Record<string, number> = {};
-    orders.forEach((o) => {
-      if (!o.isMarketing) {
-        stats[o.brandCode] = (stats[o.brandCode] || 0) + 1;
-      }
-    });
+    orders.forEach((o) => { stats[o.brandCode] = (stats[o.brandCode] || 0) + 1; });
     return stats;
   }, [orders]);
 
@@ -237,7 +230,7 @@ export default function DailyOrdersPage() {
 
     commercialOrders.forEach((ord) => {
       ord.items.forEach((it) => {
-        const isCombo = it.productName.toLowerCase().includes('kit') || it.productName.toLowerCase().includes('duo') || it.productName.toLowerCase().includes('bundle');
+        const isCombo = comboIds.has(it.productId);
         if (isCombo) {
           const key = `${ord.brandCode}_${it.productName}`;
           const existing = map.get(key) || {
@@ -256,66 +249,19 @@ export default function DailyOrdersPage() {
       ...c,
       pctOfCombos: totalCombos > 0 ? Math.round((c.units / totalCombos) * 100) : 0,
     }));
-  }, [commercialOrders]);
+  }, [commercialOrders, comboIds]);
 
-  // Edit handler
-  const handleOpenEdit = (ord: Order) => {
-    setEditingOrder(ord);
-    setEditAssignee(ord.assignedToId || (ord as any).createdById || db.getCurrentUser().id);
-    setEditCustomerName(ord.customerName);
-    setEditCustomerPhone(ord.customerPhone);
-    setEditAddress(ord.address);
-    setEditCity(ord.district || '');
-    setEditProvince(ord.province || '');
-    setEditPaymentTerms(ord.paymentTerms);
-    setEditDeliveryMethod(ord.deliveryMethod);
-    setEditItems([...ord.items]);
-    setEditNote('');
-  };
-
-  const handleSaveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingOrder || savingEdit) return;
-
-    const newTotal = JSON.stringify(editItems) === JSON.stringify(editingOrder.items) ? editingOrder.totalAmount : editItems.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
-
-    setSavingEdit(true);
+  const [deleting, setDeleting] = useState(false);
+  const handleDeleteConfirmed = async () => {
+    if (!orderToDelete || deleting) return;
+    setDeleting(true);
     try {
-      const updated = db.updateOrder(
-      editingOrder.id,
-      {
-        customerName: editCustomerName,
-        assignedToId: editAssignee,
-        customerPhone: editCustomerPhone,
-        address: editAddress,
-        district: editCity.trim(),
-        province: editProvince.trim(),
-        paymentTerms: editPaymentTerms,
-        deliveryMethod: editDeliveryMethod,
-        items: editItems,
-        totalAmount: editingOrder.isMarketing ? 0 : newTotal,
-      },
-      db.getCurrentUser().fullName,
-      editNote || 'Modified order line items & customer fields'
-    );
-
-      if (!updated) throw new Error('This order is no longer available. Refresh and try again.');
-      try { await syncManager.forceSyncNow(); } catch { /* The edit remains in the device sync queue. */ }
-      const pending = syncManager.getWorkspaceMutations().some(mutation => mutation.collection === 'orders' && mutation.id === editingOrder.id);
-      if (pending) toast.info(`Order #${editingOrder.orderNumber} is pending sync`, 'Check Sync status to resolve connection or permission errors.');
-      else toast.success(`Updated order #${editingOrder.orderNumber}`);
-      setEditingOrder(null);
+      db.deleteOrder(orderToDelete.id);
+      try { await syncManager.forceSyncNow(); } catch { /* The deletion stays in the sync queue. */ }
+      toast.info(`Deleted order ${displayDocumentId(orderToDelete.orderNumber)}`, 'Customer totals are recounted automatically.');
+      setOrderToDelete(null);
       loadOrders();
-    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not update the order.'); }
-    finally { setSavingEdit(false); }
-  };
-
-  const handleDeleteConfirmed = () => {
-    if (!orderToDelete) return;
-    db.deleteOrder(orderToDelete.id);
-    toast.info(`Deleted order #${orderToDelete.orderNumber}`);
-    setOrderToDelete(null);
-    loadOrders();
+    } finally { setDeleting(false); }
   };
 
   return (
@@ -436,15 +382,6 @@ export default function DailyOrdersPage() {
                   {b.name}: <strong>{brandStats[b.code] || 0}</strong>
                 </span>
               ))}
-              {marketingSends.length > 0 && (
-                <>
-                  <span className="text-slate-300">|</span>
-                  <span className="inline-flex items-center gap-1 text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
-                    <Gift className="w-3 h-3" />
-                    {marketingSends.length} Marketing Send(s)
-                  </span>
-                </>
-              )}
             </div>
           </div>
         </div>
@@ -459,7 +396,7 @@ export default function DailyOrdersPage() {
                 : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
           >
-            📋 Order Cross-Check Table ({filteredOrders.length})
+            Order Cross-Check Table ({findQuery.trim() ? `${visibleOrders.length} of ${filteredOrders.length}` : filteredOrders.length})
           </button>
           <button
             onClick={() => setActiveTab('BREAKDOWN')}
@@ -474,6 +411,25 @@ export default function DailyOrdersPage() {
           </button>
         </div>
 
+        {activeTab === 'ORDERS' && filteredOrders.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-semibold text-slate-500">
+            <label className="relative w-full max-w-xs">
+              <span className="sr-only">Find an order on this day</span>
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+              <input type="search" value={findQuery} onChange={(event) => setFindQuery(event.target.value)} placeholder="Find by order ID, phone or name"
+                className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+            </label>
+            {filteredOrders.length > 1 && <div className="flex items-center gap-2">
+            <span>Order of rows</span>
+            <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5" role="group" aria-label="Order of rows">
+              {([['OLDEST', 'Day # 1 first'], ['NEWEST', 'Newest first']] as const).map(([value, label]) => (
+                <button key={value} type="button" aria-pressed={sortOrder === value} onClick={() => setSortOrder(value)} className={`rounded-md px-2.5 py-1 font-bold transition ${sortOrder === value ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{label}</button>
+              ))}
+            </div>
+            </div>}
+          </div>
+        )}
+
         {/* TAB 1: Real-Time Orders Cross-Check Table */}
         {activeTab === 'ORDERS' && (
           <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
@@ -481,15 +437,22 @@ export default function DailyOrdersPage() {
               <div className="p-12 text-center text-slate-400 text-xs">
                 No orders recorded for <strong className="font-mono text-slate-600">{selectedDateAd}</strong>. Use the date arrows above to inspect other dates.
               </div>
+            ) : visibleOrders.length === 0 ? (
+              <div className="p-10 text-center text-xs text-slate-500">
+                No order on this day matches <strong className="font-mono text-slate-700">{findQuery.trim()}</strong>.{' '}
+                <button type="button" onClick={() => setFindQuery('')} className="font-bold text-blue-700 hover:underline">Clear</button>
+                <span className="mt-1 block text-[11px] text-slate-400">To search every date, press Ctrl+K (⌘K on Mac) and type the order ID.</span>
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs text-slate-600">
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
                     <tr>
-                      <th className="py-3 px-3">#</th>
+                      <th className="py-3 px-3" title="Day number: the order's position among today's orders">Day #</th>
+                      <th className="py-3 px-3">Order ID</th>
                       <th className="py-3 px-3">Time</th>
                       <th className="py-3 px-3">Brand</th>
-                      <th className="py-3 px-3">Customer / Influencer</th>
+                      <th className="py-3 px-3">Customer</th>
                       <th className="py-3 px-3">Phone</th>
                       <th className="py-3 px-3">Platform</th>
                       <th className="py-3 px-3">Products</th>
@@ -504,18 +467,13 @@ export default function DailyOrdersPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
-                    {filteredOrders.map((ord, idx) => {
+                    {visibleOrders.map((ord) => {
                       const isInserted = recentlyInsertedIds.has(ord.id);
                       const isUpdated = recentlyUpdatedIds.has(ord.id);
                       const totalQty = ord.items.reduce((sum, it) => sum + it.quantity, 0);
 
                       // Check if items form a known combo
-                      const comboItem = ord.items.find(
-                        (i) =>
-                          i.productName.toLowerCase().includes('kit') ||
-                          i.productName.toLowerCase().includes('duo') ||
-                          i.productName.toLowerCase().includes('bundle')
-                      );
+                      const comboItem = ord.items.find((i) => comboIds.has(i.productId));
 
                       return (
                         <tr
@@ -525,14 +483,16 @@ export default function DailyOrdersPage() {
                               ? 'bg-emerald-50/80 animate-pulse'
                               : isUpdated
                               ? 'bg-amber-50/80'
-                              : ord.isMarketing
-                              ? 'bg-purple-50/30 border-l-4 border-l-purple-500'
                               : 'hover:bg-slate-50/60'
                           }`}
                         >
-                          <td className="py-3 px-3 font-bold text-slate-400">{idx + 1}</td>
+                          <td className="py-3 px-3 text-center text-sm font-black text-slate-900">{dayNumberOf.get(ord.id)}</td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <Link href={`/orderflow/orders/${ord.id}`} className="font-mono font-bold text-blue-700 hover:underline">{displayDocumentId(ord.orderNumber)}</Link>
+                            {(ord.editHistory?.length || 0) > 0 && <span className="ml-1.5 rounded bg-amber-50 px-1 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200" title="This order has been edited">Edited</span>}
+                          </td>
                           <td className="py-3 px-3 font-mono text-[11px] text-slate-500">
-                            {ord.createdAt ? ord.createdAt.substring(11, 16) : '11:00'}
+                            {ord.createdAt ? new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
                           </td>
                           <td className="py-3 px-3">
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
@@ -554,13 +514,7 @@ export default function DailyOrdersPage() {
                             {ord.alternatePhone && <span className="block text-slate-400">Alt: {ord.alternatePhone}</span>}
                           </td>
                           <td className="py-3 px-3">
-                            {ord.isMarketing ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-300">
-                                MARKETING
-                              </span>
-                            ) : (
-                              <span className="text-slate-700">{ord.platform}</span>
-                            )}
+                            <span className="text-slate-700">{ord.platform}</span>
                           </td>
                           <td className="py-3 px-3 max-w-xs">
                             {ord.items.map((it, i) => (
@@ -585,7 +539,7 @@ export default function DailyOrdersPage() {
                             )}
                           </td>
                           <td className="py-3 px-3 text-right font-bold text-slate-900">
-                            ₹{ord.totalAmount.toLocaleString()}
+                            NPR {ord.totalAmount.toLocaleString()}
                           </td>
                           <td className="py-3 px-3 text-right">
                             {ord.statedPrice ? (
@@ -596,7 +550,7 @@ export default function DailyOrdersPage() {
                                     : 'text-slate-500'
                                 }`}
                               >
-                                ₹{ord.statedPrice.toLocaleString()}
+                                NPR {ord.statedPrice.toLocaleString()}
                               </span>
                             ) : (
                               <span className="text-slate-300">—</span>
@@ -623,13 +577,14 @@ export default function DailyOrdersPage() {
                           </td>
                           <td className="py-3 px-3 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              {canPerform(db.getCurrentUser(), 'orderflow', 'EDIT') && <button
-                                onClick={() => handleOpenEdit(ord)}
-                                className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                title="Edit Order"
+                              {canPerform(db.getCurrentUser(), 'orderflow', 'EDIT') && <Link
+                                href={`/orderflow/orders/${ord.id}`}
+                                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-100"
+                                title="Edit every field of this order"
+                                aria-label={`Edit order ${displayDocumentId(ord.orderNumber)}`}
                               >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>}
+                                <Pencil className="w-3 h-3" /> Edit
+                              </Link>}
                               {hasAccess(db.getCurrentUser(), 'customers') && <Link
                                 href={`/customers/${ord.customerPhone.replace(/\D/g, '')}`}
                                 className="p-1 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded"
@@ -761,158 +716,6 @@ export default function DailyOrdersPage() {
           </div>
         </div>
 
-        {/* Inline Edit Modal (Fix 68d) */}
-        {editingOrder && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-            <div className="w-full max-w-xl bg-white rounded-2xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-base font-bold text-slate-900">
-                  Edit Order #{editingOrder.orderNumber}
-                </h3>
-                <button onClick={() => setEditingOrder(null)} className="text-slate-400 hover:text-slate-600">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
-                <div><label className="font-semibold text-slate-600 block mb-1" htmlFor="edit-assignee">Responsible person</label><select id="edit-assignee" value={editAssignee} onChange={event => setEditAssignee(event.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg">{db.getUsers().filter(user => user.id === editAssignee || d2cAssignees(db.getCurrentUser(), db.getUsers(), editingOrder.brandCode).some(candidate => candidate.id === user.id)).map(user => <option key={user.id} value={user.id}>{user.fullName}</option>)}</select></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="font-semibold text-slate-600 block mb-1">Customer Name</label>
-                    <input
-                      type="text"
-                      value={editCustomerName}
-                      onChange={(e) => setEditCustomerName(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="font-semibold text-slate-600 block mb-1">Phone Number</label>
-                    <input
-                      type="text"
-                      value={editCustomerPhone}
-                      onChange={(e) => setEditCustomerPhone(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="font-semibold text-slate-600 block mb-1">Delivery Address</label>
-                  <input
-                    type="text"
-                    value={editAddress}
-                    onChange={(e) => setEditAddress(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <NepalLocationFields idPrefix="edit-location" province={editProvince} city={editCity} onChange={next => { setEditProvince(next.province); setEditCity(next.city); }} />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="font-semibold text-slate-600 block mb-1">Payment Method</label>
-                    <select
-                      value={editPaymentTerms}
-                      onChange={(e) => setEditPaymentTerms(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs"
-                    >
-                      <option value="COD">COD</option>
-                      <option value="Prepaid">Prepaid</option>
-                      <option value="Advance">Advance</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="font-semibold text-slate-600 block mb-1">Delivery Provider</label>
-                    <select
-                      value={editDeliveryMethod}
-                      onChange={(e) => setEditDeliveryMethod(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs"
-                    >
-                      {activeOrderOptionNames(orderOptions, 'deliveryMethods', editDeliveryMethod).map(method => <option key={method} value={method}>{method}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Edit Line Items */}
-                <div className="border border-slate-100 rounded-xl p-3 bg-slate-50/50 space-y-2">
-                  <span className="font-bold text-slate-700 block">Line Items</span>
-                  {editItems.map((it, idx) => (
-                    <div key={idx} className="flex items-center justify-between gap-2 bg-white p-2 rounded-lg border border-slate-200">
-                      <span className="font-medium text-slate-800 flex-1 truncate">{it.productName}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-400">Qty:</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={50}
-                          value={it.quantity}
-                          onChange={(e) => {
-                            const q = parseInt(e.target.value, 10) || 1;
-                            const updated = [...editItems];
-                            updated[idx] = { ...updated[idx], quantity: q, totalPrice: updated[idx].unitPrice * q };
-                            setEditItems(updated);
-                          }}
-                          className="w-14 px-2 py-1 border border-slate-200 rounded text-center text-xs font-bold"
-                        />
-                        <span className="font-bold text-slate-900 w-16 text-right">
-                          ₹{(it.unitPrice * it.quantity).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Edit reason / audit trail note */}
-                <div>
-                  <label className="font-semibold text-slate-600 block mb-1">Audit Note (Why was this edited?)</label>
-                  <input
-                    type="text"
-                    value={editNote}
-                    onChange={(e) => setEditNote(e.target.value)}
-                    placeholder="E.g., Customer called to change quantity from 2 to 3"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs"
-                  />
-                </div>
-
-                {/* Prior Edit History Trail */}
-                {editingOrder.editHistory && editingOrder.editHistory.length > 0 && (
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] space-y-1">
-                    <span className="font-bold text-slate-600 block">Edit Audit Trail:</span>
-                    {editingOrder.editHistory.map((hist, hi) => (
-                      <div key={hi} className="text-slate-500">
-                        • {hist.timestamp.substring(0, 16)} — <strong>{hist.changedBy}</strong>: {hist.note}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setEditingOrder(null)}
-                    className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingEdit}
-                    className="px-5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-xs"
-                  >
-                    {savingEdit ? 'Saving…' : 'Save Changes'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
         {/* Delete Confirmation Modal */}
         {orderToDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
@@ -923,7 +726,7 @@ export default function DailyOrdersPage() {
               </div>
               <p className="text-xs text-slate-600">
                 Are you sure you want to delete order{' '}
-                <strong>#{orderToDelete.orderNumber}</strong> for {orderToDelete.customerName}? This will remove it from daily counts and inventory deductions.
+                <strong>{displayDocumentId(orderToDelete.orderNumber)}</strong> for {orderToDelete.customerName}? It leaves daily counts, the dashboard, the monthly sheet and this customer’s totals. This cannot be undone.
               </p>
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
@@ -934,9 +737,10 @@ export default function DailyOrdersPage() {
                 </button>
                 <button
                   onClick={handleDeleteConfirmed}
-                  className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700"
+                  disabled={deleting}
+                  className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 disabled:bg-rose-300 disabled:cursor-not-allowed"
                 >
-                  Delete Order
+                  {deleting ? 'Deleting…' : 'Delete Order'}
                 </button>
               </div>
             </div>

@@ -2,7 +2,7 @@ import type { DatabaseService } from './db/db-service';
 
 export type GoogleReportCell = string | number | boolean;
 export interface GoogleReportTab { title: string; values: GoogleReportCell[][] }
-export type GoogleReportDatabase = Pick<DatabaseService, 'getFilteredStores' | 'getOrders' | 'getUsers' | 'getCheques' | 'getVisits' | 'getStockCounts'>;
+export type GoogleReportDatabase = Pick<DatabaseService, 'getFilteredStores' | 'getOrders' | 'getUsers' | 'getCheques' | 'getVisits' | 'getStockCounts'> & Partial<Pick<DatabaseService, 'getMarketingSends'>>;
 
 export function quoteGoogleTab(title: string): string { return `'${title.replace(/'/g, "''")}'`; }
 
@@ -21,6 +21,11 @@ export function buildGoogleReportTabs(db: GoogleReportDatabase, month = nepalRep
   const allStockCounts = db.getStockCounts();
   const orders = allOrders.filter((order) => order.orderDateAd?.slice(0, 7) === month);
   const stockCounts = allStockCounts.filter((stock) => stock.dateAd?.slice(0, 7) === month);
+  const sends = db.getMarketingSends?.() || [];
+  // An order whose date was edited into or out of another month moves tabs: rewrite the month it left as well.
+  const movedMonths = [...new Set(allOrders.flatMap((order) => (order.editHistory || []).filter((entry) => entry.field === 'Order date')
+    .flatMap((entry) => [entry.oldValue, entry.newValue]).filter((value): value is string => /^\d{4}-\d{2}-\d{2}$/.test(value || '')).map((value) => value.slice(0, 7))))]
+    .filter((other) => other !== month).sort();
   const tabs: GoogleReportTab[] = [
     { title: 'Summary', values: [
       ['Metric', 'Value', 'Export Timestamp'],
@@ -37,9 +42,16 @@ export function buildGoogleReportTabs(db: GoogleReportDatabase, month = nepalRep
       ['Store ID', 'Store Name', 'Type', 'City', 'Address', 'Brands Stocked', 'Assigned Officer', 'Health Score'],
       ...stores.map((store) => [store.id, store.name, store.entityType === 'BRANCH' ? 'Distributor Branch' : store.type, store.entityType === 'RETAILER' ? store.city || '' : '', store.address || '', (store.entityType === 'BRANCH' ? store.brandsAvailable || [] : store.brandsStocked || []).join(', '), store.assignedOfficerName || '', store.entityType === 'RETAILER' ? store.healthScore ?? '' : '']),
     ] },
-    { title: `Orders-${month}`, values: [
-      ['Order ID', 'Order Date (BS)', 'Order Date (AD)', 'Brand', 'Customer', 'Products', 'Qty', 'Type', 'Total Amount', 'Status'],
-      ...orders.map((order) => [order.id, order.orderDateBs || '', order.orderDateAd || '', order.brandCode || '', order.customerName || '', (order.items || []).map((item) => item.productName).join('; '), (order.items || []).reduce((sum, item) => sum + (item.quantity ?? 0), 0), order.orderType || '', order.totalAmount ?? '', order.status || '']),
+    // One row per order, keyed by its short ID. The whole tab is rewritten on every export,
+    // so an edited order updates its row and can never appear twice.
+    ...[month, ...movedMonths].map((tabMonth) => ({ title: `Orders-${tabMonth}`, values: [
+      ['Order ID', 'Order Date (BS)', 'Order Date (AD)', 'Brand', 'Customer', 'Products', 'Qty', 'Type', 'Total Amount', 'Status', 'Earlier ID'],
+      ...allOrders.filter((order) => order.orderDateAd?.slice(0, 7) === tabMonth).map((order) => [order.orderNumber || order.id, order.orderDateBs || '', order.orderDateAd || '', order.brandCode || '', order.customerName || '', (order.items || []).map((item) => item.productName).join('; '), (order.items || []).reduce((sum, item) => sum + (item.quantity ?? 0), 0), order.orderType || '', order.totalAmount ?? '', order.status || '', order.legacyOrderNumber || '']),
+    ] as GoogleReportCell[][] })),
+    // Marketing sends have their own tab and never appear on an Orders tab.
+    { title: 'Marketing Sends', values: [
+      ['Send ID', 'Sent Date (BS)', 'Sent Date (AD)', 'Influencer', 'Brands', 'Products', 'Units', 'Reach-out Platform', 'Responsible', 'Delivery Channel', 'Content Due (AD)', 'Status'],
+      ...sends.map((send) => [send.sendNumber, send.sentDateBs || '', send.sentDateAd || '', send.influencerName || '', (send.brandCodes || []).join(', '), (send.items || []).map((item) => `${item.quantity}x ${item.productName}`).join('; '), (send.items || []).reduce((sum, item) => sum + (item.quantity ?? 0), 0), send.reachOutPlatform || '', send.responsibleName || '', send.deliveryChannel || '', send.expectedContentDateAd || '', send.status || '']),
     ] },
     { title: `Stock Counts-${month}`, values: [
       ['Date (AD)', 'Store', 'Entity Type', 'Officer', 'Product', 'Shelf Qty', 'Previous Qty', 'Flagged Drop'],

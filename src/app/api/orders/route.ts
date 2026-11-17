@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { requireFeatureAccess } from '@/lib/auth-guard';
 import { openServerWorkspace } from '@/lib/db/server-workspace';
@@ -38,7 +37,8 @@ export async function POST(request: Request) {
       return { productId: product.id, productName: product.name, brandCode: product.brandCode, quantity, unitPrice, totalPrice };
     });
     const order = {
-      orderNumber: typeof body.orderNumber === 'string' && body.orderNumber.trim() ? body.orderNumber.trim().toUpperCase() : `ORD-${randomUUID()}`.toUpperCase(),
+      // An ID sent with the request is kept as the legacy reference; the server assigns the short ID.
+      ...(typeof body.orderNumber === 'string' && body.orderNumber.trim() ? { orderNumber: body.orderNumber.trim().toUpperCase() } : {}),
       brandCode, customerName, customerPhone,
       platform: allowedValue(body.platform, activeOrderOptionNames(db.getOrderOptions(), 'channels'), activeOrderOptionNames(db.getOrderOptions(), 'channels')[0], 'platform'),
       orderDateAd: dateAd(body.orderDateAd, 'orderDateAd', new Date().toISOString().slice(0, 10)),
@@ -54,7 +54,8 @@ export async function POST(request: Request) {
     };
     if (!Number.isFinite(order.totalAmount)) throw new ApiInputError('Order total is too large.');
     const created = db.addOrder(order);
-    await commit();
-    return NextResponse.json({ success: true, data: created }, { status: 201 });
+    const assigned = await commit();
+    const orderNumber = assigned?.[created.id];
+    return NextResponse.json({ success: true, data: orderNumber ? { ...created, orderNumber, ...(order.orderNumber ? { legacyOrderNumber: order.orderNumber } : {}) } : created }, { status: 201 });
   } catch (error) { return apiFailure(error, 'Failed to create order.'); }
 }

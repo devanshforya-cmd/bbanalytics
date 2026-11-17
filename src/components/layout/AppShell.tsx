@@ -7,6 +7,7 @@ import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
 import PWAInstallBanner from '@/components/common/PWAInstallBanner';
 import { ToastContainer } from '@/components/common/Toast';
+import { ConfirmHost } from '@/components/common/confirm';
 import OfflineBar from '@/components/common/OfflineBar';
 import FieldGpsTracker from '@/components/common/FieldGpsTracker';
 import { getSessionUser } from '@/lib/auth';
@@ -64,6 +65,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <>
         {children}
         <ToastContainer />
+      <ConfirmHost />
       </>
     );
   }
@@ -104,6 +106,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <PWAInstallBanner />
       <OfflineBar />
       <ToastContainer />
+      <ConfirmHost />
     </div>
   );
 }

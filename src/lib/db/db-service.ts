@@ -3,11 +3,16 @@ import { installWorkspaceFetch } from '../workspace-reset-client';
 import { validGpsCoordinates } from '../gps-validation';
 import {
   getScope,
+  canPerform,
 } from '../permissions';
 import { WORKSPACE_COLLECTIONS, WorkspaceCollection, WorkspaceMutation, WorkspaceSnapshot, WorkspaceVersions } from './workspace-types';
 import { canReadWorkspaceRecord, canWriteWorkspaceRecord, StoredWorkspaceRecord } from './workspace-policy';
 import { DEFAULT_ALERT_RULES, validateAlertRules, type AlertRules } from '../alert-rules';
 import { defaultOrderOptions, validateOrderOptions, assertActiveOrderOption, type OrderOptions } from '../order-options';
+import { brandPrefix, pendingDocumentId, validateBrandPrefix, RESERVED_PREFIXES } from '../document-ids';
+import { historyEntries } from '../order-history';
+import { phoneDigits } from '../customer-lookup';
+import { DEFAULT_CONTENT_PLATFORMS, DEFAULT_FAILURE_REASONS, DEFAULT_REACH_OUT_PLATFORMS, lookupId, sameName } from '../marketing';
 
 const ANONYMOUS_USER: User = { id: '', fullName: '', email: '', phone: '', role: 'OFFICE_STAFF', active: false, isSuperAdmin: false, dutyStatus: 'OFFLINE', assignedBrands: [], permissions: {}, customPermissions: {} };
 
@@ -59,6 +64,13 @@ import {
   StoreEntity,
   Influencer,
   InfluencerContent,
+  InfluencerNiche,
+  MarketingOption,
+  MarketingOptionList,
+  MarketingSend,
+  FailureReason,
+  UserPreferenceRecord,
+  DeliveryAttempt,
   SharedAccessLink,
   DashboardSalesMode,
   DocumentTypeConfig,
@@ -130,6 +142,13 @@ export class DatabaseService {
   private comparisonMode: ComparisonMode = 'OFF';
   private influencers: Influencer[] = [];
   private influencerContent: InfluencerContent[] = [];
+  private marketingSends: MarketingSend[] = [];
+  private influencerNiches: InfluencerNiche[] = [];
+  private marketingOptions: MarketingOption[] = [];
+  private failureReasons: FailureReason[] = [];
+  private userPreferences: UserPreferenceRecord[] = [];
+  private brandPrefixes: Record<string, string> = {};
+  private workspaceLoaded = false;
   private sharedAccessLinks: SharedAccessLink[] = [];
   private salesMode: DashboardSalesMode = 'ALL';
   private orderSubscribers: Set<(event: OrderRealtimeEvent) => void> = new Set();
@@ -184,8 +203,15 @@ export class DatabaseService {
       if (event.key === 'bb_auth_user_session_v3') this.setSessionUser(this.readSessionUser());
     });
     window.addEventListener('bb-workspace-mutation-synced', (event) => {
-      const { collection, id, version } = (event as CustomEvent).detail;
+      const { collection, id, version, assigned } = (event as CustomEvent).detail;
       this.versions[collection as WorkspaceCollection] = { ...this.versions[collection as WorkspaceCollection], [id]: version };
+      // The server chose this record's short ID. Show it straight away without queuing another save.
+      if (assigned && typeof assigned === 'object') {
+        const patch = Object.fromEntries(Object.entries(assigned).filter(([, value]) => typeof value === 'string' && value));
+        const live = ((this as any)[collection] as any[] | undefined)?.find((row) => row.id === id);
+        const base = this.baseline[collection as WorkspaceCollection]?.find((row) => row.id === id);
+        if (live && Object.keys(patch).length) { Object.assign(live, patch); if (base) Object.assign(base, patch); window.dispatchEvent(new CustomEvent('bb-db-updated')); }
+      }
       this.writeCache();
     });
   }
@@ -210,7 +236,7 @@ export class DatabaseService {
   public exportSnapshot(): WorkspaceSnapshot {
     const snapshot: WorkspaceSnapshot = {};
     for (const collection of WORKSPACE_COLLECTIONS) {
-      if (collection === 'workspaceConfig') snapshot[collection] = [{ id: 'workspace', requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn, alertRules: this.alertRules, ...(this.orderOptions ? { orderOptions: this.orderOptions } : {}) }];
+      if (collection === 'workspaceConfig') snapshot[collection] = [{ id: 'workspace', requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn, alertRules: this.alertRules, ...(this.orderOptions ? { orderOptions: this.orderOptions } : {}), ...(Object.keys(this.brandPrefixes).length ? { brandPrefixes: this.brandPrefixes } : {}) }];
       else snapshot[collection] = ((this as any)[collection] || []).map((row: any) => JSON.parse(JSON.stringify({ ...row, id: row.id || (collection === 'staffLiveLocations' ? row.officerId : undefined) })));
     }
     return snapshot;
@@ -223,6 +249,7 @@ export class DatabaseService {
         this.requireStorePhotoAtCheckIn = config?.requireStorePhotoAtCheckIn === true;
         this.orderOptions = config?.orderOptions ? validateOrderOptions(config.orderOptions) : null;
         this.alertRules = config?.alertRules ? validateAlertRules(config.alertRules) : { ...DEFAULT_ALERT_RULES };
+        this.brandPrefixes = config?.brandPrefixes && typeof config.brandPrefixes === 'object' ? { ...config.brandPrefixes } : {};
       }
       else (this as any)[collection] = JSON.parse(JSON.stringify(snapshot[collection] || []));
     }
@@ -256,6 +283,7 @@ export class DatabaseService {
     }
     this.baseline = snapshot;
   }
+  public getRecordVersion(collection: WorkspaceCollection, id: string): number { return this.versions[collection]?.[id] || 0; }
   public getPendingMutations(): WorkspaceMutation[] {
     if (this.server) { this.captureMutations(); return JSON.parse(JSON.stringify([...this.pending.values()])); }
     return syncManager.getWorkspaceMutations();
@@ -263,7 +291,7 @@ export class DatabaseService {
   public setSessionUser(user: User | null): void {
     if (this.server) { if (user) this.currentUser = user; return; }
     if (this.activeUserId !== (user?.id || null)) {
-      this.activeUserId = user?.id || null; this.syncPromise = null; this.legacySnapshot = null;
+      this.activeUserId = user?.id || null; this.syncPromise = null; this.legacySnapshot = null; this.workspaceLoaded = false;
       this.deletedProductIds.clear(); this.deletedStoreIds.clear();
       this.hydrateSnapshot(this.initialSnapshot, user || ANONYMOUS_USER);
       this.users = user ? [user] : []; this.brands = [];
@@ -353,6 +381,7 @@ export class DatabaseService {
       if (Array.isArray(result.data.users)) this.users = result.data.users;
       if (!this.users.some((user) => user.id === this.currentUser.id)) this.users.push(this.currentUser);
       if (Array.isArray(result.data.brands)) this.brands = result.data.brands;
+      this.workspaceLoaded = true;
       this.writeCache(); window.dispatchEvent(new CustomEvent('bb-db-updated'));
       return { success: true, syncedCount: WORKSPACE_COLLECTIONS.reduce((count, collection) => count + (remote[collection]?.length || 0), 0), message: pending.length ? `${pending.length} local changes remain pending.` : 'Workspace data refreshed.' };
     } catch (error) { return { success: false, syncedCount: 0, message: error instanceof Error ? error.message : 'Workspace refresh failed.' }; }
@@ -415,6 +444,8 @@ export class DatabaseService {
         if (parsed.comparisonMode) this.comparisonMode = parsed.comparisonMode;
         if (parsed.influencers) this.influencers = parsed.influencers;
         if (parsed.influencerContent) this.influencerContent = parsed.influencerContent;
+        for (const key of ['marketingSends', 'influencerNiches', 'marketingOptions', 'failureReasons', 'userPreferences'] as const) if (Array.isArray(parsed[key])) (this as any)[key] = parsed[key];
+        if (parsed.brandPrefixes && typeof parsed.brandPrefixes === 'object') this.brandPrefixes = parsed.brandPrefixes;
         if (parsed.sharedAccessLinks) this.sharedAccessLinks = parsed.sharedAccessLinks;
         if (parsed.salesMode) this.salesMode = parsed.salesMode;
         if (parsed.documentTypes) this.documentTypes = parsed.documentTypes;
@@ -568,6 +599,12 @@ export class DatabaseService {
         comparisonMode: this.comparisonMode,
         influencers: this.influencers,
         influencerContent: this.influencerContent,
+        marketingSends: this.marketingSends,
+        influencerNiches: this.influencerNiches,
+        marketingOptions: this.marketingOptions,
+        failureReasons: this.failureReasons,
+        userPreferences: this.userPreferences,
+        brandPrefixes: this.brandPrefixes,
         sharedAccessLinks: this.sharedAccessLinks,
         salesMode: this.salesMode,
         documentTypes: this.documentTypes,
@@ -936,9 +973,8 @@ export class DatabaseService {
   public createSecondaryOrder(
     order: Omit<SecondaryOrder, 'id' | 'orderNumber' | 'createdAt'>
   ): SecondaryOrder {
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    const orderNumber = `SO-${dateStr}-${rand}`;
+    // The server replaces this with the next SO number when it saves the order.
+    const orderNumber = pendingDocumentId();
     const newOrder: SecondaryOrder = {
       ...order,
       id: this.generateId('sec_ord'),
@@ -2444,9 +2480,14 @@ export class DatabaseService {
   }
 
   // Orders
+  /**
+   * Commercial orders only. Marketing sends live in their own collection; any
+   * older order still carrying the marketing flag is excluded here, at the one
+   * place every screen, report and export reads orders from.
+   */
   public getOrders(brandCode?: BrandCode): Order[] {
     const user = this.getCurrentUser();
-    let list = this.orders;
+    let list = this.orders.some((o) => o.isMarketing) ? this.orders.filter((o) => !o.isMarketing) : this.orders;
     if (!user.is_super_admin && !user.isSuperAdmin && user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
       list = list.filter((o) => user.assignedBrands!.includes(o.brandCode));
     }
@@ -2457,25 +2498,41 @@ export class DatabaseService {
     return list;
   }
 
-  public addOrder(order: Omit<Order, 'id' | 'createdAt'>): Order {
+  private findCustomer(phone: string): Customer | undefined {
+    const digits = phoneDigits(phone);
+    return digits ? this.customers.find((c) => phoneDigits(c.phone) === digits) : undefined;
+  }
+
+  /** The customer to update alongside another record, or undefined when this account may not change customers (so no save gets stuck). */
+  private editableCustomer(phone: string): Customer | undefined {
+    if (!this.server && !canPerform(this.currentUser, 'customers', 'EDIT') && !canPerform(this.currentUser, 'orderflow', 'EDIT')) return undefined;
+    return this.findCustomer(phone);
+  }
+
+  public getOrderById(id: string): Order | undefined {
+    return this.orders.find((o) => o.id === id && !o.isMarketing);
+  }
+
+  public addOrder(order: Omit<Order, 'id' | 'createdAt' | 'orderNumber'> & { orderNumber?: string; id?: string }): Order {
+    if ((order as Partial<Order>).isMarketing) throw new Error('Marketing sends are created from the influencer profile, not as orders.');
     assertActiveOrderOption(this.getOrderOptions(), 'channels', order.platform);
     assertActiveOrderOption(this.getOrderOptions(), 'deliveryMethods', order.deliveryMethod);
     const newOrder: Order = {
       ...order,
-      id: this.generateId('ord'),
+      // The server replaces this with the short ID (for example FOR-0421) when it saves the order.
+      orderNumber: order.orderNumber?.trim() || pendingDocumentId(),
+      id: order.id && /^ord_[A-Za-z0-9_-]{6,120}$/.test(order.id) && !this.orders.some((o) => o.id === order.id) ? order.id : this.generateId('ord'),
       createdAt: new Date().toISOString(),
     };
+    delete newOrder.isMarketing; delete newOrder.influencerId; delete newOrder.influencerHandle; delete newOrder.contentReceived;
 
     this.orders.unshift(newOrder);
 
-
-    // Marketing sends are not commercial customer orders.
-    if (!newOrder.isMarketing) {
     // Update Customer 360 record
-    let customer = this.customers.find((c) => normalizePhoneNumber(c.phone) === normalizePhoneNumber(newOrder.customerPhone));
+    const customer = this.findCustomer(newOrder.customerPhone);
     if (customer) {
       customer.totalOrders += 1;
-      customer.lastOrderDate = newOrder.orderDateAd;
+      if (!customer.lastOrderDate || newOrder.orderDateAd > customer.lastOrderDate) customer.lastOrderDate = newOrder.orderDateAd;
       if (!customer.brandsPurchased.includes(newOrder.brandCode)) {
         customer.brandsPurchased.push(newOrder.brandCode);
       }
@@ -2483,7 +2540,7 @@ export class DatabaseService {
         customer,
         'ORDER_PLACED',
         KARMA_RULES.ORDER_PLACED,
-        `Order #${newOrder.orderNumber}`
+        'Order placed'
       );
       Object.assign(customer, updatedCustomer);
     } else {
@@ -2510,22 +2567,8 @@ export class DatabaseService {
       this.customers.unshift(newCust);
     }
 
-    }
-
-    // Update influencer metrics if marketing send
-    if (newOrder.isMarketing && newOrder.influencerId) {
-      const inf = this.influencers.find((i) => i.id === newOrder.influencerId);
-      if (inf) {
-        inf.totalSends = (inf.totalSends || 0) + 1;
-        inf.lastSendDate = newOrder.orderDateAd;
-        inf.lastSendDateBs = newOrder.orderDateBs;
-      }
-    }
-
     this.logActivity('CREATED_ORDER', 'ORDER', newOrder.id, {
-      orderNumber: newOrder.orderNumber,
       amount: newOrder.totalAmount,
-      isMarketing: newOrder.isMarketing,
     });
     this.persistState();
 
@@ -2537,11 +2580,16 @@ export class DatabaseService {
     return newOrder;
   }
 
+  /**
+   * Save a change to an order. The server rebuilds the trusted history (who,
+   * when, field, old, new) and moves customer totals when the phone changes;
+   * the entries added here only make the change visible before the next refresh.
+   */
   public updateOrder(
     id: string,
     updates: Partial<Order>,
-    editorName?: string,
-    editNote?: string
+    _editorName?: string,
+    reason?: string
   ): Order | null {
     const idx = this.orders.findIndex((o) => o.id === id);
     if (idx === -1) return null;
@@ -2549,20 +2597,18 @@ export class DatabaseService {
     const existing = this.orders[idx];
     if (updates.platform !== undefined) assertActiveOrderOption(this.getOrderOptions(), 'channels', updates.platform, existing.platform);
     if (updates.deliveryMethod !== undefined) assertActiveOrderOption(this.getOrderOptions(), 'deliveryMethods', updates.deliveryMethod, existing.deliveryMethod);
-    const editHistory = existing.editHistory ? [...existing.editHistory] : [];
-    if (editNote || editorName) {
-      editHistory.unshift({
-        timestamp: new Date().toISOString(),
-        changedBy: editorName || 'Admin',
-        note: editNote || 'Updated order details',
-      });
-    }
+    const clean = { ...updates };
+    delete (clean as any).orderNumber; delete (clean as any).legacyOrderNumber; delete (clean as any).editHistory; delete (clean as any).id; delete (clean as any).createdAt; delete clean.isMarketing;
+    const next: Order = { ...existing, ...clean };
+    if (JSON.stringify(next) === JSON.stringify(existing)) return existing;
+    const entries = historyEntries(existing, next, { id: this.currentUser.id, name: this.currentUser.fullName }, { reason: reason?.trim() || undefined });
+    next.editHistory = [...entries, ...(existing.editHistory || [])];
+    // Only the fields this person actually changed. If someone else saved first, the server
+    // applies just these on top of their version, so nothing they changed elsewhere is lost.
+    const fields = Object.keys(clean).filter((key) => JSON.stringify((clean as any)[key]) !== JSON.stringify((existing as any)[key]));
+    (next as any)._edit = { token: globalThis.crypto.randomUUID(), fields, ...(reason?.trim() ? { reason: reason.trim() } : {}) };
 
-    this.orders[idx] = {
-      ...existing,
-      ...updates,
-      editHistory,
-    };
+    this.orders[idx] = next;
     this.persistState();
 
     this.emitOrderRealtimeEvent({
@@ -2621,15 +2667,6 @@ export class DatabaseService {
     };
   }
 
-  public incrementInfluencerSends(influencerId: string) {
-    const inf = this.influencers.find((i) => i.id === influencerId);
-    if (inf) {
-      inf.totalSends = (inf.totalSends || 0) + 1;
-      inf.lastSendDate = new Date().toISOString().split('T')[0];
-      this.persistState();
-    }
-  }
-
   // Delivery Failures
   public getDeliveryFailures(brandCode?: BrandCode): DeliveryFailure[] {
     const user = this.getCurrentUser();
@@ -2644,16 +2681,44 @@ export class DatabaseService {
     return list;
   }
 
+  /** Reasons staff can pick when a delivery fails. The built-in list is used until an admin saves their own. */
+  public getFailureReasons(includeArchived = false): FailureReason[] {
+    const saved = this.failureReasons;
+    const merged: FailureReason[] = [...saved];
+    for (const name of DEFAULT_FAILURE_REASONS) {
+      if (!saved.some((row) => sameName(row.name, name) || row.id === lookupId('reason', name))) merged.push({ id: lookupId('reason', name), name, isArchived: false, createdAt: '' });
+    }
+    return includeArchived ? merged : merged.filter((row) => !row.isArchived);
+  }
+
+  public addFailureReason(name: string): FailureReason {
+    return this.addLookup('failureReasons', 'reason', name, this.getFailureReasons(true)) as FailureReason;
+  }
+
+  public getOpenDeliveryFailure(orderId: string): DeliveryFailure | undefined {
+    return this.deliveryFailures.find((df) => df.orderId === orderId && (!df.status || df.status === 'FAILED' || df.status === 'REATTEMPT_SCHEDULED'));
+  }
+
   public addDeliveryFailure(failure: Omit<DeliveryFailure, 'id' | 'createdAt'>): DeliveryFailure {
     if (failure.deliveryMethod) assertActiveOrderOption(this.getOrderOptions(), 'deliveryMethods', failure.deliveryMethod);
+    const now = new Date().toISOString();
+    const attempt: DeliveryAttempt = { attempt: failure.attempts || 1, dateAd: failure.dateAd, dateBs: failure.dateBs, reason: failure.reason,
+      ...(failure.remarks ? { remarks: failure.remarks } : {}), loggedBy: this.currentUser.fullName, loggedAt: now };
     const newDf: DeliveryFailure = {
       ...failure,
+      attempts: failure.attempts || 1,
+      status: failure.status || 'FAILED',
+      attemptLog: [attempt],
       id: this.generateId('df'),
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     };
     this.deliveryFailures.unshift(newDf);
 
-    const customer = this.customers.find((c) => c.phone === newDf.customerPhone);
+    // The order itself shows as Failed. This is a delivery failure, not a return.
+    const order = this.orders.find((o) => o.id === newDf.orderId);
+    if (order && order.status !== 'DELIVERED' && canPerform(this.currentUser, 'orderflow', 'EDIT')) order.status = 'FAILED';
+
+    const customer = this.editableCustomer(newDf.customerPhone);
     if (customer) {
       customer.totalDeliveryFailures += 1;
       const { updatedCustomer } = applyKarmaEvent(
@@ -2667,6 +2732,29 @@ export class DatabaseService {
 
     this.persistState();
     return newDf;
+  }
+
+  /** A further failed attempt on an order that already has an open failure. Never a duplicate record. */
+  public addDeliveryAttempt(failureId: string, attempt: { dateAd: string; dateBs: string; reason: string; remarks?: string; reattemptDateAd?: string; reattemptDateBs?: string }): DeliveryFailure | null {
+    const failure = this.deliveryFailures.find((df) => df.id === failureId);
+    if (!failure) return null;
+    const number = (failure.attempts || failure.attemptLog?.length || 1) + 1;
+    const log: DeliveryAttempt[] = failure.attemptLog?.length ? [...failure.attemptLog]
+      : [{ attempt: 1, dateAd: failure.dateAd, dateBs: failure.dateBs, reason: failure.reason, ...(failure.remarks ? { remarks: failure.remarks } : {}), loggedBy: '', loggedAt: failure.createdAt }];
+    log.push({ attempt: number, dateAd: attempt.dateAd, dateBs: attempt.dateBs, reason: attempt.reason, ...(attempt.remarks ? { remarks: attempt.remarks } : {}), loggedBy: this.currentUser.fullName, loggedAt: new Date().toISOString() });
+    Object.assign(failure, { attempts: number, attemptLog: log, reason: attempt.reason, dateAd: attempt.dateAd, dateBs: attempt.dateBs,
+      status: attempt.reattemptDateAd ? 'REATTEMPT_SCHEDULED' : 'FAILED',
+      ...(attempt.remarks ? { remarks: attempt.remarks } : {}),
+      ...(attempt.reattemptDateAd ? { reattemptDateAd: attempt.reattemptDateAd, reattemptDateBs: attempt.reattemptDateBs } : {}) });
+    const order = this.orders.find((o) => o.id === failure.orderId);
+    if (order && order.status !== 'DELIVERED' && canPerform(this.currentUser, 'orderflow', 'EDIT')) order.status = 'FAILED';
+    const customer = this.editableCustomer(failure.customerPhone);
+    if (customer) {
+      customer.totalDeliveryFailures += 1;
+      Object.assign(customer, applyKarmaEvent(customer, 'DELIVERY_FAILURE', KARMA_RULES.DELIVERY_FAILURE, `Delivery attempt ${number} failed: ${attempt.reason} (Order #${failure.orderNumber})`).updatedCustomer);
+    }
+    this.persistState();
+    return failure;
   }
 
   public updateDeliveryFailure(
@@ -2684,7 +2772,7 @@ export class DatabaseService {
         orderNumber: failure.orderNumber,
         customer: failure.customerName,
       });
-      const customer = this.customers.find((c) => c.phone === failure.customerPhone);
+      const customer = this.findCustomer(failure.customerPhone);
       if (customer) {
         applyKarmaEvent(
           customer,
@@ -2743,8 +2831,12 @@ export class DatabaseService {
       if (found) found.tickCount += 1;
     }
 
-    const customer = this.customers.find((c) => c.phone === newRet.customerPhone);
+    const customer = this.editableCustomer(newRet.customerPhone);
     if (customer) {
+      // Three or more returns inside 30 days flags the profile, from saved returns only.
+      const digits = phoneDigits(newRet.customerPhone);
+      const recent = this.returns.filter((r) => phoneDigits(r.customerPhone) === digits && Date.parse(r.dateAd) >= Date.now() - 30 * 86400000).length;
+      if (recent >= 3 && !(customer.activeFlags || []).includes('Serial Returner')) customer.activeFlags = [...(customer.activeFlags || []), 'Serial Returner'];
       customer.totalReturns += 1;
       const { updatedCustomer } = applyKarmaEvent(
         customer,
@@ -2944,7 +3036,7 @@ export class DatabaseService {
       if (found) found.tickCount += 1;
     }
 
-    const customer = this.customers.find((c) => c.phone === newFb.customerPhone);
+    const customer = newFb.customerPhone ? this.editableCustomer(newFb.customerPhone) : undefined;
     if (customer) {
       if (newFb.type === 'REVIEW') {
         customer.totalReviews += 1;
@@ -2962,6 +3054,32 @@ export class DatabaseService {
 
     this.persistState();
     return newFb;
+  }
+
+  /** Entries saved with only a name or handle, waiting for staff to attach a customer. */
+  public getUnlinkedFeedback(): FeedbackEntry[] {
+    return this.getFeedback('ALL').filter((entry) => entry.customerLink === 'UNLINKED');
+  }
+
+  /** Attach a customer to an entry from the Needs linking queue. */
+  public linkFeedbackCustomer(feedbackId: string, customer: { phone: string; name: string; isNew: boolean }): FeedbackEntry | null {
+    const entry = this.feedbackEntries.find((f) => f.id === feedbackId);
+    if (!entry) return null;
+    entry.customerPhone = phoneDigits(customer.phone);
+    if (customer.name.trim()) entry.customerName = customer.name.trim();
+    entry.customerLink = customer.isNew ? 'NEW' : 'LINKED';
+    const profile = this.editableCustomer(entry.customerPhone);
+    if (profile) {
+      if (entry.type === 'REVIEW') {
+        profile.totalReviews += 1;
+        Object.assign(profile, applyKarmaEvent(profile, 'REVIEW_GIVEN', entry.sentiment === 'POSITIVE' ? KARMA_RULES.REVIEW_GIVEN + KARMA_RULES.POSITIVE_REVIEW_BONUS : KARMA_RULES.REVIEW_GIVEN, 'Customer review').updatedCustomer);
+      } else if (entry.type === 'COMPLAINT') {
+        profile.totalComplaints += 1;
+        Object.assign(profile, applyKarmaEvent(profile, 'COMPLAINT_FILED', KARMA_RULES.COMPLAINT_FILED, 'Customer complaint').updatedCustomer);
+      }
+    }
+    this.persistState();
+    return entry;
   }
 
   public updateComplaintStatus(feedbackId: string, newStatus: ComplaintStatus, notes?: string) {
@@ -3046,7 +3164,7 @@ export class DatabaseService {
   }
 
   public getCustomerByPhone(phone: string): Customer | undefined {
-    return this.customers.find((c) => normalizePhoneNumber(c.phone) === normalizePhoneNumber(phone));
+    return this.findCustomer(phone);
   }
 
   public addCustomer(cust: Omit<Customer, 'id'>): Customer {
@@ -3944,7 +4062,7 @@ export class DatabaseService {
     const isBrandMgr = Boolean(!activeUser.is_super_admin && !activeUser.isSuperAdmin && activeUser.assignedBrands?.length && !activeUser.assignedBrands.includes('ALL'));
 
     // Filtered collections
-    let filteredOrders = this.orders;
+    let filteredOrders = this.orders.filter((o) => !o.isMarketing);
     let filteredFailures = this.deliveryFailures;
     let filteredReturns = this.returns;
     let filteredFeedback = this.feedbackEntries;
@@ -4053,7 +4171,7 @@ export class DatabaseService {
   // Role-Based Data Filtering (Fix 26b)
   public getFilteredOrders(user?: User): Order[] {
     const activeUser = user || this.currentUser;
-    let list = this.orders;
+    let list = this.orders.filter((o) => !o.isMarketing);
     if (!activeUser.is_super_admin && !activeUser.isSuperAdmin && activeUser.assignedBrands && activeUser.assignedBrands.length > 0 && !activeUser.assignedBrands.includes('ALL')) {
       list = list.filter((o) => activeUser.assignedBrands!.includes(o.brandCode));
     }
@@ -4181,25 +4299,28 @@ export class DatabaseService {
   public getInfluencers(filter?: {
     platform?: string;
     qualityRating?: string;
-    brandCode?: string;
     search?: string;
+    nicheIds?: string[];
   }): Influencer[] {
     let result = [...this.influencers];
     if (filter) {
       if (filter.platform && filter.platform !== 'ALL') {
         result = result.filter((inf) =>
-          inf.platforms.some((p) => p.platform.toLowerCase() === filter.platform!.toLowerCase())
+          (inf.platforms || []).some((p) => p.platform.toLowerCase() === filter.platform!.toLowerCase())
         );
       }
       if (filter.qualityRating && filter.qualityRating !== 'ALL') {
         result = result.filter((inf) => inf.qualityRating === filter.qualityRating);
+      }
+      if (filter.nicheIds?.length) {
+        result = result.filter((inf) => filter.nicheIds!.some((id) => (inf.nicheIds || []).includes(id)));
       }
       if (filter.search && filter.search.trim()) {
         const q = filter.search.toLowerCase().trim();
         result = result.filter(
           (inf) =>
             inf.name.toLowerCase().includes(q) ||
-            inf.platforms.some((p) => p.handle.toLowerCase().includes(q)) ||
+            (inf.platforms || []).some((p) => p.handle.toLowerCase().includes(q)) ||
             (inf.city && inf.city.toLowerCase().includes(q))
         );
       }
@@ -4211,11 +4332,16 @@ export class DatabaseService {
     return this.influencers.find((inf) => inf.id === id);
   }
 
+  /** Only a name is required. Everything else can be added later. */
   public createInfluencer(
-    data: Omit<Influencer, 'id' | 'createdAt' | 'totalSends' | 'totalContent'>
+    data: Omit<Influencer, 'id' | 'createdAt' | 'totalSends' | 'totalContent' | 'isActive'> & { isActive?: boolean }
   ): Influencer {
+    if (!data.name?.trim()) throw new Error('An influencer needs a name.');
     const newInfluencer: Influencer = {
       ...data,
+      name: data.name.trim(),
+      platforms: data.platforms || [],
+      nicheIds: data.nicheIds || [],
       id: this.generateId('inf'),
       totalSends: 0,
       totalContent: 0,
@@ -4224,7 +4350,6 @@ export class DatabaseService {
     };
     this.influencers.unshift(newInfluencer);
     this.persistState();
-    this.logActivity('Influencer Created', 'INFLUENCER', newInfluencer.id, { name: newInfluencer.name });
     return newInfluencer;
   }
 
@@ -4233,17 +4358,159 @@ export class DatabaseService {
     if (index === -1) return undefined;
     this.influencers[index] = { ...this.influencers[index], ...updates };
     this.persistState();
-    this.logActivity('Influencer Updated', 'INFLUENCER', id, updates);
     return this.influencers[index];
   }
 
-  public deleteInfluencer(id: string): boolean {
-    const prevLen = this.influencers.length;
-    this.influencers = this.influencers.filter((inf) => inf.id !== id);
-    this.influencerContent = this.influencerContent.filter((c) => c.influencerId !== id);
+  // ----- Shared lists: niches, reach-out platforms, content platforms, failure reasons -----
+
+  private addLookup(collection: 'influencerNiches' | 'marketingOptions' | 'failureReasons', prefix: string, rawName: string, existing: { id: string; name: string; isArchived: boolean; list?: string }[], extra: Record<string, unknown> = {}) {
+    const name = rawName.trim().replace(/\s+/g, ' ');
+    if (!name) throw new Error('Enter a name.');
+    if (name.length > 60) throw new Error('Use a name of at most 60 characters.');
+    const clash = existing.find((row) => sameName(row.name, name));
+    if (clash && !clash.isArchived) return clash;
+    if (clash) throw new Error(`"${clash.name}" exists but is archived. An admin can restore it in Settings.`);
+    const row = { id: lookupId(prefix, name), name, isArchived: false, createdBy: this.currentUser.fullName, createdAt: new Date().toISOString(), ...extra };
+    const list = (this as any)[collection] as { id: string }[];
+    if (list.some((entry) => entry.id === row.id)) row.id = `${row.id}-${Date.now().toString(36)}`;
+    list.push(row);
     this.persistState();
-    return this.influencers.length < prevLen;
+    return row;
   }
+
+  private saveLookup(collection: 'influencerNiches' | 'marketingOptions' | 'failureReasons', row: { id: string; name: string; isArchived: boolean }) {
+    const list = (this as any)[collection] as { id: string }[];
+    const index = list.findIndex((entry) => entry.id === row.id);
+    if (index < 0) list.push({ ...row }); else list[index] = { ...list[index], ...row };
+    this.persistState();
+  }
+
+  public getInfluencerNiches(includeArchived = false): InfluencerNiche[] {
+    return [...this.influencerNiches].filter((niche) => includeArchived || !niche.isArchived).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** Creates the niche if the name is new; returns the existing one otherwise (case ignored). */
+  public addInfluencerNiche(name: string): InfluencerNiche {
+    return this.addLookup('influencerNiches', 'niche', name, this.influencerNiches) as InfluencerNiche;
+  }
+
+  public nicheUsage(id: string): number {
+    return this.influencers.filter((inf) => (inf.nicheIds || []).includes(id)).length;
+  }
+
+  public renameLookup(collection: 'influencerNiches' | 'marketingOptions' | 'failureReasons', id: string, rawName: string): void {
+    const name = rawName.trim().replace(/\s+/g, ' ');
+    if (!name || name.length > 60) throw new Error('Enter a name of at most 60 characters.');
+    const all: { id: string; name: string; isArchived: boolean; list?: string }[] = collection === 'failureReasons' ? this.getFailureReasons(true)
+      : collection === 'influencerNiches' ? this.influencerNiches : this.getAllMarketingOptions();
+    const row = all.find((entry) => entry.id === id);
+    if (!row) throw new Error('This entry no longer exists.');
+    if (all.some((entry) => entry.id !== id && sameName(entry.name, name) && entry.list === row.list)) throw new Error(`"${name}" already exists.`);
+    this.saveLookup(collection, { ...row, name });
+  }
+
+  public setLookupArchived(collection: 'influencerNiches' | 'marketingOptions' | 'failureReasons', id: string, isArchived: boolean): void {
+    const all: { id: string; name: string; isArchived: boolean }[] = collection === 'failureReasons' ? this.getFailureReasons(true)
+      : collection === 'influencerNiches' ? this.influencerNiches : this.getAllMarketingOptions();
+    const row = all.find((entry) => entry.id === id);
+    if (!row) throw new Error('This entry no longer exists.');
+    this.saveLookup(collection, { ...row, isArchived });
+  }
+
+  /** Move every influencer from one niche to another, then archive the first. */
+  public mergeInfluencerNiches(sourceId: string, targetId: string): number {
+    if (sourceId === targetId) throw new Error('Choose two different niches.');
+    const source = this.influencerNiches.find((niche) => niche.id === sourceId);
+    const target = this.influencerNiches.find((niche) => niche.id === targetId);
+    if (!source || !target) throw new Error('This niche no longer exists.');
+    let moved = 0;
+    for (const inf of this.influencers) {
+      if (!(inf.nicheIds || []).includes(sourceId)) continue;
+      inf.nicheIds = [...new Set((inf.nicheIds || []).map((id) => id === sourceId ? targetId : id))];
+      moved++;
+    }
+    source.isArchived = true; source.mergedIntoId = targetId;
+    this.persistState();
+    return moved;
+  }
+
+  public deleteInfluencerNiche(id: string): void {
+    if (this.nicheUsage(id) > 0) throw new Error('This niche is used by at least one influencer. Archive or merge it instead.');
+    this.influencerNiches = this.influencerNiches.filter((niche) => niche.id !== id);
+    this.persistState();
+  }
+
+  private getAllMarketingOptions(): MarketingOption[] {
+    const merged: MarketingOption[] = [...this.marketingOptions];
+    const defaults: [MarketingOptionList, string[]][] = [['REACH_OUT', DEFAULT_REACH_OUT_PLATFORMS], ['CONTENT_PLATFORM', DEFAULT_CONTENT_PLATFORMS]];
+    for (const [list, names] of defaults) for (const name of names) {
+      const id = lookupId(list === 'REACH_OUT' ? 'reach' : 'platform', name);
+      if (!merged.some((row) => row.list === list && (row.id === id || sameName(row.name, name)))) merged.push({ id, list, name, isArchived: false, createdAt: '' });
+    }
+    return merged;
+  }
+
+  /** Reach-out platforms and content platforms are two separate lists. */
+  public getMarketingOptions(list: MarketingOptionList, includeArchived = false): MarketingOption[] {
+    return this.getAllMarketingOptions().filter((row) => row.list === list && (includeArchived || !row.isArchived));
+  }
+
+  public addMarketingOption(list: MarketingOptionList, name: string): MarketingOption {
+    return this.addLookup('marketingOptions', list === 'REACH_OUT' ? 'reach' : 'platform', name, this.getAllMarketingOptions().filter((row) => row.list === list), { list }) as MarketingOption;
+  }
+
+  // ----- Marketing sends: their own collection, never orders -----
+
+  public getMarketingSends(filter?: { influencerId?: string }): MarketingSend[] {
+    const list = filter?.influencerId ? this.marketingSends.filter((send) => send.influencerId === filter.influencerId) : this.marketingSends;
+    return [...list].sort((a, b) => b.sentDateAd.localeCompare(a.sentDateAd) || (b.createdAt || '').localeCompare(a.createdAt || ''));
+  }
+
+  public getMarketingSendById(id: string): MarketingSend | undefined {
+    return this.marketingSends.find((send) => send.id === id);
+  }
+
+  /**
+   * The only way to create a send. It needs an existing influencer and carries
+   * no price, payment, total or order type.
+   */
+  public createMarketingSend(input: Omit<MarketingSend, 'id' | 'sendNumber' | 'createdAt' | 'status' | 'influencerName' | 'responsibleName'>): MarketingSend {
+    const influencer = this.influencers.find((inf) => inf.id === input.influencerId);
+    if (!influencer) throw new Error('Create the influencer first, then send from their profile.');
+    if (!input.brandCodes.length) throw new Error('Choose at least one brand.');
+    if (!input.items.length || input.items.some((item) => !Number.isSafeInteger(item.quantity) || item.quantity < 1)) throw new Error('Add at least one product with a whole-number quantity.');
+    if (input.items.some((item) => !input.brandCodes.includes(item.brandCode))) throw new Error('Every product must belong to one of the selected brands.');
+    if (input.expectedContentDateAd && input.expectedContentDateAd < input.sentDateAd) throw new Error('The expected content date cannot be earlier than the sent date.');
+    const responsible = this.users.find((user) => user.id === input.responsibleId);
+    const send: MarketingSend = {
+      ...input,
+      items: input.items.map((item) => ({ productId: item.productId, productName: item.productName, brandCode: item.brandCode, quantity: item.quantity })),
+      id: this.generateId('send'),
+      // Replaced by the server with the next MS number when the send is saved.
+      sendNumber: pendingDocumentId(),
+      influencerName: influencer.name,
+      responsibleName: responsible?.fullName || this.currentUser.fullName,
+      status: 'SENT',
+      createdAt: new Date().toISOString(),
+    };
+    this.marketingSends.unshift(send);
+    if (canPerform(this.currentUser, 'marketing', 'EDIT')) {
+      influencer.totalSends = this.marketingSends.filter((row) => row.influencerId === influencer.id && row.status !== 'CANCELLED').length;
+      if (!influencer.lastSendDate || send.sentDateAd >= influencer.lastSendDate) { influencer.lastSendDate = send.sentDateAd; influencer.lastSendDateBs = send.sentDateBs; }
+    }
+    this.persistState();
+    return send;
+  }
+
+  public cancelMarketingSend(id: string): MarketingSend | undefined {
+    const send = this.marketingSends.find((row) => row.id === id);
+    if (!send) return undefined;
+    send.status = 'CANCELLED';
+    this.persistState();
+    return send;
+  }
+
+  // ----- Content pieces -----
 
   public getInfluencerContent(influencerId?: string): InfluencerContent[] {
     if (influencerId) {
@@ -4252,78 +4519,98 @@ export class DatabaseService {
     return this.influencerContent;
   }
 
-  public addInfluencerContent(
-    data: Omit<InfluencerContent, 'id' | 'createdAt'>
-  ): InfluencerContent {
-    const newContent: InfluencerContent = {
-      ...data,
-      id: this.generateId('cnt'),
-      createdAt: new Date().toISOString(),
-    };
-    this.influencerContent.unshift(newContent);
+  private refreshSendStatus(sendId?: string) {
+    if (!sendId) return;
+    const send = this.marketingSends.find((row) => row.id === sendId);
+    if (!send || send.status === 'CANCELLED' || !canPerform(this.currentUser, 'marketing', 'EDIT')) return;
+    send.status = this.influencerContent.some((piece) => piece.sendId === sendId) ? 'CONTENT_RECEIVED' : 'SENT';
+  }
 
-    // Update parent influencer metrics
-    const inf = this.influencers.find((i) => i.id === data.influencerId);
-    if (inf) {
-      inf.totalContent = (inf.totalContent || 0) + 1;
-      inf.lastContentDate = data.datePostedAd;
-      inf.lastContentDateBs = data.datePostedBs;
-      if (inf.qualityRating === 'NOT_RATED') {
-        inf.qualityRating = 'AVERAGE'; // Upgrade to average once content is delivered
-      }
+  private refreshInfluencerContentStats(influencerId: string) {
+    const inf = this.influencers.find((i) => i.id === influencerId);
+    if (!inf || !canPerform(this.currentUser, 'marketing', 'EDIT')) return;
+    const own = this.influencerContent.filter((piece) => piece.influencerId === influencerId);
+    const latest = own.reduce<InfluencerContent | null>((best, piece) => !best || piece.datePostedAd > best.datePostedAd ? piece : best, null);
+    inf.totalContent = own.length;
+    inf.lastContentDate = latest?.datePostedAd;
+    inf.lastContentDateBs = latest?.datePostedBs;
+  }
+
+  public saveInfluencerContent(data: Omit<InfluencerContent, 'id' | 'createdAt'> & { id?: string }): InfluencerContent {
+    if (!data.links?.length) throw new Error('Add at least one platform link.');
+    if (!data.datePostedAd) throw new Error('The date posted is required.');
+    const existing = data.id ? this.influencerContent.find((piece) => piece.id === data.id) : undefined;
+    const previousSend = existing?.sendId;
+    let saved: InfluencerContent;
+    if (existing) {
+      // Replace the legacy single-link fields with the new list on first edit.
+      const { url: _url, platform: _platform, brandCode: _brand, productName: _product, ...kept } = existing;
+      saved = { ...kept, ...data, id: existing.id, createdAt: existing.createdAt };
+      this.influencerContent[this.influencerContent.indexOf(existing)] = saved;
+    } else {
+      saved = { ...data, id: this.generateId('cnt'), createdAt: new Date().toISOString() };
+      this.influencerContent.unshift(saved);
     }
-
+    this.refreshSendStatus(saved.sendId);
+    if (previousSend && previousSend !== saved.sendId) this.refreshSendStatus(previousSend);
+    this.refreshInfluencerContentStats(saved.influencerId);
     this.persistState();
-    this.logActivity('Influencer Content Logged', 'INFLUENCER_CONTENT', newContent.id, {
-      influencerId: data.influencerId,
-      url: data.url,
-      brandCode: data.brandCode,
-    });
-    return newContent;
+    return saved;
   }
 
   public deleteInfluencerContent(id: string): boolean {
     const target = this.influencerContent.find((c) => c.id === id);
     if (!target) return false;
     this.influencerContent = this.influencerContent.filter((c) => c.id !== id);
-
-    const inf = this.influencers.find((i) => i.id === target.influencerId);
-    if (inf && inf.totalContent > 0) {
-      inf.totalContent -= 1;
-    }
-
+    this.refreshSendStatus(target.sendId);
+    this.refreshInfluencerContentStats(target.influencerId);
     this.persistState();
     return true;
   }
 
-  public getMarketingOrders(brandCode?: BrandCode): Order[] {
-    return this.orders.filter((o) => {
-      if (!o.isMarketing) return false;
-      if (brandCode && brandCode !== 'ALL' && o.brandCode !== brandCode) return false;
-      return true;
-    });
+  /** Orders still carrying the old marketing flag. Shown to admins until the data upgrade has moved them. */
+  public getLegacyMarketingOrderCount(): number {
+    return this.orders.filter((o) => o.isMarketing).length;
   }
 
-  public toggleOrderContentReceived(orderId: string, received?: boolean): Order | undefined {
-    const order = this.orders.find((o) => o.id === orderId);
-    if (!order) return undefined;
-    const nextVal = received !== undefined ? received : !order.contentReceived;
-    order.contentReceived = nextVal;
+  // ----- Preferences saved on the account -----
 
-    // Also update influencer stats
-    if (order.influencerId) {
-      const inf = this.influencers.find((i) => i.id === order.influencerId);
-      if (inf) {
-        if (nextVal && (!inf.qualityRating || inf.qualityRating === 'NOT_RATED' || inf.qualityRating === 'POOR')) {
-          inf.qualityRating = 'AVERAGE';
-        }
-      }
-    }
+  public getMyPreferences(): UserPreferenceRecord {
+    return this.userPreferences.find((row) => row.id === this.currentUser.id) || { id: this.currentUser.id };
+  }
 
+  public setMyPreferences(updates: Partial<Omit<UserPreferenceRecord, 'id'>>): void {
+    if (!this.currentUser.id) return;
+    const next = { ...this.getMyPreferences(), ...updates, id: this.currentUser.id, updatedAt: new Date().toISOString() };
+    for (const key of Object.keys(next) as (keyof UserPreferenceRecord)[]) if (next[key] === undefined) delete next[key];
+    const index = this.userPreferences.findIndex((row) => row.id === this.currentUser.id);
+    if (index < 0) this.userPreferences.push(next); else this.userPreferences[index] = next;
     this.persistState();
-    this.logActivity('Marketing Content Receipt Toggled', 'ORDER', orderId, { contentReceived: received });
-    return order;
   }
+
+  /** True once the first server refresh has completed in this session, so screens can tell "empty" from "not loaded yet". */
+  public isWorkspaceLoaded(): boolean { return this.server || this.workspaceLoaded; }
+
+  // ----- Short order ID prefixes -----
+
+  public getBrandPrefix(brandCode: string): string { return brandPrefix(brandCode, this.brandPrefixes); }
+  public getBrandPrefixes(): Record<string, string> { return { ...this.brandPrefixes }; }
+
+  public setBrandPrefix(brandCode: string, value: string): void {
+    const code = brandCode.trim().toUpperCase();
+    const prefix = validateBrandPrefix(value);
+    const others = this.getBrands('ALL').filter((brand) => brand.code.toUpperCase() !== code);
+    const clash = others.find((brand) => this.getBrandPrefix(brand.code) === prefix);
+    if (clash) throw new Error(`${prefix} is already the prefix for ${clash.name}.`);
+    // Save every brand's effective prefix so a later default can never collide with a saved one.
+    const next: Record<string, string> = {};
+    for (const brand of others) next[brand.code.toUpperCase()] = this.getBrandPrefix(brand.code);
+    next[code] = prefix;
+    this.brandPrefixes = next;
+    this.persistState();
+  }
+
+  public reservedPrefixes(): string[] { return Object.values(RESERVED_PREFIXES); }
 
   // =========================================================================
   // FIX 62: DASHBOARD SALES MODE (ALL / D2C / B2B)

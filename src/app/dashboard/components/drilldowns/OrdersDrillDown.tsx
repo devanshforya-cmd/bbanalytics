@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { matchesDocumentId } from '@/lib/document-ids';
 import Link from 'next/link';
 import { ShoppingBag, Search } from 'lucide-react';
 import { Order, ReturnEntry, BrandCode, Brand } from '@/lib/types';
@@ -128,8 +129,7 @@ function OrdersListTab({
     const cust = o.customerName.toLowerCase();
     const phone = o.customerPhone.toLowerCase();
     const prods = o.items.map((i) => i.productName.toLowerCase()).join(' ');
-    const id = o.orderNumber.toLowerCase();
-    return cust.includes(q) || phone.includes(q) || prods.includes(q) || id.includes(q);
+    return cust.includes(q) || phone.includes(q) || prods.includes(q) || matchesDocumentId(q, o.orderNumber, o.legacyOrderNumber);
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -220,16 +220,10 @@ function OrdersListTab({
                   </td>
                   <td className="p-2.5 whitespace-nowrap text-center font-bold">{totalUnits}</td>
                   <td className="p-2.5 whitespace-nowrap">
-                    {o.isMarketing ? (
-                      <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold text-[10px] border border-purple-200 inline-flex items-center gap-1">
-                        <span>🎁</span>
-                        <span>MARKETING</span>
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium text-[10px] border border-slate-200">
+                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium text-[10px] border border-slate-200">
                         {o.platform}
                       </span>
-                    )}
+
                   </td>
                   <td className="p-2.5 whitespace-nowrap">
                     <span

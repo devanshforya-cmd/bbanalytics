@@ -27,10 +27,14 @@ import SharedAccessSettings from './components/SharedAccessSettings';
 import FieldSalesSettings from './components/FieldSalesSettings';
 import FeatureFlagsSettings from './components/FeatureFlagsSettings';
 import GoogleWorkspaceSettings from './components/GoogleWorkspaceSettings';
+import ListsSettings from './components/ListsSettings';
+import OrderIdPrefixes from './components/OrderIdPrefixes';
+import DataUpgradeSettings from './components/DataUpgradeSettings';
+import SetupWizard from '@/components/dashboard/SetupWizard';
 import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
 import { hasAccess, isSuperAdmin } from '@/lib/permissions';
-import { Compass, Sliders } from 'lucide-react';
+import { Compass, Sliders, ListChecks, DatabaseZap, Sparkles } from 'lucide-react';
 
 export type SettingsTab =
   | 'STAFF'
@@ -44,10 +48,13 @@ export type SettingsTab =
   | 'IMPORT'
   | 'SHARED_ACCESS'
   | 'FEATURE_FLAGS'
-  | 'GOOGLE';
+  | 'GOOGLE'
+  | 'LISTS'
+  | 'UPGRADE';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('STAFF');
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
   const [user, setUser] = useState(() => getSessionUser() || db.getCurrentUser());
   useEffect(() => { const refresh = () => setUser(getSessionUser() || db.getCurrentUser()); window.addEventListener('bb-db-updated', refresh); return () => window.removeEventListener('bb-db-updated', refresh); }, []);
 
@@ -67,6 +74,8 @@ export default function SettingsPage() {
       'shared-access': 'SHARED_ACCESS',
       'feature-flags': 'FEATURE_FLAGS',
       google: 'GOOGLE',
+      lists: 'LISTS',
+      upgrade: 'UPGRADE',
     };
     if (tab && tabByQuery[tab]) setActiveTab(tabByQuery[tab]);
   }, []);
@@ -83,9 +92,11 @@ export default function SettingsPage() {
     { id: 'PROMOTIONS' as SettingsTab, label: 'Promotions', icon: Flame },
     { id: 'IMPORT' as SettingsTab, label: 'Data Import Tool', icon: FileSpreadsheet },
     { id: 'SHARED_ACCESS' as SettingsTab, label: 'Shared Access', icon: Share2 },
+    { id: 'LISTS' as SettingsTab, label: 'Lists & Categories', icon: ListChecks },
     { id: 'FEATURE_FLAGS' as SettingsTab, label: 'Feature Flags (A/B)', icon: Sliders },
+    { id: 'UPGRADE' as SettingsTab, label: 'Data Upgrade', icon: DatabaseZap },
   ].filter(tab => {
-    if (['GOOGLE', 'STAFF', 'RULES', 'IMPORT', 'SHARED_ACCESS', 'FEATURE_FLAGS'].includes(tab.id)) return isSuperAdmin(user);
+    if (['GOOGLE', 'STAFF', 'RULES', 'IMPORT', 'SHARED_ACCESS', 'FEATURE_FLAGS', 'UPGRADE'].includes(tab.id)) return isSuperAdmin(user);
     if (tab.id === 'CHANNELS') return hasAccess(user, 'orderflow');
     if (tab.id === 'FIELD_SALES') return hasAccess(user, 'beat_plans') || hasAccess(user, 'stores');
     return true;
@@ -109,6 +120,11 @@ export default function SettingsPage() {
                 Manage operational staff, brand lines, delivery channels, and business rules.
               </p>
             </div>
+            {isSuperAdmin(user) && (
+              <button type="button" onClick={() => setShowSetupGuide(true)} className="inline-flex items-center gap-1.5 self-start rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 sm:self-center">
+                <Sparkles className="h-3.5 w-3.5 text-blue-600" /> Setup guide
+              </button>
+            )}
           </div>
 
           {/* Tab Strip */}
@@ -136,6 +152,8 @@ export default function SettingsPage() {
                       IMPORT: 'import',
                       SHARED_ACCESS: 'shared-access',
                       FEATURE_FLAGS: 'feature-flags',
+                      LISTS: 'lists',
+                      UPGRADE: 'upgrade',
                     };
                     url.searchParams.set('tab', queryByTab[tab.id]);
                     window.history.replaceState(null, '', url);
@@ -159,7 +177,7 @@ export default function SettingsPage() {
           {activeTab === 'GOOGLE' && <GoogleWorkspaceSettings />}
           {activeTab === 'STAFF' && <StaffManagement />}
           {activeTab === 'FIELD_SALES' && <FieldSalesSettings />}
-          {activeTab === 'BRANDS' && <BrandSettings />}
+          {activeTab === 'BRANDS' && <div className="space-y-6"><BrandSettings /><OrderIdPrefixes /></div>}
           {activeTab === 'CHANNELS' && <ChannelSettings />}
           {activeTab === 'RULES' && <NotificationRules />}
           {activeTab === 'HOLIDAYS' && <HolidayCalendar />}
@@ -168,7 +186,11 @@ export default function SettingsPage() {
           {activeTab === 'IMPORT' && <DataImport />}
           {activeTab === 'SHARED_ACCESS' && <SharedAccessSettings />}
           {activeTab === 'FEATURE_FLAGS' && <FeatureFlagsSettings />}
+          {activeTab === 'LISTS' && <ListsSettings />}
+          {activeTab === 'UPGRADE' && <DataUpgradeSettings />}
         </div>
+        {/* Opened on purpose from here; the dashboard only shows it for a brand-new, empty workspace. */}
+        {showSetupGuide && isSuperAdmin(user) && <SetupWizard onComplete={() => setShowSetupGuide(false)} onDismiss={() => setShowSetupGuide(false)} />}
       </div>
     </PageGuard>
   );

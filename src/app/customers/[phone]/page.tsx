@@ -745,12 +745,12 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                       </div>
 
                       <div className="flex items-center justify-between pt-1 text-[11px]">
-                        <span className="text-slate-400 font-mono">ID: {ord.id}</span>
+                        <span className="text-slate-400 font-mono">{ord.legacyOrderNumber ? `Earlier ID ${ord.legacyOrderNumber}` : ''}</span>
                         <Link
-                          href={`/orderflow/manual-entry?order=${ord.orderNumber}`}
+                          href={`/orderflow/orders/${ord.id}`}
                           className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-bold hover:underline"
                         >
-                          View in OrderFlow <ExternalLink className="h-3 w-3" />
+                          Open or edit order <ExternalLink className="h-3 w-3" />
                         </Link>
                       </div>
                     </div>

@@ -159,6 +159,7 @@ export default function DispatchPage() {
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-slate-100 pb-3">
                 <div>
                   <div className="flex items-center gap-2">
+                    {disp.dispatchNumber && <span className="rounded bg-slate-900 px-2 py-0.5 font-mono text-xs font-bold text-white">{disp.dispatchNumber}</span>}
                     <h3 className="font-bold text-slate-900 text-base">{disp.distributorName}</h3>
                     {disp.branchName && (
                       <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
