@@ -17,6 +17,12 @@ import DualDateField from '@/components/common/DualDateField';
 import { toast } from '@/components/common/Toast';
 import { displayDocumentId } from '@/lib/document-ids';
 
+interface CatalogueEntry { id: string; name: string; sku: string; brandCode: string; isCombo: boolean; contents: string }
+
+function ComboBadge() {
+  return <span className="ml-1.5 inline-block rounded-full bg-amber-100 px-1.5 py-px align-middle text-[9px] font-bold uppercase tracking-wide text-amber-800">Combo</span>;
+}
+
 interface SendProductsFormProps {
   influencer: Influencer;
   onClose: () => void;
@@ -58,10 +64,17 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
   const [, refresh] = useState(0);
 
   const reachOutOptions = db.getMarketingOptions('REACH_OUT');
-  const catalogue = db.getProducts('ALL').filter((product) => product.active !== false);
+  // Products and combos (kits) are both sendable. Combos follow their products within each brand.
+  const catalogue: CatalogueEntry[] = [
+    ...db.getProducts('ALL').filter((product) => product.active !== false)
+      .map((product) => ({ id: product.id, name: product.name, sku: product.sku || '', brandCode: product.brandCode, isCombo: false, contents: '' })),
+    ...db.getCombos().filter((combo) => combo.active !== false && combo.isActive !== false)
+      .map((combo) => ({ id: combo.id, name: combo.name, sku: combo.sku || '', brandCode: combo.brandCode, isCombo: true,
+        contents: (combo.items || []).map((item) => `${item.quantity}× ${item.productName}`).join(', ') })),
+  ];
   const available = useMemo(() => {
     const term = productQuery.trim().toLowerCase();
-    return catalogue.filter((product) => brandCodes.includes(product.brandCode) && (!term || product.name.toLowerCase().includes(term) || (product.sku || '').toLowerCase().includes(term)));
+    return catalogue.filter((product) => brandCodes.includes(product.brandCode) && (!term || product.name.toLowerCase().includes(term) || product.sku.toLowerCase().includes(term) || product.contents.toLowerCase().includes(term)));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandCodes, productQuery, catalogue.length]);
   const brandName = (code: string) => brands.find((brand) => brand.code === code)?.name || code;
@@ -86,7 +99,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
     if (!responsibleId) next.responsible = 'Choose the responsible person.';
     if (!sentAd) next.sent = 'Choose the sent date.';
     if (expectedAd && expectedAd < sentAd) next.expected = 'Cannot be earlier than the sent date.';
-    if (!items.length) next.items = 'Add at least one product.';
+    if (!items.length) next.items = 'Add at least one product or combo.';
     setErrors(next);
     if (Object.keys(next).length) { toast.error('A few details are missing', Object.values(next)[0]); return; }
     setStep('CONFIRM');
@@ -97,7 +110,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
       const send = db.createMarketingSend({
         influencerId: influencer.id, brandCodes, reachOutPlatform: reachOutName, responsibleId, sentDateAd: sentAd, sentDateBs: sentBs,
         ...(expectedAd ? { expectedContentDateAd: expectedAd, expectedContentDateBs: expectedBs } : {}),
-        items: items.map((row) => { const product = productOf(row.productId)!; return { productId: product.id, productName: product.name, brandCode: product.brandCode, quantity: row.quantity }; }),
+        items: items.map((row) => { const product = productOf(row.productId)!; return { productId: product.id, productName: product.name, brandCode: product.brandCode, quantity: row.quantity, ...(product.isCombo ? { isCombo: true } : {}) }; }),
         deliveryChannel: channel, ...(address.trim() ? { deliveryAddress: address.trim() } : {}), ...(phone.trim() ? { deliveryPhone: phone.trim() } : {}), ...(notes.trim() ? { notes: notes.trim() } : {}),
       });
       try { await syncManager.forceSyncNow(); } catch { /* The send stays in the sync queue. */ }
@@ -149,7 +162,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
             <ul className="divide-y divide-slate-100">
               {items.map((row) => { const product = productOf(row.productId); return (
                 <li key={row.productId} className="flex items-center justify-between gap-2 px-3 py-2">
-                  <span className="min-w-0"><span className="block truncate font-semibold text-slate-900">{product?.name}</span><span className="text-[11px] text-slate-500">{brandName(product?.brandCode || '')}</span></span>
+                  <span className="min-w-0"><span className="block truncate font-semibold text-slate-900">{product?.name}{product?.isCombo && <ComboBadge />}</span><span className="text-[11px] text-slate-500">{brandName(product?.brandCode || '')}</span></span>
                   <span className="shrink-0 font-black text-slate-900">× {row.quantity}</span>
                 </li>
               ); })}
@@ -198,12 +211,12 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
           </div>
 
           <section>
-            <span className="mb-1.5 block font-bold text-slate-700">6. Products <span className="text-rose-500">*</span></span>
+            <span className="mb-1.5 block font-bold text-slate-700">6. Products and combos <span className="text-rose-500">*</span></span>
             {items.length > 0 && (
               <ul className="mb-2 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
                 {items.map((row) => { const product = productOf(row.productId); return (
                   <li key={row.productId} className="flex items-center justify-between gap-2 bg-white px-3 py-2">
-                    <span className="min-w-0"><span className="block truncate font-semibold text-slate-900">{product?.name}</span><span className="text-[11px] text-slate-500">{brandName(product?.brandCode || '')}</span></span>
+                    <span className="min-w-0"><span className="block truncate font-semibold text-slate-900">{product?.name}{product?.isCombo && <ComboBadge />}</span><span className="text-[11px] text-slate-500">{brandName(product?.brandCode || '')}</span></span>
                     <span className="flex shrink-0 items-center gap-1">
                       <button type="button" aria-label={`One fewer ${product?.name}`} onClick={() => setQuantity(row.productId, row.quantity - 1)} disabled={row.quantity <= 1} className="rounded-lg border border-slate-200 p-1 text-slate-600 hover:bg-slate-50 disabled:opacity-40"><Minus className="h-3 w-3" /></button>
                       <input aria-label={`Quantity of ${product?.name}`} type="number" min={1} max={999} value={row.quantity} onChange={(event) => setQuantity(row.productId, Number(event.target.value))} className="w-12 rounded-lg border border-slate-200 py-1 text-center font-bold" />
@@ -214,11 +227,11 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
                 ); })}
               </ul>
             )}
-            {!brandCodes.length ? <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-center text-slate-500">Choose a brand to see its products.</p> : (
+            {!brandCodes.length ? <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-center text-slate-500">Choose a brand to see its products and combos.</p> : (
               <div className="rounded-xl border border-slate-200">
                 <div className="relative border-b border-slate-100">
                   <Search className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                  <input aria-label="Search products" value={productQuery} onChange={(event) => setProductQuery(event.target.value)} placeholder="Search the catalogue by name or SKU" className="w-full rounded-t-xl bg-transparent py-2 pl-8 pr-3 text-xs outline-none" />
+                  <input aria-label="Search products and combos" value={productQuery} onChange={(event) => setProductQuery(event.target.value)} placeholder="Search products and combos by name or SKU" className="w-full rounded-t-xl bg-transparent py-2 pl-8 pr-3 text-xs outline-none" />
                 </div>
                 <ul className="max-h-52 overflow-y-auto">
                   {brandCodes.map((code) => { const list = available.filter((product) => product.brandCode === code); if (!list.length) return null; return (
@@ -229,7 +242,10 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
                           <li key={product.id}>
                             <button type="button" disabled={added} onClick={() => { setItems((rows) => [...rows, { productId: product.id, quantity: 1 }]); setErrors((current) => ({ ...current, items: '' })); }}
                               className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-purple-50 disabled:cursor-default disabled:bg-white disabled:text-slate-400">
-                              <span className="truncate font-medium">{product.name}</span>
+                              <span className="min-w-0">
+                                <span className="block truncate font-medium">{product.name}{product.isCombo && <ComboBadge />}</span>
+                                {product.isCombo && product.contents && <span className="block truncate text-[10px] text-slate-500">{product.contents}</span>}
+                              </span>
                               <span className={`inline-flex shrink-0 items-center gap-1 text-[11px] font-bold ${added ? 'text-emerald-600' : 'text-purple-700'}`}>{added ? <><Check className="h-3 w-3" /> Added</> : <><PackagePlus className="h-3 w-3" /> Add</>}</span>
                             </button>
                           </li>
@@ -237,7 +253,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
                       </ul>
                     </li>
                   ); })}
-                  {!available.length && <li className="p-4 text-center text-slate-500">{productQuery.trim() ? 'No product matches this search.' : 'No active products are saved for the selected brands.'}</li>}
+                  {!available.length && <li className="p-4 text-center text-slate-500">{productQuery.trim() ? 'No product or combo matches this search.' : 'No active products or combos are saved for the selected brands.'}</li>}
                 </ul>
               </div>
             )}

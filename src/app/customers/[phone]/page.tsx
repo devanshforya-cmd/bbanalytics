@@ -1,5 +1,6 @@
 'use client';
 
+import { failureReasonLabel } from '@/lib/failure-reason';
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -231,7 +232,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
     failures.forEach((df) => {
       rawEvents.push({
         date: df.dateAd || '2026-08-05',
-        label: `Delivery failure (${df.reason})`,
+        label: `Delivery failure (${failureReasonLabel(df)})`,
         points: -5,
         type: 'FAILURE',
       });
@@ -769,7 +770,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="font-bold text-rose-900 text-sm">
-                            Delivery Failure: {df.reason} (Order #{df.orderNumber})
+                            Delivery Failure: {failureReasonLabel(df)} (Order #{df.orderNumber})
                           </div>
                           <div className="text-slate-500 text-[11px] mt-0.5">
                             {df.dateBs} ({df.dateAd}) • Courier Territory: <strong>{df.valley} Valley</strong>

@@ -1,3 +1,4 @@
+import { isOtherReason, failureReasonLabel } from '../failure-reason';
 import { normalizePhoneNumber } from '../auth-utils';
 import { installWorkspaceFetch } from '../workspace-reset-client';
 import { validGpsCoordinates } from '../gps-validation';
@@ -2701,8 +2702,10 @@ export class DatabaseService {
 
   public addDeliveryFailure(failure: Omit<DeliveryFailure, 'id' | 'createdAt'>): DeliveryFailure {
     if (failure.deliveryMethod) assertActiveOrderOption(this.getOrderOptions(), 'deliveryMethods', failure.deliveryMethod);
+    if (isOtherReason(failure.reason) && !failure.reasonDetail?.trim()) throw new Error('Write the reason when Other is chosen.');
     const now = new Date().toISOString();
     const attempt: DeliveryAttempt = { attempt: failure.attempts || 1, dateAd: failure.dateAd, dateBs: failure.dateBs, reason: failure.reason,
+      ...(failure.reasonDetail?.trim() ? { reasonDetail: failure.reasonDetail.trim() } : {}),
       ...(failure.remarks ? { remarks: failure.remarks } : {}), loggedBy: this.currentUser.fullName, loggedAt: now };
     const newDf: DeliveryFailure = {
       ...failure,
@@ -2725,7 +2728,7 @@ export class DatabaseService {
         customer,
         'DELIVERY_FAILURE',
         KARMA_RULES.DELIVERY_FAILURE,
-        `Delivery failure: ${newDf.reason} (Order #${newDf.orderNumber})`
+        `Delivery failure: ${failureReasonLabel(newDf)} (Order #${newDf.orderNumber})`
       );
       Object.assign(customer, updatedCustomer);
     }
@@ -2735,13 +2738,17 @@ export class DatabaseService {
   }
 
   /** A further failed attempt on an order that already has an open failure. Never a duplicate record. */
-  public addDeliveryAttempt(failureId: string, attempt: { dateAd: string; dateBs: string; reason: string; remarks?: string; reattemptDateAd?: string; reattemptDateBs?: string }): DeliveryFailure | null {
+  public addDeliveryAttempt(failureId: string, attempt: { dateAd: string; dateBs: string; reason: string; reasonDetail?: string; remarks?: string; reattemptDateAd?: string; reattemptDateBs?: string }): DeliveryFailure | null {
     const failure = this.deliveryFailures.find((df) => df.id === failureId);
     if (!failure) return null;
+    if (isOtherReason(attempt.reason) && !attempt.reasonDetail?.trim()) throw new Error('Write the reason when Other is chosen.');
+    const detail = attempt.reasonDetail?.trim() || '';
     const number = (failure.attempts || failure.attemptLog?.length || 1) + 1;
     const log: DeliveryAttempt[] = failure.attemptLog?.length ? [...failure.attemptLog]
-      : [{ attempt: 1, dateAd: failure.dateAd, dateBs: failure.dateBs, reason: failure.reason, ...(failure.remarks ? { remarks: failure.remarks } : {}), loggedBy: '', loggedAt: failure.createdAt }];
-    log.push({ attempt: number, dateAd: attempt.dateAd, dateBs: attempt.dateBs, reason: attempt.reason, ...(attempt.remarks ? { remarks: attempt.remarks } : {}), loggedBy: this.currentUser.fullName, loggedAt: new Date().toISOString() });
+      : [{ attempt: 1, dateAd: failure.dateAd, dateBs: failure.dateBs, reason: failure.reason, ...(failure.reasonDetail ? { reasonDetail: failure.reasonDetail } : {}), ...(failure.remarks ? { remarks: failure.remarks } : {}), loggedBy: '', loggedAt: failure.createdAt }];
+    log.push({ attempt: number, dateAd: attempt.dateAd, dateBs: attempt.dateBs, reason: attempt.reason, ...(detail ? { reasonDetail: detail } : {}), ...(attempt.remarks ? { remarks: attempt.remarks } : {}), loggedBy: this.currentUser.fullName, loggedAt: new Date().toISOString() });
+    // The failure shows its latest reason; an earlier "Other" explanation does not carry over to a different reason.
+    if (detail) failure.reasonDetail = detail; else delete failure.reasonDetail;
     Object.assign(failure, { attempts: number, attemptLog: log, reason: attempt.reason, dateAd: attempt.dateAd, dateBs: attempt.dateBs,
       status: attempt.reattemptDateAd ? 'REATTEMPT_SCHEDULED' : 'FAILED',
       ...(attempt.remarks ? { remarks: attempt.remarks } : {}),
@@ -2751,7 +2758,7 @@ export class DatabaseService {
     const customer = this.editableCustomer(failure.customerPhone);
     if (customer) {
       customer.totalDeliveryFailures += 1;
-      Object.assign(customer, applyKarmaEvent(customer, 'DELIVERY_FAILURE', KARMA_RULES.DELIVERY_FAILURE, `Delivery attempt ${number} failed: ${attempt.reason} (Order #${failure.orderNumber})`).updatedCustomer);
+      Object.assign(customer, applyKarmaEvent(customer, 'DELIVERY_FAILURE', KARMA_RULES.DELIVERY_FAILURE, `Delivery attempt ${number} failed: ${failureReasonLabel({ reason: attempt.reason, reasonDetail: detail })} (Order #${failure.orderNumber})`).updatedCustomer);
     }
     this.persistState();
     return failure;
@@ -4484,7 +4491,7 @@ export class DatabaseService {
     const responsible = this.users.find((user) => user.id === input.responsibleId);
     const send: MarketingSend = {
       ...input,
-      items: input.items.map((item) => ({ productId: item.productId, productName: item.productName, brandCode: item.brandCode, quantity: item.quantity })),
+      items: input.items.map((item) => ({ productId: item.productId, productName: item.productName, brandCode: item.brandCode, quantity: item.quantity, ...(item.isCombo ? { isCombo: true } : {}) })),
       id: this.generateId('send'),
       // Replaced by the server with the next MS number when the send is saved.
       sendNumber: pendingDocumentId(),

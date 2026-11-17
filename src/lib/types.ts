@@ -761,6 +761,8 @@ export interface DeliveryFailure {
   dateBs: string;
   /** Reasons are managed in Settings; historical labels are kept as saved. */
   reason: string;
+  /** The typed explanation when the reason is "Other". */
+  reasonDetail?: string;
   valley: 'Inside' | 'Outside';
   attempts?: number;
   attemptLog?: DeliveryAttempt[];
@@ -782,6 +784,7 @@ export interface DeliveryAttempt {
   dateAd: string;
   dateBs: string;
   reason: string;
+  reasonDetail?: string;
   remarks?: string;
   loggedBy: string;
   loggedAt: string;
@@ -1245,10 +1248,13 @@ export interface Influencer {
 }
 
 export interface MarketingSendItem {
+  /** A product id, or a combo id when isCombo is true. */
   productId: string;
   productName: string;
   brandCode: BrandCode;
   quantity: number;
+  /** True when this line is a combo (kit) rather than a single product. */
+  isCombo?: boolean;
 }
 
 export type MarketingSendStatus = 'SENT' | 'CONTENT_RECEIVED' | 'CANCELLED';

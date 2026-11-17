@@ -51,7 +51,7 @@ export function buildGoogleReportTabs(db: GoogleReportDatabase, month = nepalRep
     // Marketing sends have their own tab and never appear on an Orders tab.
     { title: 'Marketing Sends', values: [
       ['Send ID', 'Sent Date (BS)', 'Sent Date (AD)', 'Influencer', 'Brands', 'Products', 'Units', 'Reach-out Platform', 'Responsible', 'Delivery Channel', 'Content Due (AD)', 'Status'],
-      ...sends.map((send) => [send.sendNumber, send.sentDateBs || '', send.sentDateAd || '', send.influencerName || '', (send.brandCodes || []).join(', '), (send.items || []).map((item) => `${item.quantity}x ${item.productName}`).join('; '), (send.items || []).reduce((sum, item) => sum + (item.quantity ?? 0), 0), send.reachOutPlatform || '', send.responsibleName || '', send.deliveryChannel || '', send.expectedContentDateAd || '', send.status || '']),
+      ...sends.map((send) => [send.sendNumber, send.sentDateBs || '', send.sentDateAd || '', send.influencerName || '', (send.brandCodes || []).join(', '), (send.items || []).map((item) => `${item.quantity}x ${item.productName}${item.isCombo ? " (combo)" : ""}`).join('; '), (send.items || []).reduce((sum, item) => sum + (item.quantity ?? 0), 0), send.reachOutPlatform || '', send.responsibleName || '', send.deliveryChannel || '', send.expectedContentDateAd || '', send.status || '']),
     ] },
     { title: `Stock Counts-${month}`, values: [
       ['Date (AD)', 'Store', 'Entity Type', 'Officer', 'Product', 'Shelf Qty', 'Previous Qty', 'Flagged Drop'],

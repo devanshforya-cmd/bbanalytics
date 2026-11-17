@@ -192,7 +192,7 @@ export default function InfluencerDetailPage() {
                       </div>
                       <span className="text-[11px] text-slate-500">Sent {formatDate(send.sentDateAd, send.sentDateBs)}</span>
                     </div>
-                    <p className="mt-2 font-medium text-slate-800">{send.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')}</p>
+                    <p className="mt-2 font-medium text-slate-800">{send.items.map((item) => `${item.quantity}× ${item.productName}${item.isCombo ? " (combo)" : ""}`).join(', ')}</p>
                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
                       <span>Reached out on <strong className="text-slate-700">{send.reachOutPlatform}</strong></span>
                       <span>Responsible <strong className="text-slate-700">{send.responsibleName || 'Not recorded'}</strong></span>

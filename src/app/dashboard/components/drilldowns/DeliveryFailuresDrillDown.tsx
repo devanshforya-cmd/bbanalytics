@@ -1,5 +1,6 @@
 'use client';
 
+import { failureReasonLabel } from '@/lib/failure-reason';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { TruckIcon } from 'lucide-react';
@@ -133,7 +134,7 @@ function DeliveryFailuresListTab({
                   {f.brandCode}
                 </span>
               </td>
-              <td className="p-2.5 font-semibold text-rose-700">{f.reason}</td>
+              <td className="p-2.5 font-semibold text-rose-700">{failureReasonLabel(f)}</td>
               <td className="p-2.5 text-slate-600">{f.valley} Valley</td>
               <td className="p-2.5 text-center font-bold text-slate-800">2</td>
               <td className="p-2.5">

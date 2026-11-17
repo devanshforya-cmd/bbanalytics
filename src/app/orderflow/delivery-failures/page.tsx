@@ -240,6 +240,7 @@ export default function DeliveryFailuresPage() {
           f.customerPhone.includes(q) ||
           (f.productName && f.productName.toLowerCase().includes(q)) ||
           f.reason.toLowerCase().includes(q) ||
+          (f.reasonDetail && f.reasonDetail.toLowerCase().includes(q)) ||
           (f.remarks && f.remarks.toLowerCase().includes(q)) ||
           (f.assignedTo && f.assignedTo.toLowerCase().includes(q));
         if (!matches) return false;
@@ -796,6 +797,7 @@ export default function DeliveryFailuresPage() {
                         >
                           {df.reason}
                         </span>
+                        {df.reasonDetail && <span className="mt-1 block max-w-[220px] whitespace-normal text-[11px] text-slate-600" title={df.reasonDetail}>{df.reasonDetail}</span>}
                       </td>
 
                       {/* Delivery Method */}

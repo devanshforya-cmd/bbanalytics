@@ -181,7 +181,7 @@ export default function ContentPieceForm({ influencer, content, sendId, onClose,
           <label htmlFor="content-send" className="mb-1 block font-bold text-slate-700">Linked send</label>
           <select id="content-send" value={linkedSend} onChange={(event) => setLinkedSend(event.target.value)} className={field}>
             <option value="">Not linked to a send</option>
-            {sends.map((send) => <option key={send.id} value={send.id}>{displayDocumentId(send.sendNumber)} · {formatDate(send.sentDateAd, send.sentDateBs)} · {send.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ').slice(0, 70)}</option>)}
+            {sends.map((send) => <option key={send.id} value={send.id}>{displayDocumentId(send.sendNumber)} · {formatDate(send.sentDateAd, send.sentDateBs)} · {send.items.map((item) => `${item.quantity}× ${item.productName}${item.isCombo ? " (combo)" : ""}`).join(', ').slice(0, 70)}</option>)}
           </select>
           <p className="mt-1 text-[11px] text-slate-500">{sends.length ? 'Optional. Linking marks that send as Content received and clears any overdue reminder.' : 'This influencer has no sends yet.'}</p>
         </section>
