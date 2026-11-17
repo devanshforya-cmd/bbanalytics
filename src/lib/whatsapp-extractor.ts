@@ -6,6 +6,7 @@ export type Confidence = 'HIGH' | 'AUTO' | 'REVIEW' | 'FAILED';
 export interface ExtractedField<T> { value: T; confidence: Confidence; rawMatched?: string; matchedKeyword?: string }
 export interface ExtractedProductItem {
   productId?: string; name: string; brandCode: BrandCode; quantity: number; unitPrice: number; totalPrice: number; confidence: Confidence; isCombo?: boolean;
+  saleUnitPrice?: number; sourceLine?: number;
 }
 export interface ExtractedOrderResult {
   salesChannel?: string; assignedToId?: string; id: string;
@@ -79,7 +80,7 @@ export function parseDiscountPercent(text: string): number | null {
   return match ? Number(match[1] || match[2]) : null;
 }
 export function extractedOrderTotal(order: ExtractedOrderResult): number {
-  const cents = Math.round(order.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) * 100);
+  const cents = Math.round(order.products.reduce((sum, item) => sum + (item.saleUnitPrice ?? item.unitPrice) * item.quantity, 0) * 100);
   if (order.isMarketing) return 0;
   if (order.statedPrice.provided ?? order.statedPrice.value > 0) return order.statedPrice.value;
   if (order.discountPercent?.provided) return Math.round(cents * (1 - order.discountPercent.value / 100)) / 100;
@@ -181,7 +182,7 @@ function matchCatalog(text: string, products: Product[], combos: Combo[], flags:
   return chosen.sort((a,b) => a.line - b.line || a.start - b.start).map(match => {
     const quantity = qtyFor(lines, match, text);
     const price = match.combo ? Number((match.item as Combo).comboPrice || (match.item as Combo).comboMrp || 0) : Number((match.item as Product).mrp || 0);
-    return { productId: match.id, name: match.item.name, brandCode: match.item.brandCode, quantity, unitPrice: price, totalPrice: price * quantity, confidence: 'HIGH' as Confidence, ...(match.combo ? { isCombo: true } : {}) };
+    return { productId: match.id, name: match.item.name, brandCode: match.item.brandCode, quantity, unitPrice: price, totalPrice: price * quantity, sourceLine: match.line, confidence: 'HIGH' as Confidence, ...(match.combo ? { isCombo: true } : {}) };
   });
 }
 function collapseCombo(items: ExtractedProductItem[], combos: Combo[], stated: number | null, flags: string[], discount: number | null): ExtractedProductItem[] {
@@ -199,6 +200,37 @@ function collapseCombo(items: ExtractedProductItem[], combos: Combo[], stated: n
   const { combo } = found[0]; flags.push(`The items and price also match ${combo.name}; select the combo manually if intended.`);
   return items;
 }
+function extractPrices(lines: string[], items: ExtractedProductItem[], flags: string[]): number | null {
+  let stated: number | null = null;
+  const priced = new Set<string>();
+  for (const [index, line] of lines.entries()) {
+    const amount = parseStatedPrice(line);
+    if (amount === null) continue;
+    const isTotal = /^\s*(?:(?:grand\s+)?total(?:\s+(?:amount|price))?|(?:order|final)\s+(?:total|amount)|amount|cod|paid)\b/i.test(line);
+    if (isTotal) {
+      if (stated !== null) flags.push('Price needs review: Multiple order totals were mentioned. Choose the correct total.');
+      else stated = amount;
+      continue;
+    }
+    const sameLine = items.filter(item => item.sourceLine === index);
+    const preceding = items.filter(item => item.sourceLine !== undefined && item.sourceLine < index).sort((a,b) => b.sourceLine! - a.sourceLine!);
+    const nearest = preceding[0];
+    const between = nearest ? lines.slice(nearest.sourceLine! + 1, index) : [];
+    const connected = nearest && between.every(value => /^(?:qty|quantity)?\s*[:=\-]?\s*\d+\s*(?:units?|pcs?|pieces?|bottles?|kits?|sets?|pairs?|combos?)\b/i.test(value));
+    const item = sameLine.length === 1 ? sameLine[0] : sameLine.length === 0 && connected ? nearest : undefined;
+    const explicitUnit = /\b(?:each|per\s*(?:unit|piece)|unit\s*price)\b/i.test(line);
+    const followedByItem = items.some(other => other.sourceLine !== undefined && other.sourceLine > index);
+    const clearScope = item && (item.quantity === 1 || explicitUnit) && (sameLine.length === 1 || followedByItem || items.length === 1 || explicitUnit);
+    if (!clearScope || !item?.productId || priced.has(item.productId)) {
+      flags.push(`Price needs review: NPR ${amount.toLocaleString()} could be an item price or an order total. Enter the agreed price below.`);
+      continue;
+    }
+    priced.add(item.productId);
+    item.saleUnitPrice = amount;
+    item.totalPrice = Math.round(amount * item.quantity * 100) / 100;
+  }
+  return stated;
+}
 export function validateExtractedOrder(order: ExtractedOrderResult): string[] {
   const errors: string[] = [];
   if (!order.customerName.value.trim()) errors.push('Enter the customer name.');
@@ -209,13 +241,14 @@ export function validateExtractedOrder(order: ExtractedOrderResult): string[] {
   if (!order.address.value.trim()) errors.push('Enter the delivery address.');
   if (order.isMarketing && !order.influencerId) errors.push('Choose an influencer for the marketing send.');
   if (!order.products.length || order.products.some(item => !item.productId || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || item.quantity > 10000 || item.unitPrice <= 0)) errors.push('Select valid catalogue items and quantities.');
+  if (order.products.some(item => item.saleUnitPrice !== undefined && (!Number.isFinite(item.saleUnitPrice) || item.saleUnitPrice < 0 || item.saleUnitPrice > item.unitPrice || Math.abs(item.saleUnitPrice * 100 - Math.round(item.saleUnitPrice * 100)) > 1e-6))) errors.push('Each selling price must be between zero and its catalogue price, with at most two decimal places.');
   if (new Set(order.products.map(item => item.brandCode)).size > 1) errors.push('Split products from different brands into separate orders.');
   if (order.statedPrice.value < 0 || !Number.isFinite(order.statedPrice.value) || Math.abs(order.statedPrice.value * 100 - Math.round(order.statedPrice.value * 100)) > 1e-6) errors.push('Enter a valid stated amount.');
-  if (!order.isMarketing && order.statedPrice.value > order.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) + 0.005) errors.push('The stated amount exceeds the catalogue total; review items or amount.');
+  if (!order.isMarketing && order.statedPrice.value > order.products.reduce((sum, item) => sum + (item.saleUnitPrice ?? item.unitPrice) * item.quantity, 0) + 0.005) errors.push('The stated amount exceeds the item selling prices; review items or amount.');
   if (order.discountPercent?.provided) {
     const pct = order.discountPercent.value;
     if (!Number.isFinite(pct) || pct < 0 || pct > 100 || Math.abs(pct * 100 - Math.round(pct * 100)) > 1e-6) errors.push('Enter a discount between 0 and 100%.');
-    const cents = Math.round(order.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) * 100);
+    const cents = Math.round(order.products.reduce((sum, item) => sum + (item.saleUnitPrice ?? item.unitPrice) * item.quantity, 0) * 100);
     if (!order.isMarketing && (order.statedPrice.provided ?? order.statedPrice.value > 0) && Math.abs(Math.round(order.statedPrice.value * 100) - Math.round(cents * (1 - pct / 100))) > 0) errors.push('The stated total and percentage discount do not match; correct or clear one.');
     if (order.flags.some(flag => flag.startsWith('Discount scope is unclear'))) errors.push('Review the discount scope; clear the percentage and enter the agreed order total.');
   }
@@ -233,12 +266,8 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
   const products = options.products.filter(product => product.active !== false);
   const combos = options.combos.filter(combo => isSellableCombo(combo, products));
   const discount = parseDiscountPercent(body);
-  let items = matchCatalog(body, products, combos, flags);
-  const priceLine = lines.findIndex(line => parseStatedPrice(line) !== null);
-  const candidatePrice = parseStatedPrice(body);
-  const ambiguousPrice = priceLine >= 0 && !/^\s*(?:total(?:\s+(?:amount|price))?|amount|cod)\b/i.test(lines[priceLine]) && lines.slice(priceLine + 1).some(line => matchCatalog(line, products, combos, []).length > 0);
-  const stated = ambiguousPrice ? null : candidatePrice;
-  if (ambiguousPrice) flags.push(`Price needs review: NPR ${candidatePrice?.toLocaleString()} appears before another item. Confirm the order total below; catalogue prices are used unless you change it.`);
+  let items = matchCatalog(lines.join('\n'), products, combos, flags);
+  const stated = extractPrices(lines, items, flags);
   const unrecognizedItemLines = new Set<string>();
   for (const [index, line] of lines.entries()) {
     if (/^\s*(?:name|naam|customer|phone|mobile|contact|address|location|delivery|shipping|payment|total|amount|price|discount|date|platform|channel|note)\b/i.test(line)) continue;
@@ -253,7 +282,7 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
   }
   items = collapseCombo(items, combos, stated, flags, discount);
   if (discount !== null && items.length > 1 && lines.some(line => parseDiscountPercent(line) !== null && [...products, ...combos].some(item => keywordsFor(item, 'items' in item).some(keyword => expression(keyword).test(line))))) flags.push('Discount scope is unclear because the percentage appears on an item line.');
-  const catalogTotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
+  const itemSubtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
   const namePrefix = /^(?:name|naam|customer(?:\s+name)?|receiver)(?:\s*[:=\-]\s*|\s+)/i;
   const nameLine = lines.find(line => namePrefix.test(line));
   let name = nameLine?.replace(namePrefix, '').trim() || '';
@@ -293,7 +322,7 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
   const prepaid = !/\b(?:unpaid|not\s+paid)\b/i.test(body) && /\b(?:paid|prepaid|esewa|khalti|fonepay|bank transfer)\b/i.test(body);
   const delivery = options.deliveryMethods?.slice().sort((a,b) => b.length - a.length).find(value => expression(value).test(body)) || (/\bpathao\b/i.test(body) ? 'Pathao' : /\bindrive\b/i.test(body) ? 'InDrive' : '');
   if (!items.length) flags.push('No catalogue item recognized; add the correct product or combo.');
-  if (stated !== null && catalogTotal > 0 && stated !== catalogTotal) flags.push(`Stated total NPR ${stated.toLocaleString()} differs from catalogue total NPR ${catalogTotal.toLocaleString()}; review before saving.`);
+  if (stated !== null && itemSubtotal > 0 && stated !== itemSubtotal) flags.push(`Stated total NPR ${stated.toLocaleString()} differs from item prices total NPR ${itemSubtotal.toLocaleString()}; review before saving.`);
   const comboNames = items.filter(item => item.isCombo).map(item => item.name);
   const order: ExtractedOrderResult = {
     id: `ext_${globalThis.crypto.randomUUID()}`, salesChannel: platform,
@@ -303,8 +332,8 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
     address: { value: address, confidence: address ? (addressLine ? 'HIGH' : 'REVIEW') : 'FAILED' }, rawAddress: address,
     city: { value: city, confidence: city ? 'AUTO' : 'FAILED' }, province: { value: province, confidence: province ? 'AUTO' : 'FAILED' },
     combo: { value: comboNames.join(', ') || 'None (Standard SKU)', confidence: 'AUTO' },
-    totalAmount: { value: stated !== null && stated <= catalogTotal ? stated : catalogTotal, confidence: catalogTotal ? 'HIGH' : 'REVIEW' },
-    statedPrice: { value: stated ?? 0, provided: stated !== null, confidence: stated !== null ? 'HIGH' : 'REVIEW', difference: stated === null ? 0 : Math.abs(stated-catalogTotal), differencePct: catalogTotal && stated !== null ? Math.round(Math.abs(stated-catalogTotal)/catalogTotal*100) : 0, level: stated !== null && stated !== catalogTotal ? 'WARNING' : 'OK' },
+    totalAmount: { value: stated !== null && stated <= itemSubtotal ? stated : itemSubtotal, confidence: itemSubtotal ? 'HIGH' : 'REVIEW' },
+    statedPrice: { value: stated ?? 0, provided: stated !== null, confidence: stated !== null ? 'HIGH' : 'REVIEW', difference: stated === null ? 0 : Math.abs(stated-itemSubtotal), differencePct: itemSubtotal && stated !== null ? Math.round(Math.abs(stated-itemSubtotal)/itemSubtotal*100) : 0, level: stated !== null && stated !== itemSubtotal ? 'WARNING' : 'OK' },
     discountPercent: { value: discount ?? 0, provided: discount !== null, confidence: discount !== null ? 'HIGH' : 'REVIEW' },
     paymentTerms: { value: prepaid ? 'Prepaid' : 'COD', confidence: 'AUTO' }, deliveryMethod: { value: delivery, confidence: delivery ? 'AUTO' : 'REVIEW' },
     orderDateAd: { value: date.value, confidence: date.confidence }, orderDateBs: { value: dateBs(date.value), confidence: date.confidence },

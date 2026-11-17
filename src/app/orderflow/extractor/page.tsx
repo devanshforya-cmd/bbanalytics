@@ -192,10 +192,16 @@ export default function ExtractorPage() {
     if (newQty < 1 || newQty > 10000) return;
     setExtractedOrders(previous => previous.map(order => {
       if (order.id !== orderId) return order;
-      const items = [...order.products]; items[itemIdx] = { ...items[itemIdx], quantity: newQty, totalPrice: items[itemIdx].unitPrice * newQty };
+      const items = [...order.products]; items[itemIdx] = { ...items[itemIdx], quantity: newQty, totalPrice: (items[itemIdx].saleUnitPrice ?? items[itemIdx].unitPrice) * newQty };
       return refreshOrder({ ...order, products: items });
     }));
   };
+  const handleUpdateItemPrice = (orderId: string, itemIdx: number, value: string) => setExtractedOrders(previous => previous.map(order => {
+    if (order.id !== orderId) return order;
+    const items = [...order.products]; const item = items[itemIdx]; const saleUnitPrice = value === '' ? undefined : Number(value);
+    items[itemIdx] = { ...item, saleUnitPrice, totalPrice: (saleUnitPrice ?? item.unitPrice) * item.quantity };
+    return refreshOrder({ ...order, products: items });
+  }));
   const handleRemoveItem = (orderId: string, itemIdx: number) => setExtractedOrders(previous => previous.map(order => order.id === orderId ? refreshOrder({ ...order, products: order.products.filter((_, index) => index !== itemIdx) }) : order));
   const handleAddItemToOrder = (orderId: string, value: string) => {
     const [kind, productId] = value.split(':');
@@ -206,7 +212,7 @@ export default function ExtractorPage() {
     setExtractedOrders(previous => previous.map(order => {
       if (order.id !== orderId) return order;
       const existing = order.products.find(item => item.productId === productId);
-      const products = existing ? order.products.map(item => item.productId === productId ? { ...item, quantity: Math.min(item.quantity + 1, 10000), totalPrice: item.unitPrice * Math.min(item.quantity + 1, 10000) } : item)
+      const products = existing ? order.products.map(item => item.productId === productId ? { ...item, quantity: Math.min(item.quantity + 1, 10000), totalPrice: (item.saleUnitPrice ?? item.unitPrice) * Math.min(item.quantity + 1, 10000) } : item)
         : [...order.products, { productId, name: selected.name, brandCode: selected.brandCode, quantity: 1, unitPrice: price, totalPrice: price, confidence: 'HIGH' as Confidence, ...(combo ? { isCombo: true } : {}) }];
       return refreshOrder({ ...order, products });
     }));
@@ -254,7 +260,7 @@ export default function ExtractorPage() {
           city: order.city.value, province: order.province.value, address: order.address.value, orderDateAd: order.orderDateAd.value,
           platform: order.salesChannel ?? sourceChannel, deliveryMethod: order.deliveryMethod.value || deliveryMethods[0], paymentTerms: order.paymentTerms.value, assignedToId: order.assignedToId || currentUser.id,
           statedPrice: order.statedPrice.provided ? order.statedPrice.value : null, discountPercent: order.discountPercent?.provided ? order.discountPercent.value : null, isMarketing: false,
-          items: order.products.map(item => ({ productId: item.productId, quantity: item.quantity, expectedUnitPrice: item.unitPrice })),
+          items: order.products.map(item => ({ productId: item.productId, quantity: item.quantity, expectedUnitPrice: item.unitPrice, ...(item.saleUnitPrice !== undefined ? { saleUnitPrice: item.saleUnitPrice } : {}) })),
         })) }) });
         const result = await response.json().catch(() => null);
         if (!response.ok || !result?.success || !Array.isArray(result.orderNumbers)) throw new Error(result?.error || 'Could not save orders. Your review stays here for retry.');
@@ -696,7 +702,8 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                                 </span>
                               )}
                               <span className="font-semibold text-slate-900">{item.name}</span>
-                              <span className="text-slate-400">@ NPR {item.unitPrice.toLocaleString()}</span>
+                              <span className="text-slate-400">Catalogue NPR {item.unitPrice.toLocaleString()}</span>
+                              <label className="text-slate-600">Selling price per unit (NPR)<input aria-label={`Selling price per unit for ${item.name}`} type="number" min="0" max={item.unitPrice} step="0.01" value={item.saleUnitPrice ?? ''} placeholder={String(item.unitPrice)} onChange={event => handleUpdateItemPrice(ord.id, itIdx, event.target.value)} className="ml-2 w-24 rounded-lg border border-slate-200 p-1" /></label>
                             </div>
 
                             <div className="flex items-center gap-3">
@@ -748,7 +755,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           <label className="text-slate-500" htmlFor={`amount_${ord.id}`}>Stated total (NPR)</label>
                           <input id={`amount_${ord.id}`} type="number" min="0" step="0.01" value={ord.statedPrice.provided ? ord.statedPrice.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, statedPrice: { ...order.statedPrice, provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-28 rounded-lg border border-slate-200 p-1" placeholder="Optional" />
                         </div>
-                        <div><label className="text-slate-500" htmlFor={`discount_${ord.id}`}>Discount (%)</label><input id={`discount_${ord.id}`} type="number" min="0" max="100" step="0.01" value={ord.discountPercent?.provided ? ord.discountPercent.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, discountPercent: { confidence: 'HIGH', provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-20 rounded-lg border border-slate-200 p-1" placeholder="Optional" /></div>
+                        <div><label className="text-slate-500" htmlFor={`discount_${ord.id}`}>Order discount (%)</label><input id={`discount_${ord.id}`} type="number" min="0" max="100" step="0.01" value={ord.discountPercent?.provided ? ord.discountPercent.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, discountPercent: { confidence: 'HIGH', provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-20 rounded-lg border border-slate-200 p-1" placeholder="Optional" /></div>
                         <div><span className="text-slate-400">Order total: </span><span className="font-bold text-slate-900">NPR {ord.totalAmount.value.toLocaleString()}</span></div>
                         <div><label className="text-slate-500" htmlFor={`assignee_${ord.id}`}>Responsible person</label><select id={`assignee_${ord.id}`} value={ord.assignedToId || currentUser.id} onChange={event => handleUpdateOrderField(ord.id, 'assignedToId', event.target.value)} className="ml-2 rounded-lg border border-slate-200 p-1">{d2cAssignees(currentUser, db.getUsers(), ord.brandCode.value).map(user => <option key={user.id} value={user.id}>{user.fullName}</option>)}</select></div>
                         <div>

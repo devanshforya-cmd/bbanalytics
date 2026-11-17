@@ -75,18 +75,44 @@ test('a shortened body duo name and a separate roll-on are recognized independen
   assert.deepEqual(result.products.map(item=>[item.productId,item.quantity]),[['body-duo',1],['aqua',1]]);
   assert.equal(result.paymentTerms.value,'Prepaid'); assert.equal(result.salesChannel,'Messenger');
   assert.equal(result.statedPrice.provided,false); assert.equal(result.totalAmount.value,1765);
-  assert(result.extractionErrors.some(error=>error.includes('Review the price')));
+  assert.equal(result.products[0].saleUnitPrice,1366); assert(!result.extractionErrors.some(error=>error.includes('Review the price')));
   const labelled = extractSingleOrder(message.replace('Rs 1366','Total: Rs 1500'),current);
   assert.equal(labelled.statedPrice.value,1500); assert.equal(labelled.totalAmount.value,1500);
   const ambiguous = {...bodyCombo,id:'other-duo',name:'Other Body Care Duo',sku:'BD-02'};
   const collision = extractSingleOrder('Product: body duo', {...current,combos:[bodyCombo,ambiguous]});
   assert.equal(collision.products.length,0); assert(collision.flags.some(flag=>flag.includes('multiple catalogue items')));
   const combined = extractSingleOrder(message.replace('1 unit\nRs 1366','2 units - Rs 1366'),current);
-  assert.equal(combined.products[0].quantity,2);
+  assert.equal(combined.products[0].quantity,2); assert(combined.extractionErrors.some(error=>error.includes('Review the price')));
+  const each = extractSingleOrder(message.replace('1 unit\nRs 1366','2 units\nRs 1300 each'),current);
+  assert.equal(each.products[0].quantity,2); assert.equal(each.products[0].saleUnitPrice,1300); assert.equal(each.totalAmount.value,2999);
+  const discounted = extractSingleOrder(message.replace('Rs 1366','Rs 1200'),current);
+  assert.equal(discounted.products[0].saleUnitPrice,1200); assert.equal(discounted.totalAmount.value,1599);
+  const endPrice = extractSingleOrder(message.replace('Rs 1366\n\n','').replace('Paid Fonepay','Rs 1200\nPaid Fonepay'),current);
+  assert(endPrice.extractionErrors.some(error=>error.includes('Review the price')));
+  const twoPrices = extractSingleOrder(message.replace('Rs 1366','Rs 1200').replace('Aqua Rollon\n1 unit','Aqua Rollon Rs 350\n1 unit'),current);
+  assert.deepEqual(twoPrices.products.map(item=>item.saleUnitPrice),[1200,350]); assert.equal(twoPrices.totalAmount.value,1550);
   const missing = extractSingleOrder(message.replace('Brand body duo','Unknown hair mask'),current);
   assert(missing.flags.some(flag=>flag.startsWith('Unrecognized order item: Unknown hair mask')));
   assert(missing.extractionErrors.some(error=>error.includes('unrecognized item')));
   assert(!missing.address.value.includes('Unknown hair mask'));
+});
+
+test('item prices save with catalogue snapshots and flow into monthly product sales', async () => {
+  const ws = workspace();
+  const input = {...row('ext_12345678-1234-1234-1234-123456789abc'),statedPrice:null,items:[{productId:'pair',quantity:1,expectedUnitPrice:1518,saleUnitPrice:1400},{productId:'aqua',quantity:2,expectedUnitPrice:399}]};
+  await saveExtractedOrders({orders:[input]},ws);
+  const order = ws.db.getOrders()[0];
+  assert.equal(order.totalAmount,2198); assert.deepEqual(order.items.map(item=>[item.catalogUnitPrice,item.totalPrice,item.discountAmount]),[[1518,1400,118],[399,798,0]]);
+  const { buildMonthlySalesReport } = await import('../src/lib/monthly-sales-report');
+  const report = buildMonthlySalesReport([order],options.products,options.combos,'BRAND','2026-11-01','2026-11-30');
+  assert.equal(report.salesCents,219800); assert.equal(report.items.find(item=>item.id==='pair')?.salesCents,140000); assert.equal(report.items.find(item=>item.id==='aqua')?.salesCents,79800);
+  await assert.rejects(saveExtractedOrders({orders:[{...input,clientId:'ext_87654321-1234-1234-1234-123456789abc',items:[{...input.items[0],saleUnitPrice:1600}]}]},workspace()),/selling price/i);
+  const free=workspace(); await saveExtractedOrders({orders:[{...input,clientId:'ext_abcdef12-1234-1234-1234-123456789abc',items:[{...input.items[0],saleUnitPrice:0}]}]},free); assert.equal(free.db.getOrders()[0].totalAmount,0);
+  const { extractorCSV } = await import('../src/lib/extractor-export');
+  const { parseCSV } = await import('../src/lib/csv');
+  const preview = extractSingleOrder('Name: Rina\nPhone: 9800001011\nAddress: Kathmandu Road\nhair pair\n1 unit\nRs 1400\naqua\n2 units',options);
+  const rows = parseCSV(extractorCSV([preview],options.products,'Instagram')).rows;
+  assert.deepEqual(rows.map(item=>Number(item['Line Revenue (Rs.)'])),[1400,798]);
 });
 
 test('unmentioned channels default to Instagram, while explicitly named channels remain distinct', () => {

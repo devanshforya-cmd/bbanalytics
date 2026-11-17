@@ -7,7 +7,8 @@ export function allocateOrderTotal(items: { unitPrice: number; quantity: number 
   const bases = items.map(item => Math.round(item.unitPrice * item.quantity * 100));
   const catalog = bases.reduce((sum, value) => sum + value, 0);
   const target = Math.round(total * 100);
-  if (!Number.isSafeInteger(target) || target < 0 || target > catalog || catalog <= 0) throw new Error('Invalid order total.');
+  if (!Number.isSafeInteger(target) || target < 0 || target > catalog || catalog < 0) throw new Error('Invalid order total.');
+  if (catalog === 0) return bases.map(() => 0);
   const allocation = bases.map((base, index) => { const exact = target * base / catalog; return { index, cents: Math.floor(exact), fraction: exact - Math.floor(exact) }; });
   let remainder = target - allocation.reduce((sum, item) => sum + item.cents, 0);
   allocation.sort((a,b) => b.fraction - a.fraction || a.index - b.index);
@@ -29,7 +30,7 @@ export function extractorCSV(orders: ExtractedOrderResult[], products: Product[]
   const rows = orders.flatMap(order => {
     const total = order.isMarketing ? 0 : order.totalAmount.value;
     let allocation: number[] = [];
-    try { if (order.products.length) allocation = allocateOrderTotal(order.products, total); } catch { /* Incomplete orders remain explicitly marked for review. */ }
+    try { if (order.products.length) allocation = allocateOrderTotal(order.products.map(item => ({ ...item, unitPrice: item.saleUnitPrice ?? item.unitPrice })), total); } catch { /* Incomplete orders remain explicitly marked for review. */ }
     const followUps = followUpDates(order.orderDateAd.value);
     const items = order.products.length ? order.products : [null];
     return items.map((item,index) => {
