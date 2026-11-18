@@ -192,7 +192,7 @@ export default function AllOrdersPage() {
                           <span className="block font-mono text-[11px] text-slate-500">{order.customerPhone}</span>
                         </td>
                         <td className="max-w-[240px] px-3 py-3 align-top text-slate-700">
-                          <span className="line-clamp-2">{order.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')}</span>
+                          <span className="line-clamp-2">{order.items.map((item) => `${item.quantity}× ${item.productName}${item.isGift ? ' (gift)' : ''}`).join(', ')}</span>
                         </td>
                         <td className="px-3 py-3 align-top text-[11px] text-slate-600">
                           <span className="block">{order.deliveryMethod}</span>

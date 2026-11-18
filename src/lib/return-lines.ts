@@ -27,6 +27,8 @@ export function returnableLines(order: Pick<Order, 'id' | 'items' | 'brandCode'>
   const own = returns.filter((entry) => entry.orderId === order.id && counted(entry));
   const lines: ReturnableLine[] = [];
   for (const item of order.items) {
+    // Free gifts are not returned for money; they stay out of the list.
+    if (item.isGift) continue;
     const combo = combos.find((entry) => entry.id === item.productId);
     if (!combo || !combo.items?.length) {
       const returned = own.filter((entry) => entry.productId === item.productId && !entry.comboId).reduce((sum, entry) => sum + entry.quantity, 0);

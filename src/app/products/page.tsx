@@ -208,13 +208,8 @@ export default function ProductsPage() {
     // Direct / Online Orders
     let onlineUnits = 0;
     orders.filter(countsAsSale).forEach((o) => {
-      const item = o.items.find(
-        (i) =>
-          i.productId === prod.id
-      );
-      if (item) {
-        onlineUnits += item.quantity;
-      }
+      // Paid lines only: a free gift of this product is not a unit sold.
+      for (const item of o.items) if (item.productId === prod.id && !item.isGift) onlineUnits += item.quantity;
     });
 
     const totalUnitsSold = secondaryUnits + onlineUnits;
@@ -825,7 +820,7 @@ export default function ProductsPage() {
             const currentMrp = c.items.reduce((sum, part) => sum + (products.find(product => product.id === part.productId)?.mrp ?? part.mrp) * part.quantity, 0);
             const currentSavings = currentMrp > 0 ? Math.max(0, Math.round((1 - c.comboPrice / currentMrp) * 1000) / 10) : 0;
             const comboOrders = orders.filter(countsAsSale);
-            const comboLines = comboOrders.flatMap(order => order.items).filter(item => item.productId === c.id);
+            const comboLines = comboOrders.flatMap(order => order.items).filter(item => item.productId === c.id && !item.isGift);
             const kitsSold = comboLines.reduce((sum, item) => sum + item.quantity, 0);
             const comboRevenue = comboLines.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
 

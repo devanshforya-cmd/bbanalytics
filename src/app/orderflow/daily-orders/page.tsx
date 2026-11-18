@@ -181,7 +181,7 @@ export default function DailyOrdersPage() {
   const statsFooter = useMemo(() => {
     const totalCommercial = commercialOrders.length;
     const totalUnits = commercialOrders.reduce(
-      (sum, ord) => sum + ord.items.reduce((iSum, it) => iSum + it.quantity, 0),
+      (sum, ord) => sum + ord.items.reduce((iSum, it) => iSum + (it.isGift ? 0 : it.quantity), 0),
       0
     );
 
@@ -208,9 +208,10 @@ export default function DailyOrdersPage() {
 
     commercialOrders.forEach((ord) => {
       ord.items.forEach((it) => {
-        const key = `${ord.brandCode}_${it.productName}`;
+        // Free gifts are listed apart so they never look like units sold.
+        const key = `${ord.brandCode}_${it.productName}${it.isGift ? '_gift' : ''}`;
         const existing = map.get(key) || {
-          product: it.productName,
+          product: it.isGift ? `${it.productName} (free gift)` : it.productName,
           brand: ord.brandCode,
           units: 0,
           ordersCount: 0,
@@ -471,7 +472,7 @@ export default function DailyOrdersPage() {
                     {visibleOrders.map((ord) => {
                       const isInserted = recentlyInsertedIds.has(ord.id);
                       const isUpdated = recentlyUpdatedIds.has(ord.id);
-                      const totalQty = ord.items.reduce((sum, it) => sum + it.quantity, 0);
+                      const totalQty = ord.items.reduce((sum, it) => sum + (it.isGift ? 0 : it.quantity), 0);
 
                       // Check if items form a known combo
                       const comboItem = ord.items.find((i) => comboIds.has(i.productId));

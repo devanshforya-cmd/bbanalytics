@@ -427,3 +427,8 @@ export function isRecordVisibleToUser(
 export function canWorkOrders(user: UserWithPermissions, action: ActionPermission = 'EDIT'): boolean {
   return canPerform(user, 'orderflow', action) || canPerform(user, 'order_desk', action);
 }
+
+/** Creating and changing online sales and offers: Settings or Marketing edit access. */
+export function canManageSales(user: UserWithPermissions): boolean {
+  return isSuperAdmin(user) || canPerform(user, 'settings', 'EDIT') || canPerform(user, 'marketing', 'EDIT');
+}

@@ -8,7 +8,9 @@ import { validateAlertRules } from '../alert-rules';
 import { defaultOrderOptions, validateOrderOptions, requiredOrderOptionActions, assertActiveOrderOption } from '../order-options';
 import { DatabaseService } from './db-service';
 import { supabaseAdmin } from './supabase-server';
-import { canPerform, getAssignedBrandCodes, getScope, hasAccess, isSuperAdmin } from '../permissions';
+import { canManageSales, canPerform, getAssignedBrandCodes, getScope, hasAccess, isSuperAdmin } from '../permissions';
+import { validateCampaign } from '../offers';
+import type { Order } from '../types';
 import type { Brand, User, SharedAccessLink } from '../types';
 import { WORKSPACE_COLLECTIONS, isWorkspaceCollection, isLookupCollection, type WorkspaceMutation, type WorkspaceSnapshot, type WorkspaceVersions } from './workspace-types';
 import { RESERVED_PREFIXES, brandPrefix, isShortDocumentId, isPendingDocumentId, validateBrandPrefix } from '../document-ids';
@@ -262,6 +264,15 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
     const after = validateOrderOptions(data.orderOptions);
     if (requiredOrderOptionActions(before, after).some(action => !canPerform(user, 'settings', action))) throw new WorkspaceError(403, 'Your settings permissions do not allow this channel or delivery change.');
     data.orderOptions = after;
+  }
+  if (mutation.collection === 'campaigns') {
+    // One set of rules for the browser and the server; who created it and when never changes.
+    if (!canManageSales(user)) throw new WorkspaceError(403, 'Managing sales and offers needs Settings or Marketing edit access.');
+    try { mutation.data = { ...validateCampaign({ ...data, id: mutation.id }), id: mutation.id, createdById: data.createdById,
+      createdAt: prior?.data.createdAt || data.createdAt || new Date().toISOString(), ...(prior?.data.createdBy || data.createdBy ? { createdBy: prior?.data.createdBy || data.createdBy } : {}),
+      updatedAt: new Date().toISOString() }; }
+    catch (error) { throw new WorkspaceError(400, error instanceof Error ? error.message : 'This sale could not be saved.'); }
+    return;
   }
   if (mutation.collection === 'orders' || mutation.collection === 'deliveryFailures') {
     const configured = context.records.find(row => row.collection === 'workspaceConfig' && row.id === 'workspace')?.data.orderOptions;
@@ -542,6 +553,11 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
     if (sends.error) throw new WorkspaceError(503, 'Send history could not be checked.');
     if (sends.data?.length) throw new WorkspaceError(409, 'This influencer has send history. Archive the profile instead of deleting it.');
   }
+  if (mutation.operation === 'delete' && mutation.collection === 'campaigns' && prior) {
+    const priced = await supabaseAdmin.from('workspace_records').select('id').eq('collection', 'orders').contains('data', { campaignIds: [mutation.id] }).limit(1);
+    if (priced.error) throw new WorkspaceError(503, 'Orders priced with this sale could not be checked.');
+    if (priced.data?.length) throw new WorkspaceError(409, 'Orders were priced with this sale. End it instead so its results stay in the reports.');
+  }
   prepareRecordData(user, mutation, prior, context);
   const candidate: StoredWorkspaceRecord = { collection: mutation.collection, id: mutation.id, data: mutation.data || prior?.data || { id: mutation.id },
     created_by: prior?.created_by || user.id, version: prior?.version || 0 };
@@ -662,7 +678,10 @@ export async function openServerWorkspace(user: User) {
   db.replaceUsers(context.users);
   db.replaceBrands(view.data.brands);
   db.hydrateSnapshot(db.exportSnapshot(), user, view.versions);
-  return { db, async commit(): Promise<Record<string, string> | void> {
+  return { db,
+    /** Every order in the workspace, whatever this person can see: offer limits (gift stock, once per customer) count them all. */
+    allOrders: () => context.records.filter((row) => row.collection === 'orders' && !row.data.isMarketing).map((row) => row.data as Order),
+    async commit(): Promise<Record<string, string> | void> {
     const pending: WorkspaceMutation[] = [];
     for (const mutation of db.getPendingMutations()) {
       if (['products', 'combos', ...STORE_COLLECTIONS].includes(mutation.collection) && mutation.operation === 'delete') throw new WorkspaceError(400, 'Use the catalogue or store directory to check and delete this record.');

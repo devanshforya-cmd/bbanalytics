@@ -3,7 +3,21 @@ import type { DatabaseService } from './db-service';
 import type { Order, OrderItem } from '../types';
 import { canAccessBrand, canPerform, isSuperAdmin } from '../permissions';
 import { applyAddOn, findAddOnTarget, itemSummary } from '../order-merge';
-import { percentDiscountTotal } from '../whatsapp-extractor';
+import { priceTrail } from '../order-pricing';
+import { offerUsageFrom } from '../offers';
+
+/** An add-on's offers and customer discount join the order's own. */
+function mergePriceFields(target: Partial<Order>, added: Partial<Order>): Partial<Order> {
+  const offers = [...(target.appliedOffers || [])];
+  for (const entry of added.appliedOffers || []) {
+    const same = offers.find(item => item.offerId === entry.offerId);
+    if (same) Object.assign(same, { amount: money(same.amount + entry.amount), ...(entry.giftQuantity ? { giftQuantity: (same.giftQuantity || 0) + entry.giftQuantity, giftValue: money((same.giftValue || 0) + (entry.giftValue || 0)) } : {}) });
+    else offers.push({ ...entry });
+  }
+  const customer = money((target.customerDiscount || 0) + (added.customerDiscount || 0));
+  return { ...(offers.length ? { appliedOffers: offers, campaignIds: [...new Set(offers.map(item => item.campaignId))] } : {}),
+    ...(customer > 0 ? { customerDiscount: customer } : {}), ...(added.customerDiscountReason && !target.customerDiscountReason ? { customerDiscountReason: added.customerDiscountReason } : {}) };
+}
 import { normalizePhoneNumber } from '../auth-utils';
 import { isSellableCombo } from '../product-catalog';
 import { activeOrderOptionNames } from '../order-options';
@@ -17,7 +31,7 @@ const required = (value: unknown, label: string, max = 200) => {
 };
 const optional = (value: unknown, label: string, max = 200) => value == null || typeof value === 'string' && !value.trim() ? '' : required(value, label, max);
 const money = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
-export async function saveExtractedOrders(input: any, workspace: { db: DatabaseService; commit(): Promise<void | Record<string, string>> }) {
+export async function saveExtractedOrders(input: any, workspace: { db: DatabaseService; commit(): Promise<void | Record<string, string>>; allOrders?: () => Order[] }) {
   if (!Array.isArray(input?.orders) || input.orders.length < 1 || input.orders.length > 50) throw new ExtractorInputError('Save between 1 and 50 orders at a time.');
   const { db } = workspace; const actor = db.getCurrentUser(); const seen = new Set<string>();
   type NewOrder = Omit<Order, 'id' | 'createdAt'> & { id: string };
@@ -61,7 +75,7 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     if (!['COD','Prepaid'].includes(row.paymentTerms)) throw new ExtractorInputError(`${label} payment must be COD or Prepaid.`);
     if (!Array.isArray(row.items) || row.items.length === 0 || row.items.length > 50) throw new ExtractorInputError(`${label} needs catalogue items.`);
     const products = db.getProducts(), combos = db.getCombos();
-    const items: { productId: string; productName: string; brandCode: string; quantity: number; unitPrice: number; totalPrice: number; catalogUnitPrice: number }[] = (row.items as any[]).map((item: any) => {
+    const items: { productId: string; productName: string; brandCode: string; quantity: number; unitPrice: number; totalPrice: number; catalogUnitPrice: number; written: boolean }[] = (row.items as any[]).map((item: any) => {
       if (!item || typeof item.productId !== 'string' || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || item.quantity > 10000) throw new ExtractorInputError(`${label} has an invalid item quantity.`);
       const product = products.find(candidate => candidate.id === item.productId && candidate.active !== false);
       const combo = combos.find(candidate => candidate.id === item.productId && isSellableCombo(candidate, products));
@@ -70,7 +84,7 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
       if (!Number.isFinite(price) || price <= 0 || typeof item.expectedUnitPrice !== 'number' || !Number.isFinite(item.expectedUnitPrice) || Math.abs(item.expectedUnitPrice - price) > 0.005) throw new ExtractorInputError(`${label} has a changed or invalid catalogue price. Refresh and extract again.`, 409);
       const salePrice = item.saleUnitPrice == null ? price : item.saleUnitPrice;
       if (typeof salePrice !== 'number' || !Number.isFinite(salePrice) || salePrice < 0 || salePrice > price || Math.abs(salePrice * 100 - Math.round(salePrice * 100)) > 1e-6) throw new ExtractorInputError(`${label} item selling price must be between zero and the catalogue price.`);
-      return { productId: selected.id, productName: selected.name, brandCode: selected.brandCode, quantity: item.quantity, catalogUnitPrice: price, unitPrice: salePrice, totalPrice: money(salePrice * item.quantity) };
+      return { productId: selected.id, productName: selected.name, brandCode: selected.brandCode, quantity: item.quantity, catalogUnitPrice: price, unitPrice: salePrice, totalPrice: money(salePrice * item.quantity), written: item.saleUnitPrice != null };
     });
     if (new Set(items.map(item => item.brandCode)).size !== 1) throw new ExtractorInputError(`${label} contains multiple brands; split it into separate orders.`);
     const brandCode = items[0].brandCode;
@@ -82,14 +96,41 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     if (stated !== null && (!Number.isFinite(stated) || stated < 0 || Math.abs(stated * 100 - Math.round(stated * 100)) > 1e-6 || !Number.isSafeInteger(Math.round(stated * 100)) || stated * 100 > catalogCents + 0.5)) throw new ExtractorInputError(`${label} stated amount cannot exceed the item selling prices.`);
     if (discount !== null && (!Number.isFinite(discount) || discount < 0 || discount > 100 || Math.abs(discount * 100 - Math.round(discount * 100)) > 1e-6)) throw new ExtractorInputError(`${label} discount must be between 0 and 100%.`);
     if (kind === 'EXCHANGE' && discount !== null) throw new ExtractorInputError(`${label} is an exchange: enter the amount to collect instead of a percentage.`);
-    // A percentage is paid in whole rupees (5% off 3,595 is 3,415).
-    const discountedCents = discount === null ? catalogCents : Math.round(percentDiscountTotal(catalogCents / 100, discount) * 100);
-    // A written price wins over a percentage; the percentage is kept as a record of the offer.
-    // An exchange collects only an amount the message states, otherwise nothing.
-    const targetCents = stated !== null ? Math.round(stated * 100) : kind === 'EXCHANGE' ? 0 : discountedCents;
-    const totals = allocateOrderTotal(items, targetCents / 100);
-    const adjusted: OrderItem[] = items.map((item,i) => ({ ...item, totalPrice: totals[i], unitPrice: money(totals[i] / item.quantity), ...(kind === 'EXCHANGE' ? {} : { discountAmount: money(item.catalogUnitPrice * item.quantity - totals[i]) }) }));
-    const total = targetCents / 100;
+    // Price trail: catalogue MRP → live sales and offers → what staff wrote → net. The server prices with its
+    // own copy of the sales, so a browser can never invent an offer.
+    const orderTime = typeof row.orderTime === 'string' && /^\d{2}:\d{2}$/.test(row.orderTime) ? row.orderTime : undefined;
+    const disabledOfferIds = Array.isArray(row.disabledOfferIds) ? row.disabledOfferIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, 50) : [];
+    const messageText = typeof row.messageText === 'string' ? row.messageText.slice(0, 5000) : '';
+    const everyOrder = [...(workspace.allOrders?.() || db.getOrders('ALL')), ...created.map(order => ({ ...order, createdAt: now } as Order))];
+    const ownOrders = everyOrder.filter(order => normalizePhoneNumber(order.customerPhone) === customerPhone && order.status !== 'CANCELLED' && !order.exchangeRequested && !order.exchangeReturnId);
+    const catalogue = { name: (id: string) => products.find(entry => entry.id === id)?.name || combos.find(entry => entry.id === id)?.name,
+      price: (id: string) => { const product = products.find(entry => entry.id === id && entry.active !== false && entry.brandCode === brandCode); return product ? product.mrp : undefined; } };
+    const trail = priceTrail({ kind, stated, percent: discount,
+      lines: items.map(item => ({ itemId: item.productId, name: item.productName, quantity: item.quantity, mrp: item.catalogUnitPrice, isCombo: combos.some(entry => entry.id === item.productId),
+        category: products.find(entry => entry.id === item.productId)?.category, ...(item.written ? { writtenUnitPrice: item.unitPrice } : {}) })),
+      offers: { brandCode, channel: platform, dateAd: orderDateAd, time: orderTime, customerPhone, isFirstOrder: !ownOrders.length, text: messageText,
+        campaigns: db.getCampaigns(), disabledOfferIds, usage: offerUsageFrom(everyOrder, customerPhone), catalogue } });
+    if (trail.problem) throw new ExtractorInputError(`${label}: ${trail.problem}`, 409);
+    if (typeof row.expectedTotal === 'number' && Math.abs(row.expectedTotal - trail.total) > 0.005) {
+      const applied = (trail.pricing?.applied || []).map(entry => entry.offerName);
+      throw new ExtractorInputError(`${label}: the sales or offers changed since this order was extracted. It now comes to NPR ${trail.total.toLocaleString()}${applied.length ? ` with ${applied.join(' + ')}` : ' with no offer'}. Extract it again, or switch off an offer that has already been used up.`, 409);
+    }
+    const adjusted: OrderItem[] = items.map((item, i) => {
+      const line = trail.lines[i];
+      return { productId: item.productId, productName: item.productName, brandCode: item.brandCode, quantity: item.quantity, catalogUnitPrice: item.catalogUnitPrice,
+        totalPrice: line.total, unitPrice: money(line.total / item.quantity),
+        ...(kind === 'EXCHANGE' ? {} : { discountAmount: money(item.catalogUnitPrice * item.quantity - line.total),
+          ...(line.offerDiscount > 0 ? { offerUnitPrice: money(line.offerTotal / item.quantity), offerDiscount: line.offerDiscount } : {}),
+          ...(line.customerDiscount > 0 ? { customerDiscount: line.customerDiscount } : {}) }) };
+    });
+    for (const gift of trail.pricing?.gifts || []) {
+      adjusted.push({ productId: gift.itemId, productName: gift.name, brandCode, quantity: gift.quantity, unitPrice: 0, totalPrice: 0, catalogUnitPrice: gift.mrp, isGift: true, giftOfferId: gift.offerId });
+    }
+    const total = trail.total;
+    const applied = trail.pricing?.applied || [];
+    const reason = typeof row.customerDiscountReason === 'string' ? row.customerDiscountReason.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 120) : '';
+    const priceFields = { ...(orderTime ? { orderTime } : {}), ...(applied.length ? { appliedOffers: applied, campaignIds: trail.pricing!.campaignIds } : {}),
+      ...(trail.customerDiscount > 0 ? { customerDiscount: trail.customerDiscount, ...(reason ? { customerDiscountReason: reason } : {}) } : {}) };
 
     if (kind === 'ADD_ON') {
       // The customer added to today's order: the items join that order instead of making a new one.
@@ -97,7 +138,7 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
       const found = findAddOnTarget(candidates, { phone: customerPhone, dateAd: orderDateAd, brandCode });
       if (!found.order) throw new ExtractorInputError(`${label}: ${found.problem}`, 409);
       const target = created.find(order => order.id === found.order!.id) || db.getOrderById(found.order.id)!;
-      const merged = applyAddOn(target, { items: adjusted, total, discountPercent: discount });
+      const merged = { ...applyAddOn(target, { items: adjusted, total, discountPercent: discount }), ...mergePriceFields(target, priceFields) };
       const addOns = [...(target.extractorAddOns || []), { clientId, hash: requestHash, addedAt: now, total }];
       const note = `Order added ${orderDateAd}: ${itemSummary(adjusted)} (NPR ${total.toLocaleString()}).`;
       const notes = [target.notes, note].filter(Boolean).join(' ');
@@ -118,7 +159,7 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     const order: NewOrder = { id: `ord_${clientId}`, orderNumber, extractorRequestHash: requestHash, brandCode, orderDateAd, orderDateBs: `${bs.monthName} ${bs.day}, ${bs.year}`,
       platform, customerName, customerPhone, ...(alternatePhone ? { alternatePhone } : {}), province, district, address, deliveryMethod, ...(row.assignedToId ? { assignedToId: required(row.assignedToId, `${label} responsible person`) } : {}),
       paymentTerms: row.paymentTerms, orderType: kind === 'EXCHANGE' ? 'REPEAT' : 'NEW', items: adjusted, totalAmount: total,
-      ...(stated !== null ? { statedPrice: stated } : {}), ...(discount !== null ? { discountPercent: discount } : {}), status: 'PENDING', source: 'WHATSAPP_EXTRACTOR',
+      ...(stated !== null ? { statedPrice: stated } : {}), ...(discount !== null ? { discountPercent: discount } : {}), ...priceFields, status: 'PENDING', source: 'WHATSAPP_EXTRACTOR',
       ...(kind === 'EXCHANGE' ? { exchangeRequested: true, notes: `Exchange from WhatsApp (NPR ${total.toLocaleString()} to collect). Link it to the return when the return is logged.` } : { notes: 'Extracted and reviewed from WhatsApp.' }) };
     created.push(order);
     results.push({ orderId: order.id, orderNumber, alreadySaved: false });

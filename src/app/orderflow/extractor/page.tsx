@@ -24,6 +24,11 @@ import {
 import { getTodayAd } from '@/lib/nepali-calendar';
 import type { BrandCode, Order } from '@/lib/types';
 import { findAddOnTarget, itemSummary, type ExtractedEntryKind } from '@/lib/order-merge';
+import { priceTrail } from '@/lib/order-pricing';
+import { offerUsageFrom } from '@/lib/offers';
+import { phoneDigits } from '@/lib/customer-lookup';
+
+const DISCOUNT_REASONS = ['Loyal customer', 'Bulk order', 'Compensation', 'Friend or influencer', 'Staff', 'Other'];
 import { displayDocumentId } from '@/lib/document-ids';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toast } from '@/components/common/Toast';
@@ -156,8 +161,9 @@ export default function ExtractorPage() {
       if (result.salesChannel && !channels.includes(result.salesChannel)) { result.flags.push(`The detected ${result.salesChannel} channel is unavailable; choose an active channel.`); result.salesChannel = ''; }
       if (result.deliveryMethod.value && !deliveryMethods.includes(result.deliveryMethod.value)) { result.flags.push(`The detected ${result.deliveryMethod.value} logistics option is unavailable; choose an active option.`); result.deliveryMethod.value = ''; }
     }
-    setExtractedOrders(results);
-    setSelectedOrderIds(new Set(results.map((r) => r.id)));
+    const priced = results.map((result) => { const order = withPricing(result); order.totalAmount = { ...order.totalAmount, value: extractedOrderTotal(order) }; order.extractionErrors = validateExtractedOrder(order); return order; });
+    setExtractedOrders(priced);
+    setSelectedOrderIds(new Set(priced.map((r) => r.id)));
     setPushedSummary(null);
 
     const totalErrors = results.reduce((sum, r) => sum + (r.extractionErrors?.length || 0), 0);
@@ -175,12 +181,32 @@ export default function ExtractorPage() {
     }
   };
 
+  /** Price the order with the live sales and offers: MRP → offers → written price → net. */
+  const withPricing = (order: ExtractedOrderResult): ExtractedOrderResult => {
+    const brandCode = order.brandCode.value;
+    if (!order.products.length || order.products.some(item => !item.productId) || !brandCode || brandCode === 'ALL') return { ...order, trail: undefined };
+    const catalogueProducts = db.getProducts('ALL'); const orders = db.getOrders('ALL'); const phone = phoneDigits(order.customerPhone.value);
+    const own = orders.filter(entry => phoneDigits(entry.customerPhone) === phone && entry.status !== 'CANCELLED' && !entry.exchangeRequested && !entry.exchangeReturnId);
+    const trail = priceTrail({ kind: order.entryKind ?? 'ORDER', stated: order.statedPrice.provided ? order.statedPrice.value : null, percent: order.discountPercent?.provided ? order.discountPercent.value : null,
+      lines: order.products.map(item => ({ itemId: item.productId!, name: item.name, quantity: item.quantity, mrp: item.unitPrice, isCombo: !!item.isCombo,
+        category: catalogueProducts.find(product => product.id === item.productId)?.category, ...(item.saleUnitPrice !== undefined ? { writtenUnitPrice: item.saleUnitPrice } : {}) })),
+      offers: { brandCode, channel: order.salesChannel ?? sourceChannel ?? '', dateAd: order.orderDateAd.value, time: order.orderTime, customerPhone: phone, isFirstOrder: !own.length,
+        text: order.rawText, campaigns: db.getCampaigns(), disabledOfferIds: order.disabledOfferIds, usage: offerUsageFrom(orders, phone),
+        catalogue: { name: id => catalogueProducts.find(product => product.id === id)?.name, price: id => { const product = catalogueProducts.find(entry => entry.id === id && entry.active !== false && entry.brandCode === brandCode); return product ? product.mrp : undefined; } } } });
+    return { ...order, trail };
+  };
+  const toggleOffer = (orderId: string, offerId: string) => setExtractedOrders(previous => previous.map(order => {
+    if (order.id !== orderId) return order;
+    const off = new Set(order.disabledOfferIds || []); if (off.has(offerId)) off.delete(offerId); else off.add(offerId);
+    return refreshOrder({ ...order, disabledOfferIds: [...off] });
+  }));
   const refreshOrder = (order: ExtractedOrderResult): ExtractedOrderResult => {
     const catalogTotal = order.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
     const brandCodes = [...new Set(order.products.map(item => item.brandCode))];
     const combos = order.products.filter(item => item.isCombo).map(item => item.name);
-    const amount = extractedOrderTotal(order);
-    const updated = { ...order, brandCode: { ...order.brandCode, value: brandCodes.length === 1 ? brandCodes[0] : 'ALL' },
+    const shaped = withPricing({ ...order, brandCode: { ...order.brandCode, value: brandCodes.length === 1 ? brandCodes[0] : 'ALL' } });
+    const amount = extractedOrderTotal(shaped);
+    const updated = { ...shaped,
       combo: { ...order.combo, value: combos.join(', ') || 'None (Standard SKU)' }, totalAmount: { ...order.totalAmount, value: amount },
       flags: order.flags.filter(flag => !flag.startsWith('Stated total NPR') && !flag.startsWith('No catalogue item recognized') && !(order.statedPrice.value > 0 && flag.startsWith('The message states a zero total'))) };
     return { ...updated, extractionErrors: validateExtractedOrder(updated) };
@@ -272,7 +298,8 @@ export default function ExtractorPage() {
     void guardedSubmit(async () => {
       try {
         const response = await fetch('/api/extractor/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Workspace-User': currentUser.id }, body: JSON.stringify({ orders: ordersToPush.map(order => ({
-          clientId: order.id, entryKind: order.entryKind ?? 'ORDER', customerName: order.customerName.value, customerPhone: order.customerPhone.value, alternatePhone: order.alternatePhone.value,
+          clientId: order.id, entryKind: order.entryKind ?? 'ORDER', orderTime: order.orderTime, disabledOfferIds: order.disabledOfferIds || [], messageText: order.rawText.slice(0, 5000),
+          expectedTotal: order.totalAmount.value, customerDiscountReason: order.customerDiscountReason || '', customerName: order.customerName.value, customerPhone: order.customerPhone.value, alternatePhone: order.alternatePhone.value,
           city: order.city.value, province: order.province.value, address: order.address.value, orderDateAd: order.orderDateAd.value,
           platform: order.salesChannel ?? sourceChannel, deliveryMethod: order.deliveryMethod.value || deliveryMethods[0], paymentTerms: order.paymentTerms.value, assignedToId: order.assignedToId || currentUser.id,
           statedPrice: order.statedPrice.provided ? order.statedPrice.value : null, discountPercent: order.discountPercent?.provided ? order.discountPercent.value : null,
@@ -605,6 +632,31 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       );
                     })()}
 
+                    {/* Sales and offers that price this order */}
+                    {ord.trail?.pricing && (ord.trail.pricing.candidates.length > 0) && (
+                      <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-xs">
+                        <p className="mb-1 font-semibold text-emerald-900">Offers applied</p>
+                        <ul className="space-y-1">
+                          {ord.trail.pricing.candidates.map(candidate => {
+                            const applied = ord.trail!.pricing!.applied.find(entry => entry.offerId === candidate.offerId);
+                            const why = ord.trail!.pricing!.notes.find(entry => entry.offerId === candidate.offerId)?.message;
+                            return (
+                              <li key={candidate.offerId}>
+                                <label className="flex cursor-pointer items-start gap-2">
+                                  <input type="checkbox" className="mt-0.5" checked={!candidate.disabled} onChange={() => toggleOffer(ord.id, candidate.offerId)} aria-label={`Use ${candidate.offerName}`} />
+                                  <span className={applied ? 'text-slate-900' : 'text-slate-500'}>
+                                    <strong className="font-semibold">{candidate.offerName}</strong> <span className="text-slate-500">· {candidate.campaignName}</span>
+                                    {applied && (applied.amount > 0 ? <span className="ml-1 text-emerald-700">−NPR {applied.amount.toLocaleString()}</span> : applied.giftName ? <span className="ml-1 text-emerald-700">+ {applied.giftQuantity}× {applied.giftName} free</span> : applied.freeDelivery ? <span className="ml-1 text-emerald-700">free delivery</span> : null)}
+                                    {!applied && <span className="block text-[11px]">{candidate.disabled ? 'Switched off for this order.' : why || 'Does not apply.'}</span>}
+                                  </span>
+                                </label>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+
                     {/* Critical Extraction Errors Banner */}
                     {ord.extractionErrors && ord.extractionErrors.length > 0 && (
                       <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1">
@@ -773,8 +825,9 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                                 </button>
                               </div>
 
-                              <span className="font-bold text-slate-900 w-20 text-right">
-                                NPR {item.totalPrice.toLocaleString()}
+                              <span className="w-24 text-right">
+                                <span className="block font-bold text-slate-900">NPR {(ord.trail?.lines[itIdx]?.total ?? item.totalPrice).toLocaleString()}</span>
+                                {ord.trail && ord.trail.lines[itIdx] && ord.trail.lines[itIdx].total < item.unitPrice * item.quantity && <span className="block text-[11px] text-slate-400 line-through">NPR {(item.unitPrice * item.quantity).toLocaleString()}</span>}
                               </span>
 
                               <button
@@ -804,7 +857,16 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         </div>
                         {ord.entryKind !== 'EXCHANGE' && <div><label className="text-slate-500" htmlFor={`discount_${ord.id}`}>Order discount (%)</label><input id={`discount_${ord.id}`} type="number" min="0" max="100" step="0.01" value={ord.discountPercent?.provided ? ord.discountPercent.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, discountPercent: { confidence: 'HIGH', provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-20 rounded-lg border border-slate-200 p-1" placeholder="Optional" /></div>}
                         <div><span className="text-slate-400">{ord.entryKind === 'EXCHANGE' ? 'To collect: ' : 'Order total: '}</span><span className="font-bold text-slate-900">NPR {ord.totalAmount.value.toLocaleString()}</span>
-                          {ord.entryKind !== 'EXCHANGE' && extractedDiscount(ord).amount > 0 && <span className="ml-1.5 text-emerald-700">− NPR {extractedDiscount(ord).amount.toLocaleString()} ({extractedDiscount(ord).percent}% off)</span>}</div>
+                          {ord.entryKind !== 'EXCHANGE' && extractedDiscount(ord).amount > 0 && <span className="ml-1.5 text-emerald-700">− NPR {extractedDiscount(ord).amount.toLocaleString()} ({extractedDiscount(ord).percent}% off)</span>}
+                          {ord.entryKind !== 'EXCHANGE' && ord.trail && (ord.trail.offerDiscount > 0 || ord.trail.customerDiscount > 0) && (
+                            <span className="block text-[11px] text-slate-500">MRP {ord.trail.mrpTotal.toLocaleString()}{ord.trail.offerDiscount > 0 ? ` · offers −${ord.trail.offerDiscount.toLocaleString()}` : ''}{ord.trail.customerDiscount > 0 ? ` · customer discount −${ord.trail.customerDiscount.toLocaleString()}` : ''}</span>
+                          )}</div>
+                        {ord.entryKind !== 'EXCHANGE' && (ord.trail?.customerDiscount || 0) > 0 && (
+                          <div><label className="text-slate-500" htmlFor={`reason_${ord.id}`}>Discount reason</label>
+                            <select id={`reason_${ord.id}`} value={ord.customerDiscountReason || ''} onChange={event => setExtractedOrders(previous => previous.map(order => order.id === ord.id ? { ...order, customerDiscountReason: event.target.value } : order))} className="ml-2 rounded-lg border border-slate-200 p-1">
+                              <option value="">Not given</option>{DISCOUNT_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}
+                            </select></div>
+                        )}
                         <div><label className="text-slate-500" htmlFor={`assignee_${ord.id}`}>Responsible person</label><select id={`assignee_${ord.id}`} value={ord.assignedToId || currentUser.id} onChange={event => handleUpdateOrderField(ord.id, 'assignedToId', event.target.value)} className="ml-2 rounded-lg border border-slate-200 p-1">{d2cAssignees(currentUser, db.getUsers(), ord.brandCode.value).map(user => <option key={user.id} value={user.id}>{user.fullName}</option>)}</select></div>
                         <div>
                           <label className="text-slate-500" htmlFor={`payment_${ord.id}`}>Payment</label>
@@ -830,7 +892,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                                 ord.extractionErrors[0] || addOnTarget(ord)?.problem
                               );
                             }}
-                            className="px-4 py-1.5 bg-rose-100 text-rose-800 font-bold rounded-xl hover:bg-rose-200 transition flex items-center gap-1.5 shadow-xs text-xs border border-rose-300"
+                            className="shrink-0 whitespace-nowrap px-4 py-1.5 bg-rose-100 text-rose-800 font-bold rounded-xl hover:bg-rose-200 transition flex items-center gap-1.5 shadow-xs text-xs border border-rose-300"
                           >
                             <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
                             Fix Errors to Push
@@ -843,7 +905,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                               executePushOrders(unsaved ? [unsaved, ord] : [ord]);
                             }}
                             disabled={isSubmitting}
-                            className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:bg-blue-300 transition flex items-center gap-1.5 shadow-xs"
+                            className="shrink-0 whitespace-nowrap px-4 py-1.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:bg-blue-300 transition flex items-center gap-1.5 shadow-xs"
                           >
                             {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : <><Check className="w-3.5 h-3.5" />{ord.entryKind === 'ADD_ON' ? 'Add to order' : ord.entryKind === 'EXCHANGE' ? 'Save exchange' : 'Push This Order'}</>}
                           </button>
