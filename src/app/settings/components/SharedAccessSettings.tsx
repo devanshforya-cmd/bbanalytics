@@ -42,6 +42,7 @@ export default function SharedAccessSettings() {
     'delivery-failures',
     'returns',
   ]);
+  const [showSalesAmounts, setShowSalesAmounts] = useState(true);
   const [expiresInDays, setExpiresInDays] = useState<number | 'never'>(30);
   const [passcode, setPasscode] = useState('');
   const [createdLinkUrl, setCreatedLinkUrl] = useState<string | null>(null);
@@ -111,7 +112,8 @@ export default function SharedAccessSettings() {
       expiresAt,
       passcode: passcode.trim() || undefined,
       maskCustomerPii: true,
-      hideFinancials: true,
+      hideFinancials: !(allowedPages.includes('monthly-sales') && showSalesAmounts),
+      showSalesAmounts: allowedPages.includes('monthly-sales') && showSalesAmounts,
       showCustomerDetails: false,
       showStaffDetails: false,
       showOrderRows: true,
@@ -135,6 +137,7 @@ export default function SharedAccessSettings() {
     setName('');
     setBrandScope('ALL');
     setAllowedPages(['dashboard', 'products', 'delivery-failures', 'returns']);
+    setShowSalesAmounts(true);
     setExpiresInDays(30);
     setPasscode('');
     setCreatedLinkUrl(null);
@@ -259,7 +262,9 @@ export default function SharedAccessSettings() {
                             >
                               {page === 'delivery-failures'
                                 ? 'Failures'
-                                : page.charAt(0).toUpperCase() + page.slice(1)}
+                                : page === 'monthly-sales'
+                                  ? `Monthly sales${link.showSalesAmounts ? ' (with NPR)' : ''}`
+                                  : page.charAt(0).toUpperCase() + page.slice(1)}
                             </span>
                           ))}
                         </div>
@@ -483,6 +488,7 @@ export default function SharedAccessSettings() {
                       { id: 'products' as SharedAccessAllowedPage, label: 'Products & Performance' },
                       { id: 'delivery-failures' as SharedAccessAllowedPage, label: 'Delivery Failure Trends' },
                       { id: 'returns' as SharedAccessAllowedPage, label: 'Return Rates & Reasons' },
+                      { id: 'monthly-sales' as SharedAccessAllowedPage, label: 'Monthly Sales Sheet & Breakdown' },
                     ].map((sec) => (
                       <label
                         key={sec.id}
@@ -502,6 +508,14 @@ export default function SharedAccessSettings() {
                       </label>
                     ))}
                   </div>
+                  {allowedPages.includes('monthly-sales') && (
+                    <label className="mt-2 flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50/50 p-2.5 text-xs text-blue-900">
+                      <input type="checkbox" checked={showSalesAmounts} onChange={(event) => setShowSalesAmounts(event.target.checked)} className="mt-0.5 rounded text-blue-600" />
+                      <span><strong className="font-semibold">Show rupee amounts in the monthly sheet</strong>
+                        <span className="block text-[11px] text-blue-800">Net sales, MRP value, sale and customer discounts, and discount reasons. Off: only orders and units are shared.</span>
+                        <span className="block text-[11px] text-blue-800">The viewer picks the brand and month, within the brands chosen above.</span></span>
+                    </label>
+                  )}
                   <div className="text-[11px] text-slate-400 mt-1.5 italic">
                     Note: Customer 360, offline beat plans, cheques, and settings are always restricted.
                   </div>
@@ -512,7 +526,7 @@ export default function SharedAccessSettings() {
                   <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <div>
                     <strong className="block font-bold">Automatic Privacy &amp; Commercial Guardrails</strong>
-                    Customer names will be masked as &quot;S*** S***&quot;, phone numbers as &quot;98****1234&quot;, and internal product margins/financials are stripped.
+                    Customer names will be masked as &quot;S*** S***&quot;, phone numbers as &quot;98****1234&quot;, and internal margins are never shared.{allowedPages.includes('monthly-sales') && showSalesAmounts ? ' Sales amounts are shared only in the monthly sheet.' : ' No rupee amounts are shared.'}
                   </div>
                 </div>
 

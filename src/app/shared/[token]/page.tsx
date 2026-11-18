@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Lock, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Download, Lock, ShieldAlert, ShieldCheck } from 'lucide-react';
 import type { PortalTab, SharedPortalData } from '@/app/api/shared/[token]/projection';
+import { MonthlySalesBreakdown, MonthlySalesCards, MonthlySalesTable, monthlySalesCsv } from '@/components/reports/MonthlySalesView';
+import { downloadCSV } from '@/lib/csv';
 
-const labels: Record<PortalTab, string> = { dashboard: 'Dashboard Overview', products: 'Products & Performance', 'delivery-failures': 'Delivery Failures', returns: 'Returns & Quality' };
+const labels: Record<PortalTab, string> = { dashboard: 'Dashboard Overview', products: 'Products & Performance', 'delivery-failures': 'Delivery Failures', returns: 'Returns & Quality', 'monthly-sales': 'Monthly Sales Sheet' };
 
 export default function SharedAccessPortalPage() {
   const token = useParams()?.token as string;
@@ -18,11 +20,13 @@ export default function SharedAccessPortalPage() {
   const [name, setName] = useState('Shared Operational View');
   const [activeTab, setActiveTab] = useState<PortalTab>('dashboard');
 
-  async function load(sharedPasscode = '', signal?: AbortSignal) {
+  const [view, setView] = useState<{ brand?: string; month?: string }>({});
+  async function load(sharedPasscode = '', signal?: AbortSignal, nextView: { brand?: string; month?: string } = view) {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch(`/api/shared/${encodeURIComponent(token)}`, { cache: 'no-store', credentials: 'omit', headers: sharedPasscode ? { 'x-shared-passcode': sharedPasscode } : {}, signal });
+      const query = new URLSearchParams(Object.entries(nextView).filter(([, value]) => !!value) as [string, string][]).toString();
+      const response = await fetch(`/api/shared/${encodeURIComponent(token)}${query ? `?${query}` : ''}`, { cache: 'no-store', credentials: 'omit', headers: sharedPasscode ? { 'x-shared-passcode': sharedPasscode } : {}, signal });
       const result = await response.json();
       if (signal?.aborted) return;
       if (response.status === 401 && result.requiresPasscode) {
@@ -38,7 +42,7 @@ export default function SharedAccessPortalPage() {
       const sharedData = result.data as SharedPortalData;
       setData(sharedData);
       setRequiresPasscode(false);
-      setActiveTab(sharedData.link.allowedPages[0]);
+      if (!query) setActiveTab(sharedData.link.allowedPages[0]);
     } catch (cause) {
       if (!signal?.aborted) setError(cause instanceof Error ? cause.message : 'Shared data could not be loaded.');
     } finally { if (!signal?.aborted) setLoading(false); }
@@ -108,6 +112,27 @@ export default function SharedAccessPortalPage() {
           {[['Total orders', summary.totalOrders], ['Delivery failure rate', `${failureRate}% (${summary.failureCount})`], ['Return rate', `${returnRate}% (${summary.returnCount})`], ['Catalog products', summary.productCount]].map(([label, value]) => <section key={label} className="rounded-2xl border bg-white p-5"><h2 className="text-xs font-bold uppercase text-slate-500">{label}</h2><p className="mt-2 text-3xl font-bold">{value}</p></section>)}
         </div>}
         {activeTab === 'products' && data.products && <div className="overflow-x-auto rounded-2xl border bg-white"><table className="w-full text-left text-sm"><caption className="p-4 text-left font-bold">Product performance</caption><thead className="bg-slate-100"><tr>{['Product', 'Brand', 'Category', 'SKU', 'Orders', 'Returns'].map(label => <th key={label} className="p-3">{label}</th>)}</tr></thead><tbody>{products.map(product => <tr key={product.id} className="border-t"><td className="p-3">{product.name}</td><td className="p-3">{product.brandCode}</td><td className="p-3">{product.category}</td><td className="p-3">{product.sku}</td><td className="p-3">{product.orderCount}</td><td className="p-3">{product.returnCount}</td></tr>)}</tbody></table>{products.length === 0 && <p className="p-4 text-sm text-slate-500">No products in this shared scope.</p>}</div>}
+        {activeTab === 'monthly-sales' && data.monthlySales && (() => {
+          const sheet = data.monthlySales;
+          const change = (next: { brand?: string; month?: string }) => { const merged = { brand: sheet.brand, month: sheet.month, ...next }; setView(merged); void load(passcode, undefined, merged); };
+          return (
+            <div className="space-y-4" aria-busy={loading}>
+              <div className="flex flex-wrap items-end gap-3 rounded-2xl border bg-white p-4">
+                <label className="text-xs font-semibold text-slate-700">Brand
+                  <select value={sheet.brand} onChange={(event) => change({ brand: event.target.value })} className="mt-1 block min-h-[42px] min-w-40 rounded-lg border border-slate-300 px-3 text-sm">
+                    {sheet.brands.map((brand) => <option key={brand.code} value={brand.code}>{brand.name}</option>)}
+                  </select></label>
+                <label className="text-xs font-semibold text-slate-700">Month
+                  <input type="month" value={sheet.month} min={sheet.firstMonth} max={sheet.lastMonth} onChange={(event) => event.target.value && change({ month: event.target.value })} className="mt-1 block min-h-[42px] rounded-lg border border-slate-300 px-3 text-sm" /></label>
+                <button type="button" onClick={() => downloadCSV(monthlySalesCsv(sheet.report, sheet.showMoney), `monthly-sales-${sheet.brand}-${sheet.from}-to-${sheet.to}.csv`)} className="inline-flex min-h-[42px] items-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-semibold text-white"><Download className="h-4 w-4" />Download CSV</button>
+                <p className="text-xs text-slate-500">{sheet.from} to {sheet.to}{loading ? ' · updating…' : ''}</p>
+              </div>
+              <MonthlySalesCards report={sheet.report} showMoney={sheet.showMoney} />
+              <MonthlySalesTable report={sheet.report} showMoney={sheet.showMoney} />
+              <MonthlySalesBreakdown report={sheet.report} showMoney={sheet.showMoney} />
+            </div>
+          );
+        })()}
         {activeTab === 'delivery-failures' && data.deliveryFailures && <div className="overflow-x-auto rounded-2xl border bg-white"><table className="w-full text-left text-sm"><caption className="p-4 text-left font-bold">Delivery failures</caption><thead className="bg-slate-100"><tr>{['Order ID', 'Date', 'Brand', 'Customer', 'Phone', 'Region', 'Reason', 'Status'].map(label => <th key={label} className="p-3">{label}</th>)}</tr></thead><tbody>{failures.map(failure => <tr key={failure.id} className="border-t"><td className="p-3 font-mono">{failure.orderNumber || '—'}</td><td className="p-3">{failure.dateBs || failure.dateAd}</td><td className="p-3">{failure.brandCode}</td><td className="p-3">{failure.customerName}</td><td className="p-3">{failure.customerPhone}</td><td className="p-3">{failure.valley}</td><td className="p-3">{failure.reason}</td><td className="p-3">{failure.status}</td></tr>)}</tbody></table>{failures.length === 0 && <p className="p-4 text-sm text-slate-500">No delivery failure rows are shared.</p>}</div>}
         {activeTab === 'returns' && data.returns && <div className="overflow-x-auto rounded-2xl border bg-white"><table className="w-full text-left text-sm"><caption className="p-4 text-left font-bold">Returns &amp; quality</caption><thead className="bg-slate-100"><tr>{['Order ID', 'Date', 'Product', 'Brand', 'Customer', 'Phone', 'Reason', 'Resolution'].map(label => <th key={label} className="p-3">{label}</th>)}</tr></thead><tbody>{returns.map(entry => <tr key={entry.id} className="border-t"><td className="p-3 font-mono">{entry.orderNumber || '—'}</td><td className="p-3">{entry.dateBs || entry.dateAd}</td><td className="p-3">{entry.productName}</td><td className="p-3">{entry.brandCode}</td><td className="p-3">{entry.customerName}</td><td className="p-3">{entry.customerPhone}</td><td className="p-3">{entry.reasonCategory}</td><td className="p-3">{entry.orderStatus}</td></tr>)}</tbody></table>{returns.length === 0 && <p className="p-4 text-sm text-slate-500">No return rows are shared.</p>}</div>}
       </main>

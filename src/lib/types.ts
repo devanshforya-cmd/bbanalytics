@@ -1409,7 +1409,8 @@ export type SharedAccessAllowedPage =
   | 'dashboard'
   | 'products'
   | 'delivery-failures'
-  | 'returns';
+  | 'returns'
+  | 'monthly-sales';
 
 export interface SharedAccessLink {
   id: string;
@@ -1432,6 +1433,8 @@ export interface SharedAccessLink {
   passcode?: string;
   maskCustomerPii?: boolean;
   hideFinancials?: boolean;
+  /** Monthly sales sheet: show rupee amounts (MRP, discounts, net sales), not only orders and units. */
+  showSalesAmounts?: boolean;
   isActive: boolean;
   lastAccessedAt?: string;
   accessCount: number;
