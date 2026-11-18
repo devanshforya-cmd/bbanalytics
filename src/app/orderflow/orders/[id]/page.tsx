@@ -11,6 +11,7 @@ import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { useSubmitGuard } from '@/hooks/useSubmitGuard';
 import { useCalendarPreference } from '@/lib/hooks/useCalendarPreference';
 import { isSellableCombo, matchingCatalogCombo } from '@/lib/product-catalog';
+import { allocate } from '@/lib/offers';
 import { diffOrder, editNeedsReason } from '@/lib/order-history';
 import { displayDocumentId } from '@/lib/document-ids';
 import { phoneDigits } from '@/lib/customer-lookup';
@@ -156,23 +157,30 @@ export default function OrderPage() {
     const price = product ? product.mrp : combo ? combo.comboPrice || combo.comboMrp || 0 : 0;
     const chosen = product || combo;
     if (!chosen) return;
-    setItems([...draft.items, { productId: chosen.id, productName: chosen.name, brandCode: chosen.brandCode, quantity: 1, unitPrice: price, totalPrice: price }]);
+    // A line added today is priced at today's catalogue price, and that price is kept with it.
+    setItems([...draft.items, { productId: chosen.id, productName: chosen.name, brandCode: chosen.brandCode, quantity: 1, unitPrice: price, totalPrice: price, catalogUnitPrice: price }]);
   };
   /** A combo line that needs changing is opened into its products, at their own prices. */
   const expandCombo = (index: number) => {
     const line = draft.items[index];
     const combo = combos.find((entry) => entry.id === line.productId);
     if (!combo) return;
-    const parts: OrderItem[] = combo.items.map((part) => {
+    // The amount the customer paid for the combo stays the same: it is shared out over the products in
+    // proportion to their prices in the combo, never re-priced at today's catalogue prices.
+    const weights = combo.items.map((part) => Math.round((part.mrp || products.find((entry) => entry.id === part.productId)?.mrp || 0) * 100) * part.quantity);
+    const shares = allocate(Math.round(line.totalPrice * 100), weights.some((weight) => weight > 0) ? weights : weights.map(() => 1));
+    const parts: OrderItem[] = combo.items.map((part, i) => {
       const product = products.find((entry) => entry.id === part.productId);
       const quantity = part.quantity * line.quantity;
-      const price = product?.mrp || 0;
-      return { productId: part.productId, productName: product?.name || 'Product', brandCode: product?.brandCode || combo.brandCode, quantity, unitPrice: price, totalPrice: price * quantity };
+      const total = shares[i] / 100;
+      const listPrice = part.mrp || product?.mrp || 0;
+      return { productId: part.productId, productName: product?.name || part.productName || 'Product', brandCode: product?.brandCode || combo.brandCode, quantity,
+        unitPrice: Math.round((total / quantity) * 100) / 100, totalPrice: total, catalogUnitPrice: listPrice, discountAmount: Math.round((listPrice * quantity - total) * 100) / 100 };
     });
     const rest = draft.items.filter((_, i) => i !== index);
     for (const part of parts) {
-      const at = rest.findIndex((item) => item.productId === part.productId && item.unitPrice === part.unitPrice);
-      if (at >= 0) rest[at] = { ...rest[at], quantity: rest[at].quantity + part.quantity, totalPrice: rest[at].unitPrice * (rest[at].quantity + part.quantity) };
+      const at = rest.findIndex((item) => item.productId === part.productId && !item.isGift && item.catalogUnitPrice === part.catalogUnitPrice);
+      if (at >= 0) { const quantity = rest[at].quantity + part.quantity; const totalPrice = Math.round((rest[at].totalPrice + part.totalPrice) * 100) / 100; rest[at] = { ...rest[at], quantity, totalPrice, unitPrice: Math.round((totalPrice / quantity) * 100) / 100 }; }
       else rest.push(part);
     }
     setItems(rest);
