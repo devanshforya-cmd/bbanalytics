@@ -56,13 +56,16 @@ export function findAddOnTarget(orders: Order[], input: { phone: string; dateAd:
 export function mergeOrderItems(existing: OrderItem[], added: OrderItem[]): OrderItem[] {
   const result = existing.map((item) => ({ ...item }));
   for (const item of added) {
-    const same = result.find((line) => line.productId === item.productId);
+    // A free gift never merges with the same product bought at a price.
+    const same = result.find((line) => line.productId === item.productId && !!line.isGift === !!item.isGift);
     if (!same) { result.push({ ...item }); continue; }
     const quantity = same.quantity + item.quantity;
     const totalPrice = money(same.totalPrice + item.totalPrice);
     same.quantity = quantity; same.totalPrice = totalPrice; same.unitPrice = money(totalPrice / quantity);
     if (same.discountAmount !== undefined || item.discountAmount !== undefined) same.discountAmount = money((same.discountAmount || 0) + (item.discountAmount || 0));
     if (same.catalogUnitPrice === undefined && item.catalogUnitPrice !== undefined) same.catalogUnitPrice = item.catalogUnitPrice;
+    for (const key of ['offerDiscount', 'customerDiscount'] as const) if (same[key] !== undefined || item[key] !== undefined) same[key] = money((same[key] || 0) + (item[key] || 0));
+    if (same.offerDiscount) same.offerUnitPrice = money((same.totalPrice + (same.customerDiscount || 0)) / quantity); else delete same.offerUnitPrice;
   }
   return result;
 }

@@ -92,7 +92,7 @@ export default function LogFailureForm({ onClose, onSaved, onViewCustomer, initi
       } else {
         db.addDeliveryFailure({
           orderId: order.id, orderNumber: order.orderNumber, brandCode: order.brandCode, customerName: order.customerName, customerPhone: order.customerPhone,
-          productName: order.items.map((item) => `${item.quantity}× ${item.productName}`).join(', '), products: order.items.map((item) => ({ productName: item.productName, quantity: item.quantity })),
+          productName: order.items.map((item) => `${item.quantity}× ${item.productName}${item.isGift ? ' (gift)' : ''}`).join(', '), products: order.items.map((item) => ({ productName: item.productName, quantity: item.quantity })),
           deliveryMethod: order.deliveryMethod, address: order.address, district: order.district, platform: order.platform, orderDateAd: order.orderDateAd,
           dateAd, dateBs, reason, ...(detail ? { reasonDetail: detail } : {}), valley: valleyOf(order.district), attempts: attemptNumber, status: reattemptAd ? 'REATTEMPT_SCHEDULED' : 'FAILED',
           ...(remarks.trim() ? { remarks: remarks.trim() } : {}), ...(reattemptAd ? { reattemptDateAd: reattemptAd, reattemptDateBs: reattemptBs } : {}),
@@ -148,7 +148,7 @@ export default function LogFailureForm({ onClose, onSaved, onViewCustomer, initi
             <section>
               <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">From the order</p>
               <div className="flex flex-wrap gap-1.5">
-                {[['Customer', order.customerName], ['Brand', brandName(order.brandCode)], ['Products', order.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')],
+                {[['Customer', order.customerName], ['Brand', brandName(order.brandCode)], ['Products', order.items.map((item) => `${item.quantity}× ${item.productName}${item.isGift ? ' (gift)' : ''}`).join(', ')],
                   ['Address', order.address || '—'], ['District', order.district || '—'], ['Valley', valleyOf(order.district)], ['Platform', order.platform],
                   ['Delivery', order.deliveryMethod], ['Ordered', formatDate(order.orderDateAd, order.orderDateBs)]].map(([term, detail]) => (
                   <span key={term} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1"><span className="text-slate-500">{term}:</span> <strong className="text-slate-900">{detail}</strong></span>

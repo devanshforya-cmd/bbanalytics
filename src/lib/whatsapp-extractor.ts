@@ -3,6 +3,7 @@ import { BrandCode, Product, Combo, Brand } from './types';
 import { adToBs, getTodayAd } from './nepali-calendar';
 import { readEntryMarker, type ExtractedEntryKind } from './order-merge';
 import { findOption, findPhrase, normalizeWord, optionAliases, tokens } from './fuzzy-match';
+import type { PriceTrail } from './order-pricing';
 
 export type Confidence = 'HIGH' | 'AUTO' | 'REVIEW' | 'FAILED';
 export interface ExtractedField<T> { value: T; confidence: Confidence; rawMatched?: string; matchedKeyword?: string }
@@ -23,6 +24,14 @@ export interface ExtractedOrderResult {
   flags: string[]; extractionErrors: string[]; rawText: string;
   /** "order added:" adds the items to the customer's order of the same date; "exchange:" saves a replacement order. */
   entryKind?: ExtractedEntryKind;
+  /** Time from the WhatsApp header (HH:mm), for offers limited to hours. */
+  orderTime?: string;
+  /** Live offers staff switched off for this order. */
+  disabledOfferIds?: string[];
+  /** Why this customer got a price below the offer price. */
+  customerDiscountReason?: string;
+  /** MRP → offers → written price → net, worked out on the review screen. */
+  trail?: PriceTrail;
 }
 export const NEPAL_CITIES = ['Ghorahi','Budhanilkantha','Thecho','Kathmandu','Lalitpur','Bhaktapur','Pokhara','Chitwan','Narayangarh','Biratnagar','Butwal','Dharan','Birgunj','Hetauda','Nepalgunj','Itahari','Dhangadhi','Bhairahawa','Janakpur','Jhapa','Birtamode','Birtamod','Banepa','Dhulikhel','Surkhet'];
 export interface DynamicExtractorOptions { products: Product[]; combos: Combo[]; brands: Brand[]; channels?: string[]; deliveryMethods?: string[]; dateOverride?: string; customSeparator?: string }
@@ -74,6 +83,16 @@ function messageDate(text: string, override?: string): { value: string; confiden
   if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return { value: getTodayAd(), confidence: 'REVIEW', warning: 'The message date is invalid; check the order date.' };
   return { value: date.toISOString().slice(0, 10), confidence: match[3] ? 'HIGH' : 'REVIEW', ...(match[3] ? {} : { warning: 'The message has no year; the current year was selected.' }) };
 }
+/** The time in a WhatsApp header ("[16/11/26, 6:32 PM]" or "16/11/2026, 18:32 - Sita:"), as HH:mm. */
+export function messageTime(text: string): string | undefined {
+  const header = new RegExp(headerStart.source, 'im').exec(text);
+  if (!header || header.index !== 0) return undefined;
+  const match = /(?<![\d/.\-])(\d{1,2}):(\d{2})(?::\d{2})?\s*([AP]\.?M\.?)?/i.exec(header[0]);
+  if (!match) return undefined;
+  let hour = Number(match[1]); const minute = Number(match[2]); const half = match[3]?.replace(/\./g, '').toUpperCase();
+  if (half === 'PM' && hour < 12) hour += 12; if (half === 'AM' && hour === 12) hour = 0;
+  return hour < 24 && minute < 60 ? `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}` : undefined;
+}
 function dateBs(value: string): string {
   try { const bs = adToBs(new Date(`${value}T12:00:00`)); return `${bs.monthName} ${bs.day}, ${bs.year}`; } catch { return ''; }
 }
@@ -94,6 +113,8 @@ export function percentDiscountTotal(subtotal: number, percent: number): number 
   return Math.round(subtotal * (1 - percent / 100));
 }
 export function extractedOrderTotal(order: ExtractedOrderResult): number {
+  // With sales and offers worked out, their price trail is the answer.
+  if (order.trail) return order.trail.total;
   const cents = Math.round(order.products.reduce((sum, item) => sum + (item.saleUnitPrice ?? item.unitPrice) * item.quantity, 0) * 100);
   if (order.statedPrice.provided ?? order.statedPrice.value > 0) return order.statedPrice.value;
   // An exchange collects nothing unless the message gives an amount.
@@ -103,6 +124,7 @@ export function extractedOrderTotal(order: ExtractedOrderResult): number {
 }
 /** How much below the catalogue price the order is sold, for the review screen. */
 export function extractedDiscount(order: ExtractedOrderResult): { amount: number; percent: number } {
+  if (order.trail) { const amount = Math.max(0, Math.round((order.trail.mrpTotal - order.trail.total) * 100) / 100); return { amount, percent: order.trail.mrpTotal ? Math.round((amount / order.trail.mrpTotal) * 1000) / 10 : 0 }; }
   const catalogue = order.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const amount = Math.max(0, Math.round((catalogue - extractedOrderTotal(order)) * 100) / 100);
   return { amount, percent: catalogue ? Math.round((amount / catalogue) * 1000) / 10 : 0 };
@@ -302,6 +324,7 @@ export function validateExtractedOrder(order: ExtractedOrderResult): string[] {
     if (!Number.isFinite(pct) || pct < 0 || pct > 100 || Math.abs(pct * 100 - Math.round(pct * 100)) > 1e-6) errors.push('Enter a discount between 0 and 100%.');
     if (order.flags.some(flag => flag.startsWith('Discount scope is unclear'))) errors.push('Review the discount scope; clear the percentage and enter the agreed order total.');
   }
+  if (order.trail?.problem) errors.push(order.trail.problem);
   if (order.entryKind === 'EXCHANGE' && order.discountPercent?.provided) errors.push('An exchange collects a written amount, not a percentage. Clear the discount and enter the amount to collect (0 if free).');
   if (order.flags.some(flag => flag.includes('matches multiple catalogue items') || flag.startsWith('Multiple combos match'))) errors.push('Resolve the ambiguous catalogue match before saving.');
   if (order.flags.some(flag => flag.startsWith('Unrecognized order item:'))) errors.push('Review the unrecognized item and add the correct catalogue product before saving.');
@@ -405,7 +428,7 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
     discountPercent: { value: discount ?? 0, provided: discount !== null, confidence: discount !== null ? 'HIGH' : 'REVIEW' },
     paymentTerms: { value: prepaid ? 'Prepaid' : 'COD', confidence: 'AUTO' }, deliveryMethod: { value: delivery, confidence: delivery ? 'AUTO' : 'REVIEW' },
     orderDateAd: { value: date.value, confidence: date.confidence }, orderDateBs: { value: dateBs(date.value), confidence: date.confidence },
-    flags, extractionErrors: [], rawText: text, entryKind,
+    flags, extractionErrors: [], rawText: text, entryKind, ...(messageTime(text) ? { orderTime: messageTime(text) } : {}),
   };
   order.totalAmount.value = extractedOrderTotal(order);
   order.extractionErrors = validateExtractedOrder(order); return order;

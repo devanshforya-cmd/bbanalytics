@@ -27,12 +27,13 @@ const FEATURES: Record<WorkspaceCollection, FeatureKey[]> = {
   workspaceConfig: ['settings'],
   marketingSends: ['marketing'], influencerNiches: ['marketing', 'settings'], marketingOptions: ['marketing', 'settings'],
   failureReasons: ['orderflow', 'order_desk', 'settings'], userPreferences: [],
+  campaigns: ['settings', 'marketing'],
 };
 
 const GLOBAL_CATALOG = new Set<WorkspaceCollection>([
   'products', 'combos', 'reviewCategories', 'holidays', 'seasonalPatterns', 'taskTemplates',
   'promotions', 'documentTypes', 'storeCategories', 'workspaceConfig',
-  'influencerNiches', 'marketingOptions', 'failureReasons',
+  'influencerNiches', 'marketingOptions', 'failureReasons', 'campaigns',
 ]);
 
 export function collectionFeatures(collection: WorkspaceCollection, read = false): FeatureKey[] {
@@ -40,6 +41,8 @@ export function collectionFeatures(collection: WorkspaceCollection, read = false
   if (read && collection === 'reviewCategories') return ['reviews', 'order_desk'];
   if (read && ['documentTypes', 'storeCategories', 'workspaceConfig', 'promotions'].includes(collection)) return ['settings', 'beat_plans', 'stores', 'document_handover', 'orderflow', 'order_desk'];
   if (read && collection === 'holidays') return ['settings', 'beat_plans', 'tasks'];
+  // Everyone who takes or reviews online orders sees the running sales; settings and marketing manage them.
+  if (read && collection === 'campaigns') return ['settings', 'marketing', 'orderflow', 'order_desk', 'dashboard'];
   if (read && collection === 'failureReasons') return ['orderflow', 'order_desk', 'settings', 'reviews', 'dashboard'];
   if (read && collection === 'stockCounts') return ['beat_plans', 'dispatches'];
   if (read && (collection === 'retailers' || collection === 'branches')) return ['stores', 'beat_plans', 'cheque_tracker', 'shelf_photos', 'call_tracker', 'document_handover', 'dispatches'];

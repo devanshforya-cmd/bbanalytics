@@ -25,12 +25,13 @@ export function followUpDates(value: string): [string, string] {
   return [after21.toISOString().slice(0,10), after2Months.toISOString().slice(0,10)];
 }
 export function extractorCSV(orders: ExtractedOrderResult[], products: Product[], defaultChannel: string): string {
-  const columns = ['S.N.','Order ID','Order Placed Date','Order Type','Order Platform','Customer Name','Customer Phone Number','Alternate Phone Number','Province','Product Category','Product Name','MRP (Rs.)','Quantity Ordered','Discount (Rs.)','Line Revenue (Rs.)','Delivery Status','Remarks','Follow up-1 (21 days)','Follow up-2 (2 months)'];
+  const columns = ['S.N.','Order ID','Order Placed Date','Order Type','Order Platform','Customer Name','Customer Phone Number','Alternate Phone Number','Province','Product Category','Product Name','MRP (Rs.)','Quantity Ordered','Discount (Rs.)','Line Revenue (Rs.)','Delivery Status','Remarks','Follow up-1 (21 days)','Follow up-2 (2 months)','Sale & Offer Discount (Rs.)','Customer Discount (Rs.)','Sale / Offers'];
   let serial = 0;
   const rows = orders.flatMap(order => {
     const total = order.totalAmount.value;
     let allocation: number[] = [];
-    try { if (order.products.length) allocation = allocateOrderTotal(order.products.map(item => ({ ...item, unitPrice: item.saleUnitPrice ?? item.unitPrice })), total); } catch { /* Incomplete orders remain explicitly marked for review. */ }
+    try { if (order.trail) allocation = order.trail.lines.map(line => line.total); else if (order.products.length) allocation = allocateOrderTotal(order.products.map(item => ({ ...item, unitPrice: item.saleUnitPrice ?? item.unitPrice })), total); } catch { /* Incomplete orders remain explicitly marked for review. */ }
+    const offers = [...new Set((order.trail?.pricing?.applied || []).map(offer => `${offer.campaignName}: ${offer.offerName}`))].join('; ');
     const followUps = followUpDates(order.orderDateAd.value);
     const items = order.products.length ? order.products : [null];
     return items.map((item,index) => {
@@ -39,7 +40,8 @@ export function extractorCSV(orders: ExtractedOrderResult[], products: Product[]
       const values: unknown[] = [++serial,'',order.orderDateAd.value,'New',order.salesChannel ?? defaultChannel,order.customerName.value,order.customerPhone.value,order.alternatePhone.value,order.province.value,
         item?.isCombo ? 'Combo' : products.find(product => product.id === item?.productId)?.category || '', item?.name || 'Review manually',item?.unitPrice ?? '',item?.quantity ?? '',
         original !== undefined && amount !== undefined ? Math.round((original - amount) * 100) / 100 : '', amount ?? '', '',
-        [item?.isCombo ? `Combo: ${item.name}` : '', order.extractionErrors.length ? `Review: ${order.extractionErrors.join('; ')}` : ''].filter(Boolean).join('; '), ...followUps];
+        [item?.isCombo ? `Combo: ${item.name}` : '', order.extractionErrors.length ? `Review: ${order.extractionErrors.join('; ')}` : ''].filter(Boolean).join('; '), ...followUps,
+        item && order.trail ? order.trail.lines[index]?.offerDiscount ?? '' : '', item && order.trail ? order.trail.lines[index]?.customerDiscount ?? '' : '', offers];
       return Object.fromEntries(columns.map((column,i) => [column, typeof values[i] === 'string' && /^[\s]*[=+\-@\t\r]/.test(values[i] as string) ? `'${values[i]}` : values[i]]));
     });
   });

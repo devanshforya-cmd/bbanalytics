@@ -663,6 +663,30 @@ export interface OrderItem {
   totalPrice: number;
   catalogUnitPrice?: number;
   discountAmount?: number;
+  /** Price trail (sales and offers): the unit price after offers and before any one-off customer discount. */
+  offerUnitPrice?: number;
+  /** Line total taken off by offers (NPR), and by a one-off customer discount. MRP − offers − customer = net. */
+  offerDiscount?: number;
+  customerDiscount?: number;
+  /** A free gift from an offer: NPR 0, its catalogue price kept for cost. */
+  isGift?: boolean;
+  giftOfferId?: string;
+}
+
+/** An offer that priced an order, kept as it was at the time so later edits to the offer never change history. */
+export interface AppliedOffer {
+  offerId: string;
+  offerName: string;
+  campaignId: string;
+  campaignName: string;
+  /** Discount it gave on this order (NPR). Gifts and free delivery are 0 here. */
+  amount: number;
+  giftItemId?: string;
+  giftName?: string;
+  giftQuantity?: number;
+  /** Catalogue value of the gift (NPR), for cost. */
+  giftValue?: number;
+  freeDelivery?: boolean;
 }
 
 // Channel/provider labels are configured in Settings; historical attribution stays unchanged.
@@ -723,6 +747,14 @@ export interface Order {
   exchangeRequested?: boolean;
   /** WhatsApp "order added" messages merged into this order, so a repeated save never adds them twice. */
   extractorAddOns?: { clientId: string; hash: string; addedAt: string; total: number }[];
+  /** Time of day the order was placed (HH:mm, Nepal time), when known. Offers with hours need it. */
+  orderTime?: string;
+  /** Sales and offers that priced this order. */
+  appliedOffers?: AppliedOffer[];
+  campaignIds?: string[];
+  /** Taken off on top of offers for this customer only (NPR), and why. */
+  customerDiscount?: number;
+  customerDiscountReason?: string;
   /** Written by the server only. Each entry is one changed field. */
   editHistory?: OrderEditEntry[];
   createdAt: string;
@@ -1430,3 +1462,75 @@ export interface FlagEvent {
   createdAt: string;
 }
 
+
+// ---------------------------------------------------------------------------
+// Sales and offers (online). A campaign is the scheduled umbrella; it holds any number of offers.
+// ---------------------------------------------------------------------------
+export type OfferTargetMode = 'ALL' | 'COMBOS' | 'SINGLES' | 'CATEGORY' | 'ITEMS' | 'EXCEPT';
+export interface OfferTarget { mode: OfferTargetMode; itemIds?: string[]; categories?: string[] }
+export interface OfferCondition {
+  minUnits?: number;
+  minOrderValue?: number;
+  /** All of these products or combos must be in the order. */
+  requiresAll?: string[];
+  firstOrderOnly?: boolean;
+  /** Only these customers (10-digit mobiles). */
+  customerPhones?: string[];
+  /** A word that must appear in the message, e.g. DASHAIN10. */
+  codeWord?: string;
+  /** Daily hours, Nepal time, e.g. 18:00–21:00. */
+  hours?: { from: string; to: string };
+}
+export type OfferReward =
+  | { type: 'PERCENT_OFF'; percent: number }
+  | { type: 'AMOUNT_OFF_EACH'; amount: number }
+  | { type: 'FIXED_PRICE'; price: number }
+  | { type: 'ORDER_AMOUNT_OFF'; amount: number }
+  | { type: 'BUY_X_GET_Y'; buy: number; get: number; percent: number }
+  | { type: 'BUNDLE_PRICE'; pick: number; price: number }
+  | { type: 'TIERED'; basis: 'ORDER_VALUE' | 'UNITS'; tiers: { min: number; percent: number }[] }
+  | { type: 'FREE_GIFT'; giftItemId: string; quantity: number }
+  | { type: 'FREE_DELIVERY' };
+export type OfferStacking = 'STACK' | 'BEST' | 'EXCLUSIVE';
+export interface SaleOffer {
+  id: string;
+  name: string;
+  enabled: boolean;
+  /** Narrower window inside the campaign (Nepal time, YYYY-MM-DDTHH:mm). */
+  startsAt?: string;
+  endsAt?: string;
+  target: OfferTarget;
+  condition: OfferCondition;
+  reward: OfferReward;
+  stacking: OfferStacking;
+  /** Lower runs first. */
+  priority: number;
+  limits?: { perCustomer?: number; totalUses?: number; giftStock?: number };
+  /** Never sell an item below this share of its MRP (%), whatever stacks. */
+  floorPercent?: number;
+  /** Coupon code on the website, for the website order import. */
+  websiteCode?: string;
+  notes?: string;
+}
+export type CampaignStatus = 'DRAFT' | 'SCHEDULED' | 'PAUSED' | 'ENDED';
+export interface SaleCampaign {
+  id: string;
+  name: string;
+  /** Brands it covers. */
+  brandCodes: string[];
+  /** Sales channels it covers; empty means every channel. */
+  channels: string[];
+  /** Nepal time, YYYY-MM-DDTHH:mm. */
+  startsAt: string;
+  endsAt: string;
+  status: CampaignStatus;
+  offers: SaleOffer[];
+  /** A saved template, never applied to orders. */
+  isTemplate?: boolean;
+  notes?: string;
+  /** When it was ended early by hand. */
+  endedAt?: string;
+  createdAt: string;
+  createdBy?: string;
+  updatedAt?: string;
+}

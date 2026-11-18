@@ -1,4 +1,5 @@
 import { MANUAL_ORDER_STATUSES, type ManualOrderStatus } from '../order-status';
+import { validateCampaign } from '../offers';
 import { isOtherReason, failureReasonLabel } from '../failure-reason';
 import { normalizePhoneNumber } from '../auth-utils';
 import { installWorkspaceFetch } from '../workspace-reset-client';
@@ -7,6 +8,7 @@ import {
   getScope,
   canPerform,
   canWorkOrders,
+  canManageSales,
 } from '../permissions';
 import { WORKSPACE_COLLECTIONS, WorkspaceCollection, WorkspaceMutation, WorkspaceSnapshot, WorkspaceVersions } from './workspace-types';
 import { canReadWorkspaceRecord, canWriteWorkspaceRecord, StoredWorkspaceRecord } from './workspace-policy';
@@ -72,6 +74,7 @@ import {
   MarketingOptionList,
   MarketingSend,
   FailureReason,
+  SaleCampaign,
   UserPreferenceRecord,
   DeliveryAttempt,
   SharedAccessLink,
@@ -149,6 +152,7 @@ export class DatabaseService {
   private influencerNiches: InfluencerNiche[] = [];
   private marketingOptions: MarketingOption[] = [];
   private failureReasons: FailureReason[] = [];
+  private campaigns: SaleCampaign[] = [];
   private userPreferences: UserPreferenceRecord[] = [];
   private brandPrefixes: Record<string, string> = {};
   private workspaceLoaded = false;
@@ -447,7 +451,7 @@ export class DatabaseService {
         if (parsed.comparisonMode) this.comparisonMode = parsed.comparisonMode;
         if (parsed.influencers) this.influencers = parsed.influencers;
         if (parsed.influencerContent) this.influencerContent = parsed.influencerContent;
-        for (const key of ['marketingSends', 'influencerNiches', 'marketingOptions', 'failureReasons', 'userPreferences'] as const) if (Array.isArray(parsed[key])) (this as any)[key] = parsed[key];
+        for (const key of ['marketingSends', 'influencerNiches', 'marketingOptions', 'failureReasons', 'userPreferences', 'campaigns'] as const) if (Array.isArray(parsed[key])) (this as any)[key] = parsed[key];
         if (parsed.brandPrefixes && typeof parsed.brandPrefixes === 'object') this.brandPrefixes = parsed.brandPrefixes;
         if (parsed.sharedAccessLinks) this.sharedAccessLinks = parsed.sharedAccessLinks;
         if (parsed.salesMode) this.salesMode = parsed.salesMode;
@@ -607,6 +611,7 @@ export class DatabaseService {
         marketingOptions: this.marketingOptions,
         failureReasons: this.failureReasons,
         userPreferences: this.userPreferences,
+        campaigns: this.campaigns,
         brandPrefixes: this.brandPrefixes,
         sharedAccessLinks: this.sharedAccessLinks,
         salesMode: this.salesMode,
@@ -2738,6 +2743,49 @@ export class DatabaseService {
   }
 
   /** Reasons staff can pick when a delivery fails. The built-in list is used until an admin saves their own. */
+  // ------------------------------------------------------------------ Sales and offers (online campaigns)
+  public getCampaigns(): SaleCampaign[] {
+    return [...this.campaigns].sort((a, b) => b.startsAt.localeCompare(a.startsAt));
+  }
+  public getCampaign(id: string): SaleCampaign | undefined { return this.campaigns.find((entry) => entry.id === id); }
+
+  /** Create or update a sale. Checked with the same rules the server uses. */
+  public saveCampaign(input: Partial<SaleCampaign>): SaleCampaign {
+    if (!canManageSales(this.currentUser)) throw new Error('Managing sales and offers needs Settings or Marketing edit access.');
+    const existing = input.id ? this.campaigns.find((entry) => entry.id === input.id) : undefined;
+    const clean = validateCampaign({ ...input, offers: (input.offers || []).map((offer) => ({ ...offer, id: offer.id || this.generateId('offer') })) });
+    const now = new Date().toISOString();
+    const saved: SaleCampaign = { ...clean, id: existing?.id || this.generateId('campaign'), createdAt: existing?.createdAt || now, createdBy: existing?.createdBy || this.currentUser.fullName, updatedAt: now };
+    if (existing) Object.assign(existing, saved); else this.campaigns.push(saved);
+    this.persistState();
+    return saved;
+  }
+
+  /** Schedule, pause, resume or end a sale. Ending keeps it for reports; orders already priced keep their prices. */
+  public setCampaignStatus(id: string, status: SaleCampaign['status']): SaleCampaign {
+    const campaign = this.campaigns.find((entry) => entry.id === id);
+    if (!campaign) throw new Error('This sale no longer exists.');
+    return this.saveCampaign({ ...campaign, status, ...(status === 'ENDED' ? { endedAt: new Date().toISOString() } : {}) });
+  }
+
+  /** A copy as a new draft (or template): fresh offer IDs, so limits and reports start again. */
+  public duplicateCampaign(id: string, options: { asTemplate?: boolean; name?: string; startsAt?: string; endsAt?: string } = {}): SaleCampaign {
+    const source = this.campaigns.find((entry) => entry.id === id);
+    if (!source) throw new Error('This sale no longer exists.');
+    const { id: _id, createdAt: _c, createdBy: _b, updatedAt: _u, endedAt: _e, ...rest } = source;
+    return this.saveCampaign({ ...rest, name: options.name || `${source.name} (copy)`, status: 'DRAFT', isTemplate: !!options.asTemplate,
+      startsAt: options.startsAt || source.startsAt, endsAt: options.endsAt || source.endsAt, offers: source.offers.map((offer) => ({ ...offer, id: '' })) });
+  }
+
+  /** Drafts and templates can be deleted. A sale that priced orders is ended instead, so its reports stay. */
+  public deleteCampaign(id: string): void {
+    if (!canManageSales(this.currentUser)) throw new Error('Managing sales and offers needs Settings or Marketing edit access.');
+    const used = this.orders.some((order) => order.campaignIds?.includes(id) || order.appliedOffers?.some((entry) => entry.campaignId === id));
+    if (used) throw new Error('Orders were priced with this sale. End it instead so its results stay in the reports.');
+    this.campaigns = this.campaigns.filter((entry) => entry.id !== id);
+    this.persistState();
+  }
+
   public getFailureReasons(includeArchived = false): FailureReason[] {
     const saved = this.failureReasons;
     const merged: FailureReason[] = [...saved];

@@ -143,7 +143,10 @@ export default function OrderPage() {
   const setItems = (items: OrderItem[]) => set({ items });
   const setQuantity = (index: number, quantity: number) => {
     const clean = Math.max(1, Math.min(9999, Math.round(quantity) || 1));
-    setItems(draft.items.map((item, i) => i === index ? { ...item, quantity: clean, totalPrice: Math.round(item.unitPrice * clean * 100) / 100, ...(item.discountAmount !== undefined && item.catalogUnitPrice !== undefined ? { discountAmount: Math.round((item.catalogUnitPrice - item.unitPrice) * clean * 100) / 100 } : {}) } : item));
+    // The price trail scales with the quantity: offer and customer discounts per unit stay the same.
+    const scale = (value: number | undefined, from: number) => value === undefined || !from ? value : Math.round((value / from) * clean * 100) / 100;
+    setItems(draft.items.map((item, i) => i === index ? { ...item, quantity: clean, totalPrice: Math.round(item.unitPrice * clean * 100) / 100, ...(item.discountAmount !== undefined && item.catalogUnitPrice !== undefined ? { discountAmount: Math.round((item.catalogUnitPrice - item.unitPrice) * clean * 100) / 100 } : {}),
+      ...(item.offerDiscount !== undefined ? { offerDiscount: scale(item.offerDiscount, item.quantity) } : {}), ...(item.customerDiscount !== undefined ? { customerDiscount: scale(item.customerDiscount, item.quantity) } : {}) } : item));
   };
   const addCatalogueItem = (id: string) => {
     const existing = draft.items.findIndex((item) => item.productId === id);

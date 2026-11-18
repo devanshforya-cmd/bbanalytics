@@ -11,6 +11,8 @@ export const WORKSPACE_COLLECTIONS = [
   'documentTypes', 'storeCategories', 'recurringSchedules', 'workspaceConfig',
   // November 2026: marketing sends are their own collection, never orders.
   'marketingSends', 'influencerNiches', 'marketingOptions', 'failureReasons', 'userPreferences',
+  // Online sales and offers: each record is a scheduled campaign holding its offers.
+  'campaigns',
 ] as const;
 
 /** Shared pick-lists that staff can extend inline and admins manage in Settings. */

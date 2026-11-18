@@ -1,4 +1,5 @@
 import { adToBs } from './nepali-calendar';
+import { lineMoney } from './monthly-sales-report';
 import type { DatabaseService } from './db/db-service';
 
 /** Offline (B2B) tabs carry BS next to AD; online and marketing tabs are AD only. */
@@ -52,8 +53,18 @@ export function buildGoogleReportTabs(db: GoogleReportDatabase, month = nepalRep
     // One row per order, keyed by its short ID. The whole tab is rewritten on every export,
     // so an edited order updates its row and can never appear twice.
     ...[month, ...movedMonths].map((tabMonth) => ({ title: `Orders-${tabMonth}`, values: [
-      ['Order ID', 'Order Date (AD)', 'Brand', 'Customer', 'Products', 'Qty', 'Type', 'Total Amount', 'Status', 'Earlier ID'],
-      ...allOrders.filter((order) => order.orderDateAd?.slice(0, 7) === tabMonth).map((order) => [order.orderNumber || order.id, order.orderDateAd || '', order.brandCode || '', order.customerName || '', (order.items || []).map((item) => item.productName).join('; '), (order.items || []).reduce((sum, item) => sum + (item.quantity ?? 0), 0), order.orderType || '', order.totalAmount ?? '', order.status || '', order.legacyOrderNumber || '']),
+      // Price trail columns are added at the end so existing sheet formulas keep their columns.
+      ['Order ID', 'Order Date (AD)', 'Brand', 'Customer', 'Products', 'Qty', 'Type', 'Total Amount', 'Status', 'Earlier ID',
+        'Platform', 'MRP Total', 'Sale & Offer Discount', 'Customer Discount', 'Discount Reason', 'Sale / Offers', 'Free Gifts'],
+      ...allOrders.filter((order) => order.orderDateAd?.slice(0, 7) === tabMonth).map((order) => {
+        const paid = (order.items || []).filter((item) => !item.isGift);
+        const money = paid.reduce((sum, item) => { const line = lineMoney(item); return { mrp: sum.mrp + line.mrp, offer: sum.offer + line.offer, customer: sum.customer + line.customer }; }, { mrp: 0, offer: 0, customer: 0 });
+        const type = order.exchangeRequested || order.exchangeReturnId ? 'Exchange' : order.orderType || '';
+        return [order.orderNumber || order.id, order.orderDateAd || '', order.brandCode || '', order.customerName || '', paid.map((item) => item.productName).join('; '), paid.reduce((sum, item) => sum + (item.quantity ?? 0), 0), type, order.totalAmount ?? '', order.status || '', order.legacyOrderNumber || '',
+          order.platform || '', money.mrp / 100, money.offer / 100, money.customer / 100, money.customer ? order.customerDiscountReason || '' : '',
+          [...new Set((order.appliedOffers || []).map((offer) => `${offer.campaignName}: ${offer.offerName}`))].join('; '),
+          (order.items || []).filter((item) => item.isGift).map((item) => `${item.quantity}x ${item.productName}`).join('; ')];
+      }),
     ] as GoogleReportCell[][] })),
     // Marketing sends have their own tab and never appear on an Orders tab.
     { title: 'Marketing Sends', values: [

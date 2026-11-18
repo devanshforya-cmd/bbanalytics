@@ -12,6 +12,9 @@ import { useOrderOptions } from '@/hooks/useOrderOptions';
 import { activeOrderOptionNames, assertActiveOrderOption } from '@/lib/order-options';
 import { BrandCode, OrderPlatform, DeliveryMethod } from '@/lib/types';
 import { displayDocumentId } from '@/lib/document-ids';
+import { priceTrail } from '@/lib/order-pricing';
+import { nepalNow, offerUsageFrom } from '@/lib/offers';
+import { phoneDigits } from '@/lib/customer-lookup';
 import {
   getTodayAd,
   getTodayBs,
@@ -223,17 +226,21 @@ export default function ManualOrderEntryPage() {
   const appliedCombo = comboApplied && detectedCombo && comboApplied.id === detectedCombo.id
     && comboApplied.comboPrice === detectedCombo.comboPrice && comboApplied.originalPrice === detectedCombo.originalPrice ? detectedCombo : null;
 
-  // Total amount calculation
-  const totalAmount = useMemo(() => {
-    if (appliedCombo) {
-      return appliedCombo.comboPrice;
-    }
-    return orderItems.reduce((sum, item) => {
-      const prod = products.find((p) => p.id === item.productId);
-      const price = item.overridePrice ?? (prod?.mrp || 0);
-      return sum + price * (item.quantity || 1);
-    }, 0);
-  }, [orderItems, products, appliedCombo]);
+  // Price trail: MRP → live sales and offers → a price typed per item → net. Same rules as the extractor.
+  const [disabledOfferIds, setDisabledOfferIds] = useState<string[]>([]);
+  const trail = useMemo(() => {
+    const lines = appliedCombo
+      ? [{ itemId: appliedCombo.id, name: appliedCombo.name, quantity: 1, mrp: appliedCombo.comboPrice, isCombo: true }]
+      : orderItems.filter((item) => products.some((p) => p.id === item.productId)).map((item) => { const p = products.find((prod) => prod.id === item.productId)!; return { itemId: p.id, name: p.name, quantity: item.quantity || 1, mrp: p.mrp, category: p.category, ...(item.overridePrice !== undefined ? { writtenUnitPrice: item.overridePrice } : {}) }; });
+    if (!lines.length || !brandCode) return null;
+    const orders = db.getOrders('ALL'); const phone = phoneDigits(customerPhone);
+    const own = orders.filter((order) => phoneDigits(order.customerPhone) === phone && order.status !== 'CANCELLED' && !order.exchangeRequested && !order.exchangeReturnId);
+    const now = nepalNow();
+    return priceTrail({ lines, stated: null, percent: null, offers: { brandCode, channel: platform, dateAd: orderDateAd, time: orderDateAd === now.slice(0, 10) ? now.slice(11, 16) : undefined,
+      customerPhone: phone, isFirstOrder: !own.length, campaigns: db.getCampaigns(), disabledOfferIds, usage: offerUsageFrom(orders, phone),
+      catalogue: { name: (id) => products.find((p) => p.id === id)?.name, price: (id) => products.find((p) => p.id === id && p.active !== false && p.brandCode === brandCode)?.mrp } } });
+  }, [orderItems, products, appliedCombo, brandCode, platform, orderDateAd, customerPhone, disabledOfferIds]);
+  const totalAmount = trail ? trail.total : 0;
 
   const handleApplyCombo = () => {
     if (detectedCombo) {
@@ -295,22 +302,21 @@ export default function ManualOrderEntryPage() {
       assertActiveOrderOption(db.getOrderOptions(), 'channels', platform);
       assertActiveOrderOption(db.getOrderOptions(), 'deliveryMethods', deliveryMethod);
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Choose an active channel and delivery method.'); return; }
+    if (!trail) { toast.error('Add at least one product.'); return; }
+    if (trail.problem) { toast.error('Check the price', trail.problem); return; }
     guardedSubmit(async () => {
-      const items = appliedCombo ? [{
-        productId: appliedCombo.id, productName: appliedCombo.name, brandCode,
-        quantity: 1, unitPrice: appliedCombo.comboPrice, totalPrice: appliedCombo.comboPrice,
-      }] : orderItems.map((item) => {
-        const p = products.find((prod) => prod.id === item.productId);
-        const unitPrice = item.overridePrice ?? (p?.mrp || 0);
-        return {
-          productId: item.productId,
-          productName: p?.name || 'Product',
-          brandCode: p?.brandCode || brandCode,
-          quantity: item.quantity,
-          unitPrice,
-          totalPrice: unitPrice * item.quantity,
-        };
-      });
+      const money = (value: number) => Math.round(value * 100) / 100;
+      const base = appliedCombo ? [{ productId: appliedCombo.id, productName: appliedCombo.name, brandCode, quantity: 1, mrp: appliedCombo.comboPrice }]
+        : orderItems.filter((item) => products.some((p) => p.id === item.productId)).map((item) => { const p = products.find((prod) => prod.id === item.productId)!; return { productId: item.productId, productName: p.name, brandCode: p.brandCode || brandCode, quantity: item.quantity || 1, mrp: p.mrp }; });
+      const items = [
+        ...base.map((item, index) => { const line = trail.lines[index]; return {
+          productId: item.productId, productName: item.productName, brandCode: item.brandCode, quantity: item.quantity, catalogUnitPrice: item.mrp,
+          unitPrice: money(line.total / item.quantity), totalPrice: line.total, discountAmount: money(item.mrp * item.quantity - line.total),
+          ...(line.offerDiscount > 0 ? { offerUnitPrice: money(line.offerTotal / item.quantity), offerDiscount: line.offerDiscount } : {}),
+          ...(line.customerDiscount > 0 ? { customerDiscount: line.customerDiscount } : {}) }; }),
+        ...(trail.pricing?.gifts || []).map((gift) => ({ productId: gift.itemId, productName: gift.name, brandCode, quantity: gift.quantity, unitPrice: 0, totalPrice: 0, catalogUnitPrice: gift.mrp, isGift: true, giftOfferId: gift.offerId })),
+      ];
+      const applied = trail.pricing?.applied || [];
 
       // The server gives the order its short ID (for example FOR-0421) when it saves it.
       const createdOrder = db.addOrder({
@@ -332,6 +338,9 @@ export default function ManualOrderEntryPage() {
         source: 'MANUAL',
         notes: `${remarks ? remarks + '. ' : ''}${appliedCombo ? `Combo: ${appliedCombo.name}. ` : ''}`.trim(),
         items,
+        ...(applied.length ? { appliedOffers: applied, campaignIds: trail.pricing!.campaignIds } : {}),
+        ...(trail.customerDiscount > 0 ? { customerDiscount: trail.customerDiscount } : {}),
+        ...(orderDateAd === nepalNow().slice(0, 10) ? { orderTime: nepalNow().slice(11, 16) } : {}),
       });
 
       try { await syncManager.forceSyncNow(); } catch { /* Keep the local order in the durable sync queue. */ }
@@ -537,6 +546,16 @@ export default function ManualOrderEntryPage() {
               </div>
             </div>
 
+            {trail?.pricing && trail.pricing.candidates.length > 0 && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-[11px] text-emerald-900">
+                <p className="mb-1 font-semibold">Offers applied</p>
+                {trail.pricing.candidates.map((candidate) => { const applied = trail.pricing!.applied.find((entry) => entry.offerId === candidate.offerId); const why = trail.pricing!.notes.find((entry) => entry.offerId === candidate.offerId)?.message; return (
+                  <label key={candidate.offerId} className="flex items-start gap-2"><input type="checkbox" className="mt-0.5" checked={!candidate.disabled} onChange={() => setDisabledOfferIds((ids) => ids.includes(candidate.offerId) ? ids.filter((id) => id !== candidate.offerId) : [...ids, candidate.offerId])} aria-label={`Use ${candidate.offerName}`} />
+                    <span className={applied ? '' : 'text-slate-500'}><strong>{candidate.offerName}</strong> · {candidate.campaignName}{applied ? (applied.amount > 0 ? ` −NPR ${applied.amount.toLocaleString()}` : applied.giftName ? ` + ${applied.giftQuantity}× ${applied.giftName} free` : applied.freeDelivery ? ' free delivery' : '') : ` — ${candidate.disabled ? 'switched off' : why || 'does not apply'}`}</span></label>
+                ); })}
+                {trail.problem && <p className="mt-1 font-semibold text-rose-700">{trail.problem}</p>}
+              </div>
+            )}
             {appliedCombo && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-[11px] text-amber-900 flex items-center justify-between">
                 <span>Promotional Combo Applied: <strong>{appliedCombo.name}</strong></span>
@@ -952,6 +971,7 @@ export default function ManualOrderEntryPage() {
                 <strong className="text-xl font-mono font-black text-slate-900 block sm:inline sm:ml-1">
                   NPR {totalAmount.toLocaleString()}
                 </strong>
+                {trail && trail.offerDiscount > 0 && <span className="block text-[11px] text-emerald-700">{trail.pricing?.applied.filter((entry) => entry.amount > 0).map((entry) => entry.offerName).join(' + ')}: −NPR {trail.offerDiscount.toLocaleString()} from MRP {trail.mrpTotal.toLocaleString()}</span>}
               </div>
               {canPerform(currentUser, 'orderflow', 'CREATE') && <button
                 type="submit"

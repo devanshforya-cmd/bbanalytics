@@ -103,7 +103,7 @@ export default function Product360Page() {
   const d2cOrders = db.getOrders().filter(countsAsSale);
   const d2cUnits = d2cOrders.reduce((sum, o) => {
     const matched = (o.items || []).filter(
-      (item) => item.productId === product.id
+      (item) => item.productId === product.id && !item.isGift
     );
     return sum + matched.reduce((s, it) => s + (it.quantity || 1), 0);
   }, 0);
