@@ -2,6 +2,7 @@ import { isSellableCombo } from './product-catalog';
 import { BrandCode, Product, Combo, Brand } from './types';
 import { adToBs, getTodayAd } from './nepali-calendar';
 import { readEntryMarker, type ExtractedEntryKind } from './order-merge';
+import { findOption, findPhrase, normalizeWord, optionAliases, tokens } from './fuzzy-match';
 
 export type Confidence = 'HIGH' | 'AUTO' | 'REVIEW' | 'FAILED';
 export interface ExtractedField<T> { value: T; confidence: Confidence; rawMatched?: string; matchedKeyword?: string }
@@ -46,7 +47,13 @@ export function splitMessageBlocks(rawText: string, customSeparator?: string): s
 export const splitRawChatIntoBlocks = splitMessageBlocks;
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const expressionCache = new Map<string, RegExp>();
 function expression(value: string): RegExp {
+  const cached = expressionCache.get(value); if (cached) return cached;
+  if (expressionCache.size > 5000) expressionCache.clear();
+  const built = buildExpression(value); expressionCache.set(value, built); return built;
+}
+function buildExpression(value: string): RegExp {
   return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegex(value.trim()).replace(/\s+/g, '\\s+')}(?![\\p{L}\\p{N}])`, 'iu');
 }
 function phoneNumbers(text: string): string[] {
@@ -131,7 +138,12 @@ function comboNameAliases(combo: Combo): string[] {
   if (/\bfull\s+set$/i.test(heading)) { result.push('full set', `${combo.brandCode} set`); if (words.length > 1) result.push(`${words.slice(0,-1).join(' ')} set`); }
   return result;
 }
+const keywordCache = new WeakMap<object, string[]>();
 function keywordsFor(item: Product | Combo, combo: boolean): string[] {
+  const cached = keywordCache.get(item); if (cached) return cached;
+  const result = buildKeywords(item, combo); keywordCache.set(item, result); return result;
+}
+function buildKeywords(item: Product | Combo, combo: boolean): string[] {
   const name = item.name || '';
   const explicit = [...(item.extractorKeywords || []), item.sku || '', name, ...(!combo && 'keywords' in item ? item.keywords || [] : [])];
   const derived = combo ? comboNameAliases(item as Combo) : (name.match(/[\p{L}]{4,}/gu) || []).filter(word => !genericWords.has(word.toLowerCase()));
@@ -139,7 +151,11 @@ function keywordsFor(item: Product | Combo, combo: boolean): string[] {
   if (!combo && /\bfragrance\s*free\b/i.test(name)) synonyms.push('fragrance free');
   return [...new Set([...explicit, ...derived, ...synonyms].map(value => value.trim()).filter(value => value.length >= 2))];
 }
-type Match = { id: string; item: Product | Combo; keyword: string; start: number; end: number; line: number; combo: boolean };
+type Match = { id: string; item: Product | Combo; keyword: string; start: number; end: number; line: number; combo: boolean; typo?: string };
+/** A keyword worth matching with typos: at least one distinctive word of five letters or more. */
+const typoSafeCache = new Map<string, boolean>();
+const typoSafe = (keyword: string) => { let known = typoSafeCache.get(keyword); if (known === undefined) { if (typoSafeCache.size > 5000) typoSafeCache.clear(); known = typoSafeWords(keyword); typoSafeCache.set(keyword, known); } return known; };
+const typoSafeWords = (keyword: string) => tokens(keyword).some(token => normalizeWord(token.text).length >= 5 && !genericWords.has(token.text.toLowerCase()) && !/^\d+$/.test(token.text));
 function qtyFor(lines: string[], match: Match, text: string): number {
   const line = lines[match.line]; const start = match.start; const end = match.end;
   const before = line.slice(0, start), after = line.slice(end);
@@ -167,13 +183,22 @@ function matchCatalog(text: string, products: Product[], combos: Combo[], flags:
         const exactName = keyword.toLowerCase() === item.name.toLowerCase() && new RegExp(`^\\s*${escapeRegex(keyword)}\\s*(?:[:=\\-–—]?\\s*(?:[x×]\\s*)?\\d+\\s*(?:units?|pcs?|pieces?|sets?|kits?|pairs?|combos?)?)?\\s*$`, 'i').test(line);
         if (!isSku && !namesBundle && !exactName) return;
       }
-      const found = re.exec(line); if (found) candidates.push({ id: item.id, item, keyword, start: found.index, end: found.index + found[0].length, line: index, combo });
+      const found = re.exec(line); if (found) { candidates.push({ id: item.id, item, keyword, start: found.index, end: found.index + found[0].length, line: index, combo }); return; }
+      // Not written exactly: allow a typo ("exfolaiting", "condtioner", "bodywash") on distinctive words only.
+      if (!typoSafe(keyword) || (combo && !/\b(?:duo|pair|trio|kit|set|combo|bundle|pack)\b/i.test(keyword))) return;
+      const near = findPhrase(line, keyword);
+      if (near && !near.exact) candidates.push({ id: item.id, item, keyword, start: near.start, end: near.end, line: index, combo, typo: near.matched });
     });
+  }
+  // A typo match never overrides an exact match of the same words.
+  for (let i = candidates.length - 1; i >= 0; i--) {
+    const fuzzy = candidates[i];
+    if (fuzzy.typo && candidates.some(other => !other.typo && other.line === fuzzy.line && other.start < fuzzy.end && other.end > fuzzy.start && other.end - other.start >= fuzzy.end - fuzzy.start)) candidates.splice(i, 1);
   }
   const chosen: Match[] = [];
   const ambiguous: { candidate: Match; ids: string[] }[] = [];
   for (const combo of [true, false]) {
-    const group = candidates.filter(candidate => candidate.combo === combo).sort((a,b) => (b.end - b.start) - (a.end - a.start));
+    const group = candidates.filter(candidate => candidate.combo === combo).sort((a,b) => (b.end - b.start) - (a.end - a.start) || Number(!!a.typo) - Number(!!b.typo));
     for (const candidate of group) {
       if (chosen.some(c => c.id === candidate.id)) continue;
       if (!combo) {
@@ -187,7 +212,9 @@ function matchCatalog(text: string, products: Product[], combos: Combo[], flags:
         }
       }
       if (chosen.some(c => c.line === candidate.line && candidate.start < c.end && candidate.end > c.start)) continue;
-      const collision = group.some(other => other.id !== candidate.id && other.line === candidate.line && other.start === candidate.start && other.end === candidate.end);
+      // Two items fitting the same words (exactly, or both by typo) is ambiguous; an exact fit beats a typo fit.
+      const rivals = group.filter(other => other.id !== candidate.id && other.line === candidate.line && other.start === candidate.start && other.end === candidate.end && !!other.typo === !!candidate.typo);
+      const collision = rivals.length > 0;
       if (collision) { ambiguous.push({ candidate, ids: group.filter(other => other.line === candidate.line && other.start === candidate.start && other.end === candidate.end).map(other => other.id) }); continue; }
       chosen.push(candidate);
     }
@@ -195,10 +222,13 @@ function matchCatalog(text: string, products: Product[], combos: Combo[], flags:
   for (const match of ambiguous) if (!chosen.some(item => item.line === match.candidate.line && match.ids.includes(item.id))) {
     const flag = `“${match.candidate.keyword}” matches multiple catalogue items; select the correct item.`; if (!flags.includes(flag)) flags.push(flag);
   }
+  for (const match of chosen) if (match.typo) {
+    const note = `Read “${match.typo}” as ${match.item.name}. Check the item.`; if (!flags.includes(note)) flags.push(note);
+  }
   return chosen.sort((a,b) => a.line - b.line || a.start - b.start).map(match => {
     const quantity = qtyFor(lines, match, text);
     const price = match.combo ? Number((match.item as Combo).comboPrice || (match.item as Combo).comboMrp || 0) : Number((match.item as Product).mrp || 0);
-    return { productId: match.id, name: match.item.name, brandCode: match.item.brandCode, quantity, unitPrice: price, totalPrice: price * quantity, sourceLine: match.line, confidence: 'HIGH' as Confidence, ...(match.combo ? { isCombo: true } : {}) };
+    return { productId: match.id, name: match.item.name, brandCode: match.item.brandCode, quantity, unitPrice: price, totalPrice: price * quantity, sourceLine: match.line, confidence: (match.typo ? 'AUTO' : 'HIGH') as Confidence, ...(match.combo ? { isCombo: true } : {}) };
   });
 }
 function collapseCombo(items: ExtractedProductItem[], combos: Combo[], stated: number | null, flags: string[], discount: number | null): ExtractedProductItem[] {
@@ -306,20 +336,22 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
   items = collapseCombo(items, combos, stated, flags, discount);
   if (discount !== null && items.length > 1 && lines.some(line => parseDiscountPercent(line) !== null && [...products, ...combos].some(item => keywordsFor(item, 'items' in item).some(keyword => expression(keyword).test(line))))) flags.push('Discount scope is unclear because the percentage appears on an item line.');
   const itemSubtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
+  // A line that is only a channel or courier, even misspelt ("whatapp", "patao"), is never the name or the address.
+  const knownOptions = ['ML', ...(options.channels || ['TikTok', 'WhatsApp', 'Messenger', 'Website', 'Instagram', 'Facebook']), ...(options.deliveryMethods || ['Pathao', 'InDrive'])].map(value => ({ name: value, aliases: optionAliases(value) }));
+  const isOptionLine = (line: string) => { const hit = findOption([line], knownOptions); return !!hit && normalizeWord(hit.matched) === normalizeWord(line); };
   const namePrefix = /^(?:name|naam|customer(?:\s+name)?|receiver)(?:\s*[:=\-]\s*|\s+)/i;
   const nameLine = lines.find(line => namePrefix.test(line));
   let name = nameLine?.replace(namePrefix, '').trim() || '';
-  if (!name) name = lines.find(line => /^[\p{L}][\p{L}\s.'-]{1,79}$/u.test(line) && !/^(?:contact|order|website|number|location|address|phone|delivery|note|ph\s*no|paid|unpaid|cod|total|product|items?)\b/i.test(line) && !NEPAL_CITIES.some(city => line.toLowerCase() === city.toLowerCase()) && !items.some(item => expression(item.name).test(line) || item.name.toLowerCase().includes(line.toLowerCase()))) || '';
+  if (!name) name = lines.find(line => /^[\p{L}][\p{L}\s.'-]{1,79}$/u.test(line) && !isOptionLine(line) && !/^(?:contact|order|website|number|location|address|phone|delivery|note|ph\s*no|paid|unpaid|cod|total|product|items?)\b/i.test(line) && !NEPAL_CITIES.some(city => line.toLowerCase() === city.toLowerCase()) && !items.some(item => expression(item.name).test(line) || item.name.toLowerCase().includes(line.toLowerCase()))) || '';
   const addressPrefix = /^(?:delivery\s*address|shipping\s*address|address|location|thau)(?:\s*[:=\-]\s*|\s+)/i;
   const addressLine = lines.find(line => addressPrefix.test(line));
   const knownAddress = lines.find(line => line !== name && !/^(?:outside|inside|name|phone|product|total|payment|price)\b/i.test(line) && (/\b(?:near|chowk|tole|marg|galli|road|bazaar|mall|height|park|village|dang)\b/i.test(line) || NEPAL_CITIES.some(city => expression(city).test(line))));
-  const optionNames = ['ML', ...(options.channels || ['TikTok', 'WhatsApp', 'Messenger', 'Website', 'Instagram', 'Facebook']), ...(options.deliveryMethods || ['Pathao', 'InDrive'])];
   const zoneIndex = lines.findIndex(line => /^(?:outside|inside)\s+(?:the\s+)?(?:valley|ring\s*road)\b/i.test(line));
   const phoneIndex = lines.findIndex(line => phoneNumbers(line).length);
   // shortcut: without a matching product, only customer lines before a delivery zone or phone are candidates; ambiguous formats need review.
   const addressLines = items.length ? lines : zoneIndex >= 0 ? lines.slice(0, zoneIndex) : phoneIndex >= 0 ? lines.slice(0, phoneIndex) : [];
   const fallbackAddress = !addressLine ? addressLines.filter(line => {
-    if (line === name || unrecognizedItemLines.has(line) || phoneNumbers(line).length || optionNames.some(option => option.toLowerCase() === line.toLowerCase())) return false;
+    if (line === name || unrecognizedItemLines.has(line) || phoneNumbers(line).length || isOptionLine(line)) return false;
     if (/^(?:outside|inside|name|naam|customer|receiver|phone|mobile|contact|ph\s*no|address|location|thau|product|items?|qty|quantity|order|date|payment|paid|unpaid|cod|total|amount|price|discount|sale|platform|channel|courier|delivery|shipping|note|remarks?)\b/i.test(line)) return false;
     if (/^(?:free\s+(?:shipping|delivery)\b|\d+\s*(?:units?|pcs?|pieces?|sets?|kits?|pairs?|combos?|bottles?)\b|\d+(?:\.\d+)?\s*%|(?:rs\.?|npr|₹)\s*\d)/i.test(line)) return false;
     if (/\b\d{1,6}\s*(?:units?|pcs?|pieces?|bottles?|kits?|sets?|pairs?|combos?)\b/i.test(line)) return false;
@@ -341,9 +373,17 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
   const detectedBrands = [...new Set(items.map(item => item.brandCode))];
   const brand = detectedBrands.length === 1 ? detectedBrands[0] : options.brands.find(item => expression(item.code).test(body) || expression(item.name).test(body))?.code || 'ALL';
   const labelledChannel = lines.find(line => /^(?:platform|sales\s*channel|channel|source)\s*[:=\-]/i.test(line))?.replace(/^(?:platform|sales\s*channel|channel|source)\s*[:=\-]\s*/i, '').trim();
-  const platform = options.channels?.slice().sort((a,b) => b.length - a.length).find(value => expression(value).test(body)) || (/\btiktok\b/i.test(body) ? 'TikTok' : /\bwhatsapp\b/i.test(body) ? 'WhatsApp' : /\bmessenger\b/i.test(body) ? 'Messenger' : (/\bwebsite\b/i.test(body) || /(?:^|\n)\s*(?:platform\s*[:=]\s*)?ML\s*(?:$|\n)/.test(body)) ? 'Website' : /\binstagram\b/i.test(body) ? 'Instagram' : undefined) || labelledChannel || (options.channels ? options.channels.find(value => value.toLowerCase() === 'instagram') : 'Instagram');
+  // Channels and couriers are read with typos allowed ("whatapp" is WhatsApp), never from the customer's name.
+  const channelNames = [...new Set([...(options.channels || []), ...(options.channels ? [] : ['TikTok', 'WhatsApp', 'Messenger', 'Website', 'Instagram', 'Facebook'])])];
+  const optionLines = lines.filter(line => line !== name && !phoneNumbers(line).length);
+  const namedChannel = findOption(optionLines, channelNames.map(value => ({ name: value, aliases: optionAliases(value) })));
+  if (namedChannel && !namedChannel.exact) flags.push(`Read “${namedChannel.matched}” as ${namedChannel.name}. Check the sales channel.`);
+  const mlLine = /(?:^|\n)\s*(?:platform\s*[:=]\s*)?ML\s*(?:$|\n)/.test(body) ? (channelNames.find(value => value.toLowerCase() === 'website') || 'Website') : undefined;
+  const platform = namedChannel?.name || mlLine || labelledChannel || (options.channels ? options.channels.find(value => value.toLowerCase() === 'instagram') : 'Instagram');
   const prepaid = !/\b(?:unpaid|not\s+paid)\b/i.test(body) && /\b(?:paid|prepaid|esewa|khalti|fonepay|bank transfer)\b/i.test(body);
-  const delivery = options.deliveryMethods?.slice().sort((a,b) => b.length - a.length).find(value => expression(value).test(body)) || (/\bpathao\b/i.test(body) ? 'Pathao' : /\bindrive\b/i.test(body) ? 'InDrive' : '');
+  const namedCourier = findOption(optionLines, (options.deliveryMethods || ['Pathao', 'InDrive']).map(value => ({ name: value, aliases: optionAliases(value) })));
+  if (namedCourier && !namedCourier.exact) flags.push(`Read “${namedCourier.matched}” as ${namedCourier.name}. Check the logistics.`);
+  const delivery = namedCourier?.name || '';
   if (!items.length) flags.push('No catalogue item recognized; add the correct product or combo.');
   if (stated !== null && discount !== null && itemSubtotal > 0) {
     // Both a written price and a percentage: the written price is what the customer agreed to pay.
