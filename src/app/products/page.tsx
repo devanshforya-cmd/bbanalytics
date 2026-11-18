@@ -39,61 +39,16 @@ import {
 import PageGuard from '@/components/common/PageGuard';
 import { canPerform } from '@/lib/permissions';
 import EmptyState from '@/components/common/EmptyState';
+import { suggestComboKeywords, suggestProductKeywords } from '@/lib/keyword-suggest';
 
+/** Brand name for a code, so it is left out of suggested phrases. */
+const brandNameOf = (brandCode?: string) => db.getBrands().find(item => item.code === brandCode)?.name;
 function autoSuggestKeywords(name: string, brandCode?: string): string[] {
-  const clean = name.toLowerCase().trim();
-  const words = clean.replace(/[^a-z0-9\s-]/g, '').split(/\s+/).filter(Boolean);
-  const suggestions = new Set<string>();
-
-  suggestions.add(clean);
-
-  const brand = db.getBrands().find(item => item.code === brandCode);
-  const withoutBrand = brand?.name ? clean.replace(brand.name.toLowerCase(), '').trim() : clean;
-  if (withoutBrand) suggestions.add(withoutBrand);
-
-  if (clean.includes('roll-on') || clean.includes('roll on')) {
-    suggestions.add('roll on');
-    suggestions.add('rollon');
-    if (clean.includes('peach')) suggestions.add('peach roll on');
-    if (clean.includes('aloe')) suggestions.add('aloe roll on');
-  }
-  if (clean.includes('serum')) {
-    suggestions.add('serum');
-    if (clean.includes('brightening')) suggestions.add('brightening serum');
-  }
-  if (clean.includes('sunscreen')) {
-    suggestions.add('sunscreen');
-    suggestions.add('sun screen');
-  }
-  if (clean.includes('strip')) {
-    suggestions.add('nose strips');
-    suggestions.add('nose strip');
-    suggestions.add('strips');
-  }
-  if (clean.includes('combo') || clean.includes('kit') || clean.includes('pack')) {
-    suggestions.add('combo');
-    suggestions.add('kit');
-    suggestions.add('pack');
-  }
-  if (clean.includes('lipstick') || clean.includes('lip stick')) {
-    suggestions.add('lipstick');
-    suggestions.add('lip stick');
-  }
-
-  words.forEach((w) => {
-    if (w.length > 3 && !['with', 'from', 'pack', 'size'].includes(w)) {
-      suggestions.add(w);
-    }
-  });
-
-  return Array.from(suggestions).filter((k) => k.length > 1);
+  return suggestProductKeywords(name, brandNameOf(brandCode));
 }
-
-function autoSuggestComboKeywords(name: string, brandCode?: string): string[] {
-  const clean = name.toLowerCase().trim();
-  const brand = db.getBrands().find(item => item.code === brandCode)?.name?.toLowerCase();
-  const withoutBrand = brand && clean.startsWith(`${brand} `) ? clean.slice(brand.length).trim() : clean;
-  return [...new Set([clean, withoutBrand].filter(Boolean))];
+function autoSuggestComboKeywords(name: string, brandCode?: string, productIds: string[] = []): string[] {
+  const products = db.getProducts('ALL');
+  return suggestComboKeywords(name, brandNameOf(brandCode), productIds.map(id => products.find(product => product.id === id)?.name || '').filter(Boolean));
 }
 
 export default function ProductsPage() {
@@ -1386,7 +1341,7 @@ export default function ProductsPage() {
                   const suggested = autoSuggestKeywords(newProd.name, newProd.brandCode);
                   const combined = Array.from(new Set([...newProd.extractorKeywords, ...suggested]));
                   setNewProd({ ...newProd, extractorKeywords: combined });
-                  toast.success(`Auto-suggested ${suggested.length} keywords!`);
+                  toast.success(`${suggested.filter(word => !newProd.extractorKeywords.includes(word)).length} phrases added`, 'Includes common misspellings. Remove any that could mean another product.');
                 }}
                 className="px-2.5 py-1 bg-white hover:bg-blue-100 border border-blue-300 text-blue-700 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs transition cursor-pointer"
               >
@@ -1663,10 +1618,10 @@ export default function ProductsPage() {
                     toast.error('Please enter a combo bundle name first.');
                     return;
                   }
-                  const suggested = autoSuggestComboKeywords(newCombo.name, newCombo.brandCode);
+                  const suggested = autoSuggestComboKeywords(newCombo.name, newCombo.brandCode, [newCombo.selectedProd1Id, newCombo.selectedProd2Id, newCombo.selectedProd3Id].filter(Boolean));
                   const combined = Array.from(new Set([...newCombo.extractorKeywords, ...suggested]));
                   setNewCombo({ ...newCombo, extractorKeywords: combined });
-                  toast.success(`Auto-suggested ${suggested.length} combo keywords!`);
+                  toast.success(`${suggested.filter(word => !newCombo.extractorKeywords.includes(word)).length} phrases added`, 'Includes common misspellings. Remove any that could mean another combo.');
                 }}
                 className="px-2.5 py-1 bg-white hover:bg-purple-100 border border-purple-300 text-purple-700 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs transition cursor-pointer"
               >

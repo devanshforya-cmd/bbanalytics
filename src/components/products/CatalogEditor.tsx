@@ -7,6 +7,7 @@ import { toast } from '@/components/common/Toast';
 import { db } from '@/lib/db/db-service';
 import { isSuperAdmin } from '@/lib/permissions';
 import type { Combo, Product } from '@/lib/types';
+import { suggestComboKeywords, suggestProductKeywords } from '@/lib/keyword-suggest';
 
 const inputClass = 'mt-1 block w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal';
 const words = (text: string) => text.split(',').map(word => word.trim()).filter(Boolean);
@@ -89,6 +90,14 @@ export default function CatalogEditor({ item, kind, products, onChanged }: { ite
             <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={priceDetection} onChange={e => setPriceDetection(e.target.checked)} />Suggest this combo when its components and exact price match</label>
           </>}
           {field('Extractor phrases (comma separated)', extractorKeywords, setExtractorKeywords)}
+          <button type="button" className="text-sm font-semibold text-blue-700" onClick={() => {
+            const brandName = db.getBrands().find(brand => brand.code === item.brandCode)?.name;
+            const suggested = kind === 'products' ? suggestProductKeywords(name, brandName) : suggestComboKeywords(name, brandName, parts.map(part => available.find(product => product.id === part.productId)?.name || '').filter(Boolean));
+            const current = words(extractorKeywords);
+            const added = suggested.filter(word => !current.includes(word));
+            setExtractorKeywords([...current, ...added].join(', '));
+            toast.success(added.length ? `${added.length} phrases added` : 'No new phrases', added.length ? 'Includes common misspellings. Remove any that could mean another item, then save.' : undefined);
+          }}>+ Suggest phrases and misspellings</button>
           <p className="text-xs text-slate-500">Existing orders keep their original items and prices. Use distinctive combo phrases to avoid accidental matches.</p>
           <button type="button" disabled={busy} onClick={() => change('PATCH')} className="min-h-[44px] rounded-xl bg-blue-700 px-4 font-semibold text-white disabled:opacity-50">Save changes</button>
           {kind === 'combos' && <div className="space-y-2 border-t border-slate-200 pt-4"><p className="text-sm text-slate-700">Permanently delete this combo from the catalogue. Existing order history is preserved.</p>{field('Type DELETE to confirm', confirmation, setConfirmation)}<button type="button" disabled={busy || confirmation !== 'DELETE'} onClick={() => change('DELETE')} className="min-h-[44px] rounded-xl bg-rose-700 px-4 font-semibold text-white disabled:opacity-50">Delete combo</button></div>}
