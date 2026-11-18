@@ -719,6 +719,10 @@ export interface Order {
   /** A replacement order sent for a return: the original order and the return it settles. */
   exchangeOfOrderId?: string;
   exchangeReturnId?: string;
+  /** Saved from a WhatsApp "exchange:" message. Not a sale; it waits until it is linked to a logged return. */
+  exchangeRequested?: boolean;
+  /** WhatsApp "order added" messages merged into this order, so a repeated save never adds them twice. */
+  extractorAddOns?: { clientId: string; hash: string; addedAt: string; total: number }[];
   /** Written by the server only. Each entry is one changed field. */
   editHistory?: OrderEditEntry[];
   createdAt: string;
@@ -839,6 +843,9 @@ export interface ReturnEntry {
   /** Exchange resolution: the replacement order sent for this return. */
   exchangeOrderId?: string;
   exchangeOrderNumber?: string;
+  /** Set when one product of a combo came back: productId/productName are that product, these name the combo. */
+  comboId?: string;
+  comboName?: string;
   /** When the resolution was last decided (AD). */
   resolvedDateAd?: string;
   createdAt: string;

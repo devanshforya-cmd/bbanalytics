@@ -31,9 +31,9 @@ export function isOpenOrder(status: OrderStatus): boolean {
   return status === 'PENDING' || status === 'DISPATCHED' || status === 'FAILED';
 }
 
-/** An order the customer bought: not cancelled, and not a free replacement for an exchange. Same rule as Daily Orders. */
-export function countsAsSale(order: { status: OrderStatus; exchangeReturnId?: string; isMarketing?: boolean }): boolean {
-  return order.status !== 'CANCELLED' && !order.exchangeReturnId && !order.isMarketing;
+/** An order the customer bought: not cancelled, and not a replacement sent for an exchange (linked or still waiting). Same rule as Daily Orders. */
+export function countsAsSale(order: { status: OrderStatus; exchangeReturnId?: string; exchangeRequested?: boolean; isMarketing?: boolean }): boolean {
+  return order.status !== 'CANCELLED' && !order.exchangeReturnId && !order.exchangeRequested && !order.isMarketing;
 }
 
 /** Orders whose delivery has an outcome, for delivery success rates (pending and in-transit are not counted yet). */

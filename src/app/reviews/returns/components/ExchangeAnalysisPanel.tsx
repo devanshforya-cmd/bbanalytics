@@ -36,7 +36,7 @@ export default function ExchangeAnalysisPanel({ returns }: { returns: ReturnEntr
             <Tile label="Exchange rate" value={`${a.exchangeRate}%`} hint="of decided returns" tone="purple" />
             <Tile label="Refund rate" value={`${a.refundRate}%`} hint="of decided returns" />
             <Tile label="Undecided" value={String(a.pendingCount)} hint="resolution pending" tone={a.pendingCount ? 'amber' : 'slate'} />
-            <Tile label="Not linked" value={String(a.unlinked)} hint="exchanges without an order" tone={a.unlinked ? 'amber' : 'slate'} />
+            <Tile label="Not linked" value={String(a.unlinked + a.awaitingReturn)} hint={`${a.unlinked} exchange${a.unlinked === 1 ? '' : 's'} without an order · ${a.awaitingReturn} exchange order${a.awaitingReturn === 1 ? '' : 's'} without a return`} tone={a.unlinked + a.awaitingReturn ? 'amber' : 'slate'} />
             <Tile label="Replacements delivered" value={`${a.replacementsDelivered}/${a.linked}`} hint={`${a.replacementsInTransit} on the way · ${a.replacementsFailed} failed`} tone="emerald" />
             <Tile label="Difference collected" value={`NPR ${a.differenceCollected.toLocaleString()}`} hint="on replacement orders" />
             <Tile label="Order → return" value={days(a.medianDaysOrderToReturn)} hint="median" />

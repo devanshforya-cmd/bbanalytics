@@ -11,7 +11,7 @@ import type { Order, ReturnEntry } from '@/lib/types';
 import { displayDocumentId, matchesDocumentId } from '@/lib/document-ids';
 import { phoneDigits } from '@/lib/customer-lookup';
 import { ORDER_STATUS_LABEL, isOpenOrder, type ManualOrderStatus } from '@/lib/order-status';
-import { exchangeNeedsLink, isExchangeOrder } from '@/lib/exchange';
+import { exchangeAwaitingReturn, exchangeNeedsLink, isExchangeOrder } from '@/lib/exchange';
 import { getTodayAd, shiftAdDate } from '@/lib/nepali-calendar';
 import { useCalendarPreference } from '@/lib/hooks/useCalendarPreference';
 import { useSubmitGuard } from '@/hooks/useSubmitGuard';
@@ -51,6 +51,7 @@ export default function AllOrdersPage() {
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [failureFor, setFailureFor] = useState<Order | null>(null);
   const [returnFor, setReturnFor] = useState<Order | null>(null);
+  const [exchangeReturnFor, setExchangeReturnFor] = useState<Order | null>(null);
   const [exchangeFor, setExchangeFor] = useState<ReturnEntry | null>(null);
 
   useEffect(() => {
@@ -184,7 +185,7 @@ export default function AllOrdersPage() {
                         <td className="px-3 py-3 align-top">
                           <Link href={`/orderflow/orders/${order.id}`} className="font-mono text-[13px] font-bold text-slate-900 hover:text-blue-700 hover:underline">{displayDocumentId(order.orderNumber)}</Link>
                           <span className="block text-[11px] text-slate-500">{formatDate(order.orderDateAd, order.orderDateBs)}{brands.length > 1 ? ` · ${brandName(order.brandCode)}` : ''}</span>
-                          {isExchangeOrder(order) && <span className="mt-0.5 inline-block rounded-full bg-purple-100 px-1.5 text-[9px] font-bold uppercase text-purple-800">Exchange</span>}
+                          {isExchangeOrder(order) && <span className="mt-0.5 inline-block rounded-full bg-purple-100 px-1.5 text-[9px] font-bold uppercase text-purple-800">{exchangeAwaitingReturn(order) ? 'Exchange · return not logged' : 'Exchange'}</span>}
                         </td>
                         <td className="px-3 py-3 align-top">
                           <span className="block max-w-[180px] truncate font-semibold text-slate-900">{order.customerName}</span>
@@ -213,7 +214,10 @@ export default function AllOrdersPage() {
                                 {canFail && !['DELIVERED', 'CANCELLED', 'RETURNED', 'EXCHANGED'].includes(order.status) && (
                                   <button role="menuitem" type="button" onClick={() => { setMenuFor(null); setFailureFor(order); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50"><PackageX className="h-3.5 w-3.5" /> {openFailure ? 'Log another failed attempt' : 'Log failed delivery'}</button>
                                 )}
-                                {canReturn && order.status !== 'CANCELLED' && (
+                                {canReturn && exchangeAwaitingReturn(order) && (
+                                  <button role="menuitem" type="button" onClick={() => { setMenuFor(null); setExchangeReturnFor(order); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-purple-700 hover:bg-purple-50"><Repeat className="h-3.5 w-3.5" /> Log the return for this exchange</button>
+                                )}
+                                {canReturn && order.status !== 'CANCELLED' && !order.exchangeRequested && (
                                   <button role="menuitem" type="button" onClick={() => { setMenuFor(null); setReturnFor(order); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-50"><Undo2 className="h-3.5 w-3.5" /> Log return or exchange</button>
                                 )}
                                 {unlinked && canReturn && (
@@ -247,7 +251,11 @@ export default function AllOrdersPage() {
         {failureFor && <LogFailureForm initialOrder={failureFor} onClose={() => setFailureFor(null)} onSaved={() => setFailureFor(null)} onViewCustomer={(phone) => router.push(`/customers/${phone}`)} />}
         {returnFor && (
           <LogReturnForm initialOrder={returnFor} onClose={() => setReturnFor(null)} onViewCustomer={(phone) => router.push(`/customers/${phone}`)}
-            onSaved={(summary) => { setReturnFor(null); if (summary.resolution === 'Exchanged') { const saved = db.getReturns('ALL').find((entry) => entry.id === summary.returnId); if (saved) setExchangeFor(saved); } }} />
+            onSaved={(summary) => { setReturnFor(null); if (summary.resolution === 'Exchanged' && !summary.exchangeLinked) { const saved = db.getReturns('ALL').find((entry) => entry.id === summary.returnId); if (saved) setExchangeFor(saved); } }} />
+        )}
+        {exchangeReturnFor && (
+          <LogReturnForm exchangeOrder={exchangeReturnFor} onClose={() => setExchangeReturnFor(null)} onViewCustomer={(phone) => router.push(`/customers/${phone}`)}
+            onSaved={(summary) => { setExchangeReturnFor(null); if (summary.resolution === 'Exchanged' && !summary.exchangeLinked) { const saved = db.getReturns('ALL').find((entry) => entry.id === summary.returnId); if (saved) setExchangeFor(saved); } }} />
         )}
         {exchangeFor && <ExchangePanel ret={exchangeFor} onClose={() => setExchangeFor(null)} />}
       </div>

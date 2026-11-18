@@ -8,8 +8,21 @@ export function exchangeNeedsLink(entry: ReturnEntry): boolean {
 }
 
 /** A replacement order is logistics work, not a new sale. */
-export function isExchangeOrder(order: Pick<Order, 'exchangeReturnId' | 'exchangeOfOrderId'>): boolean {
-  return !!(order.exchangeReturnId || order.exchangeOfOrderId);
+export function isExchangeOrder(order: Pick<Order, 'exchangeReturnId' | 'exchangeOfOrderId'> & { exchangeRequested?: boolean }): boolean {
+  return !!(order.exchangeReturnId || order.exchangeOfOrderId || order.exchangeRequested);
+}
+
+/** An exchange saved from WhatsApp that no logged return points at yet. */
+export function exchangeAwaitingReturn(order: Pick<Order, 'exchangeReturnId' | 'status'> & { exchangeRequested?: boolean }): boolean {
+  return !!order.exchangeRequested && !order.exchangeReturnId && order.status !== 'CANCELLED';
+}
+
+/** Exchange orders for this customer that still need their return: offered first when a return is logged. */
+export function waitingExchangeOrders(orders: Order[], phone: string, excludeOrderId?: string): Order[] {
+  const want = String(phone || '').replace(/\D/g, '').replace(/^977(?=9)/, '');
+  return orders.filter((order) => exchangeAwaitingReturn(order) && order.id !== excludeOrderId
+    && String(order.customerPhone || '').replace(/\D/g, '').replace(/^977(?=9)/, '') === want)
+    .sort((a, b) => b.orderDateAd.localeCompare(a.orderDateAd));
 }
 
 const days = (from?: string, to?: string) => from && to ? Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 86400000)) : null;
@@ -21,6 +34,8 @@ export interface ExchangeAnalysis {
   byResolution: Record<ReturnEntry['orderStatus'], number>;
   exchangeRate: number; refundRate: number; pendingCount: number;
   linked: number; unlinked: number;
+  /** Exchange orders from WhatsApp still waiting for their return to be logged. */
+  awaitingReturn: number;
   replacementsDelivered: number; replacementsInTransit: number; replacementsFailed: number;
   /** Price difference collected on replacement orders (NPR). */
   differenceCollected: number;
@@ -65,6 +80,7 @@ export function exchangeAnalysis(returns: ReturnEntry[], orders: Order[]): Excha
     returns: returns.length, units: returns.reduce((sum, entry) => sum + (entry.quantity || 1), 0), byResolution,
     exchangeRate: pct(byResolution.Exchanged, decided), refundRate: pct(byResolution.Refunded, decided), pendingCount: byResolution.Pending,
     linked: exchanged.filter((entry) => entry.exchangeOrderId).length, unlinked: exchanged.filter(exchangeNeedsLink).length,
+    awaitingReturn: orders.filter(exchangeAwaitingReturn).length,
     replacementsDelivered: replacements.filter((order) => order?.status === 'DELIVERED').length,
     replacementsInTransit: replacements.filter((order) => order && ['PENDING', 'DISPATCHED'].includes(order.status)).length,
     replacementsFailed: replacements.filter((order) => order?.status === 'FAILED').length,

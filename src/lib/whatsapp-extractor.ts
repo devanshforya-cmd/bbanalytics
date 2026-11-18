@@ -1,6 +1,7 @@
 import { isSellableCombo } from './product-catalog';
 import { BrandCode, Product, Combo, Brand } from './types';
 import { adToBs, getTodayAd } from './nepali-calendar';
+import { readEntryMarker, type ExtractedEntryKind } from './order-merge';
 
 export type Confidence = 'HIGH' | 'AUTO' | 'REVIEW' | 'FAILED';
 export interface ExtractedField<T> { value: T; confidence: Confidence; rawMatched?: string; matchedKeyword?: string }
@@ -19,6 +20,8 @@ export interface ExtractedOrderResult {
   paymentTerms: ExtractedField<string>; deliveryMethod: ExtractedField<string>;
   orderDateAd: ExtractedField<string>; orderDateBs: ExtractedField<string>;
   flags: string[]; extractionErrors: string[]; rawText: string;
+  /** "order added:" adds the items to the customer's order of the same date; "exchange:" saves a replacement order. */
+  entryKind?: ExtractedEntryKind;
 }
 export const NEPAL_CITIES = ['Ghorahi','Budhanilkantha','Thecho','Kathmandu','Lalitpur','Bhaktapur','Pokhara','Chitwan','Narayangarh','Biratnagar','Butwal','Dharan','Birgunj','Hetauda','Nepalgunj','Itahari','Dhangadhi','Bhairahawa','Janakpur','Jhapa','Birtamode','Birtamod','Banepa','Dhulikhel','Surkhet'];
 export interface DynamicExtractorOptions { products: Product[]; combos: Combo[]; brands: Brand[]; channels?: string[]; deliveryMethods?: string[]; dateOverride?: string; customSeparator?: string }
@@ -79,11 +82,23 @@ export function parseDiscountPercent(text: string): number | null {
   const match = /\b(\d{1,3}(?:\.\d{1,2})?)\s*%\s*(?:off|discount)\b|\b(?:discount|sale)\s*[:=-]?\s*(\d{1,3}(?:\.\d{1,2})?)\s*%/i.exec(text);
   return match ? Number(match[1] || match[2]) : null;
 }
+/** A percentage discount is rounded to whole rupees, as the customer pays it (5% off 3,595 = 3,415). */
+export function percentDiscountTotal(subtotal: number, percent: number): number {
+  return Math.round(subtotal * (1 - percent / 100));
+}
 export function extractedOrderTotal(order: ExtractedOrderResult): number {
   const cents = Math.round(order.products.reduce((sum, item) => sum + (item.saleUnitPrice ?? item.unitPrice) * item.quantity, 0) * 100);
   if (order.statedPrice.provided ?? order.statedPrice.value > 0) return order.statedPrice.value;
-  if (order.discountPercent?.provided) return Math.round(cents * (1 - order.discountPercent.value / 100)) / 100;
+  // An exchange collects nothing unless the message gives an amount.
+  if (order.entryKind === 'EXCHANGE') return 0;
+  if (order.discountPercent?.provided) return percentDiscountTotal(cents / 100, order.discountPercent.value);
   return cents / 100;
+}
+/** How much below the catalogue price the order is sold, for the review screen. */
+export function extractedDiscount(order: ExtractedOrderResult): { amount: number; percent: number } {
+  const catalogue = order.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const amount = Math.max(0, Math.round((catalogue - extractedOrderTotal(order)) * 100) / 100);
+  return { amount, percent: catalogue ? Math.round((amount / catalogue) * 1000) / 10 : 0 };
 }
 const aliases: [RegExp, string[]][] = [
   [/\bshampoo\b/i, ['shampo','shampu']], [/\bconditioner\b/i, ['condtioner','condi','cond']],
@@ -257,6 +272,7 @@ export function validateExtractedOrder(order: ExtractedOrderResult): string[] {
     if (!Number.isFinite(pct) || pct < 0 || pct > 100 || Math.abs(pct * 100 - Math.round(pct * 100)) > 1e-6) errors.push('Enter a discount between 0 and 100%.');
     if (order.flags.some(flag => flag.startsWith('Discount scope is unclear'))) errors.push('Review the discount scope; clear the percentage and enter the agreed order total.');
   }
+  if (order.entryKind === 'EXCHANGE' && order.discountPercent?.provided) errors.push('An exchange collects a written amount, not a percentage. Clear the discount and enter the amount to collect (0 if free).');
   if (order.flags.some(flag => flag.includes('matches multiple catalogue items') || flag.startsWith('Multiple combos match'))) errors.push('Resolve the ambiguous catalogue match before saving.');
   if (order.flags.some(flag => flag.startsWith('Unrecognized order item:'))) errors.push('Review the unrecognized item and add the correct catalogue product before saving.');
   if (order.flags.some(flag => flag.startsWith('Price needs review:'))) errors.push('Review the price before saving this order.');
@@ -264,13 +280,15 @@ export function validateExtractedOrder(order: ExtractedOrderResult): string[] {
 }
 export function extractSingleOrder(blockText: string, options: DynamicExtractorOptions): ExtractedOrderResult {
   const text = blockText.trim();
-  const body = text.replace(headerStart, '').trim();
+  const marked = readEntryMarker(text.replace(headerStart, '').trim());
+  const body = marked.body; const entryKind = marked.kind;
   const lines = body.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
   const flags: string[] = []; const date = messageDate(text, options.dateOverride); if (date.warning) flags.push(date.warning);
   const phones = phoneNumbers(body);
   const products = options.products.filter(product => product.active !== false);
   const combos = options.combos.filter(combo => isSellableCombo(combo, products));
-  const discount = parseDiscountPercent(body);
+  const discount = entryKind === 'EXCHANGE' ? null : parseDiscountPercent(body);
+  if (entryKind === 'EXCHANGE' && parseDiscountPercent(body) !== null) flags.push('Exchange: the percentage was ignored. An exchange collects only an amount you write (0 if none).');
   let items = matchCatalog(lines.join('\n'), products, combos, flags);
   const stated = extractPrices(lines, items, flags);
   const unrecognizedItemLines = new Set<string>();
@@ -332,7 +350,7 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
     const expected = Math.round(itemSubtotal * (100 - discount)) / 100;
     if (Math.abs(stated - expected) > Math.max(5, expected * 0.01)) flags.push(`Written price NPR ${stated.toLocaleString()} is used. It differs from ${discount}% off (NPR ${expected.toLocaleString()}); check the price.`);
     else flags.push(`Written price NPR ${stated.toLocaleString()} is used (${discount}% off NPR ${itemSubtotal.toLocaleString()}).`);
-  } else if (stated !== null && itemSubtotal > 0 && stated !== itemSubtotal) flags.push(`Stated total NPR ${stated.toLocaleString()} differs from item prices total NPR ${itemSubtotal.toLocaleString()}; review before saving.`);
+  } else if (stated !== null && itemSubtotal > 0 && stated < itemSubtotal * 0.6 && entryKind !== 'EXCHANGE') flags.push(`Stated total NPR ${stated.toLocaleString()} is ${Math.round((1 - stated / itemSubtotal) * 100)}% below the catalogue price NPR ${itemSubtotal.toLocaleString()}; check the amount.`);
   const comboNames = items.filter(item => item.isCombo).map(item => item.name);
   const order: ExtractedOrderResult = {
     id: `ext_${globalThis.crypto.randomUUID()}`, salesChannel: platform,
@@ -347,7 +365,7 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
     discountPercent: { value: discount ?? 0, provided: discount !== null, confidence: discount !== null ? 'HIGH' : 'REVIEW' },
     paymentTerms: { value: prepaid ? 'Prepaid' : 'COD', confidence: 'AUTO' }, deliveryMethod: { value: delivery, confidence: delivery ? 'AUTO' : 'REVIEW' },
     orderDateAd: { value: date.value, confidence: date.confidence }, orderDateBs: { value: dateBs(date.value), confidence: date.confidence },
-    flags, extractionErrors: [], rawText: text,
+    flags, extractionErrors: [], rawText: text, entryKind,
   };
   order.totalAmount.value = extractedOrderTotal(order);
   order.extractionErrors = validateExtractedOrder(order); return order;

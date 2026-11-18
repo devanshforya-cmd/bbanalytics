@@ -19,6 +19,7 @@ import ExchangePanel from '@/components/orders/ExchangePanel';
 import ExchangeAnalysisPanel from './components/ExchangeAnalysisPanel';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusControl';
 import { exchangeNeedsLink, RETURN_RESOLUTIONS } from '@/lib/exchange';
+import { countsAsSale } from '@/lib/order-status';
 import { canPerform } from '@/lib/permissions';
 import { displayDocumentId } from '@/lib/document-ids';
 import { useRouter } from 'next/navigation';
@@ -137,7 +138,7 @@ export default function ReturnsPage() {
   // 11a: Separation Header Stats
   // Recounted whenever the list refreshes (it listens for saves from other screens and devices).
   // Exchange replacements and cancelled orders are not orders the customer bought.
-  const totalOrdersCount = useMemo(() => db.getOrders().filter((order) => !order.exchangeReturnId && order.status !== 'CANCELLED').length,
+  const totalOrdersCount = useMemo(() => db.getOrders().filter((order) => countsAsSale(order)).length,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [returnsList]);
 
@@ -383,6 +384,7 @@ export default function ReturnsPage() {
                         >
                           {ret.productName} ↗
                         </Link>
+                        {ret.comboName && <div className="max-w-[200px] truncate text-[11px] text-slate-500">from {ret.comboName}</div>}
                         <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
                           <span className="font-semibold text-slate-600">{ret.brandCode}</span>
                           <span>•</span>
@@ -520,7 +522,7 @@ export default function ReturnsPage() {
         <LogReturnForm onClose={() => setShowLogModal(false)} onViewCustomer={(phone) => router.push(`/customers/${phone}`)}
           onSaved={(summary) => {
             setReturnsList([...db.getReturns()]); setShowLogModal(false); setSaveSuccess(summary);
-            if (summary.resolution === 'Exchanged') { const saved = db.getReturns('ALL').find((entry) => entry.id === summary.returnId); if (saved) setExchangeFor(saved); }
+            if (summary.resolution === 'Exchanged' && !summary.exchangeLinked) { const saved = db.getReturns('ALL').find((entry) => entry.id === summary.returnId); if (saved) setExchangeFor(saved); }
           }} />
       )}
       {exchangeFor && <ExchangePanel ret={exchangeFor} onClose={() => setExchangeFor(null)} onDone={() => setReturnsList([...db.getReturns()])} />}
