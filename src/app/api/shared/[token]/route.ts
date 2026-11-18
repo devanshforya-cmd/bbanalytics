@@ -19,8 +19,10 @@ export async function GET(request: Request, context: { params: Promise<{ token: 
       if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) return NextResponse.json({ success: false, requiresPasscode: true, name: link.name, error: 'Enter the shared access passcode.' }, { status: 401, headers });
     }
     const { db } = await openSystemWorkspace();
-    await recordSharedAccess(link.id);
-    return NextResponse.json({ success: true, data: projectSharedPortal(db, link) }, { headers });
+    const url = new URL(request.url);
+    // Switching brand or month inside the shared sheet is the same visit, not a new one.
+    if (!url.searchParams.has('brand') && !url.searchParams.has('month')) await recordSharedAccess(link.id);
+    return NextResponse.json({ success: true, data: projectSharedPortal(db, link, { brand: url.searchParams.get('brand'), month: url.searchParams.get('month') }) }, { headers });
   } catch (error) {
     const response = apiFailure(error, 'Shared data could not be loaded.');
     for (const [key, value] of Object.entries(headers)) response.headers.set(key, value);
