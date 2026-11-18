@@ -272,7 +272,7 @@ export default function OrderPage() {
         </section>
         {panel === 'FAILURE' && <LogFailureForm initialOrder={order} onClose={() => setPanel(null)} onSaved={() => { setPanel(null); setVersion((value) => value + 1); }} />}
         {panel === 'RETURN' && <LogReturnForm initialOrder={order} onClose={() => setPanel(null)}
-          onSaved={(summary) => { setPanel(null); setVersion((value) => value + 1); if (summary.resolution === 'Exchanged') { const saved = db.getReturns('ALL').find((entry) => entry.id === summary.returnId); if (saved) setExchangeFor(saved); } }} />}
+          onSaved={(summary) => { setPanel(null); setVersion((value) => value + 1); if (summary.resolution === 'Exchanged' && !summary.exchangeLinked) { const saved = db.getReturns('ALL').find((entry) => entry.id === summary.returnId); if (saved) setExchangeFor(saved); } }} />}
         {exchangeFor && <ExchangePanel ret={exchangeFor} onClose={() => setExchangeFor(null)} onDone={() => setVersion((value) => value + 1)} />}
 
         {!canEdit && <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">You can view this order. Editing needs the OrderFlow edit permission.</p>}

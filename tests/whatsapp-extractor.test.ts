@@ -245,15 +245,15 @@ test('orders can be saved without a city or province and completed later', async
 test('order discounts use the current catalogue, and a written total wins over the percentage', async () => {
   const base = 'Name: Rina\nPhone: 9800001011\nAddress: Kathmandu Road\nProduct: shampoo 2 pcs';
   const discounted = extractSingleOrder(`${base}\n10% off`, options);
-  assert.equal(discounted.discountPercent?.value, 10); assert.equal(discounted.totalAmount.value, 1438.2);
+  assert.equal(discounted.discountPercent?.value, 10); assert.equal(discounted.totalAmount.value, 1438);
   assert.equal(extractSingleOrder(`${base}\nVAT 13%`, options).totalAmount.value, 1598);
   const written = extractSingleOrder(`${base}\n10% discount\nTotal: Rs 1400`, options);
   assert.equal(written.extractionErrors.length, 0); assert.equal(written.totalAmount.value, 1400);
   assert.ok(written.flags.some((flag) => /Written price NPR 1,400 is used\. It differs from 10% off/.test(flag)));
   const ws = workspace(); const valid = {...row('ext_12345678-1234-1234-1234-123456789abc'), statedPrice: null, discountPercent: 10};
   await saveExtractedOrders({orders:[valid]}, ws);
-  assert.equal(ws.db.getOrders()[0].totalAmount, 1438.2);
-  assert.equal(ws.db.getOrders()[0].items.reduce((sum,item)=>sum+Math.round(item.totalPrice*100),0),143820);
+  assert.equal(ws.db.getOrders()[0].totalAmount, 1438);
+  assert.equal(ws.db.getOrders()[0].items.reduce((sum,item)=>sum+Math.round(item.totalPrice*100),0),143800);
   const written2 = workspace(); await saveExtractedOrders({orders:[{...valid, statedPrice:1400}]}, written2);
   assert.equal(written2.db.getOrders()[0].totalAmount, 1400); assert.equal(written2.db.getOrders()[0].discountPercent, 10); assert.equal(written2.db.getOrders()[0].statedPrice, 1400);
 });

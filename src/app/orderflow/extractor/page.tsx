@@ -15,13 +15,16 @@ import {
   extractOrdersDynamically,
   validateExtractedOrder,
   extractedOrderTotal,
+  extractedDiscount,
   splitMessageBlocks,
   ExtractedOrderResult,
   ExtractedProductItem,
   Confidence,
 } from '@/lib/whatsapp-extractor';
 import { getTodayAd } from '@/lib/nepali-calendar';
-import { BrandCode } from '@/lib/types';
+import type { BrandCode, Order } from '@/lib/types';
+import { findAddOnTarget, itemSummary, type ExtractedEntryKind } from '@/lib/order-merge';
+import { displayDocumentId } from '@/lib/document-ids';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toast } from '@/components/common/Toast';
 import {
@@ -182,6 +185,18 @@ export default function ExtractorPage() {
       flags: order.flags.filter(flag => !flag.startsWith('Stated total NPR') && !flag.startsWith('No catalogue item recognized') && !(order.statedPrice.value > 0 && flag.startsWith('The message states a zero total'))) };
     return { ...updated, extractionErrors: validateExtractedOrder(updated) };
   };
+  /** Where an "order added" message will go: an order already saved, or a new order earlier in this batch. */
+  const addOnTarget = (ord: ExtractedOrderResult) => {
+    if (ord.entryKind !== 'ADD_ON') return null;
+    const position = extractedOrders.findIndex(order => order.id === ord.id);
+    const earlier = extractedOrders.slice(0, Math.max(0, position)).flatMap((order, index) => (order.entryKind ?? 'ORDER') === 'ORDER' ? [{
+      id: order.id, orderNumber: `#${index + 1} above (not saved yet)`, customerPhone: order.customerPhone.value, orderDateAd: order.orderDateAd.value,
+      brandCode: order.brandCode.value, status: 'PENDING', items: order.products.map(item => ({ productName: item.name, quantity: item.quantity })), totalAmount: order.totalAmount.value, createdAt: '9999',
+    } as unknown as Order] : []);
+    return findAddOnTarget([...earlier, ...db.getOrders('ALL')], { phone: ord.customerPhone.value, dateAd: ord.orderDateAd.value, brandCode: ord.brandCode.value });
+  };
+  const setEntryKind = (orderId: string, entryKind: ExtractedEntryKind) => setExtractedOrders(previous => previous.map(order => order.id !== orderId ? order
+    : refreshOrder({ ...order, entryKind, ...(entryKind === 'EXCHANGE' ? { discountPercent: { value: 0, provided: false, confidence: 'REVIEW' as Confidence } } : {}) })));
   const handleUpdateOrderField = (orderId: string, field: string, value: any) => {
     setExtractedOrders(previous => previous.map(order => {
       if (order.id !== orderId) return order;
@@ -257,7 +272,7 @@ export default function ExtractorPage() {
     void guardedSubmit(async () => {
       try {
         const response = await fetch('/api/extractor/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Workspace-User': currentUser.id }, body: JSON.stringify({ orders: ordersToPush.map(order => ({
-          clientId: order.id, customerName: order.customerName.value, customerPhone: order.customerPhone.value, alternatePhone: order.alternatePhone.value,
+          clientId: order.id, entryKind: order.entryKind ?? 'ORDER', customerName: order.customerName.value, customerPhone: order.customerPhone.value, alternatePhone: order.alternatePhone.value,
           city: order.city.value, province: order.province.value, address: order.address.value, orderDateAd: order.orderDateAd.value,
           platform: order.salesChannel ?? sourceChannel, deliveryMethod: order.deliveryMethod.value || deliveryMethods[0], paymentTerms: order.paymentTerms.value, assignedToId: order.assignedToId || currentUser.id,
           statedPrice: order.statedPrice.provided ? order.statedPrice.value : null, discountPercent: order.discountPercent?.provided ? order.discountPercent.value : null,
@@ -266,12 +281,15 @@ export default function ExtractorPage() {
         const result = await response.json().catch(() => null);
         if (!response.ok || !result?.success || !Array.isArray(result.orderNumbers)) throw new Error(result?.error || 'Could not save orders. Your review stays here for retry.');
         const numbers = result.orderNumbers as string[];
+        const addedTo = (Array.isArray(result.addedTo) ? result.addedTo : []) as (string | null)[];
         const entries: ExtractionHistoryItem[] = ordersToPush.map((order, index) => ({ id: `eh_${order.id}`, timestamp: 'Just now', customerName: order.customerName.value, customerPhone: order.customerPhone.value, brandCode: order.brandCode.value, productSummary: order.products.map(item => `${item.name} (${item.quantity})`).join(', '), totalAmount: order.totalAmount.value, status: 'PUSHED', orderNumber: numbers[index] }));
         saveHistory([...entries, ...history].slice(0, 20)); setPushedSummary({ count: numbers.length, orderNumbers: numbers });
         setExtractedOrders(previous => previous.filter(order => !ordersToPush.some(saved => saved.id === order.id)));
         setSelectedOrderIds(new Set()); setShowConfirmModal(false);
         const sync = await db.syncWithSupabase();
-        toast.success(`${numbers.length} order(s) saved to OrderFlow.`);
+        const merged = addedTo.filter(Boolean) as string[];
+        const fresh = numbers.length - merged.length;
+        toast.success([fresh ? `${fresh} order${fresh === 1 ? '' : 's'} saved` : '', merged.length ? `items added to ${[...new Set(merged)].map(displayDocumentId).join(', ')}` : ''].filter(Boolean).join(' · '));
         if (!sync.success) toast.info('Orders were saved. Refresh the app to see the latest data.');
       } catch (error) { toast.error(error instanceof Error ? error.message : 'Orders could not be saved.'); }
     });
@@ -320,7 +338,12 @@ export default function ExtractorPage() {
               <div className="flex items-center gap-2">
                 <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
                   WhatsApp Order Extractor
-<InfoTip label="About this page">Reads products, combos, keywords, and prices directly from catalog. Adapts automatically to catalog updates with zero code changes.</InfoTip></h1>
+<InfoTip label="About this page" align="left">
+                <span className="block">Products, combos and prices come from the catalogue.</span>
+                <span className="mt-1.5 block"><strong>Discount:</strong> write “5% off”, or the amount the customer pays (“total 3415”).</span>
+                <span className="mt-1 block"><strong>“order added:”</strong> on the first line adds the items to the same customer’s order of the same date.</span>
+                <span className="mt-1 block"><strong>“exchange:”</strong> on the first line saves a replacement order with NPR 0 to collect unless you write an amount. Link it when you log the return.</span>
+              </InfoTip></h1>
               </div>
               
             </div>
@@ -554,6 +577,34 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       </div>
                     </div>
 
+                    {/* What this message is: a new order, an addition to today's order, or an exchange */}
+                    {(() => {
+                      const kind = ord.entryKind ?? 'ORDER';
+                      const target = addOnTarget(ord);
+                      return (
+                        <div className="mt-3 space-y-2">
+                          <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-[11px] font-semibold" role="radiogroup" aria-label="Message type">
+                            {([['ORDER', 'New order'], ['ADD_ON', 'Add to today’s order'], ['EXCHANGE', 'Exchange']] as const).map(([value, title]) => (
+                              <button key={value} type="button" role="radio" aria-checked={kind === value} onClick={() => setEntryKind(ord.id, value)}
+                                className={`rounded-md px-2.5 py-1 transition ${kind === value ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}>{title}</button>
+                            ))}
+                          </div>
+                          {kind === 'ADD_ON' && target?.order && (
+                            <p className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+                              Adds to <strong>{displayDocumentId(target.order.orderNumber)}</strong>{target.order.items.length ? ` (${itemSummary(target.order.items)})` : ''}. New total NPR {(target.order.totalAmount + ord.totalAmount.value).toLocaleString()}.
+                              {!!target.others && <span className="block text-blue-700">This customer has {target.others + 1} open orders that day; the latest one is used.</span>}
+                            </p>
+                          )}
+                          {kind === 'ADD_ON' && target?.problem && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-800">{target.problem}</p>}
+                          {kind === 'EXCHANGE' && (
+                            <p className="rounded-xl border border-purple-200 bg-purple-50 px-3 py-2 text-xs text-purple-900">
+                              Saved as a replacement order with <strong>NPR {ord.totalAmount.value.toLocaleString()}</strong> to collect{ord.statedPrice.provided ? '' : ' (write an amount in the message or below to collect a difference)'}. It is not counted as a sale. Link it to the return when the return is logged.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {/* Critical Extraction Errors Banner */}
                     {ord.extractionErrors && ord.extractionErrors.length > 0 && (
                       <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1">
@@ -748,11 +799,12 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           <span className="font-bold text-slate-900">NPR {ord.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0).toLocaleString()}</span>
                         </div>
                         <div>
-                          <label className="text-slate-500" htmlFor={`amount_${ord.id}`}>Stated total (NPR)</label>
+                          <label className="text-slate-500" htmlFor={`amount_${ord.id}`}>{ord.entryKind === 'EXCHANGE' ? 'Amount to collect (NPR)' : 'Stated total (NPR)'}</label>
                           <input id={`amount_${ord.id}`} type="number" min="0" step="0.01" value={ord.statedPrice.provided ? ord.statedPrice.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, statedPrice: { ...order.statedPrice, provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-28 rounded-lg border border-slate-200 p-1" placeholder="Optional" />
                         </div>
-                        <div><label className="text-slate-500" htmlFor={`discount_${ord.id}`}>Order discount (%)</label><input id={`discount_${ord.id}`} type="number" min="0" max="100" step="0.01" value={ord.discountPercent?.provided ? ord.discountPercent.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, discountPercent: { confidence: 'HIGH', provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-20 rounded-lg border border-slate-200 p-1" placeholder="Optional" /></div>
-                        <div><span className="text-slate-400">Order total: </span><span className="font-bold text-slate-900">NPR {ord.totalAmount.value.toLocaleString()}</span></div>
+                        {ord.entryKind !== 'EXCHANGE' && <div><label className="text-slate-500" htmlFor={`discount_${ord.id}`}>Order discount (%)</label><input id={`discount_${ord.id}`} type="number" min="0" max="100" step="0.01" value={ord.discountPercent?.provided ? ord.discountPercent.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, discountPercent: { confidence: 'HIGH', provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-20 rounded-lg border border-slate-200 p-1" placeholder="Optional" /></div>}
+                        <div><span className="text-slate-400">{ord.entryKind === 'EXCHANGE' ? 'To collect: ' : 'Order total: '}</span><span className="font-bold text-slate-900">NPR {ord.totalAmount.value.toLocaleString()}</span>
+                          {ord.entryKind !== 'EXCHANGE' && extractedDiscount(ord).amount > 0 && <span className="ml-1.5 text-emerald-700">− NPR {extractedDiscount(ord).amount.toLocaleString()} ({extractedDiscount(ord).percent}% off)</span>}</div>
                         <div><label className="text-slate-500" htmlFor={`assignee_${ord.id}`}>Responsible person</label><select id={`assignee_${ord.id}`} value={ord.assignedToId || currentUser.id} onChange={event => handleUpdateOrderField(ord.id, 'assignedToId', event.target.value)} className="ml-2 rounded-lg border border-slate-200 p-1">{d2cAssignees(currentUser, db.getUsers(), ord.brandCode.value).map(user => <option key={user.id} value={user.id}>{user.fullName}</option>)}</select></div>
                         <div>
                           <label className="text-slate-500" htmlFor={`payment_${ord.id}`}>Payment</label>
@@ -769,13 +821,13 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       </div>
 
                       {canCreateOrders && <div className="flex items-center gap-2">
-                        {ord.extractionErrors.length > 0 ? (
+                        {(ord.extractionErrors.length > 0 || addOnTarget(ord)?.problem) ? (
                           <button
                             type="button"
                             onClick={() => {
                               toast.error(
                                 'Cannot Push Incomplete Order',
-                                ord.extractionErrors[0]
+                                ord.extractionErrors[0] || addOnTarget(ord)?.problem
                               );
                             }}
                             className="px-4 py-1.5 bg-rose-100 text-rose-800 font-bold rounded-xl hover:bg-rose-200 transition flex items-center gap-1.5 shadow-xs text-xs border border-rose-300"
@@ -785,16 +837,15 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           </button>
                         ) : (
                           <button
-                            onClick={() => executePushOrders([ord])}
+                            onClick={() => {
+                              const target = addOnTarget(ord)?.order;
+                              const unsaved = target && extractedOrders.find(order => order.id === target.id);
+                              executePushOrders(unsaved ? [unsaved, ord] : [ord]);
+                            }}
                             disabled={isSubmitting}
                             className="px-4 py-1.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:bg-blue-300 transition flex items-center gap-1.5 shadow-xs"
                           >
-                            {isSubmitting ? (
-                              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
-                            ) : (
-                              <Check className="w-3.5 h-3.5" />
-                            )}
-                            {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Pushing…</> : 'Push This Order'}
+                            {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : <><Check className="w-3.5 h-3.5" />{ord.entryKind === 'ADD_ON' ? 'Add to order' : ord.entryKind === 'EXCHANGE' ? 'Save exchange' : 'Push This Order'}</>}
                           </button>
                         )}
                       </div>}

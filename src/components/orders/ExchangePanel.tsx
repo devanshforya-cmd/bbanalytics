@@ -32,8 +32,8 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const original = ret.orderId ? db.getOrderById(ret.orderId) : undefined;
   const canCreate = !!original && canWorkOrders(db.getCurrentUser(), 'CREATE');
-  const [mode, setMode] = useState<'CREATE' | 'LINK'>(canCreate ? 'CREATE' : 'LINK');
-  const sameProduct = db.getProducts('ALL').find((product) => product.id === ret.productId);
+  const [modeChoice, setMode] = useState<'CREATE' | 'LINK' | null>(null);
+  const sameProduct = db.getProducts('ALL').find((product) => product.id === ret.productId) || db.getCombos('ALL').find((combo) => combo.id === ret.productId);
   const [items, setItems] = useState<{ productId: string; productName: string; brandCode: string; quantity: number }[]>(
     sameProduct ? [{ productId: sameProduct.id, productName: sameProduct.name, brandCode: sameProduct.brandCode, quantity: ret.quantity || 1 }] : []);
   const [amount, setAmount] = useState('0');
@@ -54,7 +54,12 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
   const linkedElsewhere = new Set(db.getReturns('ALL').filter((entry) => entry.id !== ret.id && entry.exchangeOrderId).map((entry) => entry.exchangeOrderId));
   const candidates = db.getOrders('ALL')
     .filter((order) => phoneDigits(order.customerPhone) === phoneDigits(ret.customerPhone) && order.id !== ret.orderId && !linkedElsewhere.has(order.id))
-    .sort((a, b) => b.orderDateAd.localeCompare(a.orderDateAd));
+    // Exchanges saved from WhatsApp for this customer come first: they are what this return is waiting for.
+    .sort((a, b) => Number(!!b.exchangeRequested && !b.exchangeReturnId) - Number(!!a.exchangeRequested && !a.exchangeReturnId) || b.orderDateAd.localeCompare(a.orderDateAd));
+  const hasWaiting = candidates.some((order) => order.exchangeRequested && !order.exchangeReturnId);
+  const mode = modeChoice || (canCreate && !hasWaiting ? 'CREATE' : 'LINK');
+  const [linkPicked, setLinkPicked] = useState(false);
+  if (!linkPicked && !linkId && hasWaiting) { setLinkId(candidates[0].id); setLinkPicked(true); }
   const deliveryMethods = activeOrderOptionNames(options, 'deliveryMethods', original?.deliveryMethod);
 
   const save = () => guardedSubmit(async () => {
@@ -170,7 +175,7 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
                   <li key={order.id}>
                     <button type="button" role="radio" aria-checked={linkId === order.id} onClick={() => setLinkId(order.id)}
                       className={`w-full rounded-xl border px-3 py-2 text-left ${linkId === order.id ? 'border-purple-400 bg-purple-50 ring-2 ring-purple-100' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
-                      <span className="flex items-center justify-between gap-2"><span className="font-mono font-bold text-slate-900">{displayDocumentId(order.orderNumber)}</span><OrderStatusBadge status={order.status} /></span>
+                      <span className="flex items-center justify-between gap-2"><span className="font-mono font-bold text-slate-900">{displayDocumentId(order.orderNumber)}{order.exchangeRequested && !order.exchangeReturnId && <span className="ml-1.5 rounded-full bg-purple-100 px-1.5 font-sans text-[9px] font-bold text-purple-800">Exchange from WhatsApp</span>}</span><OrderStatusBadge status={order.status} /></span>
                       <span className="block truncate text-[11px] text-slate-500">{formatDate(order.orderDateAd, order.orderDateBs)} · {order.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')} · NPR {order.totalAmount.toLocaleString()}</span>
                     </button>
                   </li>

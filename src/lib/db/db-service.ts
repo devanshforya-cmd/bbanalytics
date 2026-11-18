@@ -2540,7 +2540,7 @@ export class DatabaseService {
         customer.brandsPurchased.push(newOrder.brandCode);
       }
       // A replacement for an exchange is not a new purchase, so it earns no order karma.
-      if (!newOrder.exchangeReturnId) {
+      if (!newOrder.exchangeReturnId && !newOrder.exchangeRequested) {
         const { updatedCustomer } = applyKarmaEvent(customer, 'ORDER_PLACED', KARMA_RULES.ORDER_PLACED, 'Order placed');
         Object.assign(customer, updatedCustomer);
       }
