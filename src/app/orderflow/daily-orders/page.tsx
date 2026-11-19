@@ -477,8 +477,8 @@ export default function DailyOrdersPage() {
                       const isUpdated = recentlyUpdatedIds.has(ord.id);
                       const totalQty = ord.items.reduce((sum, it) => sum + (it.isGift ? 0 : it.quantity), 0);
 
-                      // Check if items form a known combo
-                      const comboItem = ord.items.find((i) => comboIds.has(i.productId));
+                      // Combos in this order (each listed once)
+                      const comboNames = [...new Set(ord.items.filter((i) => comboIds.has(i.productId)).map((i) => i.productName))];
 
                       return (
                         <tr
@@ -496,7 +496,7 @@ export default function DailyOrdersPage() {
                             <Link href={`/orderflow/orders/${ord.id}`} className="font-mono font-bold text-blue-700 hover:underline">{displayDocumentId(ord.orderNumber)}</Link>
                             {(ord.editHistory?.length || 0) > 0 && <span className="ml-1.5 rounded bg-amber-50 px-1 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200" title="This order has been edited">Edited</span>}
                           </td>
-                          <td className="py-3 px-3 font-mono text-[11px] text-slate-500">
+                          <td className="py-3 px-3 whitespace-nowrap font-mono text-[11px] text-slate-500">
                             {ord.createdAt ? new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
                           </td>
                           <td className="py-3 px-3">
@@ -514,7 +514,7 @@ export default function DailyOrdersPage() {
                             <span className="text-[10px] text-slate-500 block">{[ord.district, ord.province].filter(Boolean).join(', ') || 'City and province not added'}</span>
                             <span className="text-[10px] text-slate-500 block">Responsible: {ord.assignedToName || 'Not assigned'}</span>
                           </td>
-                          <td className="py-3 px-3 font-mono text-[11px] text-slate-600">
+                          <td className="py-3 px-3 whitespace-nowrap font-mono text-[11px] text-slate-600">
                             {ord.customerPhone}
                             {ord.alternatePhone && <span className="block text-slate-500">Alt: {ord.alternatePhone}</span>}
                           </td>
@@ -534,19 +534,24 @@ export default function DailyOrdersPage() {
                           <td className="py-3 px-3 text-center font-bold text-slate-800">
                             {totalQty}
                           </td>
-                          <td className="py-3 px-3">
-                            {comboItem ? (
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                {comboItem.productName}
-                              </span>
+                          <td className="py-3 px-3 min-w-[9rem] max-w-[12rem]">
+                            {comboNames.length ? (
+                              <div className="flex flex-col items-start gap-1">
+                                {comboNames.map((name) => (
+                                  // A block badge wraps as one box, so a long combo name never breaks its border.
+                                  <span key={name} title={name} className="inline-block max-w-full rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] font-semibold leading-snug text-indigo-800 [overflow-wrap:anywhere]">
+                                    {name}
+                                  </span>
+                                ))}
+                              </div>
                             ) : (
-                              <span className="text-slate-300">—</span>
+                              <span className="text-slate-500" aria-label="No combo">—</span>
                             )}
                           </td>
-                          <td className="py-3 px-3 text-right font-bold text-slate-900">
+                          <td className="py-3 px-3 whitespace-nowrap text-right font-bold text-slate-900">
                             <Money>{ord.totalAmount.toLocaleString()}</Money>
                           </td>
-                          <td className="py-3 px-3 text-right">
+                          <td className="py-3 px-3 whitespace-nowrap text-right">
                             {ord.statedPrice ? (
                               <span
                                 className={`font-semibold ${
