@@ -336,7 +336,7 @@ export default function LiveStaffTrackingPage() {
                         : 'bg-blue-100 text-blue-700 border-blue-200'
                     }`}
                   >
-                    {(loc.officerName || 'Field Officer')
+                    {(loc.officerName || 'Officer')
                       .split(' ')
                       .filter(Boolean)
                       .map((n) => n[0])

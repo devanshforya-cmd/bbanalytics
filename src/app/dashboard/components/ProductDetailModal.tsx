@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { X, Package, ArrowUpRight, TrendingDown, Users, Globe, ShoppingBag } from 'lucide-react';
 import { Product, Order, ReturnEntry, FeedbackEntry, BrandCode } from '@/lib/types';
 import EmptyState from './EmptyState';
+import { db } from '@/lib/db/db-service';
+import { countsAsSale } from '@/lib/order-status';
+import { productMetrics, comboParts, unitsInLines } from '@/lib/product-metrics';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -28,20 +31,13 @@ export default function ProductDetailModal({
 
   if (!product) return null;
 
-  // Filter orders for this product
-  const productOrders = orders.filter((o) =>
-    o.items.some((i) => i.productId === product.id || i.productName === product.name)
-  );
-
-  // Filter returns for this product
-  const productReturns = returns.filter(
-    (r) => r.productId === product.id || r.productName === product.name
-  );
-
-  // Filter complaints for this product
-  const productComplaints = feedback.filter(
-    (f) => f.productId === product.id || f.productName === product.name
-  );
+  // Same rules as every other product view: sales only, combos included, exact product matches.
+  const combos = db.getCombos();
+  const parts = comboParts(combos);
+  const productOrders = orders.filter((o) => countsAsSale(o) && (() => { const units = unitsInLines(o.items || [], product.id, parts); return units.direct + units.viaCombo > 0; })());
+  const metrics = productMetrics(product.id, { orders, secondaryOrders: [], combos, returns, feedback });
+  const productReturns = metrics.returns.entries;
+  const productComplaints = metrics.feedback.entries.filter((f) => f.type === 'COMPLAINT');
 
   // Channels selling this product
   const channelCounts: Record<string, number> = {};
@@ -52,7 +48,7 @@ export default function ProductDetailModal({
   // Regions ordering this product
   const regionCounts: Record<string, number> = {};
   productOrders.forEach((o) => {
-    const reg = o.province || 'Kathmandu Valley';
+    const reg = o.province || 'Province not recorded';
     regionCounts[reg] = (regionCounts[reg] || 0) + 1;
   });
 
@@ -71,10 +67,7 @@ export default function ProductDetailModal({
 
   const uniqueCustomers = Array.from(customerMap.values());
 
-  const returnRate =
-    productOrders.length > 0
-      ? ((productReturns.length / productOrders.length) * 100).toFixed(1)
-      : '0.0';
+  const returnRate = metrics.returns.ratePct.toFixed(1);
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">

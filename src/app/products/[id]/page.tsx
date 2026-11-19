@@ -2,13 +2,14 @@
 
 import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
-import { countsAsSale } from '@/lib/order-status';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
-import { Product, SecondaryOrder, Retailer, Branch, FeedbackEntry, StockCount } from '@/lib/types';
+import { Product, SecondaryOrder, Retailer, Branch, FeedbackEntry, StockCount, Order, Combo, ReturnEntry, DeliveryFailure } from '@/lib/types';
+import { productMetrics, type ProductMetricsInput } from '@/lib/product-metrics';
+import ProductTrendChart from '@/components/products/ProductTrendChart';
 import {
   Package,
   ArrowLeft,
@@ -44,6 +45,10 @@ export default function Product360Page() {
   const [retailers, setRetailers] = useState<Retailer[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [stockCounts, setStockCounts] = useState<StockCount[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [combos, setCombos] = useState<Combo[]>([]);
+  const [returns, setReturns] = useState<ReturnEntry[]>([]);
+  const [deliveryFailures, setDeliveryFailures] = useState<DeliveryFailure[]>([]);
 
   useEffect(() => {
     if (!productId) return;
@@ -54,11 +59,18 @@ export default function Product360Page() {
       setRetailers(db.getRetailers());
       setBranches(db.getBranches());
       setStockCounts(db.getStockCounts());
+      setOrders(db.getOrders());
+      setCombos(db.getCombos());
+      setReturns(db.getReturns());
+      setDeliveryFailures(db.getDeliveryFailures());
     };
     load();
     window.addEventListener('bb-db-updated', load);
     return () => window.removeEventListener('bb-db-updated', load);
   }, [productId]);
+
+  const metricsInput = useMemo<ProductMetricsInput>(() => ({ orders, secondaryOrders, combos, returns, feedback, deliveryFailures }),
+    [orders, secondaryOrders, combos, returns, feedback, deliveryFailures]);
 
   if (!product) {
     return (
@@ -69,76 +81,32 @@ export default function Product360Page() {
     );
   }
 
-  // Filter orders containing this product
-  const relatedOrders = secondaryOrders.filter(order => order.status !== 'CANCELLED').filter((o) =>
-    o.items.some((item) => item.productId === product.id)
-  );
-
-  // Filter feedback for this product
-  const relatedFeedback = feedback.filter((f) =>
-    (f.productName && f.productName.toLowerCase().includes(product.name.toLowerCase().slice(0, 6))) ||
-    f.brandCode === product.brandCode
-  );
-
-  // Operational Feedback Telemetry
-  const complaintsCount = relatedFeedback.filter((f) => f.type === 'COMPLAINT').length;
-  const reviewsCount = relatedFeedback.length - complaintsCount;
-
-  // Dynamic most common issue category for this product
-  const issueCounts: Record<string, number> = {};
-  relatedFeedback.forEach((f) => {
-    (f.issueCategories || []).forEach((cat) => {
-      issueCounts[cat] = (issueCounts[cat] || 0) + 1;
-    });
-  });
-  let topIssue = 'None reported';
-  let maxIssueCount = 0;
-  for (const [cat, count] of Object.entries(issueCounts)) {
-    if (count > maxIssueCount) {
-      maxIssueCount = count;
-      topIssue = cat;
-    }
-  }
-
-  // Channel estimates (Real operational unit metrics from orders)
-  const d2cOrders = db.getOrders().filter(countsAsSale);
-  const d2cUnits = d2cOrders.reduce((sum, o) => {
-    const matched = (o.items || []).filter(
-      (item) => item.productId === product.id && !item.isGift
-    );
-    return sum + matched.reduce((s, it) => s + (it.quantity || 1), 0);
-  }, 0);
-
-  const gtUnits = relatedOrders
-    .filter((o) => !o.storeName?.toLowerCase().includes('bhatbhateni') && !o.storeName?.toLowerCase().includes('bigmart') && !o.storeName?.toLowerCase().includes('saleways'))
-    .reduce((sum, o) => {
-      const matched = o.items.filter(
-        (item) => item.productId === product.id
-      );
-      return sum + matched.reduce((s, it) => s + (it.totalUnits || 0), 0);
-    }, 0);
-
-  const mtUnits = relatedOrders
-    .filter((o) => o.storeName?.toLowerCase().includes('bhatbhateni') || o.storeName?.toLowerCase().includes('bigmart') || o.storeName?.toLowerCase().includes('saleways'))
-    .reduce((sum, o) => {
-      const matched = o.items.filter(
-        (item) => item.productId === product.id
-      );
-      return sum + matched.reduce((s, it) => s + (it.totalUnits || 0), 0);
-    }, 0);
-
-  const totalUnitsSold = gtUnits + mtUnits + d2cUnits;
+  const metrics = productMetrics(product.id, metricsInput);
+  const relatedOrders = secondaryOrders
+    .filter((order) => order.status !== 'CANCELLED' && order.items.some((item) => item.productId === product.id))
+    .sort((x, y) => (y.orderDateAd || '').localeCompare(x.orderDateAd || ''));
+  const relatedFeedback = [...metrics.feedback.entries].sort((x, y) => (y.dateReceivedAd || '').localeCompare(x.dateReceivedAd || ''));
+  const productReturns = metrics.returns.entries;
+  const { reviews: reviewsCount, complaints: complaintsCount } = metrics.feedback;
+  const topIssue = metrics.feedback.topIssue || 'None reported';
+  const d2cUnits = metrics.d2c.units;
+  const { gtUnits, mtUnits } = metrics.b2b;
+  const totalUnitsSold = metrics.totalUnits;
   const gtPct = totalUnitsSold > 0 ? Math.round((gtUnits / totalUnitsSold) * 100) : 0;
   const mtPct = totalUnitsSold > 0 ? Math.round((mtUnits / totalUnitsSold) * 100) : 0;
   const d2cPct = totalUnitsSold > 0 ? Math.round((d2cUnits / totalUnitsSold) * 100) : 0;
+  const totalReturnUnits = metrics.returns.units;
+  const returnRatePct = metrics.returns.ratePct.toFixed(1);
 
-  // Real returns for this product
-  const returnsList = db.getReturns();
-  const productReturns = returnsList.filter(
-    (r) => (r.productName && r.productName.toLowerCase().includes(product.name.toLowerCase().slice(0, 8))) || r.brandCode === product.brandCode
-  );
-  const totalReturnUnits = productReturns.reduce((sum, r) => sum + (r.quantity || 1), 0);
-  const returnRatePct = totalUnitsSold > 0 ? ((totalReturnUnits / totalUnitsSold) * 100).toFixed(1) : '0.0';
+  // Why units came back, from the returns themselves.
+  const reasonCounts = new Map<string, number>();
+  for (const entry of productReturns) {
+    if (entry.orderStatus === 'Rejected') continue;
+    const reason = entry.reasonCategory || 'Other';
+    reasonCounts.set(reason, (reasonCounts.get(reason) || 0) + 1);
+  }
+  const returnReasons = [...reasonCounts.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3);
+  const countedReturns = [...reasonCounts.values()].reduce((x, y) => x + y, 0);
 
   // Stores Carrying This Product with stock counts
   const productStores: {
@@ -151,43 +119,31 @@ export default function Product360Page() {
     daysSinceCount: number;
   }[] = [];
 
-  // Combine retailers and branches stocking this brand
-  const matchedRetailers = retailers.filter(
-    (r) => r.brandsStocked.includes(product.brandCode) || stockCounts.some((sc) => sc.entityId === r.id)
-  );
+  // Retailers and chain branches that stock this brand, or have counted it.
+  const outlets = [
+    ...retailers.map((store) => ({ id: store.id, name: store.name, area: [store.area, store.city].filter(Boolean).join(', '), officer: store.assignedOfficerName || '', brands: store.brandsStocked || [] })),
+    ...branches.map((store) => ({ id: store.id, name: store.name, area: [store.area, store.city].filter(Boolean).join(', '), officer: store.assignedOfficerName || '', brands: store.brandsAvailable || [] })),
+  ].filter((store) => store.brands.includes(product.brandCode) || stockCounts.some((count) => count.entityId === store.id));
 
-  matchedRetailers.forEach((ret) => {
-    // Find latest stock count for this retailer
+  outlets.forEach((store) => {
     const counts = stockCounts
-      .filter((sc) => sc.entityId === ret.id || sc.storeName === ret.name)
-      .sort((a, b) => new Date(b.dateAd || b.createdAt).getTime() - new Date(a.dateAd || a.createdAt).getTime());
-
-    const latest = counts[0];
+      .filter((count) => count.entityId === store.id)
+      .sort((x, y) => new Date(y.dateAd || y.createdAt).getTime() - new Date(x.dateAd || x.createdAt).getTime());
+    const latest = counts.find((count) => count.items.some((item) => item.productId === product.id)) || counts[0];
     let shelfUnits = 0;
-    let daysAgo = 0;
+    let daysAgo = 999;
     let countDate = 'Never counted';
-
     if (latest) {
       countDate = latest.dateBs || latest.dateAd;
       const parsedDate = new Date(latest.dateAd || latest.createdAt);
-      if (!isNaN(parsedDate.getTime())) {
-        daysAgo = Math.max(0, Math.floor((Date.now() - parsedDate.getTime()) / (1000 * 60 * 60 * 24)));
-      }
-      const item = latest.items.find(
-        (i) => i.productId === product.id
-      );
-      if (item) {
-        shelfUnits = item.shelfQty;
-      }
+      if (!isNaN(parsedDate.getTime())) daysAgo = Math.max(0, Math.floor((Date.now() - parsedDate.getTime()) / 86400000));
+      shelfUnits = latest.items.find((item) => item.productId === product.id)?.shelfQty || 0;
     }
-
-    const branchLoc = ret.area ? `${ret.area}, ${ret.city}` : ret.city || 'Kathmandu';
-
     productStores.push({
-      id: ret.id,
-      storeName: ret.name,
-      branchName: branchLoc,
-      assignedOfficer: ret.assignedOfficerName || 'Subash Thapa',
+      id: store.id,
+      storeName: store.name,
+      branchName: store.area || '—',
+      assignedOfficer: store.officer || 'Not assigned',
       lastStockDate: countDate,
       unitsOnShelf: shelfUnits,
       daysSinceCount: daysAgo,
@@ -232,7 +188,7 @@ export default function Product360Page() {
               </div>
               <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1.5">
                 {product.name}
-<InfoTip label="About this page">Master Master Packaging: {product.caseSize || 24} units per corrugated box carton</InfoTip></h1>
+<InfoTip label="About this page">Packed {product.caseSize || 24} units per case</InfoTip></h1>
               
             </div>
           </div>
@@ -259,14 +215,14 @@ export default function Product360Page() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-            <span>MTD Secondary Sales</span>
+            <span>Units sold</span>
             <TrendingUp className="w-4 h-4 text-brand-600" />
           </div>
           <div className="text-2xl font-black text-slate-900 mt-2 font-mono">
             {totalUnitsSold.toLocaleString()} <span className="text-xs font-normal text-slate-500">units</span>
           </div>
           <div className="text-xs text-slate-500 mt-1">
-            Operational distribution volume
+            {d2cUnits.toLocaleString()} online, {(gtUnits + mtUnits).toLocaleString()} in stores{metrics.d2c.comboUnits ? ` (${metrics.d2c.comboUnits} in combos)` : ''}
           </div>
         </div>
 
@@ -285,14 +241,14 @@ export default function Product360Page() {
 
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-            <span>Return / Defect Rate</span>
+            <span>Return rate (online)</span>
             <RotateCcw className="w-4 h-4 text-amber-600" />
           </div>
           <div className="text-2xl font-black text-amber-600 mt-2 font-mono">
             {returnRatePct}%
           </div>
           <div className="text-xs text-slate-500 mt-1">
-            {totalReturnUnits} returned units ({totalUnitsSold} sold)
+            {totalReturnUnits} of {d2cUnits} online units came back ({metrics.returns.exchangedUnits} exchanged)
           </div>
         </div>
 
@@ -308,7 +264,7 @@ export default function Product360Page() {
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black text-slate-900 mt-2 font-mono group-hover:text-brand-700 transition-colors">
-            {reviewsCount} reviews, {complaintsCount} complaints
+            {reviewsCount} {reviewsCount === 1 ? 'review' : 'reviews'}, {complaintsCount} {complaintsCount === 1 ? 'complaint' : 'complaints'}
           </div>
           <div className="text-xs text-slate-500 mt-1 truncate flex items-center justify-between" title={`Top Issue: ${topIssue}`}>
             <span>Top Issue: <strong className="text-slate-700">{topIssue}</strong></span>
@@ -317,65 +273,7 @@ export default function Product360Page() {
         </Link>
       </div>
 
-      {/* Fix 35c: 12-Month Seasonal Trend Sparkline */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-indigo-600" />
-              <span>12-Month Seasonal Demand Trend</span>
-              <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full border border-indigo-100">
-                Pattern Detection
-              </span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Historical monthly velocity across Vikram Samvat (BS) year — identifies summer peaks & monsoon adjustments
-            </p>
-          </div>
-          <div className="text-right">
-            <span className="text-xs font-bold text-emerald-700">Peak Season: Jestha–Ashadh (+40%)</span>
-          </div>
-        </div>
-
-        {/* 12 Months Bar Sparkline */}
-        <div className="grid grid-cols-6 sm:grid-cols-12 gap-2 pt-2">
-          {[
-            { month: 'Bai', name: 'Baisakh', val: 78 },
-            { month: 'Jes', name: 'Jestha', val: 120, peak: true },
-            { month: 'Ash', name: 'Ashadh', val: 135, peak: true },
-            { month: 'Shr', name: 'Shrawan', val: 95 },
-            { month: 'Bha', name: 'Bhadra', val: 110, current: true },
-            { month: 'Asw', name: 'Ashwin', val: 105 },
-            { month: 'Kar', name: 'Kartik', val: 90 },
-            { month: 'Man', name: 'Mangsir', val: 65, trough: true },
-            { month: 'Pou', name: 'Poush', val: 55, trough: true },
-            { month: 'Mag', name: 'Magh', val: 60 },
-            { month: 'Fal', name: 'Falgun', val: 75 },
-            { month: 'Cha', name: 'Chaitra', val: 85 },
-          ].map((m, idx) => (
-            <div key={idx} className="flex flex-col items-center">
-              <span className="text-[10px] font-bold text-slate-700 font-mono mb-1">{m.val}</span>
-              <div className="w-full bg-slate-100 rounded-t h-20 flex items-end">
-                <div
-                  className={`w-full rounded-t transition ${
-                    m.current
-                      ? 'bg-blue-600 ring-2 ring-blue-300'
-                      : m.peak
-                      ? 'bg-emerald-500'
-                      : m.trough
-                      ? 'bg-amber-400'
-                      : 'bg-slate-300'
-                  }`}
-                  style={{ height: `${(m.val / 140) * 100}%` }}
-                />
-              </div>
-              <span className={`text-[10px] mt-1.5 font-bold ${m.current ? 'text-blue-600' : 'text-slate-500'}`}>
-                {m.month}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <ProductTrendChart productId={product.id} input={metricsInput} />
 
       {/* Two Columns: Channel Volume Radar + Store Stocking Outlets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -510,15 +408,18 @@ export default function Product360Page() {
           </div>
 
           {/* Return reasons summary */}
-          <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl flex items-center justify-between text-xs text-amber-900">
+          <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl flex items-center justify-between gap-2 text-xs text-amber-900">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
               <span>
-                <strong>Quality Root Cause:</strong> 0.8% transit cosmetic scuffs, 0.4% seal breakage reported in deliveries.
+                {countedReturns === 0 ? 'No returns or exchanges recorded for this product.' : (
+                  <><strong>Why it came back:</strong> {returnReasons.map(([reason, count]) => `${reason} (${count})`).join(', ')}.
+                  {' '}{metrics.returns.returnedUnits} returned, {metrics.returns.exchangedUnits} exchanged, {metrics.returns.refundedUnits} refunded{metrics.returns.pendingUnits ? `, ${metrics.returns.pendingUnits} pending` : ''}.</>
+                )}
               </span>
             </div>
             <Link
-              href="/reviews/returns"
+              href={`/reviews/returns?product=${encodeURIComponent(product.name)}`}
               className="font-bold underline text-amber-800 hover:text-amber-950 shrink-0 ml-2"
             >
               View Returns

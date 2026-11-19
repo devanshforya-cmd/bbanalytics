@@ -91,7 +91,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
       id: r.id,
       name: r.name,
       type: r.type || 'Retailer',
-      location: r.area || r.city || 'Kathmandu',
+      location: r.area || r.city || '',
       officerName: r.assignedOfficerName || 'Assigned Officer',
     }));
     const branches: StoreItem[] = (hasAccess(currentUser, 'distributors') ? db.getBranches() : [])
@@ -100,7 +100,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
       id: b.id,
       name: b.name,
       type: 'Branch',
-      location: b.address || 'Kathmandu',
+      location: b.address || b.city || '',
       officerName: b.assignedOfficerName || 'Assigned Officer',
     }));
     setStores([...retailers, ...branches]);

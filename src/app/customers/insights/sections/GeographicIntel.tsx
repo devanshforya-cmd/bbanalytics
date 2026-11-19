@@ -34,7 +34,7 @@ export default function GeographicIntel({ geographicIntel }: GeographicIntelProp
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Regional revenue volume, growth velocity, and top-selling brand across provincial and metropolitan centers.
+            Revenue, recent order change and top-selling brand across provincial and metropolitan centers.
           </p>
         </div>
       </div>
@@ -48,7 +48,7 @@ export default function GeographicIntel({ geographicIntel }: GeographicIntelProp
               <th className="py-3 px-3 text-center">Customers</th>
               <th className="py-3 px-3 text-center">Total Orders</th>
               <th className="py-3 px-3 text-right">Revenue (NPR)</th>
-              <th className="py-3 px-3 text-center">Growth vs MoM</th>
+              <th className="py-3 px-3 text-center">Orders, last 30 days vs 30 before</th>
               <th className="py-3 px-3">Leading Brand</th>
               <th className="py-3 px-3 text-center">Avg Karma</th>
             </tr>
@@ -72,7 +72,7 @@ export default function GeographicIntel({ geographicIntel }: GeographicIntelProp
                   <Money>{row.revenue.toLocaleString()}</Money>
                 </td>
                 <td className="py-3 px-3 text-center">
-                  <span className="rounded bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[10px]">
+                  <span className={`rounded font-bold px-2 py-0.5 text-[10px] ${row.growth.startsWith('-') ? 'bg-rose-100 text-rose-800' : row.growth === '—' ? 'text-slate-500' : 'bg-emerald-100 text-emerald-800'}`}>
                     {row.growth}
                   </span>
                 </td>

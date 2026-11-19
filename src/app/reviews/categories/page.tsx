@@ -34,6 +34,8 @@ interface CategoryAnalytics {
   mostAffectedProduct: string;
   mostAffectedBrand: string;
   trend: 'increasing' | 'decreasing' | 'stable';
+  /** Change, last 30 days against the 30 before; null when nothing came up in the earlier window. */
+  trendPct?: number | null;
 }
 
 export default function ReviewCategoriesPage() {
@@ -76,71 +78,37 @@ export default function ReviewCategoriesPage() {
   const analyticsMap: Record<string, CategoryAnalytics> = useMemo(() => {
     const map: Record<string, CategoryAnalytics> = {};
 
+    const now = Date.now();
+    const ageDays = (date?: string) => { const t = Date.parse(`${(date || '').slice(0, 10)}T00:00:00Z`); return Number.isNaN(t) ? Infinity : (now - t) / 86400000; };
     categories.forEach((cat) => {
-      let allTime = cat.tickCount || 0;
+      let allTime = 0;
       let monthCount = 0;
+      let previousMonth = 0;
       const productCounts: Record<string, number> = {};
       const brandCounts: Record<string, number> = {};
+      const tally = (date: string | undefined, productName?: string, brandCode?: string) => {
+        allTime += 1;
+        const age = ageDays(date);
+        if (age <= 30) monthCount += 1; else if (age <= 60) previousMonth += 1;
+        if (productName) productCounts[productName] = (productCounts[productName] || 0) + 1;
+        if (brandCode) brandCounts[brandCode] = (brandCounts[brandCode] || 0) + 1;
+      };
+      feedbackList.forEach((fb) => { if (fb.issueCategories?.includes(cat.name)) tally(fb.dateReceivedAd, fb.productName, fb.brandCode); });
+      returnsList.forEach((ret) => { if (ret.issueCategories?.includes(cat.name) || ret.reasonCategory === cat.name) tally(ret.dateAd, ret.productName, ret.brandCode); });
 
-      // Analyze feedback
-      feedbackList.forEach((fb) => {
-        if (fb.issueCategories?.includes(cat.name)) {
-          allTime += 1;
-          monthCount += 1;
-          if (fb.productName) {
-            productCounts[fb.productName] = (productCounts[fb.productName] || 0) + 1;
-          }
-          if (fb.brandCode) {
-            brandCounts[fb.brandCode] = (brandCounts[fb.brandCode] || 0) + 1;
-          }
-        }
-      });
-
-      // Analyze returns
-      returnsList.forEach((ret) => {
-        if (ret.issueCategories?.includes(cat.name) || ret.reasonCategory === cat.name) {
-          allTime += 1;
-          monthCount += 1;
-          if (ret.productName) {
-            productCounts[ret.productName] = (productCounts[ret.productName] || 0) + 1;
-          }
-          if (ret.brandCode) {
-            brandCounts[ret.brandCode] = (brandCounts[ret.brandCode] || 0) + 1;
-          }
-        }
-      });
-
-      // Find top product
-      let topProduct = db.getProducts()[0]?.name || 'N/A';
-      let maxP = 0;
-      for (const [prod, c] of Object.entries(productCounts)) {
-        if (c > maxP) {
-          maxP = c;
-          topProduct = prod;
-        }
-      }
-
-      // Find top brand
-      let topBrand = db.getBrands('ACTIVE')[0]?.name || 'N/A';
-      let maxB = 0;
-      for (const [b, c] of Object.entries(brandCounts)) {
-        if (c > maxB) {
-          maxB = c;
-          topBrand = b;
-        }
-      }
-
-      // Trend calculation
-      let trend: 'increasing' | 'decreasing' | 'stable' = 'stable';
-      if (allTime > 10) trend = 'increasing';
-      else if (allTime < 3) trend = 'decreasing';
+      const top = (counts: Record<string, number>) => Object.entries(counts).sort((x, y) => y[1] - x[1])[0]?.[0] || 'None yet';
+      const brandCode = top(brandCounts);
+      // Last 30 days against the 30 before.
+      const change = previousMonth > 0 ? Math.round(((monthCount - previousMonth) / previousMonth) * 100) : null;
+      const trend: 'increasing' | 'decreasing' | 'stable' = change === null ? (monthCount > 0 ? 'increasing' : 'stable') : change >= 10 ? 'increasing' : change <= -10 ? 'decreasing' : 'stable';
 
       map[cat.id] = {
-        allTimeTicks: Math.max(cat.tickCount, allTime),
-        monthTicks: Math.max(1, monthCount || Math.ceil(cat.tickCount * 0.4)),
-        mostAffectedProduct: topProduct,
-        mostAffectedBrand: topBrand,
+        allTimeTicks: Math.max(cat.tickCount || 0, allTime),
+        monthTicks: monthCount,
+        mostAffectedProduct: top(productCounts),
+        mostAffectedBrand: db.getBrands().find((brand) => brand.code === brandCode)?.name || brandCode,
         trend,
+        trendPct: change,
       };
     });
 
@@ -650,15 +618,15 @@ export default function ReviewCategoriesPage() {
                 <span className="font-bold text-xs flex items-center gap-1 text-slate-900">
                   {analyticsMap[selectedAnalyticsCat.id]?.trend === 'increasing' ? (
                     <span className="text-rose-600 flex items-center gap-1">
-                      <TrendingUp className="h-4 w-4" /> Increasing (+18%)
+                      <TrendingUp className="h-4 w-4" /> Increasing{(() => { const pct = analyticsMap[selectedAnalyticsCat.id]?.trendPct; return pct === null || pct === undefined ? ' (new this month)' : ` (${pct > 0 ? '+' : ''}${pct}%)`; })()}
                     </span>
                   ) : analyticsMap[selectedAnalyticsCat.id]?.trend === 'decreasing' ? (
                     <span className="text-emerald-600 flex items-center gap-1">
-                      <TrendingDown className="h-4 w-4" /> Decreasing (-24%)
+                      <TrendingDown className="h-4 w-4" /> Decreasing{(() => { const pct = analyticsMap[selectedAnalyticsCat.id]?.trendPct; return pct === null || pct === undefined ? ' (new this month)' : ` (${pct > 0 ? '+' : ''}${pct}%)`; })()}
                     </span>
                   ) : (
                     <span className="text-slate-600 flex items-center gap-1">
-                      <Minus className="h-4 w-4" /> Stable (±2%)
+                      <Minus className="h-4 w-4" /> Steady{(() => { const pct = analyticsMap[selectedAnalyticsCat.id]?.trendPct; return pct === null || pct === undefined ? '' : ` (${pct > 0 ? '+' : ''}${pct}%)`; })()}
                     </span>
                   )}
                 </span>

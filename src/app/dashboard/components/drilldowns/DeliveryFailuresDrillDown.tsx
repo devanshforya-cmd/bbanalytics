@@ -235,15 +235,17 @@ function DeliveryFailuresTrendTab({
   failures: DeliveryFailure[];
   orders: Order[];
 }) {
-  const weekdays = [
-    { day: 'Sunday', count: 0 },
-    { day: 'Monday', count: 1 },
-    { day: 'Tuesday', count: 1 },
-    { day: 'Wednesday', count: 0 },
-    { day: 'Thursday', count: 0 },
-    { day: 'Friday', count: 0 },
-    { day: 'Saturday', count: 0 },
-  ];
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day) => ({ day, count: 0 }));
+  for (const failure of failures) {
+    const time = Date.parse(`${(failure.dateAd || '').slice(0, 10)}T12:00:00Z`);
+    if (!Number.isNaN(time)) weekdays[new Date(time).getUTCDay()].count += 1;
+  }
+  const partnerCounts = new Map<string, number>();
+  for (const failure of failures) {
+    const partner = failure.deliveryMethod || orders.find((order) => order.id === failure.orderId)?.deliveryMethod || 'Not recorded';
+    partnerCounts.set(partner, (partnerCounts.get(partner) || 0) + 1);
+  }
+  const partners = [...partnerCounts.entries()].sort((x, y) => y[1] - x[1]);
 
   const insideValley = failures.filter((f) => f.valley === 'Inside').length;
   const outsideValley = failures.filter((f) => f.valley === 'Outside').length;
@@ -272,14 +274,14 @@ function DeliveryFailuresTrendTab({
             By Delivery Partner
           </h4>
           <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
-              <span className="font-semibold text-slate-800 text-xs">Pathao Logistics</span>
-              <strong className="text-sm text-slate-900">1 failure (33%)</strong>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
-              <span className="font-semibold text-slate-800 text-xs">Standard Hub Express</span>
-              <strong className="text-sm text-slate-900">1 failure (50%)</strong>
-            </div>
+            {partners.length === 0 ? (
+              <p className="text-xs text-slate-500">No failures in this period.</p>
+            ) : partners.map(([partner, count]) => (
+              <div key={partner} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="font-semibold text-slate-800 text-xs">{partner}</span>
+                <strong className="text-sm text-slate-900">{count} {count === 1 ? 'failure' : 'failures'} ({Math.round((count / failures.length) * 100)}%)</strong>
+              </div>
+            ))}
           </div>
         </div>
       </div>

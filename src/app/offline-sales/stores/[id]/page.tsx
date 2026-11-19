@@ -45,6 +45,7 @@ import {
   Activity,
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
+import { belongsToStore, orderCadenceDays, shelfForecast } from '@/lib/store-records';
 import { canPerform, getScope, hasAccess } from '@/lib/permissions';
 import {
   BeatItem,
@@ -96,56 +97,32 @@ export default function StoreDetailPage() {
   // Load associated operational records
   const visits: BeatItem[] = useMemo(() => {
     if (!store) return [];
-    return db.getBeatItems().filter(
-      (b) =>
-        b.entityId === store.id ||
-        b.storeName.toLowerCase() === store.name.toLowerCase()
-    );
+    return db.getBeatItems().filter((b) => belongsToStore(b, store));
   }, [store]);
 
   const cheques: Cheque[] = useMemo(() => {
     if (!store) return [];
-    return db.getCheques().filter(
-      (c) =>
-        c.entityId === store.id ||
-        c.storeName.toLowerCase() === store.name.toLowerCase()
-    );
+    return db.getCheques().filter((c) => belongsToStore(c, store));
   }, [store]);
 
   const documents: HandoverDocument[] = useMemo(() => {
     if (!store) return [];
-    return db.getDocuments().filter(
-      (d) =>
-        d.entityId === store.id ||
-        d.storeName.toLowerCase() === store.name.toLowerCase()
-    );
+    return db.getDocuments().filter((d) => belongsToStore(d, store));
   }, [store]);
 
   const shelfPhotos: ShelfPhoto[] = useMemo(() => {
     if (!store) return [];
-    return db.getShelfPhotos().filter(
-      (p) =>
-        p.entityId === store.id ||
-        p.storeName.toLowerCase() === store.name.toLowerCase()
-    );
+    return db.getShelfPhotos().filter((p) => belongsToStore(p, store));
   }, [store]);
 
   const secondaryOrders: SecondaryOrder[] = useMemo(() => {
     if (!store) return [];
-    return db.getSecondaryOrders().filter(
-      (o) =>
-        o.entityId === store.id ||
-        o.storeName.toLowerCase() === store.name.toLowerCase()
-    );
+    return db.getSecondaryOrders().filter((o) => belongsToStore(o, store));
   }, [store]);
 
   const stockCounts: StockCount[] = useMemo(() => {
     if (!store) return [];
-    return db.getStockCounts().filter(
-      (s) =>
-        s.entityId === store.id ||
-        s.storeName.toLowerCase() === store.name.toLowerCase()
-    );
+    return db.getStockCounts().filter((s) => belongsToStore(s, store));
   }, [store]);
 
   // Fix 34: Store Health Score
@@ -160,13 +137,17 @@ export default function StoreDetailPage() {
   const promotions = canViewSelling && store ? applicableStorePromotions(db.getPromotions(), store.id, store.type === 'RETAILER' ? 'GT' : store.type === 'BRANCH' ? 'MT' : null) : [];
 
   const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const last30DaysOrders = secondaryOrders.filter((o) => {
+  // Cancelled orders are not sales: leave them out of volume, order value and cadence.
+  const liveOrders = secondaryOrders.filter((o) => o.status !== 'CANCELLED');
+  const last30DaysOrders = liveOrders.filter((o) => {
     const t = new Date(o.orderDateAd || o.createdAt).getTime();
     return t >= thirtyDaysAgoMs;
   });
   const volume30Days = last30DaysOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  const aov = secondaryOrders.length > 0 ? Math.round(secondaryOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0) / secondaryOrders.length) : 0;
-  const cadenceText = secondaryOrders.length > 1 ? `Every ${Math.max(1, Math.round(30 / secondaryOrders.length))} Days` : secondaryOrders.length === 1 ? '1 Order Recorded' : 'No Orders Yet';
+  const aov = liveOrders.length > 0 ? Math.round(liveOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0) / liveOrders.length) : 0;
+  const cadenceDays = orderCadenceDays(liveOrders.map((o) => o.orderDateAd || o.createdAt));
+  const cadenceText = cadenceDays !== null ? `Every ${cadenceDays} ${cadenceDays === 1 ? 'day' : 'days'}` : liveOrders.length === 1 ? '1 order so far' : 'No orders yet';
+  const forecastRows = shelfForecast(stockCounts, liveOrders);
   const cashedCheques = cheques.filter((c) => c.status === 'CASHED' && c.receivedDateAd && c.cashDateAd);
   const avgClearanceDelay = cashedCheques.length > 0 ? (cashedCheques.reduce((sum, c) => {
     const d1 = new Date(c.receivedDateAd).getTime();
@@ -245,7 +226,7 @@ export default function StoreDetailPage() {
               Assigned Field Officer:{' '}
               {!isOfficer ? (
                 <Link
-                  href={`/offline-sales/scorecard?officer=${encodeURIComponent(store.assignedOfficerName || 'Field Officer')}`}
+                  href={`/offline-sales/scorecard?officer=${encodeURIComponent(store.assignedOfficerName || '')}`}
                   className="font-bold text-blue-600 hover:underline hover:text-blue-800"
                 >
                   {store.assignedOfficerName || 'Unassigned'} ↗
@@ -307,7 +288,7 @@ export default function StoreDetailPage() {
                   <Money>{(store.creditLimit || 0).toLocaleString()}</Money>
                 </div>
                 <div className="text-[11px] text-slate-500">
-                  Terms: {store.paymentTerms || '30 Days Net'}
+                  Terms: {store.paymentTerms || 'Not set'}
                 </div>
               </div>
 
@@ -373,7 +354,7 @@ export default function StoreDetailPage() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-300 mt-0.5">
-                    Composite operational score based on ordering velocity, payment discipline, and shelf audits.
+                    Orders in the last 90 days, cheque record, latest shelf count and visits completed.
                   </p>
                 </div>
               </div>
@@ -614,10 +595,10 @@ export default function StoreDetailPage() {
                     <div className="text-slate-500 text-[11px]">
                       Check-in: {v.checkedInAt || '10:15 AM'} • Check-out: {v.checkedOutAt || '10:45 AM'} • Officer:{' '}
                       <Link
-                        href={`/offline-sales/scorecard?officer=${encodeURIComponent(v.officerId || 'Field Officer')}`}
+                        href={`/offline-sales/scorecard?officer=${encodeURIComponent((v as any).officerName || v.officerId || '')}`}
                         className="font-bold text-blue-600 hover:underline"
                       >
-                        {(v as any).officerName || v.officerId || 'Field Officer'}
+                        {(v as any).officerName || 'Officer not recorded'}
                       </Link>
                     </div>
                   </div>
@@ -645,21 +626,21 @@ export default function StoreDetailPage() {
               <span className="text-slate-500 text-[11px] font-bold block">30-Day Order Volume</span>
               <p className="text-xl font-black text-slate-900 mt-1"><Money>{volume30Days.toLocaleString()}</Money></p>
               <span className="text-xs text-slate-500 font-semibold mt-0.5 inline-block">
-                {last30DaysOrders.length} orders booked in last 30 days
+                {last30DaysOrders.length} {last30DaysOrders.length === 1 ? 'order' : 'orders'} in the last 30 days
               </span>
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
               <span className="text-slate-500 text-[11px] font-bold block">Average Order Value (AOV)</span>
               <p className="text-xl font-black text-purple-700 mt-1"><Money>{aov.toLocaleString()}</Money></p>
-              <span className="text-xs text-slate-500 mt-0.5 inline-block">{secondaryOrders.length} total secondary orders</span>
+              <span className="text-xs text-slate-500 mt-0.5 inline-block">{liveOrders.length} orders, cancelled left out</span>
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
               <span className="text-slate-500 text-[11px] font-bold block">Replenishment Cadence</span>
               <p className="text-xl font-black text-blue-700 mt-1">{cadenceText}</p>
               <span className="text-xs text-blue-600 font-semibold mt-0.5 inline-block">
-                {secondaryOrders.length > 0 ? 'Secondary retailer cadence' : 'Awaiting first secondary order'}
+                {liveOrders.length > 1 ? 'Typical gap between orders' : 'Awaiting more orders'}
               </span>
             </div>
           </div>
@@ -670,11 +651,11 @@ export default function StoreDetailPage() {
               <div>
                 <h3 className="font-bold text-slate-900 text-sm">SKU Stock Depletion &amp; Runout Forecast</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Calculated based on average sales velocity between consecutive merchandiser audits.
+                  From this store&apos;s last two shelf counts and the units it ordered between them.
                 </p>
               </div>
               <span className="text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-bold border border-blue-200">
-                Live Forecast
+                {forecastRows.length} products counted
               </span>
             </div>
 
@@ -691,38 +672,29 @@ export default function StoreDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {db.getProducts().length === 0 ? (
+                  {forecastRows.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-6 text-center text-slate-500 italic">
-                        No products in catalog. Add products in Product Catalog to view replenishment forecasts.
+                      <td colSpan={6} className="p-6 text-center text-slate-500">
+                        No stock counts for this store yet. Count the shelf on a visit to start the forecast.
                       </td>
                     </tr>
                   ) : (
-                    db.getProducts().slice(0, 5).map((prod, idx) => {
-                      const shelfQty = idx === 0 ? 3 : idx === 1 ? 8 : 22;
-                      const runRate = idx === 0 ? 0.8 : idx === 1 ? 1.1 : 1.4;
-                      const days = (shelfQty / runRate).toFixed(1);
-                      const isCrit = idx === 0;
-                      const isLow = idx === 1;
+                    forecastRows.map((row) => {
+                      const tone = row.status === 'OUT' || row.status === 'CRITICAL'
+                        ? { text: 'text-rose-600', chip: 'bg-rose-50 text-rose-700 border-rose-200' }
+                        : row.status === 'LOW' ? { text: 'text-amber-600', chip: 'bg-amber-50 text-amber-700 border-amber-200' }
+                        : row.status === 'OK' ? { text: 'text-emerald-600', chip: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+                        : { text: 'text-slate-500', chip: 'bg-slate-50 text-slate-600 border-slate-200' };
+                      const label = { OUT: 'Out of stock', CRITICAL: 'Reorder today', LOW: 'Reorder next visit', OK: 'Enough stock', UNKNOWN: 'Needs a second count' }[row.status];
                       return (
-                        <tr key={prod.id} className="hover:bg-slate-50">
-                          <td className="p-3 font-semibold text-slate-900">{prod.name}</td>
-                          <td className="p-3 text-slate-600 font-medium">{prod.brandCode}</td>
-                          <td className="p-3 text-center font-bold text-slate-800">{shelfQty} units</td>
-                          <td className="p-3 text-center text-slate-600">{runRate} units/day</td>
-                          <td className={`p-3 text-center font-black ${isCrit ? 'text-rose-600' : isLow ? 'text-amber-600' : 'text-emerald-600'}`}>
-                            {days} Days
-                          </td>
+                        <tr key={row.productId} className="hover:bg-slate-50">
+                          <td className="p-3 font-semibold text-slate-900"><Link href={`/products/${row.productId}`} className="hover:text-blue-600 hover:underline">{row.productName}</Link></td>
+                          <td className="p-3 text-slate-600 font-medium">{row.brandCode}</td>
+                          <td className="p-3 text-center font-bold text-slate-800">{row.shelfQty} units<div className="text-[10px] font-normal text-slate-500">counted {row.countedOn}</div></td>
+                          <td className="p-3 text-center text-slate-600">{row.perDay === null ? '—' : `${row.perDay} a day`}</td>
+                          <td className={`p-3 text-center font-black ${tone.text}`}>{row.daysLeft === null ? '—' : `${row.daysLeft} days`}</td>
                           <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                              isCrit
-                                ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                : isLow
-                                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            }`}>
-                              {isCrit ? 'Critical: Reorder Today' : isLow ? 'Low: Reorder Next Beat' : 'Healthy Inventory'}
-                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${tone.chip}`}>{label}</span>
                           </td>
                         </tr>
                       );
@@ -743,7 +715,7 @@ export default function StoreDetailPage() {
                 </p>
               </div>
               <span className="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-bold border border-emerald-200">
-                Terms: {store.paymentTerms || '30 Days Net'}
+                Terms: {store.paymentTerms || 'Not set'}
               </span>
             </div>
 
@@ -873,7 +845,7 @@ export default function StoreDetailPage() {
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 truncate">
-                        Officer: {p.officerName || 'Field Officer'}
+                        Officer: {p.officerName || 'Not recorded'}
                       </p>
                     </div>
                   </div>
