@@ -135,27 +135,27 @@ export default function BrandDropdown({
     return (
       <Link
         href="/settings?tab=brands"
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-blue-300 bg-blue-50/50 text-[11px] font-semibold text-blue-700 hover:bg-blue-100/60 transition"
+        className={`flex h-10 min-w-0 items-center gap-1.5 rounded-full border border-dashed border-blue-300 bg-blue-50/50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100/60 sm:h-auto sm:rounded-lg sm:py-1.5 ${className}`}
       >
-        <Plus className="w-3.5 h-3.5 text-blue-600" />
-        <span>+ Add Brands in Settings</span>
+        <Plus className="h-3.5 w-3.5 shrink-0 text-blue-600" />
+        <span className="truncate">Add brands</span>
       </Link>
     );
   }
 
   return (
-    <div className={`relative inline-block text-left ${className}`} ref={dropdownRef}>
+    <div className={`relative text-left sm:inline-block ${className}`} ref={dropdownRef}>
       {/* Trigger Button */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-xs hover:border-slate-300 hover:bg-slate-50/80 transition active:scale-98 ${
-          isCompact ? 'w-36 sm:w-44' : 'w-44 sm:w-52'
+        className={`flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-full border border-slate-200 bg-white px-3 text-[13px] font-semibold text-slate-800 shadow-xs hover:border-slate-300 hover:bg-slate-50/80 transition sm:h-auto sm:rounded-lg sm:py-1.5 sm:text-xs ${
+          isCompact ? 'sm:w-44' : 'sm:w-52'
         }`}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <div className="flex items-center gap-2 truncate">
+        <div className="flex min-w-0 items-center gap-2 truncate">
           {currentBrand === 'ALL' ? (
             <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 font-bold">
               <Layers className="h-3 w-3" />

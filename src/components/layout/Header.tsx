@@ -155,7 +155,7 @@ export default function Header() {
   return (
     <>
       <header
-        className={`sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b px-3 sm:px-6 transition duration-200 ${
+        className={`sticky top-0 z-30 flex h-14 sm:h-16 w-full items-center justify-between gap-2 border-b px-2.5 sm:px-6 transition duration-200 ${
           isGlassVariant
             ? 'border-black/[0.06] bg-white/70 backdrop-blur-xl backdrop-saturate-150'
             : 'border-black/[0.06] bg-white/80 backdrop-blur-xl backdrop-saturate-150'
@@ -163,23 +163,24 @@ export default function Header() {
       >
         <SavingBar />
         {/* Left: Hamburger (mobile/tablet) + Clean Brand Dropdown */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-none sm:gap-3">
           {/* Hamburger Menu Trigger for <lg (touch target >= 44px on mobile) */}
           <button
             type="button"
             onClick={() => setShowMobileNavDrawer(true)}
-            className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 transition lg:hidden shadow-2xs"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-800 hover:bg-black/[0.05] transition sm:h-9 sm:w-9 sm:rounded-xl sm:border sm:border-slate-200 sm:bg-white sm:shadow-2xs lg:hidden"
             aria-label="Open navigation menu"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <Link href="/dashboard" aria-label="Brand Bucket home" className="shrink-0 lg:hidden"><BrandLogo variant="mark" className="h-8 w-8" /></Link>
+          <Link href="/dashboard" aria-label="Brand Bucket home" className="hidden shrink-0 sm:block lg:hidden"><BrandLogo variant="mark" className="h-8 w-8" /></Link>
 
           {/* Clean Brand Selector Dropdown (No bulky BB square logo, no clutter) */}
           <BrandDropdown
             currentBrand={brandFilter}
             onBrandChange={handleBrandChange}
             isCompact={false}
+            className="min-w-0 flex-1 sm:flex-none"
           />
         </div>
 
@@ -202,7 +203,7 @@ export default function Header() {
         </div>
 
         {/* Right: Offline Sync Pill, Date Badge, Notification Center, Profile Drawer Button */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-2.5">
           {/* Dual Calendar Date Badge */}
           <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 bg-slate-50/70 text-xs font-bold text-slate-700 shadow-2xs">
             <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
@@ -213,10 +214,10 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setShowSearchModal(true)}
-            className="flex h-11 w-11 sm:hidden items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-2xs"
+            className="flex h-10 w-10 sm:hidden items-center justify-center rounded-full text-slate-700 hover:bg-black/[0.05] transition"
             aria-label="Open search"
           >
-            <Search className="h-4 w-4" />
+            <Search className="h-[18px] w-[18px]" />
           </button>
 
           {/* Offline Sync State (desktop & tablet) */}
@@ -227,12 +228,12 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setShowNotifMenu(!showNotifMenu)}
-              className="relative flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-2xs"
-              aria-label="View notifications"
+              className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-700 hover:bg-black/[0.05] transition sm:h-9 sm:w-9 sm:rounded-lg sm:border sm:border-slate-200 sm:bg-white sm:shadow-2xs"
+              aria-label={unreadNotifs.length ? `View notifications, ${unreadNotifs.length} unread` : 'View notifications'}
             >
-              <Bell className="h-4 w-4" />
+              <Bell className="h-[18px] w-[18px] sm:h-4 sm:w-4" />
               {unreadNotifs.length > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white ring-2 ring-white animate-pulse">
+                <span className="absolute top-1 right-1 sm:-top-1 sm:-right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white ring-2 ring-white">
                   {unreadNotifs.length}
                 </span>
               )}
@@ -240,7 +241,7 @@ export default function Header() {
 
             {/* Notification Popover */}
             {showNotifMenu && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl z-50 animate-in fade-in overflow-hidden">
+              <div className="fixed inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top)+0.5rem)] sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 sm:w-96 rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl z-50 animate-in fade-in overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/70">
                   <div className="flex items-center gap-2">
@@ -375,10 +376,10 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setShowProfileDrawer(true)}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs transition active:scale-98"
+            className="flex h-10 w-10 items-center justify-center gap-2 rounded-full text-xs font-semibold text-slate-800 transition hover:bg-black/[0.05] sm:h-auto sm:w-auto sm:rounded-lg sm:border sm:border-slate-200 sm:bg-slate-50 sm:px-2.5 sm:py-1.5 sm:shadow-2xs sm:hover:bg-slate-100"
             aria-label="Open user profile and duty settings"
           >
-            <div className="relative flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 font-black text-[11px] text-white">
+            <div className="relative flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 font-semibold text-xs text-white sm:h-6 sm:w-6 sm:text-[11px]">
               {currentUser?.fullName?.charAt(0) || 'U'}
               {/* Duty indicator dot */}
               <span
@@ -403,7 +404,7 @@ export default function Header() {
               </div>
             </div>
 
-            <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+            <ChevronDown className="hidden h-3.5 w-3.5 text-slate-400 sm:block" />
           </button>
         </div>
       </header>
