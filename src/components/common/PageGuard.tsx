@@ -1,5 +1,6 @@
 'use client';
 
+import ProgressRing from '@/components/common/ProgressRing';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User } from '@/lib/types';
@@ -46,7 +47,7 @@ export default function PageGuard({
   if (!isReady) {
     return (
       <div className="flex h-64 w-full items-center justify-center">
-        <div className="h-7 w-7 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <ProgressRing estimateMs={800} size={52} label="Opening page" />
       </div>
     );
   }
