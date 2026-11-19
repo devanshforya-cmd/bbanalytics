@@ -2,23 +2,27 @@
 
 import { confirmAction } from '@/components/common/confirm';
 import React, { useState, useEffect, useRef } from 'react';
-import { syncManager, SyncState } from '@/lib/offline-sync';
-import {
-  CheckCircle2,
-  AlertCircle,
-  WifiOff,
-  Wifi,
-  RefreshCw,
-  HardDrive,
-  Clock,
-  ChevronDown,
-  Layers,
-  Zap,
-  Check,
-  PlusCircle,
-  Radio,
-  Trash2,
-} from 'lucide-react';
+import { syncManager, SyncState, type QueuedSyncItem } from '@/lib/offline-sync';
+import { CheckCircle2, AlertCircle, WifiOff, Wifi, RefreshCw, Clock, ChevronDown, Check } from 'lucide-react';
+
+const RECORD_LABELS: Record<string, string> = {
+  orders: 'Order', cheques: 'Cheque', dispatches: 'Dispatch', returns: 'Return', feedbackEntries: 'Feedback', deliveryFailures: 'Delivery failure',
+  tasks: 'Task', retailers: 'Store', branches: 'Branch', distributors: 'Distributor', products: 'Product', combos: 'Combo', visits: 'Store visit',
+  beatItems: 'Beat stop', shelfPhotos: 'Shelf photos', callLogs: 'Call', documents: 'Document', customers: 'Customer', influencers: 'Influencer',
+  marketingSends: 'Marketing send', campaigns: 'Sale', holidays: 'Holiday', sharedAccessLinks: 'Shared link', workspaceConfig: 'Settings',
+  secondaryOrders: 'Store order', notifications: 'Notification', userPreferences: 'Your preferences',
+};
+
+/** "Order FOR-0421", "Cheque 004512", "Duty status" — what a queued change is, in words. */
+function describe(item: QueuedSyncItem): string {
+  if (item.type === 'DUTY_STATUS') return 'Your duty status';
+  if (item.type !== 'WORKSPACE_MUTATION') return 'An older change from this device';
+  const payload = item.payload as Record<string, any>;
+  const data = payload.data || {};
+  const kind = RECORD_LABELS[String(payload.collection)] || String(payload.collection).replace(/([A-Z])/g, ' $1').toLowerCase();
+  const name = data.orderNumber || data.sendNumber || data.dispatchNumber || data.chequeNumber || data.name || data.storeName || data.title || data.customerName || '';
+  return `${payload.operation === 'delete' ? 'Delete ' : ''}${kind}${name ? ` ${name}` : ''}`;
+}
 
 export default function SyncStatusDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -78,10 +82,21 @@ export default function SyncStatusDropdown() {
     const url = URL.createObjectURL(new Blob([JSON.stringify(syncManager.getQueue(), null, 2)], { type: 'application/json' }));
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'bb-pending-changes.json'; anchor.click(); URL.revokeObjectURL(url);
   };
+  const discard = async (id: string, conflict: boolean) => {
+    const ok = await confirmAction({
+      title: conflict ? 'Keep the version on the server?' : 'Discard this change?',
+      consequences: [conflict ? 'Your change to this record is dropped and the server’s version comes back.' : 'This change will not be saved. A copy stays on this device in case you need it.'],
+      confirmLabel: conflict ? 'Keep their version' : 'Discard change', destructive: !conflict,
+    });
+    if (!ok) return;
+    syncManager.discardItem(id);
+    void handleForceSync(); // brings back the server's copy of the record
+  };
   const errors = syncManager.getErrors();
-  const conflicts = syncManager.getQueue().filter((item) => item.conflictVersion !== undefined);
-  const queueBreakdown = syncManager.getQueueBreakdown();
-  const storageInfo = syncManager.getStorageUsage();
+  const queue = syncManager.getQueue();
+  const stuck = queue.filter((item) => item.lastError || item.conflictVersion !== undefined);
+  const itemErrors = new Set(queue.map((item) => item.lastError).filter(Boolean));
+  const otherErrors = Array.from(new Set(errors)).filter((error) => !itemErrors.has(error));
   const lastSyncTime = syncManager.getLastSyncTime();
   const isOffline = syncState === 'OFFLINE';
 
@@ -118,160 +133,85 @@ export default function SyncStatusDropdown() {
         />
       </button>
 
-      {/* 15b. Click to Expand Dropdown Popover */}
       {isOpen && (
-        <div className="fixed inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top)+0.5rem)] sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 sm:w-88 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150 text-xs">
-          {/* Popover Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top)+0.5rem)] sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 sm:w-96 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150 text-sm">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                <HardDrive className="h-4 w-4 text-blue-600" />
-                Offline Sync & Local Cache
-              </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
-                Changes stay on this device until the server confirms them
-              </div>
+              <h2 className="text-sm font-semibold text-slate-900">Saving &amp; sync</h2>
+              <p className="mt-0.5 text-xs text-slate-600">Changes are saved on this device first, then sent to the server. If the internet drops, nothing is lost: it sends when you are back online.</p>
             </div>
-
-            {/* Connection Status Pill */}
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                !isOffline
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  : 'bg-rose-50 text-rose-700 border border-rose-200'
-              }`}
-            >
-              {!isOffline ? (
-                <>
-                  <Wifi className="h-3 w-3 text-emerald-600" />
-                  Online
-                </>
-              ) : (
-                <>
-                  <WifiOff className="h-3 w-3 text-rose-600" />
-                  Offline
-                </>
-              )}
+            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${isOffline ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>
+              {isOffline ? <WifiOff className="h-3 w-3" /> : <Wifi className="h-3 w-3" />}{isOffline ? 'Offline' : 'Online'}
             </span>
           </div>
 
-          {/* Pending Entries Breakdown Section */}
-          <div className="py-3 border-b border-slate-100 space-y-2">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
-              <span className="flex items-center gap-1">
-                <Layers className="h-3.5 w-3.5 text-slate-400" />
-                Pending Queue ({pendingCount})
-              </span>
-              {pendingCount > 0 && (
-                <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                  Waiting for sync
-                </span>
-              )}
-            </div>
-
-            {pendingCount > 0 ? (
-              <div className="space-y-1.5 bg-amber-50/40 rounded-xl p-2.5 border border-amber-200/60">
-                {queueBreakdown.map((item) => (
-                  <div key={item.type} className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-700 font-medium">• {item.label}</span>
-                    <span className="font-bold font-mono text-amber-800 bg-amber-100/80 px-1.5 py-0.5 rounded text-[10px]">
-                      {item.count} {item.count === 1 ? 'entry' : 'entries'}
-                    </span>
-                  </div>
-                ))}
-              </div>
+          <div className="mt-3 rounded-xl bg-slate-50 p-3">
+            {pendingCount === 0 ? (
+              <p className="flex items-center gap-2 text-xs text-slate-700"><Check className="h-4 w-4 shrink-0 text-emerald-600" />Everything is saved on the server.</p>
             ) : (
-              <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-2.5 text-[11px] text-slate-600 border border-slate-100">
-                <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                <span>All local entries pushed to server. No pending items.</span>
-              </div>
+              <p className="text-xs text-slate-700"><strong className="text-slate-900">{pendingCount} {pendingCount === 1 ? 'change is' : 'changes are'} waiting.</strong>{stuck.length ? ` ${stuck.length} could not be saved; see why below.` : ' They send by themselves within a few seconds.'}</p>
             )}
+            <p className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-600"><Clock className="h-3 w-3" />Last saved to the server: {lastSyncTime}</p>
           </div>
 
-          {errors.length > 0 && (
-            <div role="alert" className="mt-3 space-y-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-[11px] text-rose-800">
-              {Array.from(new Set(errors)).map((error) => <p key={error}>{error}</p>)}
-              {conflicts.map((item) => (
-                <details key={item.id}>
-                  <summary className="cursor-pointer font-semibold">Review {String(item.payload.collection)} change</summary>
-                  <p className="mt-2">Local version: {String(item.payload.expectedVersion)}. Server version: {item.conflictVersion === -1 ? 'unknown' : item.conflictVersion}.</p>
-                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap py-2">{JSON.stringify(item.payload.data || { operation: item.payload.operation, id: item.payload.id }, null, 2)}</pre>
-                  {item.conflictVersion !== undefined && item.conflictVersion >= 0 && (
-                    <button type="button" onClick={() => { syncManager.retryConflict(item.id); void handleForceSync(); }} className="rounded border border-rose-300 bg-white p-2 font-semibold">
-                      Save this local version over server version {item.conflictVersion}
-                    </button>
-                  )}
-                </details>
-              ))}
+          {queue.length > 0 && (
+            <ul className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+              {queue.slice(0, 20).map((item) => {
+                const conflict = item.conflictVersion !== undefined;
+                return (
+                  <li key={item.id} className={`rounded-xl border p-2.5 ${item.lastError ? 'border-rose-200 bg-rose-50/60' : 'border-slate-200'}`}>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-xs font-semibold text-slate-900">{describe(item)}</span>
+                      <span className="shrink-0 text-[11px] text-slate-600">{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p className={`mt-0.5 text-[11px] ${item.lastError ? 'text-rose-800' : 'text-slate-600'}`}>
+                      {conflict ? 'Someone else changed this record after you. Keep their version, or save yours over it.' : item.lastError || 'Waiting to send.'}
+                    </p>
+                    {(item.lastError || conflict) && (
+                      <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold">
+                        {conflict ? (
+                          <>
+                            <button type="button" onClick={() => void discard(item.id, true)} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-slate-800 hover:bg-slate-50">Keep their version</button>
+                            {item.conflictVersion! >= 0 && <button type="button" onClick={() => { syncManager.retryConflict(item.id); void handleForceSync(); }} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-slate-800 hover:bg-slate-50">Save mine over it</button>}
+                          </>
+                        ) : (
+                          <>
+                            <button type="button" onClick={() => { syncManager.retryItem(item.id); void handleForceSync(); }} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-slate-800 hover:bg-slate-50">Try again</button>
+                            <button type="button" onClick={() => void discard(item.id, false)} className="rounded-lg px-2.5 py-1 text-rose-700 hover:bg-rose-100">Discard change</button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {otherErrors.length > 0 && (
+            <div role="alert" className="mt-3 space-y-1 rounded-xl border border-rose-200 bg-rose-50 p-2.5 text-[11px] text-rose-800">
+              {otherErrors.map((error) => <p key={error}>{error}</p>)}
             </div>
           )}
 
-          {/* Metadata Rows: Last Sync Time & Storage Used */}
-          <div className="py-3 border-b border-slate-100 space-y-2 text-[11px]">
-            {/* Last Sync */}
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500 flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-slate-400" />
-                Last Sync Time:
-              </span>
-              <span className="font-semibold text-slate-800">{lastSyncTime}</span>
-            </div>
-
-            {/* Storage Used */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500 flex items-center gap-1.5">
-                  <HardDrive className="h-3.5 w-3.5 text-slate-400" />
-                  Local Device Cache:
-                </span>
-                <span className="font-mono font-bold text-slate-800">{storageInfo.formatted}</span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className="h-full bg-blue-600 rounded-full transition"
-                  style={{ width: `${storageInfo.percent}%` }}
-                />
-              </div>
-            </div>
+          <div className="mt-3 flex items-center gap-2">
+            <button type="button" onClick={handleForceSync} disabled={isSyncing}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Syncing…' : justSynced ? 'All saved' : 'Sync now'}
+            </button>
+            {pendingCount > 0 && (
+              <button type="button" onClick={downloadPending} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Download a copy</button>
+            )}
           </div>
-
-          {/* Action Buttons */}
-          <div className="pt-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleForceSync}
-                disabled={isSyncing}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-2 px-3 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50 transition"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? 'Synchronizing…' : justSynced ? 'Queue Synchronized ✓' : 'Force Sync'}
-              </button>
-              {pendingCount > 0 && (
-                <button type="button" onClick={downloadPending} className="rounded-xl border border-slate-200 py-2 px-3 font-semibold text-slate-700">
-                  Download backup
-                </button>
-              )}
-            </div>
-
-            {/* Testing Tools Strip */}
-            <div className="flex items-center gap-1.5 pt-1">
-              {/* Toggle Simulated Offline */}
-              <button
-                type="button"
-                onClick={handleToggleOffline}
-                className={`w-full flex items-center justify-center gap-1 rounded-lg border py-1.5 px-2 text-[10px] font-semibold transition cursor-pointer ${
-                  isOffline
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-                }`}
-                title="Toggle offline state to simulate field internet loss"
-              >
-                <Radio className="h-3 w-3" />
-                {isOffline ? 'Go Back Online' : 'Simulate Offline Mode'}
-              </button>
-            </div>
-          </div>
+          {process.env.NODE_ENV === 'development' && (
+            <button type="button" onClick={handleToggleOffline} className="mt-2 w-full rounded-lg border border-dashed border-slate-300 py-1.5 text-[11px] text-slate-600">
+              {syncManager.isSimulated() ? 'Testing: go back online' : 'Testing: act as offline'}
+            </button>
+          )}
+          {syncManager.isSimulated() && process.env.NODE_ENV !== 'development' && (
+            <button type="button" onClick={handleToggleOffline} className="mt-2 w-full rounded-lg bg-amber-50 py-1.5 text-[11px] font-semibold text-amber-800">Saving to the server is paused on this device. Resume</button>
+          )}
         </div>
       )}
     </div>

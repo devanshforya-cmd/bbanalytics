@@ -113,12 +113,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-dvh w-full overflow-hidden bg-slate-50 pt-[env(safe-area-inset-top)] text-slate-900 antialiased">
+    <div className="relative flex h-dvh w-full overflow-hidden bg-slate-50 pt-[env(safe-area-inset-top)] text-slate-900 antialiased">
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <Sidebar pending={!confirmed} />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header />
-        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto focus:outline-none p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-8">
+        <main id="main-content" tabIndex={-1} className="relative flex-1 overflow-y-auto focus:outline-none p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-8">
           <FieldGpsTracker />
           {confirmed && pageAllowed ? children : (
             <div role="status" aria-live="polite" className="flex h-64 items-center justify-center">

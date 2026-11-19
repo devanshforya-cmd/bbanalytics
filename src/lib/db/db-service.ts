@@ -4852,6 +4852,17 @@ export class DatabaseService {
     return true;
   }
 
+  /** Set, change or remove (empty) the password on a shared link. The link itself stays the same. */
+  public setSharedAccessPasscode(id: string, passcode: string): boolean {
+    const link = this.sharedAccessLinks.find((l) => l.id === id);
+    if (!link) return false;
+    const clean = passcode.trim();
+    if (clean) link.passcode = clean; else delete link.passcode;
+    this.persistState();
+    this.logActivity(clean ? 'Shared Access Password Set' : 'Shared Access Password Removed', 'SHARED_ACCESS', id);
+    return true;
+  }
+
   public getSharedAccessByToken(token: string): SharedAccessLink | undefined {
     return this.sharedAccessLinks.find((l) => l.token === token && l.isActive);
   }

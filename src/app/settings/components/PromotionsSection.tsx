@@ -84,8 +84,8 @@ export default function PromotionsSection() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Tag className="w-6 h-6 text-brand-blue" />
-              Trade Promotions & Consumer Offers (Fix 46d)
+              <Tag className="w-6 h-6 text-blue-600" />
+              Trade Promotions & Consumer Offers
             </h2>
             <p className="text-sm text-gray-500 mt-1">
               Configure active schemes that automatically surface in the Smart Selling Assist tool when field officers visit stores.
@@ -94,10 +94,10 @@ export default function PromotionsSection() {
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-brand-blue text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition flex items-center gap-2 shadow-sm self-start md:self-auto"
+            className="shrink-0 whitespace-nowrap px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition flex items-center gap-2 shadow-sm self-start md:self-auto"
           >
             <Plus className="w-4 h-4" />
-            Create New Promotion
+            New promotion
           </button>
         </div>
       </div>
@@ -118,7 +118,7 @@ export default function PromotionsSection() {
             <div
               key={promo.id}
               className={`bg-white rounded-xl border p-5 shadow-sm flex flex-col justify-between transition ${
-                promo.active ? 'border-gray-200 hover:border-brand-blue/50' : 'border-gray-200 opacity-60 bg-gray-50/50'
+                promo.active ? 'border-gray-200 hover:border-blue-600/50' : 'border-gray-200 opacity-60 bg-gray-50/50'
               }`}
             >
               <div className="space-y-3">
@@ -128,11 +128,11 @@ export default function PromotionsSection() {
                   </span>
                   <button
                     onClick={() => handleToggleActive(promo.id, promo.active)}
-                    className="text-gray-500 hover:text-brand-blue"
+                    className="text-gray-500 hover:text-blue-600"
                     title={promo.active ? 'Deactivate' : 'Activate'}
                   >
                     {promo.active ? (
-                      <ToggleRight className="w-6 h-6 text-brand-blue" />
+                      <ToggleRight className="w-6 h-6 text-blue-600" />
                     ) : (
                       <ToggleLeft className="w-6 h-6 text-gray-400" />
                     )}
@@ -141,7 +141,7 @@ export default function PromotionsSection() {
 
                 <div>
                   <h3 className="font-bold text-gray-900 text-sm leading-snug">{promo.name}</h3>
-                  <p className="text-xs text-brand-blue font-semibold mt-0.5">{promo.brandCode}</p>
+                  <p className="text-xs text-blue-600 font-semibold mt-0.5">{promo.brandCode}</p>
                   <p className="text-xs text-gray-600 mt-2 line-clamp-2">{promo.description}</p>
                 </div>
 
@@ -183,8 +183,8 @@ export default function PromotionsSection() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
               <h3 className="font-bold text-gray-900 flex items-center gap-2 text-sm">
-                <Sparkles className="w-4 h-4 text-brand-blue" />
-                Create New Promotion Scheme
+                <Sparkles className="w-4 h-4 text-blue-600" />
+                New promotion Scheme
               </h3>
               <button
                 onClick={() => setShowAddModal(false)}
@@ -203,7 +203,7 @@ export default function PromotionsSection() {
                   placeholder="e.g. Dashain Bumper: Buy 10 Get 1 Free"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-blue"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-600"
                 />
               </div>
 
@@ -213,7 +213,7 @@ export default function PromotionsSection() {
                   <select id="promotionssection-brand-portfolio"
                     value={brandCode}
                     onChange={(e) => setBrandCode(e.target.value as BrandCode)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-brand-blue"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-600"
                   >
                     <option value="">Select brand</option>
                     {db.getBrands('ACTIVE').map(brand => <option key={brand.id} value={brand.code}>{brand.name}</option>)}
@@ -224,7 +224,7 @@ export default function PromotionsSection() {
                   <select aria-label="Offer Type"
                     value={offerType}
                     onChange={(e) => setOfferType(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-brand-blue"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-600"
                   >
                     <option value="BUY_X_GET_Y">Buy X Get Y Free</option>
                     <option value="PERCENTAGE_OFF">Percentage Discount</option>
@@ -244,7 +244,7 @@ export default function PromotionsSection() {
                   placeholder="e.g. Cica Soothing Cleanser, Matte Lip Gloss"
                   value={productNames}
                   onChange={(e) => setProductNames(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-brand-blue"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-600"
                 />
               </div>
 
@@ -303,7 +303,7 @@ export default function PromotionsSection() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-brand-blue text-white text-xs font-semibold rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700"
                 >
                   Save Promotion
                 </button>

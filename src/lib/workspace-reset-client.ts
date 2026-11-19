@@ -5,7 +5,7 @@ export function installWorkspaceFetch() {
   if (installed || typeof window === 'undefined' || typeof window.fetch !== 'function') return;
   installed = true;
   const originalFetch = window.fetch.bind(window);
-  const loadedEpoch = localStorage.getItem(WORKSPACE_EPOCH_KEY);
+  let loadedEpoch = localStorage.getItem(WORKSPACE_EPOCH_KEY);
   let state: Promise<WorkspaceResetState> | null = null;
   let clearing = false;
   async function clearAndReload(epoch: string): Promise<never> {
@@ -26,7 +26,8 @@ export function installWorkspaceFetch() {
           await (await registration?.pushManager?.getSubscription())?.unsubscribe();
         }
       } catch { /* Server epoch checks still block every stale upload. */ }
-      window.location.replace('/login');
+      // A shared-link visitor has no account, so they come back to the same link instead of sign-in.
+      window.location.replace(String(window.location.pathname || '').startsWith('/shared/') ? window.location.href : '/login');
     }
     throw new Error('Workspace was reset. Sign in again.');
   }
@@ -35,6 +36,11 @@ export function installWorkspaceFetch() {
     if (!response.ok) throw new Error('Workspace status is unavailable. Reconnect before syncing.');
     const result = await response.json() as WorkspaceResetState;
     if (typeof result.epoch !== 'string' || !result.epoch) throw new Error('Invalid workspace status.');
+    // A device that holds no workspace data yet (first visit, shared-link visitors) just notes the version.
+    if (loadedEpoch === null && !Object.keys(localStorage).some(isWorkspaceStorageKey)) {
+      loadedEpoch = result.epoch;
+      localStorage.setItem(WORKSPACE_EPOCH_KEY, result.epoch);
+    }
     if (result.epoch !== loadedEpoch) return clearAndReload(result.epoch);
     if (result.resetting) throw new Error('Workspace reset is in progress. Please reload shortly.');
     return result;

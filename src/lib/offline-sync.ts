@@ -277,6 +277,23 @@ export class OfflineSyncManager {
     (item.payload as unknown as WorkspaceMutation).mutationId = `retry_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     delete item.conflictVersion; delete item.lastError; delete item.lastAttemptAt; this.saveQueue();
   }
+  /** Retry one change now, without waiting for its back-off. */
+  public retryItem(itemId: string) {
+    const item = this.queue.find((entry) => entry.id === itemId);
+    if (!item || this.inFlight.has(itemId)) return;
+    delete item.lastAttemptAt; delete item.lastError;
+    if (item.conflictVersion !== undefined && item.conflictVersion >= 0) { this.retryConflict(itemId); return; }
+    delete item.conflictVersion; this.saveQueue(); this.notify();
+  }
+  /** Drop one change that cannot be saved. A copy is kept on the device first. */
+  public discardItem(itemId: string): boolean {
+    if (this.inFlight.has(itemId)) return false;
+    const item = this.queue.find((entry) => entry.id === itemId);
+    if (!item) return false;
+    try { if (this.userId) localStorage.setItem(`bb_queue_backup:${this.userId}:${Date.now()}`, JSON.stringify([item])); } catch {}
+    this.queue = this.queue.filter((entry) => entry.id !== itemId); this.saveQueue(); this.notify();
+    return true;
+  }
   public clearQueue() {
     if (this.inFlight.size) return;
     if (this.userId && typeof localStorage !== 'undefined') localStorage.setItem(`bb_queue_backup:${this.userId}:${Date.now()}`, JSON.stringify(this.queue));
