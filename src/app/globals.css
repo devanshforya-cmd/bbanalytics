@@ -82,6 +82,8 @@ h1 { letter-spacing: -0.022em; }
 h1, h2, h3 { text-wrap: balance; }
 p { text-wrap: pretty; }
 table { font-variant-numeric: tabular-nums; }
+/* A label inside a table cell wraps as one box, so a long name never splits its border across lines. */
+td span[class*="rounded"][class*="px-"]:not([class*="flex"]):not([class*="block"]) { display: inline-block; max-width: 100%; line-height: 1.35; }
 button, a, [role="button"], input, select, textarea, label { touch-action: manipulation; }
 button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, label[for] { cursor: pointer; }
 .tabular-nums, .font-mono { font-variant-numeric: tabular-nums; }
