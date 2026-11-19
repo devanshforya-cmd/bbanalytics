@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { AREAS, PAGES, type PageKey } from '@/lib/access-catalog';
 import { hasAccess, isSuperAdmin, type UserWithPermissions } from '@/lib/permissions';
+import { ShoppingBag, Building2, Wrench } from 'lucide-react';
 
 export interface NavItem {
   label: string;
@@ -51,4 +52,36 @@ export function canSeeNavItem(user: UserWithPermissions | null | undefined, item
 
 export function visibleNavSections(user: UserWithPermissions | null | undefined): NavSection[] {
   return NAV_SECTIONS.map((section) => ({ ...section, items: section.items.filter((item) => canSeeNavItem(user, item)) })).filter((section) => section.items.length > 0);
+}
+
+/** The menu in three business areas. Overview (no title) always sits on top, open. */
+export interface NavGroup {
+  key: 'overview' | 'd2c' | 'b2b' | 'operations';
+  title?: string;
+  description?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  sections: NavSection[];
+}
+
+const section = (title: string) => NAV_SECTIONS.find((entry) => entry.title === title)!;
+
+export const NAV_GROUPS: NavGroup[] = [
+  { key: 'overview', sections: [{ ...section('Overview'), title: '' }] },
+  { key: 'd2c', title: 'D2C', description: 'Online orders, customers and marketing', icon: ShoppingBag,
+    sections: [section('Online orders'), section('Reviews & returns'), section('Customers'), section('Marketing')] },
+  { key: 'b2b', title: 'B2B', description: 'Field sales, stores and distributors', icon: Building2,
+    sections: [{ ...section('Offline sales'), title: 'Field sales' }] },
+  { key: 'operations', title: 'Operations', description: 'Tasks, reports and settings', icon: Wrench,
+    sections: [{ ...section('Operations'), title: 'Work' }, section('Admin')] },
+];
+
+export function visibleNavGroups(user: UserWithPermissions | null | undefined): NavGroup[] {
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    sections: group.sections.map((entry) => ({ ...entry, items: entry.items.filter((item) => canSeeNavItem(user, item)) })).filter((entry) => entry.items.length > 0),
+  })).filter((group) => group.sections.length > 0);
+}
+
+export function isActivePath(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
 }

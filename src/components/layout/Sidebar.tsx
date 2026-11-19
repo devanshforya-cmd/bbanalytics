@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
 import { User } from '@/lib/types';
-import { visibleNavSections } from './nav-items';
+import NavMenu from './NavMenu';
 
 export default function Sidebar({ pending = false }: { pending?: boolean }) {
   const pathname = usePathname();
@@ -31,56 +31,8 @@ export default function Sidebar({ pending = false }: { pending?: boolean }) {
       </div>
 
       {/* Nav List Filtered Strictly by Permissions */}
-      <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-3 pb-4 pt-1">
-        {pending ? <NavSkeleton /> : visibleNavSections(currentUser).map((section) => {
-          const visibleItems = section.items;
-
-          return (
-            <div key={section.title}>
-              <div className="px-2.5 text-[11px] font-semibold text-slate-500">
-                {section.title}
-              </div>
-              <div className="mt-1 space-y-px">
-                {visibleItems.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-current={isActive ? 'page' : undefined}
-                      className={`group flex items-center justify-between rounded-lg px-2.5 py-[7px] text-[13px] transition-colors duration-150 ${
-                        isActive
-                          ? 'bg-blue-600/10 font-semibold text-blue-700'
-                          : 'font-medium text-slate-700 hover:bg-black/[0.04]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon
-                          className={`h-[18px] w-[18px] shrink-0 ${
-                            isActive ? 'text-blue-600' : 'text-slate-500'
-                          }`}
-                        />
-                        <span>{item.label}</span>
-                      </div>
-                      {item.badge && (
-                        <span
-                          className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold  ${
-                            isActive
-                              ? 'bg-blue-100/80 text-blue-700 border border-blue-200/60'
-                              : 'bg-slate-100 text-slate-500 border border-slate-200/50'
-                          }`}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+      <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 pb-4 pt-1">
+        {pending ? <NavSkeleton /> : <NavMenu user={currentUser} pathname={pathname} />}
       </nav>
 
       {/* Footer User Info */}

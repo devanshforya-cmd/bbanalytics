@@ -39,7 +39,8 @@ import {
 } from 'lucide-react';
 import { User, BrandCode } from '@/lib/types';
 import { isSuperAdmin } from '@/lib/permissions';
-import { visibleNavSections } from './nav-items';
+import NavMenu from './NavMenu';
+import { roleLabel } from '@/lib/roles';
 
 interface MobileNavDrawerProps {
   isOpen: boolean;
@@ -62,18 +63,6 @@ export default function MobileNavDrawer({
   const [searchQuery, setSearchQuery] = useState('');
 
   if (!isOpen) return null;
-
-  // Filter sections by user permissions
-  const permittedSections = visibleNavSections(currentUser);
-
-  // Filter sections by search query
-  const q = searchQuery.toLowerCase().trim();
-  const filteredSections = permittedSections
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((item) => item.label.toLowerCase().includes(q)),
-    }))
-    .filter((section) => section.items.length > 0);
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
@@ -116,58 +105,8 @@ export default function MobileNavDrawer({
           </div>
 
           {/* Navigation Items List */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-5">
-            {filteredSections.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500">
-                No matching navigation items found.
-              </div>
-            ) : (
-              filteredSections.map((section) => (
-                <div key={section.title} className="space-y-1">
-                  <div className="px-3 text-[10px] font-bold text-slate-500">
-                    {section.title}
-                  </div>
-                  <div className="space-y-0.5">
-                    {section.items.map((item) => {
-                      const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                      const Icon = item.icon;
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={onClose}
-                          className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition ${
-                            isActive
-                              ? 'bg-blue-50 text-blue-700 font-bold'
-                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <Icon
-                              className={`w-4 h-4 shrink-0 ${
-                                isActive ? 'text-blue-600' : 'text-slate-400'
-                              }`}
-                            />
-                            <span>{item.label}</span>
-                          </div>
-                          {item.badge && (
-                            <span
-                              className={`rounded px-1.5 py-0.5 text-[9px] font-bold   ${
-                                isActive
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-slate-100 text-slate-500'
-                              }`}
-                            >
-                              {item.badge}
-                            </span>
-                          )}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))
-            )}
+          <div className="flex-1 overflow-y-auto p-3">
+            <NavMenu compact user={currentUser} pathname={pathname} query={searchQuery} onNavigate={onClose} />
           </div>
 
           {/* User Profile Footer Strip */}
@@ -188,7 +127,7 @@ export default function MobileNavDrawer({
                   {currentUser.fullName}
                 </div>
                 <div className="truncate text-[10px] text-slate-500">
-                  {isSuperAdmin(currentUser) ? 'Super Admin' : 'Authorized User'} • {currentUser.phone}
+                  {roleLabel(currentUser)}
                 </div>
               </div>
               <span className="text-xs text-blue-600 font-bold">Profile</span>
