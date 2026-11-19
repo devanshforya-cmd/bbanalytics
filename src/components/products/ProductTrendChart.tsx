@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Calendar } from 'lucide-react';
-import { productMonthlyTrend, type CalendarMode, type ProductMetricsInput } from '@/lib/product-metrics';
+import { comboMonthlyTrend, productMonthlyTrend, type CalendarMode, type ProductMetricsInput } from '@/lib/product-metrics';
 
 const CALENDAR_KEY = 'bb_trend_calendar_v1';
 
@@ -10,11 +10,13 @@ function readMode(): CalendarMode {
   try { return window.localStorage.getItem(CALENDAR_KEY) === 'AD' ? 'AD' : 'BS'; } catch { return 'BS'; }
 }
 
-/** Units sold per month for one product: online and store sales stacked, returns noted under each month. */
-export default function ProductTrendChart({ productId, input }: { productId: string; input: ProductMetricsInput }) {
+/** Units sold per month for one product (online and store sales stacked), or kits for a combo; returns noted under each month. */
+export default function ProductTrendChart({ productId, input, kind = 'product' }: { productId: string; input: ProductMetricsInput; kind?: 'product' | 'combo' }) {
+  const isCombo = kind === 'combo';
+  const unit = isCombo ? 'kits' : 'units';
   const [mode, setMode] = useState<CalendarMode>(() => (typeof window === 'undefined' ? 'BS' : readMode()));
   const todayAd = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kathmandu' });
-  const points = useMemo(() => productMonthlyTrend(productId, input, { mode, todayAd }), [productId, input, mode, todayAd]);
+  const points = useMemo(() => (isCombo ? comboMonthlyTrend : productMonthlyTrend)(productId, input, { mode, todayAd }), [productId, input, mode, todayAd, isCombo]);
 
   const choose = (next: CalendarMode) => {
     setMode(next);
@@ -34,10 +36,12 @@ export default function ProductTrendChart({ productId, input }: { productId: str
         <div>
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Calendar className="w-4 h-4 text-indigo-600" />
-            Units sold, last 12 months
+            {isCombo ? 'Kits sold, last 12 months' : 'Units sold, last 12 months'}
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Online orders and store orders, including units sold inside combos. Cancelled orders, exchanges and free gifts are left out.
+            {isCombo
+              ? 'Online orders. Cancelled orders, exchanges and free gift kits are left out.'
+              : 'Online orders and store orders, including units sold inside combos. Cancelled orders, exchanges and free gifts are left out.'}
           </p>
         </div>
         <div role="group" aria-label="Calendar" className="inline-flex shrink-0 rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs font-bold">
@@ -51,21 +55,23 @@ export default function ProductTrendChart({ productId, input }: { productId: str
       </div>
 
       {sum === 0 ? (
-        <div className="py-8 text-center text-xs text-slate-500">No units of this product sold in the last 12 months.</div>
+        <div className="py-8 text-center text-xs text-slate-500">{isCombo ? 'No kits of this combo sold in the last 12 months.' : 'No units of this product sold in the last 12 months.'}</div>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-600">
             <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-purple-600" />Online (D2C)</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand-600" />Stores (B2B)</span>
+            {!isCombo && <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand-600" />Stores (B2B)</span>}
             <span className="ml-auto text-slate-500">
-              {best && <>Best month <strong className="text-slate-800">{best.longLabel}</strong> ({best.d2c + best.b2b} units) · </>}
+              {best && <>Best month <strong className="text-slate-800">{best.longLabel}</strong> ({best.d2c + best.b2b} {unit}) · </>}
               {averaged} a month on average
             </span>
           </div>
           <div className="grid grid-cols-12 gap-1 sm:gap-2 pt-1">
             {points.map((point) => {
               const total = point.d2c + point.b2b;
-              const label = `${point.longLabel}: ${total} units (${point.d2c} online, ${point.b2b} in stores)${point.returned ? `, ${point.returned} returned` : ''}`;
+              const label = isCombo
+                ? `${point.longLabel}: ${total} kits${point.returned ? `, ${point.returned} taken back` : ''}`
+                : `${point.longLabel}: ${total} units (${point.d2c} online, ${point.b2b} in stores)${point.returned ? `, ${point.returned} returned` : ''}`;
               return (
                 <div key={point.key} className="flex flex-col items-center min-w-0" title={label} aria-label={label}>
                   <span className="text-[10px] font-bold text-slate-700 font-mono mb-1">{total || ''}</span>
@@ -79,7 +85,7 @@ export default function ProductTrendChart({ productId, input }: { productId: str
               );
             })}
           </div>
-          <p className="text-[11px] text-slate-500">↩ marks units returned or exchanged that month. The current month is outlined and still filling up.</p>
+          <p className="text-[11px] text-slate-500">↩ marks {isCombo ? 'kits or kit products' : 'units'} returned or exchanged that month. The current month is outlined and still filling up.</p>
         </>
       )}
     </div>

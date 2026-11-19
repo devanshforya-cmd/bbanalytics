@@ -9,6 +9,7 @@ import { db } from '@/lib/db/db-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { Product, SecondaryOrder, Retailer, Branch, FeedbackEntry, StockCount, Order, Combo, ReturnEntry, DeliveryFailure } from '@/lib/types';
 import { productMetrics, type ProductMetricsInput } from '@/lib/product-metrics';
+import { countsAsSale } from '@/lib/order-status';
 import ProductTrendChart from '@/components/products/ProductTrendChart';
 import {
   Package,
@@ -97,6 +98,16 @@ export default function Product360Page() {
   const d2cPct = totalUnitsSold > 0 ? Math.round((d2cUnits / totalUnitsSold) * 100) : 0;
   const totalReturnUnits = metrics.returns.units;
   const returnRatePct = metrics.returns.ratePct.toFixed(1);
+
+  // Combos this product goes into, with the units of it each one has sold.
+  const containingCombos = combos
+    .filter((entry) => entry.items.some((item) => item.productId === product.id))
+    .map((entry) => {
+      const perKit = entry.items.find((item) => item.productId === product.id)?.quantity || 1;
+      const kits = orders.filter(countsAsSale).reduce((sum, order) => sum + order.items.filter((line) => line.productId === entry.id && !line.isGift).reduce((acc, line) => acc + line.quantity, 0), 0);
+      return { id: entry.id, name: entry.name, units: kits * perKit };
+    })
+    .sort((x, y) => y.units - x.units);
 
   // Why units came back, from the returns themselves.
   const reasonCounts = new Map<string, number>();
@@ -324,6 +335,18 @@ export default function Product360Page() {
                   <div className="h-full bg-purple-600 rounded-full" style={{ width: `${d2cPct}%` }} />
                 </div>
               </div>
+            </div>
+          )}
+
+          {containingCombos.length > 0 && (
+            <div className="p-3.5 rounded-2xl bg-purple-50/60 border border-purple-100 space-y-1.5 mt-4">
+              <div className="text-xs font-bold text-slate-800">Sold in combos</div>
+              {containingCombos.map((entry) => (
+                <div key={entry.id} className="flex items-center justify-between text-xs">
+                  <Link href={`/products/combo/${encodeURIComponent(entry.id)}`} className="font-medium text-purple-800 hover:underline truncate">{entry.name}</Link>
+                  <span className="font-mono text-slate-600 shrink-0 ml-2">{entry.units} units</span>
+                </div>
+              ))}
             </div>
           )}
 

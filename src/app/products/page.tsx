@@ -66,6 +66,10 @@ export default function ProductsPage() {
 
   const [activeBrand, setActiveBrand] = useState<BrandCode>('ALL');
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'ARCHIVED' | 'COMBOS'>('PRODUCTS');
+  // Opened from a combo page: start on the Combos tab.
+  useEffect(() => {
+    try { if (new URLSearchParams(window.location.search).get('tab') === 'combos') setActiveTab('COMBOS'); } catch { /* no query */ }
+  }, []);
   const [activeViewMode, setActiveViewMode] = useState<'OVERVIEW' | 'PERFORMANCE'>('OVERVIEW');
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -813,7 +817,9 @@ export default function ProductsPage() {
                     </span>
                   </div>
 
-                  <h2 className="font-bold text-slate-900 text-base mt-2">{c.name}</h2>
+                  <h2 className="font-bold text-slate-900 text-base mt-2">
+                    <Link href={`/products/combo/${encodeURIComponent(c.id)}`} className="hover:text-purple-700 hover:underline">{c.name}</Link>
+                  </h2>
                   <p className="text-xs text-slate-500 mt-1 line-clamp-2">{c.description}</p>
                   {!isSellableCombo(c, products) && <p className="mt-2 text-xs font-semibold text-amber-700">Unavailable for new orders: a component is missing or archived.</p>}
 
@@ -875,7 +881,7 @@ export default function ProductsPage() {
                     </div>
                     <div className="border-x border-purple-200/60">
                       <span className="text-slate-500 text-[10px] font-semibold">
-                        Delivered kits
+                        Kits sold
                       </span>
                       <div className="font-bold text-purple-700 mt-0.5 font-mono">{kitsSold}</div>
                     </div>
@@ -901,6 +907,7 @@ export default function ProductsPage() {
                     </span>
                   </div>
                   <div className="text-right">
+                    <Link href={`/products/combo/${encodeURIComponent(c.id)}`} className="mr-2 text-xs font-bold text-purple-700 hover:underline">Full details</Link>
                     <span className="inline-block text-[11px] text-purple-800 font-bold bg-purple-100 px-2.5 py-0.5 rounded-md border border-purple-200">
                       D2C / Online (Not B2B)
                     </span>
