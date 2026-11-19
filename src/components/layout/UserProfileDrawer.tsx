@@ -148,7 +148,7 @@ export default function UserProfileDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-200/60 transition"
               aria-label="Close profile drawer"
             >
               <X className="h-5 w-5" />
@@ -241,10 +241,10 @@ export default function UserProfileDrawer({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <h4 className="text-xs font-bold text-slate-500">
                     Live Duty Status
                   </h4>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     Controls field tracking &amp; operational dispatch visibility
                   </p>
                 </div>
@@ -275,7 +275,7 @@ export default function UserProfileDrawer({
                         key={status}
                         type="button"
                         onClick={() => handleStatusChange(status)}
-                        className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
+                        className={`flex items-start gap-3 p-3 rounded-xl border text-left transition ${
                           isSelected
                             ? `${cfg.bg} ${cfg.border} ring-2 ring-blue-500/20 shadow-xs`
                             : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
@@ -316,7 +316,7 @@ export default function UserProfileDrawer({
             {isOfficer && hasAccess(currentUser, 'staff_scorecards') && (
               <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <span className="text-xs font-bold text-slate-500">
                     Today&apos;s Field Quick Stats
                   </span>
                   <Link
@@ -355,7 +355,7 @@ export default function UserProfileDrawer({
                   <CalendarDays className="h-4 w-4 text-blue-600" />
                   <span className="text-xs font-bold text-slate-900">Default Calendar</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-medium">Saved on this device</span>
+                <span className="text-[10px] text-slate-500 font-medium">Saved on this device</span>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 {(['BS', 'AD', 'BOTH'] as const).map((pref) => (

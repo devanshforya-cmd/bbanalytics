@@ -107,12 +107,12 @@ export default function InfluencerDetailPage() {
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
             <div className="flex min-w-0 items-start gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-2xl font-bold text-purple-700" aria-hidden>{influencer.name.charAt(0).toUpperCase()}</div>
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-2xl font-bold text-blue-700" aria-hidden>{influencer.name.charAt(0).toUpperCase()}</div>
               <div className="min-w-0 space-y-2">
                 <h1 className="text-xl font-black tracking-tight text-slate-900 sm:text-2xl">{influencer.name}</h1>
                 <div className="flex flex-wrap gap-1.5">
                   {niches.length ? niches.map((niche) => <span key={niche} className="rounded-full border border-purple-200 bg-purple-50 px-2.5 py-0.5 text-[11px] font-bold text-purple-700">{niche}</span>)
-                    : <span className="text-[11px] text-slate-400">No niche categories yet</span>}
+                    : <span className="text-[11px] text-slate-500">No niche categories yet</span>}
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
                   {influencer.phone && <span className="flex items-center gap-1 font-mono"><Phone className="h-3.5 w-3.5 text-slate-400" />{influencer.phone}</span>}
@@ -156,7 +156,7 @@ export default function InfluencerDetailPage() {
             <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3"><p className="text-[11px] font-medium text-slate-500">Content pieces</p><p className="mt-0.5 text-xl font-black text-slate-900">{content.length}</p></div>
             <div className={`rounded-2xl border p-3 ${overdueCount ? 'border-amber-300 bg-amber-50' : 'border-slate-100 bg-slate-50'}`}>
               <p className="text-[11px] font-medium text-slate-500">Sends with content</p>
-              <p className="mt-0.5 text-xl font-black text-slate-900">{receivedCount}<span className="text-sm font-bold text-slate-400"> / {stats.totalSends}</span></p>
+              <p className="mt-0.5 text-xl font-black text-slate-900">{receivedCount}<span className="text-sm font-bold text-slate-500"> / {stats.totalSends}</span></p>
               {overdueCount > 0 && <p className="text-[11px] font-bold text-amber-800">{overdueCount} overdue</p>}
             </div>
           </div>
@@ -166,7 +166,7 @@ export default function InfluencerDetailPage() {
         <section className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="sends-heading">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div>
-              <h2 id="sends-heading" className="flex items-center gap-2 text-base font-bold text-slate-900"><Gift className="h-4 w-4 text-purple-600" /> Products sent</h2>
+              <h2 id="sends-heading" className="flex items-center gap-2 text-base font-bold text-slate-900"><Gift className="h-4 w-4 text-slate-500" /> Products sent</h2>
               <p className="text-xs text-slate-500">Marketing sends to this influencer. These never count as orders or sales.</p>
             </div>
             {canCreate && !archived && <button type="button" onClick={() => setShowSend(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-800 hover:bg-purple-100"><Plus className="h-3.5 w-3.5" /> New send</button>}
@@ -247,8 +247,8 @@ export default function InfluencerDetailPage() {
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="mr-1 text-[11px] text-slate-500">Posted {formatDate(piece.datePostedAd, piece.datePostedBs)}</span>
-                        {canEdit && <button type="button" aria-label="Edit content" onClick={() => setContentForm({ content: piece })} className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600"><Pencil className="h-3.5 w-3.5" /></button>}
-                        {canDelete && <button type="button" aria-label="Delete content" onClick={() => setContentToDelete(piece)} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>}
+                        {canEdit && <button type="button" aria-label="Edit content" onClick={() => setContentForm({ content: piece })} className="rounded-lg p-1.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600"><Pencil className="h-3.5 w-3.5" /></button>}
+                        {canDelete && <button type="button" aria-label="Delete content" onClick={() => setContentToDelete(piece)} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>}
                       </div>
                     </div>
                     <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -274,7 +274,7 @@ export default function InfluencerDetailPage() {
             <h2 id="notes-heading" className="text-base font-bold text-slate-900">Notes</h2>
             {canEdit && notes === null && <button type="button" onClick={() => setNotes(influencer.notes || '')} className="text-xs font-bold text-blue-700 hover:underline">{influencer.notes ? 'Edit' : 'Add a note'}</button>}
           </div>
-          {notes === null ? <p className="mt-2 whitespace-pre-wrap text-xs text-slate-700">{influencer.notes || <span className="text-slate-400">No notes yet.</span>}</p> : (
+          {notes === null ? <p className="mt-2 whitespace-pre-wrap text-xs text-slate-700">{influencer.notes || <span className="text-slate-500">No notes yet.</span>}</p> : (
             <div className="mt-2 space-y-2">
               <textarea rows={3} autoFocus value={notes} maxLength={2000} onChange={(event) => setNotes(event.target.value)} aria-label="Notes" className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs outline-none focus:border-blue-500" />
               <div className="flex justify-end gap-2">

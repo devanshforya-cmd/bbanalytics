@@ -110,7 +110,7 @@ function ToastNotification({ type, message, subtitle, autoDismiss, onClose, acti
   };
   const c = config[type];
   return (
-    <div role="alert" className={`relative pointer-events-auto w-80 sm:w-96 rounded-2xl shadow-xl overflow-hidden ${c.bg} ${c.border} transition-all duration-300 ease-out ${visible && !leaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
+    <div role="alert" className={`relative pointer-events-auto w-80 sm:w-96 rounded-2xl shadow-xl overflow-hidden ${c.bg} ${c.border} transition duration-300 ease-out ${visible && !leaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
       <div className="flex items-start gap-3 p-3.5 pb-4">
         <div className={`p-1.5 rounded-lg shrink-0 ${c.iconBg}`}>{c.icon}</div>
         <div className="flex-1 min-w-0">
@@ -131,7 +131,7 @@ function ToastNotification({ type, message, subtitle, autoDismiss, onClose, acti
             </div>
           )}
         </div>
-        <button type="button" onClick={dismiss} className="p-1 rounded-lg hover:bg-black/5 text-slate-400 hover:text-slate-600 transition shrink-0 -mt-0.5 -mr-0.5" title="Dismiss">
+        <button type="button" onClick={dismiss} className="p-1 rounded-lg hover:bg-black/5 text-slate-500 hover:text-slate-600 transition shrink-0 -mt-0.5 -mr-0.5" title="Dismiss">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>

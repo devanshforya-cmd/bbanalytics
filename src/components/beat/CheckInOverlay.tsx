@@ -52,28 +52,28 @@ export default function CheckInOverlay({ beat, distance, onStartWorking, onCance
           </div>
           <div className="text-center">
             <p className="text-white/60 text-sm mb-2">Arriving at</p>
-            <h2 className="text-xl font-bold tracking-wide">{beat.storeName}</h2>
+            <h2 className="text-xl font-bold ">{beat.storeName}</h2>
             <p className="text-white/50 text-xs mt-1">{beat.storeType} · {beat.address}</p>
           </div>
           <p className="text-blue-300 text-sm font-medium flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping inline-block" />
-            Locating you...
+            Locating you…
           </p>
         </div>
       )}
 
       {phase === 'success' && (
-        <div className={`flex flex-col items-center gap-5 max-w-sm w-full transition-all duration-400 ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        <div className={`flex flex-col items-center gap-5 max-w-sm w-full transition duration-400 ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           {/* Animated ✅ */}
           <div className={`w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30 ${showContent ? 'animate-scale-bounce' : ''}`}>
-            <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none">
+            <svg aria-hidden="true" className="w-8 h-8" viewBox="0 0 32 32" fill="none">
               <path d="M6 16l7 7 13-13" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="draw-check" />
             </svg>
           </div>
 
           <div className="text-center">
             <p className="text-emerald-400 text-sm font-semibold mb-1">Checked In</p>
-            <h2 className="text-xl font-bold tracking-wide">{beat.storeName}</h2>
+            <h2 className="text-xl font-bold ">{beat.storeName}</h2>
             <div className="flex items-center justify-center gap-3 mt-2 text-white/60 text-xs">
               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{timeStr}</span>
               <span>·</span>
@@ -92,7 +92,7 @@ export default function CheckInOverlay({ beat, distance, onStartWorking, onCance
           {/* Manager Note */}
           {beat.managerNotes && (
             <div className="w-full bg-blue-500/10 border border-blue-400/20 rounded-2xl p-3.5">
-              <p className="text-[11px] font-semibold text-blue-300 uppercase tracking-wider mb-1">Manager Note</p>
+              <p className="text-[11px] font-semibold text-blue-300 mb-1">Manager Note</p>
               <p className="text-xs text-white/80 leading-relaxed">&ldquo;{beat.managerNotes}&rdquo;</p>
             </div>
           )}
@@ -100,7 +100,7 @@ export default function CheckInOverlay({ beat, distance, onStartWorking, onCance
           {/* Tasks at this store */}
           {beat.pendingTasks && beat.pendingTasks.length > 0 && (
             <div className="w-full">
-              <p className="text-[11px] font-semibold text-white/50 uppercase tracking-wider mb-2">Today&apos;s tasks at this store</p>
+              <p className="text-[11px] font-semibold text-white/50 mb-2">Today&apos;s tasks at this store</p>
               <div className="space-y-2">
                 {beat.pendingTasks.map((task, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs text-white/80">
@@ -115,7 +115,7 @@ export default function CheckInOverlay({ beat, distance, onStartWorking, onCance
           <button
             type="button"
             onClick={onStartWorking}
-            className="w-full mt-2 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm shadow-lg shadow-emerald-500/30 transition-all active:scale-[0.98]"
+            className="w-full mt-2 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm shadow-lg shadow-emerald-500/30 transition active:scale-[0.98]"
           >
             <span>Start Working</span>
             <ChevronRight className="w-4 h-4" />

@@ -46,9 +46,9 @@ export default function WinBackList({
         <span className="text-[11px] font-bold text-emerald-700">Sorted by Past Orders Descending</span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-emerald-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-emerald-200 bg-white" tabIndex={0}>
         <table className="w-full text-left text-xs text-slate-700">
-          <thead className="bg-emerald-50/60 text-[11px] font-bold text-emerald-900 uppercase tracking-wider border-b border-emerald-200">
+          <thead className="bg-emerald-50/60 text-[11px] font-bold text-emerald-900 border-b border-emerald-200">
             <tr>
               <th className="py-3 px-3">Customer</th>
               <th className="py-3 px-3 text-right">Lifetime Spend</th>
@@ -62,7 +62,7 @@ export default function WinBackList({
           <tbody className="divide-y divide-slate-100">
             {winBackList.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-slate-400">
+                <td colSpan={7} className="py-8 text-center text-slate-500">
                   No dormant VIP profiles requiring immediate win-back.
                 </td>
               </tr>
@@ -78,7 +78,7 @@ export default function WinBackList({
                       >
                         {item.customer.name}
                       </Link>
-                      <div className="text-[10px] text-slate-400">{item.customer.phone}</div>
+                      <div className="text-[10px] text-slate-500">{item.customer.phone}</div>
                     </td>
                     <td className="py-3 px-3 text-right font-black text-slate-900">
                       NPR {item.spend.toLocaleString()}

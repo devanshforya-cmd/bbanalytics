@@ -70,7 +70,7 @@ export default function CrossBrandMap({
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-center">
           {crossBrandMap.segments.map((m) => (
             <div key={m.label} className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-blue-900 space-y-1">
-              <div className="text-[10px] font-bold uppercase tracking-wider">{m.label}</div>
+              <div className="text-[10px] font-bold ">{m.label}</div>
               <div className="text-xl font-black">{m.count}</div>
               <div className="text-[10px] opacity-80">
                 {Math.round((m.count / Math.max(1, crossBrandMap.total)) * 100)}% of total
@@ -81,13 +81,13 @@ export default function CrossBrandMap({
 
         {/* Cross-Sell Opportunities Table */}
         <div className="space-y-3">
-          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+          <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5 text-purple-600" />
             Cross-Sell Priority Candidates (High Karma, Untapped Brand)
           </h3>
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="overflow-x-auto rounded-xl border border-slate-200" tabIndex={0}>
             <table className="w-full text-left text-xs text-slate-700">
-              <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-3">Customer</th>
                   <th className="py-3 px-3">Current Brands</th>
@@ -107,7 +107,7 @@ export default function CrossBrandMap({
                       >
                         {item.customer.name}
                       </Link>
-                      <div className="text-[10px] text-slate-400">{item.customer.phone}</div>
+                      <div className="text-[10px] text-slate-500">{item.customer.phone}</div>
                     </td>
                     <td className="py-3 px-3 font-medium text-slate-600">{item.currentBrands}</td>
                     <td className="py-3 px-3">
@@ -155,9 +155,9 @@ export default function CrossBrandMap({
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <div className="overflow-x-auto rounded-xl border border-slate-200" tabIndex={0}>
           <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+            <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
               <tr>
                 <th className="py-3 px-3">Acquisition Channel</th>
                 <th className="py-3 px-3 text-center">Unique Customers</th>
@@ -217,7 +217,7 @@ export default function CrossBrandMap({
 
               <div className="space-y-1.5">
                 {seg.topProducts.length === 0 ? (
-                  <div className="p-3 rounded-lg bg-white border border-slate-100 text-xs text-slate-400 text-center">
+                  <div className="p-3 rounded-lg bg-white border border-slate-100 text-xs text-slate-500 text-center">
                     No orders recorded for this segment yet
                   </div>
                 ) : (
@@ -228,7 +228,7 @@ export default function CrossBrandMap({
                     >
                       <div>
                         <span className="font-bold text-slate-900">{p.name}</span>
-                        <span className="ml-2 text-[10px] text-slate-400 font-medium">{p.brand}</span>
+                        <span className="ml-2 text-[10px] text-slate-500 font-medium">{p.brand}</span>
                       </div>
                       <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
                         {p.share}

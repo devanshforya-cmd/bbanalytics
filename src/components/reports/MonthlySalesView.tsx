@@ -63,7 +63,7 @@ export function MonthlySalesTable({ report, showMoney = true }: { report: Monthl
   ];
   const width = 92 + 44 + 110 + channels.length * 76 + 82 + 70 + (showMoney ? 100 : 0) + report.items.length * 100;
   return (
-    <div className="overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div tabIndex={0} role="region" aria-label="Monthly sales sheet" className="overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm focus-visible:outline-2 focus-visible:outline-blue-600">
       <table className="w-full table-fixed border-collapse" style={{ minWidth: width }} aria-label="Daily monthly sales report">
         <colgroup><col style={{ width: 92 }} /><col style={{ width: 44 }} /><col style={{ width: 110 }} />{channels.map((channel) => <col key={channel} style={{ width: 76 }} />)}<col style={{ width: 82 }} /><col style={{ width: 70 }} />{showMoney && <col style={{ width: 100 }} />}{report.items.map((item) => <col key={item.id} style={{ width: 100 }} />)}</colgroup>
         <thead><tr>

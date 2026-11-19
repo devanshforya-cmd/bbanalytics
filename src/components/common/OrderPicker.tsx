@@ -85,7 +85,7 @@ export default function OrderPicker({ customerPhone, selectedId, onSelect, onChe
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs font-bold text-slate-700">{label} {required && <span className="text-rose-500">*</span>}</span>
+        <span className="text-xs font-bold text-slate-700">{label} {required && <span className="text-rose-600">*</span>}</span>
         <button type="button" onClick={() => { setById((value) => !value); setIdQuery(''); }} className="text-[11px] font-bold text-blue-700 hover:underline">
           {byId ? 'Back to this customer’s orders' : 'Search by order ID'}
         </button>

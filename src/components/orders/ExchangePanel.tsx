@@ -111,7 +111,7 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
               <span className="block">Same brand and channel as {displayDocumentId(original.orderNumber)}. You can edit the replacement order like any other order after saving.</span>
             </section>
             <section>
-              <p className="mb-2 font-bold text-slate-700">What are we sending? <span className="text-rose-500">*</span></p>
+              <p className="mb-2 font-bold text-slate-700">What are we sending? <span className="text-rose-600">*</span></p>
               {items.length > 0 && (
                 <ul className="mb-2 divide-y divide-slate-100 rounded-xl border border-slate-200">
                   {items.map((item) => (
@@ -121,7 +121,7 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
                         <button type="button" aria-label={`One fewer ${item.productName}`} disabled={item.quantity <= 1} onClick={() => setItems((rows) => rows.map((row) => row.productId === item.productId ? { ...row, quantity: row.quantity - 1 } : row))} className="rounded-lg border border-slate-200 p-1 disabled:opacity-40"><Minus className="h-3 w-3" /></button>
                         <span className="w-6 text-center font-bold">{item.quantity}</span>
                         <button type="button" aria-label={`One more ${item.productName}`} onClick={() => setItems((rows) => rows.map((row) => row.productId === item.productId ? { ...row, quantity: Math.min(99, row.quantity + 1) } : row))} className="rounded-lg border border-slate-200 p-1"><Plus className="h-3 w-3" /></button>
-                        <button type="button" aria-label={`Remove ${item.productName}`} onClick={() => setItems((rows) => rows.filter((row) => row.productId !== item.productId))} className="ml-1 rounded-lg p-1 text-slate-400 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                        <button type="button" aria-label={`Remove ${item.productName}`} onClick={() => setItems((rows) => rows.filter((row) => row.productId !== item.productId))} className="ml-1 rounded-lg p-1 text-slate-500 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
                       </span>
                     </li>
                   ))}
@@ -137,7 +137,7 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
                     <li key={entry.id}>
                       <button type="button" disabled={added} onClick={() => setItems((rows) => [...rows, { productId: entry.id, productName: entry.name, brandCode: entry.brandCode, quantity: 1 }])}
                         className="flex w-full items-center justify-between px-3 py-1.5 text-left hover:bg-purple-50 disabled:text-slate-400">
-                        <span className="truncate">{entry.name}{entry.combo && <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 text-[9px] font-bold uppercase text-amber-800">Combo</span>}</span>
+                        <span className="truncate">{entry.name}{entry.combo && <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 text-[9px] font-bold text-amber-800">Combo</span>}</span>
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700">{added ? 'Added' : <><PackagePlus className="h-3 w-3" /> Add</>}</span>
                       </button>
                     </li>
@@ -168,7 +168,7 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
 
         {mode === 'LINK' && (
           <section>
-            <p className="mb-2 font-bold text-slate-700">Which order is the replacement? <span className="text-rose-500">*</span></p>
+            <p className="mb-2 font-bold text-slate-700">Which order is the replacement? <span className="text-rose-600">*</span></p>
             {!candidates.length ? <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-slate-500">This customer has no other order to link. Create the replacement order instead.</p> : (
               <ul className="max-h-72 space-y-1.5 overflow-y-auto" role="radiogroup" aria-label="Replacement order">
                 {candidates.map((order) => (

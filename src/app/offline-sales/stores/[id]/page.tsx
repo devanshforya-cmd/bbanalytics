@@ -217,7 +217,7 @@ export default function StoreDetailPage() {
                     {store.name}
                   </h1>
                   <StoreDeleteButton id={store.id} name={store.name} onDeleted={() => router.push('/offline-sales/stores')} />
-                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-700 border border-slate-200">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
                     {store.type}
                   </span>
                   <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold text-blue-800">
@@ -228,7 +228,7 @@ export default function StoreDetailPage() {
                   <MapPin className="h-3.5 w-3.5 text-slate-400" />
                   <span>{store.address}</span>
                   {store.coordinates && (
-                    <span className="font-mono text-[10px] text-slate-400 ml-1">
+                    <span className="font-mono text-[10px] text-slate-500 ml-1">
                       ({store.coordinates.lat.toFixed(4)}, {store.coordinates.lng.toFixed(4)})
                     </span>
                   )}
@@ -279,7 +279,7 @@ export default function StoreDetailPage() {
         <div className={`grid grid-cols-1 sm:grid-cols-2 ${!isOfficer ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-3 pt-3 border-t border-slate-100`}>
           {/* Contacts */}
           <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1">
-            <span className="font-semibold text-slate-500 text-[11px] uppercase tracking-wider block">
+            <span className="font-semibold text-slate-500 text-[11px] block">
               Primary Contact
             </span>
             <div className="font-bold text-slate-900 flex items-center gap-1.5">
@@ -299,7 +299,7 @@ export default function StoreDetailPage() {
             <>
               {/* Credit Limit */}
               <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1">
-                <span className="font-semibold text-slate-500 text-[11px] uppercase tracking-wider block">
+                <span className="font-semibold text-slate-500 text-[11px] block">
                   Credit Limit
                 </span>
                 <div className="font-bold text-slate-900 text-sm">
@@ -312,7 +312,7 @@ export default function StoreDetailPage() {
 
               {/* Outstanding Balance */}
               <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1">
-                <span className="font-semibold text-slate-500 text-[11px] uppercase tracking-wider block">
+                <span className="font-semibold text-slate-500 text-[11px] block">
                   Current Outstanding
                 </span>
                 <div className="font-bold text-amber-600 text-sm">
@@ -327,7 +327,7 @@ export default function StoreDetailPage() {
 
           {/* Activity Totals */}
           <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1">
-            <span className="font-semibold text-slate-500 text-[11px] uppercase tracking-wider block">
+            <span className="font-semibold text-slate-500 text-[11px] block">
               Historical Activity
             </span>
             <div className="font-bold text-slate-900">
@@ -360,7 +360,7 @@ export default function StoreDetailPage() {
                   <div className="flex items-center gap-2">
                     <h4 className="font-bold text-sm text-white">Store Health Score</h4>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold   ${
                         healthScore.tier === 'TIER_1'
                           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                           : healthScore.tier === 'TIER_2'
@@ -379,19 +379,19 @@ export default function StoreDetailPage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs border-t sm:border-t-0 sm:border-l border-slate-700 pt-3 sm:pt-0 sm:pl-4">
                 <div>
-                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Order Velocity</span>
+                  <span className="text-slate-500 text-[10px] font-bold block">Order Velocity</span>
                   <span className="font-bold text-white text-sm">{healthScore.orderRegularity}/30</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Payment Discipline</span>
+                  <span className="text-slate-500 text-[10px] font-bold block">Payment Discipline</span>
                   <span className="font-bold text-white text-sm">{healthScore.paymentDiscipline}/25</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Stock Freshness</span>
+                  <span className="text-slate-500 text-[10px] font-bold block">Stock Freshness</span>
                   <span className="font-bold text-white text-sm">{healthScore.stockMaintenance}/25</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Visit Cooperation</span>
+                  <span className="text-slate-500 text-[10px] font-bold block">Visit Cooperation</span>
                   <span className="font-bold text-white text-sm">{healthScore.visitCooperation}/20</span>
                 </div>
               </div>
@@ -402,7 +402,7 @@ export default function StoreDetailPage() {
         {/* Multi-contact directory */}
         <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <span className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
+            <span className="text-[11px] font-bold text-slate-500 block mb-1">
               Store Contacts ({store.contacts?.length || 1}):
             </span>
             <div className="flex flex-wrap gap-2">
@@ -447,7 +447,7 @@ export default function StoreDetailPage() {
               <button
                 type="button"
                 onClick={() => setShowAddContactModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="text-slate-500 hover:text-slate-600 p-1"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -475,8 +475,8 @@ export default function StoreDetailPage() {
               className="space-y-4 pt-4 text-xs"
             >
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Contact Name *</label>
-                <input
+                <label htmlFor="-id--contact-name" className="block font-bold text-slate-700 mb-1">Contact Name *</label>
+                <input id="-id--contact-name"
                   type="text"
                   required
                   value={newContactName}
@@ -487,8 +487,8 @@ export default function StoreDetailPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Contact Role *</label>
-                <select
+                <label htmlFor="-id--contact-role" className="block font-bold text-slate-700 mb-1">Contact Role *</label>
+                <select id="-id--contact-role"
                   value={newContactRole}
                   onChange={(e) => setNewContactRole(e.target.value as any)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium bg-white"
@@ -502,8 +502,8 @@ export default function StoreDetailPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Phone Number *</label>
-                <input
+                <label htmlFor="-id--phone-number" className="block font-bold text-slate-700 mb-1">Phone Number *</label>
+                <input id="-id--phone-number"
                   type="tel"
                   required
                   value={newContactPhone}
@@ -554,7 +554,7 @@ export default function StoreDetailPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
-              className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition ${
                 isActive
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -587,7 +587,7 @@ export default function StoreDetailPage() {
           </div>
 
           {visits.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs border border-dashed rounded-xl">
+            <div className="p-8 text-center text-slate-500 text-xs border border-dashed rounded-xl">
               No field visits logged for this store yet.
             </div>
           ) : (
@@ -597,7 +597,7 @@ export default function StoreDetailPage() {
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-900">{v.dateBs}</span>
-                      <span className="text-slate-400 font-mono text-[11px]">({v.dateAd})</span>
+                      <span className="text-slate-500 font-mono text-[11px]">({v.dateAd})</span>
                       <span
                         className={`rounded px-2 py-0.5 text-[10px] font-bold ${
                           v.status === 'VISITED'
@@ -641,7 +641,7 @@ export default function StoreDetailPage() {
           {/* Top Velocity Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-              <span className="text-slate-500 text-[11px] font-bold uppercase block">30-Day Order Volume</span>
+              <span className="text-slate-500 text-[11px] font-bold block">30-Day Order Volume</span>
               <p className="text-xl font-black text-slate-900 mt-1">NPR {volume30Days.toLocaleString()}</p>
               <span className="text-xs text-slate-500 font-semibold mt-0.5 inline-block">
                 {last30DaysOrders.length} orders booked in last 30 days
@@ -649,13 +649,13 @@ export default function StoreDetailPage() {
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-              <span className="text-slate-500 text-[11px] font-bold uppercase block">Average Order Value (AOV)</span>
+              <span className="text-slate-500 text-[11px] font-bold block">Average Order Value (AOV)</span>
               <p className="text-xl font-black text-purple-700 mt-1">NPR {aov.toLocaleString()}</p>
               <span className="text-xs text-slate-500 mt-0.5 inline-block">{secondaryOrders.length} total secondary orders</span>
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-              <span className="text-slate-500 text-[11px] font-bold uppercase block">Replenishment Cadence</span>
+              <span className="text-slate-500 text-[11px] font-bold block">Replenishment Cadence</span>
               <p className="text-xl font-black text-blue-700 mt-1">{cadenceText}</p>
               <span className="text-xs text-blue-600 font-semibold mt-0.5 inline-block">
                 {secondaryOrders.length > 0 ? 'Secondary retailer cadence' : 'Awaiting first secondary order'}
@@ -677,7 +677,7 @@ export default function StoreDetailPage() {
               </span>
             </div>
 
-            <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <div className="overflow-x-auto border border-slate-200 rounded-xl" tabIndex={0}>
               <table className="w-full text-xs text-left">
                 <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
                   <tr>
@@ -748,21 +748,21 @@ export default function StoreDetailPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Credit Line</span>
+                <span className="text-[10px] font-bold text-slate-500 block">Total Credit Line</span>
                 <p className="text-base font-bold text-slate-900 mt-0.5">NPR {(store.creditLimit || 0).toLocaleString()}</p>
               </div>
               <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
-                <span className="text-[10px] uppercase font-bold text-blue-600 block">Current Outstanding</span>
+                <span className="text-[10px] font-bold text-blue-600 block">Current Outstanding</span>
                 <p className="text-base font-bold text-blue-900 mt-0.5">NPR {(store.outstandingBalance || 0).toLocaleString()}</p>
               </div>
               <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-                <span className="text-[10px] uppercase font-bold text-emerald-600 block">Available Balance</span>
+                <span className="text-[10px] font-bold text-emerald-600 block">Available Balance</span>
                 <p className="text-base font-bold text-emerald-900 mt-0.5">
                   NPR {Math.max(0, (store.creditLimit || 0) - (store.outstandingBalance || 0)).toLocaleString()}
                 </p>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-500 block">Avg Clearance Delay</span>
+                <span className="text-[10px] font-bold text-slate-500 block">Avg Clearance Delay</span>
                 <p className="text-base font-bold text-slate-900 mt-0.5">{avgClearanceDelay}</p>
               </div>
             </div>
@@ -783,7 +783,7 @@ export default function StoreDetailPage() {
           </div>
 
           {stockCounts.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs border border-dashed rounded-xl">
+            <div className="p-8 text-center text-slate-500 text-xs border border-dashed rounded-xl">
               No stock counts recorded for this store yet.
             </div>
           ) : (
@@ -793,7 +793,7 @@ export default function StoreDetailPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="font-bold text-slate-900">{sc.dateBs}</span>
-                      <span className="text-slate-400 text-[11px] ml-1">({sc.dateAd})</span>
+                      <span className="text-slate-500 text-[11px] ml-1">({sc.dateAd})</span>
                     </div>
                     <span className="text-slate-500">Auditor: {sc.officerName || 'Officer'}</span>
                   </div>
@@ -839,7 +839,7 @@ export default function StoreDetailPage() {
           </div>
 
           {shelfPhotos.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs border border-dashed rounded-xl">
+            <div className="p-8 text-center text-slate-500 text-xs border border-dashed rounded-xl">
               No shelf photos uploaded for this store yet.
             </div>
           ) : (
@@ -850,7 +850,7 @@ export default function StoreDetailPage() {
                   <div
                     key={p.id}
                     onClick={() => img && setLightboxPhoto(img)}
-                    className="group relative rounded-xl border border-slate-200 overflow-hidden bg-slate-100 cursor-pointer shadow-sm hover:shadow-md transition-all"
+                    className="group relative rounded-xl border border-slate-200 overflow-hidden bg-slate-100 cursor-pointer shadow-sm hover:shadow-md transition"
                   >
                     <div className="h-44 w-full overflow-hidden flex items-center justify-center bg-slate-100">
                       {img ? (
@@ -898,13 +898,13 @@ export default function StoreDetailPage() {
           </div>
 
           {cheques.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs border border-dashed rounded-xl">
+            <div className="p-8 text-center text-slate-500 text-xs border border-dashed rounded-xl">
               No cheques registered from this store yet.
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full text-left text-xs min-w-[650px]">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase font-bold">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold">
                   <tr>
                     <th className="p-2.5">Cheque #</th>
                     <th className="p-2.5">Bank</th>
@@ -978,7 +978,7 @@ export default function StoreDetailPage() {
           </div>
 
           {documents.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs border border-dashed rounded-xl">
+            <div className="p-8 text-center text-slate-500 text-xs border border-dashed rounded-xl">
               No physical handover documents tracked for this store yet.
             </div>
           ) : (
@@ -1036,7 +1036,7 @@ export default function StoreDetailPage() {
           </div>
 
           {secondaryOrders.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs border border-dashed rounded-xl">
+            <div className="p-8 text-center text-slate-500 text-xs border border-dashed rounded-xl">
               No secondary orders booked for this store yet.
             </div>
           ) : (
@@ -1046,7 +1046,7 @@ export default function StoreDetailPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="font-bold text-slate-900">{/^PENDING-/i.test(ord.orderNumber) ? 'Awaiting ID' : ord.orderNumber}</span>
-                      <span className="text-slate-400 ml-1 text-[11px]">({ord.orderDateBs})</span>
+                      <span className="text-slate-500 ml-1 text-[11px]">({ord.orderDateBs})</span>
                     </div>
                     <div className="font-black text-slate-900 text-sm">
                       NPR {ord.totalAmount.toLocaleString()}

@@ -35,8 +35,8 @@ export default function EndOfDayModal({
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
         <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white text-center">
-            <Trophy className="w-12 h-12 mx-auto text-amber-300 mb-2 animate-bounce" />
+          <div className="bg-blue-700 p-6 text-white text-center">
+            <Trophy className="w-12 h-12 mx-auto text-amber-300 mb-2" />
             <h3 className="text-xl font-black">Daily Beat Shift Completed!</h3>
             <p className="text-xs text-blue-100 mt-1">
               Field compliance report logged for {dailySummary.dateBs}
@@ -46,25 +46,25 @@ export default function EndOfDayModal({
           <div className="p-6 space-y-4 text-xs">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
               <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
-                <div className="text-[10px] text-slate-400 font-bold uppercase">Stores Visited</div>
+                <div className="text-[10px] text-slate-500 font-bold ">Stores Visited</div>
                 <div className="text-base font-black text-emerald-600 mt-0.5">
                   {dailySummary.storesVisited}/{dailySummary.totalStores}
                 </div>
               </div>
               <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
-                <div className="text-[10px] text-slate-400 font-bold uppercase">Orders Booked</div>
+                <div className="text-[10px] text-slate-500 font-bold ">Orders Booked</div>
                 <div className="text-base font-black text-blue-600 mt-0.5">
                   {dailySummary.ordersCollected}
                 </div>
               </div>
               <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
-                <div className="text-[10px] text-slate-400 font-bold uppercase">Cheques</div>
+                <div className="text-[10px] text-slate-500 font-bold ">Cheques</div>
                 <div className="text-base font-black text-amber-600 mt-0.5">
                   {dailySummary.chequesCollected}
                 </div>
               </div>
               <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
-                <div className="text-[10px] text-slate-400 font-bold uppercase">Compliance</div>
+                <div className="text-[10px] text-slate-500 font-bold ">Compliance</div>
                 <div className="text-base font-black text-purple-600 mt-0.5">
                   {dailySummary.compliancePct}%
                 </div>
@@ -99,7 +99,7 @@ export default function EndOfDayModal({
             <AlertTriangle className="w-5 h-5 text-amber-500" />
             <h3 className="text-base font-bold text-slate-900">Conclude Field Day</h3>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-500 hover:text-slate-600">
             <X className="w-5 h-5" />
           </button>
         </div>

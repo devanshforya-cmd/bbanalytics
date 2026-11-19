@@ -288,7 +288,7 @@ export default function InlineOrderForm({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+            className="p-1.5 text-slate-500 hover:text-slate-600 rounded-lg"
           >
             <X className="w-5 h-5" />
           </button>
@@ -301,7 +301,7 @@ export default function InlineOrderForm({
               {/* 1. Multi-Item Order Table */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                  <label className="font-bold text-slate-900 text-xs ">
                     Order Products ({lineItems.length} SKUs)
                   </label>
                   <button
@@ -331,10 +331,10 @@ export default function InlineOrderForm({
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase">
+                            <label className="text-[10px] font-bold text-slate-500 ">
                               SKU #{index + 1}
                             </label>
-                            <select
+                            <select aria-label="SKU #"
                               value={item.productId}
                               onChange={(e) =>
                                 handleUpdateLineItem(item.id, { productId: e.target.value })
@@ -357,7 +357,7 @@ export default function InlineOrderForm({
                             <button
                               type="button"
                               onClick={() => handleRemoveLineItem(item.id)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg mt-5 transition"
+                              className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg mt-5 transition"
                               title="Remove item"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -368,10 +368,10 @@ export default function InlineOrderForm({
                         {/* Quantity and Unit Mode */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 items-end">
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase">
+                            <label className="text-[10px] font-bold text-slate-500 ">
                               Unit Mode
                             </label>
-                            <select
+                            <select aria-label="Unit Mode"
                               value={item.unitType}
                               disabled={prodMode !== 'BOTH'}
                               onChange={(e) =>
@@ -387,10 +387,10 @@ export default function InlineOrderForm({
                           </div>
 
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase">
+                            <label htmlFor="inlineorderform-quantity" className="text-[10px] font-bold text-slate-500 ">
                               Quantity ({item.unitType === 'CASES' ? 'Cases' : 'Pcs'})
                             </label>
-                            <input
+                            <input id="inlineorderform-quantity"
                               type="number"
                               min={1}
                               value={item.quantity}
@@ -404,10 +404,10 @@ export default function InlineOrderForm({
                           </div>
 
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase">
+                            <label htmlFor="inlineorderform-promotional-scheme" className="text-[10px] font-bold text-slate-500 ">
                               Promotional Scheme
                             </label>
-                            <select
+                            <select id="inlineorderform-promotional-scheme"
                               value={item.scheme}
                               onChange={(e) =>
                                 handleUpdateLineItem(item.id, { scheme: e.target.value })
@@ -425,7 +425,7 @@ export default function InlineOrderForm({
                             <span className="font-bold text-slate-900 text-xs">
                               Rs. {lineAmount.toLocaleString()}
                             </span>
-                            <span className="text-[9px] text-slate-400 block font-mono">
+                            <span className="text-[9px] text-slate-500 block font-mono">
                               ({units} pcs @ Rs.{storePaysUnit})
                             </span>
                           </div>
@@ -471,7 +471,7 @@ export default function InlineOrderForm({
                             <label className="text-[10px] text-slate-500 font-semibold">
                               Margin %
                             </label>
-                            <input
+                            <input aria-label="Margin %"
                               type="number"
                               min={0}
                               max={60}
@@ -536,10 +536,10 @@ export default function InlineOrderForm({
               {/* 3. Payment Terms & Photo Upload */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-bold text-slate-800 mb-1.5">
+                  <label htmlFor="inlineorderform-payment-terms" className="block font-bold text-slate-800 mb-1.5">
                     Payment Terms
                   </label>
-                  <select
+                  <select id="inlineorderform-payment-terms"
                     value={paymentTerms}
                     onChange={(e) => setPaymentTerms(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white"
@@ -585,14 +585,14 @@ export default function InlineOrderForm({
 
               {/* 4. Notes */}
               <div>
-                <label className="block font-bold text-slate-800 mb-1">
+                <label htmlFor="inlineorderform-order-instructions-amp-deliv" className="block font-bold text-slate-800 mb-1">
                   Order Instructions &amp; Delivery Notes
                 </label>
-                <input
+                <input id="inlineorderform-order-instructions-amp-deliv"
                   type="text"
                   value={orderNotes}
                   onChange={(e) => setOrderNotes(e.target.value)}
-                  placeholder="e.g. Deliver before 11 AM, urgent weekend stock..."
+                  placeholder="e.g. Deliver before 11 AM, urgent weekend stock…"
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -601,7 +601,7 @@ export default function InlineOrderForm({
             /* 2-Step Confirmation Summary Screen */
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-slate-500 ">
                   Store Information
                 </span>
                 <div className="text-sm font-bold text-slate-900">{targetBeat.storeName}</div>
@@ -615,7 +615,7 @@ export default function InlineOrderForm({
 
               {/* Items Breakdown */}
               <div className="space-y-2">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-slate-500 ">
                   Ordered Products Breakdown
                 </span>
                 <div className="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100 bg-white">
@@ -673,7 +673,7 @@ export default function InlineOrderForm({
                 <strong className="text-sm font-bold text-slate-900">
                   Rs. {grandStoreTotal.toLocaleString()}
                 </strong>
-                <span className="text-[10px] text-slate-400 block font-mono">
+                <span className="text-[10px] text-slate-500 block font-mono">
                   ({grandTotalUnits} units)
                 </span>
               </div>
@@ -705,7 +705,7 @@ export default function InlineOrderForm({
                 {isSubmitting ? (
                   <>
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
-                    <span>Booking Order...</span>
+                    <span>Booking Order…</span>
                   </>
                 ) : (
                   <>

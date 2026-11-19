@@ -83,12 +83,12 @@ export default function InlinePhoneInput({
     <div className={`space-y-1 ${className}`}>
       {label && (
         <label className="block text-xs font-semibold text-slate-700">
-          {label} {required && <span className="text-rose-500">*</span>}
+          {label} {required && <span className="text-rose-600">*</span>}
         </label>
       )}
 
-      <div className={`relative flex items-center rounded-xl border bg-white transition-all shadow-2xs ${borderColor}`}>
-        <div className="pl-3 pr-2 py-2.5 flex items-center gap-1.5 text-slate-400 border-r border-slate-200 text-xs font-mono select-none">
+      <div className={`relative flex items-center rounded-xl border bg-white transition shadow-2xs ${borderColor}`}>
+        <div className="pl-3 pr-2 py-2.5 flex items-center gap-1.5 text-slate-500 border-r border-slate-200 text-xs font-mono select-none">
           <span className="font-bold text-slate-700">+977</span>
         </div>
 
@@ -98,7 +98,7 @@ export default function InlinePhoneInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 px-3 py-2.5 text-xs text-slate-900 bg-transparent outline-none placeholder:text-slate-400 font-medium tracking-wide"
+          className="flex-1 px-3 py-2.5 text-xs text-slate-900 bg-transparent outline-none placeholder:text-slate-500 font-medium "
         />
 
         {statusIcon && <div className="pr-3 flex items-center">{statusIcon}</div>}

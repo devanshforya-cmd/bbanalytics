@@ -49,7 +49,7 @@ export default function DistributorDetailModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-bold text-slate-900">{distributor.name}</h3>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">{distributor.name}</h2>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-800">
                   {distributor.type}
                 </span>
@@ -64,7 +64,7 @@ export default function DistributorDetailModal({
 
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+            className="p-1.5 text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -131,7 +131,7 @@ export default function DistributorDetailModal({
               {distBranches.length === 0 ? (
                 <EmptyState type="generic" customMessage="No branches registered for this distributor." />
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -209,7 +209,7 @@ export default function DistributorDetailModal({
               {distCheques.length === 0 ? (
                 <EmptyState type="cheques" customMessage="Zero pending cheques for this distributor branches." />
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -260,7 +260,7 @@ export default function DistributorDetailModal({
               {distRetailers.length === 0 ? (
                 <EmptyState type="generic" customMessage="No independent sub-retailers linked directly under this distributor." />
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">

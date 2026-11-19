@@ -76,7 +76,7 @@ export default function DynamicCheckboxes({
                 {isSelected && <Check className="h-2.5 w-2.5" />}
               </div>
               <span>{cat.name}</span>
-              <span className="text-[10px] text-slate-400">({cat.tickCount})</span>
+              <span className="text-[10px] text-slate-500">({cat.tickCount})</span>
             </button>
           );
         })}
@@ -91,7 +91,7 @@ export default function DynamicCheckboxes({
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="rounded p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-4 w-4" />
               </button>

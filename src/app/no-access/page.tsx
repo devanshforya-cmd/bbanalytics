@@ -10,7 +10,7 @@ export default function NoAccessPage() {
   const destination = getRedirectPathForUser(user);
 
   return (
-    <main className="mx-auto flex min-h-[70vh] max-w-xl flex-col items-center justify-center px-6 text-center">
+    <div className="mx-auto flex min-h-[70vh] max-w-xl flex-col items-center justify-center px-6 text-center">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">BB</div>
       <h1 className="text-xl font-bold text-slate-900">Workspace access is not set up</h1>
           <p className="mt-2 text-sm text-slate-500">Ask your administrator to assign your workspace access.</p>
@@ -20,6 +20,6 @@ export default function NoAccessPage() {
           Continue to your workspace
         </Link>
       )}
-    </main>
+    </div>
   );
 }

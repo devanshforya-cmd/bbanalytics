@@ -23,7 +23,7 @@ export default function KarmaTrendBoard({ karmaTrendBoard }: KarmaTrendBoardProp
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500 text-white text-xs font-black">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-600 text-white text-xs font-black">
               2h
             </span>
             <h2 className="text-base font-bold text-slate-900">
@@ -36,9 +36,9 @@ export default function KarmaTrendBoard({ karmaTrendBoard }: KarmaTrendBoardProp
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200">
+      <div className="overflow-x-auto rounded-xl border border-slate-200" tabIndex={0}>
         <table className="w-full text-left text-xs text-slate-700">
-          <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+          <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
             <tr>
               <th className="py-3 px-3">Customer</th>
               <th className="py-3 px-3 text-center">Previous Karma</th>
@@ -59,7 +59,7 @@ export default function KarmaTrendBoard({ karmaTrendBoard }: KarmaTrendBoardProp
                   >
                     {item.customer.name}
                   </Link>
-                  <div className="text-[10px] text-slate-400">{item.customer.phone}</div>
+                  <div className="text-[10px] text-slate-500">{item.customer.phone}</div>
                 </td>
                 <td className="py-3 px-3 text-center font-bold text-slate-500">{item.prevKarma}</td>
                 <td className="py-3 px-3 text-center font-black text-rose-700">{item.currentKarma}</td>

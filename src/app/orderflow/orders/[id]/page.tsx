@@ -310,7 +310,7 @@ export default function OrderPage() {
                 <input id="order-alt-phone" type="tel" value={draft.alternatePhone} maxLength={20} onChange={(event) => set({ alternatePhone: event.target.value })} className={`${field} font-mono`} />
               </div>
               <div>
-                <label htmlFor="order-address" className="mb-1 block text-xs font-bold text-slate-700">Delivery address <span className="text-rose-500">*</span></label>
+                <label htmlFor="order-address" className="mb-1 block text-xs font-bold text-slate-700">Delivery address <span className="text-rose-600">*</span></label>
                 <input id="order-address" value={draft.address} maxLength={500} onChange={(event) => set({ address: event.target.value })} className={`${field} ${errors.address ? 'border-rose-400 bg-rose-50/30' : ''}`} />
                 {errors.address && <p className="mt-1 text-[11px] font-medium text-rose-600">{errors.address}</p>}
               </div>
@@ -337,7 +337,7 @@ export default function OrderPage() {
                       <input aria-label={`Quantity of ${item.productName}`} type="number" min={1} max={9999} value={item.quantity} onChange={(event) => setQuantity(index, Number(event.target.value))} className="w-14 rounded-lg border border-slate-200 py-1 text-center font-bold disabled:bg-slate-50" />
                       <button type="button" aria-label={`One more ${item.productName}`} onClick={() => setQuantity(index, item.quantity + 1)} className="rounded-lg border border-slate-200 p-1 text-slate-600 hover:bg-slate-50"><Plus className="h-3 w-3" /></button>
                       <span className="w-24 text-right font-bold text-slate-900">{money(item.totalPrice)}</span>
-                      <button type="button" aria-label={`Remove ${item.productName}`} onClick={() => setItems(draft.items.filter((_, i) => i !== index))} className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <button type="button" aria-label={`Remove ${item.productName}`} onClick={() => setItems(draft.items.filter((_, i) => i !== index))} className="rounded-lg p-1 text-slate-500 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /></button>
                     </span>
                   </li>
                 ))}
@@ -357,7 +357,7 @@ export default function OrderPage() {
                   <div className="flex items-center border-b border-slate-100">
                     <Search className="ml-3 h-3.5 w-3.5 shrink-0 text-slate-400" />
                     <input autoFocus aria-label="Search the catalogue" value={productQuery} onChange={(event) => setProductQuery(event.target.value)} placeholder={`Search ${brandName(brandCode)} products and combos`} className="w-full bg-transparent px-2 py-2 text-xs outline-none" />
-                    <button type="button" aria-label="Close product search" onClick={() => { setShowPicker(false); setProductQuery(''); }} className="mr-1 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X className="h-3.5 w-3.5" /></button>
+                    <button type="button" aria-label="Close product search" onClick={() => { setShowPicker(false); setProductQuery(''); }} className="mr-1 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"><X className="h-3.5 w-3.5" /></button>
                   </div>
                   <ul className="max-h-52 overflow-y-auto">
                     {pickable.map((entry) => (
@@ -436,7 +436,7 @@ export default function OrderPage() {
         </div>
 
         {canEdit && (
-          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(15,23,42,0.06)] backdrop-blur">
+          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2">
               <span className="text-xs text-slate-600">{changes.length ? <><strong className="text-slate-900">{changes.length} unsaved change{changes.length === 1 ? '' : 's'}</strong> · {changes.map((change) => change.field).join(', ')}</> : 'No changes yet'}</span>
               <div className="flex gap-2">
@@ -456,7 +456,7 @@ export default function OrderPage() {
               </div>
               <div className="space-y-3 overflow-y-auto px-5 py-4 text-xs">
                 <table className="w-full table-fixed border-separate border-spacing-y-1.5">
-                  <thead><tr className="text-left text-[11px] font-bold uppercase tracking-wide text-slate-500"><th className="w-1/4 pb-1">Field</th><th className="pb-1">Before</th><th className="pb-1">After</th></tr></thead>
+                  <thead><tr className="text-left text-[11px] font-bold text-slate-500"><th className="w-1/4 pb-1">Field</th><th className="pb-1">Before</th><th className="pb-1">After</th></tr></thead>
                   <tbody>
                     {changes.map((change) => (
                       <tr key={change.field} className="align-top">
@@ -469,7 +469,7 @@ export default function OrderPage() {
                 </table>
                 {phoneChanged && (attachedFailure > 0 || attachedReturn > 0) && <p className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />A delivery failure or return is attached to this order. It is kept as it is.</p>}
                 <div>
-                  <label htmlFor="edit-reason" className="mb-1 block font-bold text-slate-700">Reason {needsReason ? <span className="text-rose-500">*</span> : <span className="font-medium text-slate-400">(optional)</span>}</label>
+                  <label htmlFor="edit-reason" className="mb-1 block font-bold text-slate-700">Reason {needsReason ? <span className="text-rose-600">*</span> : <span className="font-medium text-slate-500">(optional)</span>}</label>
                   <input id="edit-reason" autoFocus={needsReason} value={reason} maxLength={300} onChange={(event) => setReason(event.target.value)} placeholder={needsReason ? 'Why is the phone number or date changing?' : 'e.g. Customer called to add one more'} className={field} />
                   {needsReason && <p className="mt-1 text-[11px] text-slate-500">Required because the phone number or the order date is changing.</p>}
                 </div>

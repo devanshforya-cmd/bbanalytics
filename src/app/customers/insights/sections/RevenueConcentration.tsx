@@ -60,7 +60,7 @@ export default function RevenueConcentration({
         {/* Banner callout */}
         <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <div className="text-xs font-semibold text-blue-900 uppercase tracking-wider">
+            <div className="text-xs font-semibold text-blue-900 ">
               Key Concentration Finding
             </div>
             <div className="text-sm sm:text-base font-black text-blue-950 mt-0.5">
@@ -73,9 +73,9 @@ export default function RevenueConcentration({
           </span>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <div className="overflow-x-auto rounded-xl border border-slate-200" tabIndex={0}>
           <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+            <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
               <tr>
                 <th className="py-3 px-3 text-center">Rank</th>
                 <th className="py-3 px-3">Customer</th>
@@ -89,7 +89,7 @@ export default function RevenueConcentration({
             <tbody className="divide-y divide-slate-100">
               {revenueConcentration.topSlice.map((item, idx) => (
                 <tr key={item.customer.id} className="hover:bg-slate-50 transition">
-                  <td className="py-3 px-3 text-center font-black text-slate-400">#{idx + 1}</td>
+                  <td className="py-3 px-3 text-center font-black text-slate-500">#{idx + 1}</td>
                   <td className="py-3 px-3">
                     <Link
                       href={`/customers/${encodeURIComponent(item.customer.phone)}`}
@@ -97,7 +97,7 @@ export default function RevenueConcentration({
                     >
                       {item.customer.name}
                     </Link>
-                    <div className="text-[10px] text-slate-400">{item.customer.phone}</div>
+                    <div className="text-[10px] text-slate-500">{item.customer.phone}</div>
                   </td>
                   <td className="py-3 px-3 text-right font-black text-slate-900">
                     NPR {item.spend.toLocaleString()}
@@ -149,7 +149,7 @@ export default function RevenueConcentration({
             </p>
           </div>
           <div className="text-right">
-            <span className="text-[10px] font-bold uppercase text-slate-400">Mean Platform LTV</span>
+            <span className="text-[10px] font-bold text-slate-500">Mean Platform LTV</span>
             <div className="text-lg font-black text-slate-900">
               NPR {ltvDistribution.avgLtv.toLocaleString()}
             </div>

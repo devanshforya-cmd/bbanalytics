@@ -385,7 +385,7 @@ export default function DocumentsPage() {
             <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
               <button
                 onClick={() => setOnlyOverdue(!onlyOverdue)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition-all ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition ${
                   onlyOverdue
                     ? 'bg-amber-800 text-white hover:bg-amber-900'
                     : 'bg-white text-amber-900 border border-amber-300 hover:bg-amber-100'
@@ -436,7 +436,7 @@ export default function DocumentsPage() {
       {/* KPI Counters */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <span className="text-[11px] font-semibold uppercase text-slate-500">Field Custody</span>
+          <span className="text-[11px] font-semibold text-slate-500">Field Custody</span>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-bold text-amber-600">
               {documents.filter((d) => d.status === 'COLLECTED').length}
@@ -450,17 +450,17 @@ export default function DocumentsPage() {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <span className="text-[11px] font-semibold uppercase text-slate-500">Handed to Office</span>
+          <span className="text-[11px] font-semibold text-slate-500">Handed to Office</span>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-bold text-blue-600">
               {documents.filter((d) => d.status === 'HANDED_OVER').length}
             </span>
-            <span className="text-[11px] text-slate-400">Pending filing</span>
+            <span className="text-[11px] text-slate-500">Pending filing</span>
           </div>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <span className="text-[11px] font-semibold uppercase text-slate-500">Filed in Archive</span>
+          <span className="text-[11px] font-semibold text-slate-500">Filed in Archive</span>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-bold text-emerald-600">
               {documents.filter((d) => d.status === 'FILED').length}
@@ -470,9 +470,9 @@ export default function DocumentsPage() {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <span className="text-[11px] font-semibold uppercase text-slate-500">Missing / Audit</span>
+          <span className="text-[11px] font-semibold text-slate-500">Missing / Audit</span>
           <div className="flex items-baseline justify-between mt-1">
-            <span className={`text-2xl font-bold ${missingDocsCount > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+            <span className={`text-2xl font-bold ${missingDocsCount > 0 ? 'text-rose-600' : 'text-slate-500'}`}>
               {missingDocsCount}
             </span>
             {missingDocsCount > 0 ? (
@@ -480,7 +480,7 @@ export default function DocumentsPage() {
                 Action required
               </span>
             ) : (
-              <span className="text-[11px] text-slate-400">0 issues</span>
+              <span className="text-[11px] text-slate-500">0 issues</span>
             )}
           </div>
         </div>
@@ -514,7 +514,7 @@ export default function DocumentsPage() {
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Search store, ref #, type, officer..."
+              placeholder="Search store, ref #, type, officer…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full rounded-lg border border-slate-200 pl-8 pr-3 py-1.5 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -594,7 +594,7 @@ export default function DocumentsPage() {
             <label className="block text-[10px] font-semibold text-slate-500 mb-1">
               Who Holds It Now (Custodian)
             </label>
-            <select
+            <select aria-label="Who Holds It Now (Custodian)"
               value={filterHolder}
               onChange={(e) => setFilterHolder(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
@@ -611,7 +611,7 @@ export default function DocumentsPage() {
           {/* Date Range Preset */}
           <div>
             <label className="block text-[10px] font-semibold text-slate-500 mb-1">Date Range</label>
-            <select
+            <select aria-label="Date Range"
               value={filterDateRange}
               onChange={(e) => setFilterDateRange(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
@@ -665,7 +665,7 @@ export default function DocumentsPage() {
             return (
               <div
                 key={doc.id}
-                className={`rounded-2xl border bg-white p-4 sm:p-5 shadow-sm transition-all space-y-4 ${
+                className={`rounded-2xl border bg-white p-4 sm:p-5 shadow-sm transition space-y-4 ${
                   doc.status === 'MISSING'
                     ? 'border-rose-300 bg-rose-50/20'
                     : isOverdue
@@ -721,7 +721,7 @@ export default function DocumentsPage() {
 
                     {/* Status Badge */}
                     <span
-                      className={`rounded-full px-3 py-1 text-[11px] font-bold tracking-wide uppercase flex items-center gap-1.5 ${
+                      className={`rounded-full px-3 py-1 text-[11px] font-bold   flex items-center gap-1.5 ${
                         doc.status === 'FILED'
                           ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                           : doc.status === 'HANDED_OVER'
@@ -744,7 +744,7 @@ export default function DocumentsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pt-2 border-t border-slate-100">
                   {/* 5b. Document Photo Thumbnail */}
                   <div className="md:col-span-3 flex flex-col gap-1.5">
-                    <span className="text-[11px] font-bold uppercase text-slate-500 flex items-center gap-1">
+                    <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
                       <Camera className="h-3 w-3" />
                       Document Photo ({doc.photoUrls?.length || 0})
                     </span>
@@ -752,7 +752,7 @@ export default function DocumentsPage() {
                     {doc.photoUrls && doc.photoUrls.length > 0 ? (
                       <div
                         onClick={() => openLightbox(doc, 0)}
-                        className="group relative h-28 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 cursor-pointer shadow-sm hover:shadow-md transition-all"
+                        className="group relative h-28 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 cursor-pointer shadow-sm hover:shadow-md transition"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -771,7 +771,7 @@ export default function DocumentsPage() {
                         )}
                       </div>
                     ) : (
-                      <div className="h-28 w-full rounded-xl border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 text-xs">
+                      <div className="h-28 w-full rounded-xl border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-500 text-xs">
                         No photo attached
                       </div>
                     )}
@@ -795,7 +795,7 @@ export default function DocumentsPage() {
 
                     {/* Custody Timeline (5d) */}
                     <div className="pt-1">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-2">
+                      <span className="text-[11px] font-bold text-slate-500 block mb-2">
                         Chain of Custody Timeline:
                       </span>
                       <div className="relative pl-5 space-y-2.5 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
@@ -872,7 +872,7 @@ export default function DocumentsPage() {
                   {/* 5c. Status Change Action Controls */}
                   <div className="md:col-span-3 flex flex-col justify-between gap-3 bg-slate-50/70 p-3 rounded-xl border border-slate-100">
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                      <span className="text-[10px] font-bold text-slate-500 block mb-1">
                         Custody Actions
                       </span>
 
@@ -946,7 +946,7 @@ export default function DocumentsPage() {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-400">
+                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
                       <span>Doc ID: {doc.id.slice(0, 10)}</span>
                       {doc.photoUrls && doc.photoUrls.length > 0 && (
                         <button
@@ -978,12 +978,12 @@ export default function DocumentsPage() {
                     {lightboxDoc.documentType}
                   </span>
                   {lightboxDoc.referenceNumber && (
-                    <span className="font-mono text-xs text-slate-400">
+                    <span className="font-mono text-xs text-slate-500">
                       Ref: {lightboxDoc.referenceNumber}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Captured by {lightboxDoc.officerName} on {lightboxDoc.docDateBs} ({lightboxDoc.docDateAd})
                 </p>
               </div>
@@ -1059,7 +1059,7 @@ export default function DocumentsPage() {
 
             {/* Lightbox Footer with multi-page navigation */}
             <div className="flex items-center justify-between px-5 py-3 bg-slate-800/80 border-t border-slate-700 shrink-0 text-xs">
-              <div className="text-slate-400">
+              <div className="text-slate-500">
                 Holder: <span className="text-white font-semibold">{lightboxDoc.currentHolder || lightboxDoc.officerName}</span>
                 {lightboxDoc.filedLocation && (
                   <span className="ml-3 text-emerald-400 font-mono">{lightboxDoc.filedLocation}</span>
@@ -1089,7 +1089,7 @@ export default function DocumentsPage() {
                     }}
                     className="rounded bg-slate-700 px-2.5 py-1 text-xs font-semibold disabled:opacity-30 hover:bg-slate-600"
                   >
-                    Next Page →
+                    Next page
                   </button>
                 </div>
               )}
@@ -1114,7 +1114,7 @@ export default function DocumentsPage() {
               </div>
               <button
                 onClick={() => setHandoverModalDoc(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1132,10 +1132,10 @@ export default function DocumentsPage() {
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">
+              <label htmlFor="documents-who-received-it-at-office" className="block font-bold text-slate-700 mb-1">
                 Who Received It at Office? *
               </label>
-              <select
+              <select id="documents-who-received-it-at-office"
                 value={handoverRecipient}
                 onChange={(e) => setHandoverRecipient(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500 font-medium"
@@ -1156,7 +1156,7 @@ export default function DocumentsPage() {
               <label className="block font-bold text-slate-700 mb-1">
                 Handover Notes / Verification Remarks
               </label>
-              <textarea
+              <textarea aria-label="Handover Notes / Verification Remarks"
                 rows={2}
                 placeholder="e.g. Physical store stamp and signature verified. Retained for invoice reconciliation."
                 value={handoverNotes}
@@ -1199,7 +1199,7 @@ export default function DocumentsPage() {
               </div>
               <button
                 onClick={() => setFilingModalDoc(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1213,10 +1213,10 @@ export default function DocumentsPage() {
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">
+              <label htmlFor="documents-filing-cabinet-archive-folde" className="block font-bold text-slate-700 mb-1">
                 Filing Cabinet / Archive Folder *
               </label>
-              <select
+              <select id="documents-filing-cabinet-archive-folde"
                 value={filingFolder}
                 onChange={(e) => setFilingFolder(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-emerald-500 font-medium"
@@ -1230,8 +1230,8 @@ export default function DocumentsPage() {
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Filing Notes</label>
-              <textarea
+              <label htmlFor="documents-filing-notes" className="block font-bold text-slate-700 mb-1">Filing Notes</label>
+              <textarea id="documents-filing-notes"
                 rows={2}
                 placeholder="e.g. Scanned into ERP and filed in alphabetical index."
                 value={filingNotes}
@@ -1274,7 +1274,7 @@ export default function DocumentsPage() {
               </div>
               <button
                 onClick={() => setMissingModalDoc(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1291,12 +1291,12 @@ export default function DocumentsPage() {
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">
+              <label htmlFor="documents-reason-discrepancy-circumsta" className="block font-bold text-slate-700 mb-1">
                 Reason / Discrepancy Circumstances *
               </label>
-              <textarea
+              <textarea id="documents-reason-discrepancy-circumsta"
                 rows={3}
-                placeholder="Explain why this document cannot be accounted for (e.g. lost in courier pouch, not received from officer, lost during beat transition)..."
+                placeholder="Explain why this document cannot be accounted for (e.g. lost in courier pouch, not received from officer, lost during beat transition)…"
                 value={missingReason}
                 onChange={(e) => setMissingReason(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-rose-500 text-xs"
@@ -1341,7 +1341,7 @@ export default function DocumentsPage() {
               <button
                 type="button"
                 onClick={() => setShowUploadModal(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1356,7 +1356,7 @@ export default function DocumentsPage() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Type to search stores, branches, or supermarkets..."
+                  placeholder="Type to search stores, branches, or supermarkets…"
                   value={formStoreName || formStoreSearch}
                   onChange={(e) => {
                     setFormStoreSearch(e.target.value);
@@ -1393,7 +1393,7 @@ export default function DocumentsPage() {
                           <div className="font-bold text-slate-900">{store.name}</div>
                           {store.area && <div className="text-[10px] text-slate-500">{store.area}</div>}
                         </div>
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-600">
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-600">
                           {store.type}
                         </span>
                       </div>
@@ -1406,7 +1406,7 @@ export default function DocumentsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Document Type *</label>
-                <select
+                <select aria-label="Document Type"
                   value={formDocType}
                   onChange={(e) => setFormDocType(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500"
@@ -1434,7 +1434,7 @@ export default function DocumentsPage() {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Reference Number</label>
-                <input
+                <input aria-label="Reference Number"
                   type="text"
                   placeholder="e.g. PO-2083-9941, DC-8841"
                   value={formRefNumber}
@@ -1447,8 +1447,8 @@ export default function DocumentsPage() {
             {/* Officer and Custody Status */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Collected By (Officer) *</label>
-                <select
+                <label htmlFor="documents-collected-by-officer" className="block font-bold text-slate-700 mb-1">Collected By (Officer) *</label>
+                <select id="documents-collected-by-officer"
                   value={formOfficerName}
                   onChange={(e) => setFormOfficerName(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500"
@@ -1467,7 +1467,7 @@ export default function DocumentsPage() {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Initial Custody Status *</label>
-                <select
+                <select aria-label="Initial Custody Status"
                   value={formInitialHolder}
                   onChange={(e) => setFormInitialHolder(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500 font-medium"
@@ -1482,7 +1482,7 @@ export default function DocumentsPage() {
             {formInitialHolder === 'OFFICE' && (
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Handed Over To</label>
-                <select
+                <select aria-label="Handed Over To"
                   value={formHandedTo}
                   onChange={(e) => setFormHandedTo(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500 font-medium"
@@ -1518,9 +1518,9 @@ export default function DocumentsPage() {
             {/* Notes */}
             <div>
               <label className="block font-bold text-slate-700 mb-1">Notes / Verification Remarks</label>
-              <textarea
+              <textarea aria-label="Notes / Verification Remarks"
                 rows={2}
-                placeholder="Add any specific context or remarks regarding this document..."
+                placeholder="Add any specific context or remarks regarding this document…"
                 value={formNotes}
                 onChange={(e) => setFormNotes(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-blue-500 text-xs"

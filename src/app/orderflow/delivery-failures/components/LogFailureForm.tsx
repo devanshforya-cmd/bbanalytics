@@ -123,12 +123,12 @@ export default function LogFailureForm({ onClose, onSaved, onViewCustomer, initi
     <SlideOverPanel isOpen onClose={isSubmitting ? () => {} : onClose} width="lg" title="Log delivery failure" subtitle="Phone, order, reason. The rest is filled from the order." footer={footer}>
       <div className="space-y-5 p-5 text-xs">
         <section ref={lookupRef}>
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">1 · Customer</p>
+          <p className="mb-2 text-[11px] font-bold text-slate-500">1 · Customer</p>
           <CustomerLookup value={customer} onChange={pickCustomer} autoFocus error={errors.customer} />
         </section>
 
         <section>
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">2 · Order</p>
+          <p className="mb-2 text-[11px] font-bold text-slate-500">2 · Order</p>
           <OrderPicker required customerPhone={customer.link === 'LINKED' || customer.link === 'NEW' ? customer.phone : ''} selectedId={order?.id || ''} onSelect={pickOrder} error={errors.order}
             onCheckNumber={() => { setCustomer(EMPTY_CUSTOMER_LOOKUP); setOrder(null); lookupRef.current?.querySelector('input')?.focus(); }} />
         </section>
@@ -146,7 +146,7 @@ export default function LogFailureForm({ onClose, onSaved, onViewCustomer, initi
               </div>
             )}
             <section>
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">From the order</p>
+              <p className="mb-2 text-[11px] font-bold text-slate-500">From the order</p>
               <div className="flex flex-wrap gap-1.5">
                 {[['Customer', order.customerName], ['Brand', brandName(order.brandCode)], ['Products', order.items.map((item) => `${item.quantity}× ${item.productName}${item.isGift ? ' (gift)' : ''}`).join(', ')],
                   ['Address', order.address || '—'], ['District', order.district || '—'], ['Valley', valleyOf(order.district)], ['Platform', order.platform],
@@ -159,13 +159,13 @@ export default function LogFailureForm({ onClose, onSaved, onViewCustomer, initi
         )}
 
         <section>
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">3 · Reason</p>
+          <p className="mb-2 text-[11px] font-bold text-slate-500">3 · Reason</p>
           <CreatableSelect label="Why did the delivery fail?" required noun="reason" value={reasonId} onChange={(ids) => { setReasonId(ids); setErrors((current) => ({ ...current, reason: '' })); }}
             options={reasons.map((entry) => ({ id: entry.id, name: entry.name }))} error={errors.reason} placeholder="Choose a reason, or type a new one"
             onCreate={(text) => { const made = db.addFailureReason(text); refresh((n) => n + 1); return { id: made.id, name: made.name }; }} />
           {needsDetail && (
             <div className="mt-3">
-              <label htmlFor="failure-reason-detail" className="mb-1 block font-bold text-slate-700">Write the reason <span className="text-rose-500">*</span></label>
+              <label htmlFor="failure-reason-detail" className="mb-1 block font-bold text-slate-700">Write the reason <span className="text-rose-600">*</span></label>
               <textarea id="failure-reason-detail" autoFocus rows={2} maxLength={REASON_DETAIL_MAX} value={reasonDetail}
                 onChange={(event) => { setReasonDetail(event.target.value); setErrors((current) => ({ ...current, reasonDetail: '' })); }}
                 aria-invalid={!!errors.reasonDetail} aria-describedby="failure-reason-detail-help"
@@ -173,7 +173,7 @@ export default function LogFailureForm({ onClose, onSaved, onViewCustomer, initi
                 className={`${field} resize-y ${errors.reasonDetail ? 'border-rose-400 focus:border-rose-500' : ''}`} />
               <p id="failure-reason-detail-help" className={`mt-1 flex justify-between text-[11px] ${errors.reasonDetail ? 'font-medium text-rose-600' : 'text-slate-500'}`}>
                 <span>{errors.reasonDetail || 'Shown with the failure everywhere it is listed.'}</span>
-                <span className="text-slate-400">{reasonDetail.length}/{REASON_DETAIL_MAX}</span>
+                <span className="text-slate-500">{reasonDetail.length}/{REASON_DETAIL_MAX}</span>
               </p>
             </div>
           )}

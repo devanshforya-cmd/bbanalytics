@@ -61,25 +61,25 @@ export default function OrdersDrillDown({
         {/* Summary Metric Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Total Orders
             </div>
             <div className="text-xl font-black text-slate-900 mt-1">{orders.length}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Units Ordered
             </div>
             <div className="text-xl font-black text-blue-600 mt-1">{totalUnits}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Repeat Rate
             </div>
             <div className="text-xl font-black text-emerald-600 mt-1">{repeatPct}%</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Avg Units / Order
             </div>
             <div className="text-xl font-black text-slate-900 mt-1">
@@ -147,7 +147,7 @@ function OrdersListTab({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Search by customer name, phone, product, or order ID..."
+            placeholder="Search by customer name, phone, product, or order ID…"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -161,7 +161,7 @@ function OrdersListTab({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -199,7 +199,7 @@ function OrdersListTab({
                     >
                       {o.customerName}
                     </Link>
-                    <div className="text-[10px] text-slate-400 font-mono">{o.customerPhone}</div>
+                    <div className="text-[10px] text-slate-500 font-mono">{o.customerPhone}</div>
                   </td>
                   <td className="p-2.5 whitespace-nowrap">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${brandColor}`}>
@@ -311,7 +311,7 @@ function OrdersByProductTab({ orders }: { orders: Order[] }) {
   return (
     <div className="space-y-6">
       <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        <h4 className="text-xs font-bold text-slate-500">
           Units Ordered by Product
         </h4>
         <div className="space-y-2.5">
@@ -328,7 +328,7 @@ function OrdersByProductTab({ orders }: { orders: Order[] }) {
                 </div>
                 <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full rounded-full transition-all duration-300"
+                    className="h-full rounded-full transition duration-300"
                     style={{ width: `${barWidth}%`, backgroundColor: brandColor }}
                   />
                 </div>
@@ -338,7 +338,7 @@ function OrdersByProductTab({ orders }: { orders: Order[] }) {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -399,7 +399,7 @@ function OrdersByChannelTab({ orders, returns }: { orders: Order[]; returns: Ret
   return (
     <div className="space-y-6">
       <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        <h4 className="text-xs font-bold text-slate-500">
           Order Volume by Channel
         </h4>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
@@ -407,7 +407,7 @@ function OrdersByChannelTab({ orders, returns }: { orders: Order[]; returns: Ret
             <div key={c.channel} className="p-3 rounded-lg border border-slate-100 bg-slate-50/60">
               <div className="text-[11px] font-semibold text-slate-600 truncate">{c.channel}</div>
               <div className="text-lg font-black text-slate-900 mt-1">{c.orders}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">
+              <div className="text-[10px] text-slate-500 mt-0.5">
                 {totalOrders > 0 ? ((c.orders / totalOrders) * 100).toFixed(1) : 0}% of orders
               </div>
             </div>
@@ -415,7 +415,7 @@ function OrdersByChannelTab({ orders, returns }: { orders: Order[]; returns: Ret
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">

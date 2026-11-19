@@ -71,10 +71,10 @@ export default function SalesChannelPerformance({
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
         <div>
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Share2 className="w-4 h-4 text-blue-600" />
             Sales Channel Performance
-          </h3>
+          </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Compare conversion channels, expectation alignment, and customer return rates (Click row to filter dashboard)
           </p>
@@ -92,9 +92,9 @@ export default function SalesChannelPerformance({
 
       {/* Horizontal Bar Chart */}
       <div className="space-y-2 pt-1">
-        <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+        <h3 className="text-[11px] font-bold text-slate-500">
           Order Volume by Channel
-        </h4>
+        </h3>
         <div className="space-y-2">
           {channelData
             .filter((c) => c.orders > 0)
@@ -122,7 +122,7 @@ export default function SalesChannelPerformance({
                   </div>
                   <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-300 ${
+                      className={`h-full rounded-full transition duration-300 ${
                         isSelected ? 'bg-blue-600' : 'bg-slate-400 group-hover:bg-blue-500'
                       }`}
                       style={{ width: `${barWidth}%` }}
@@ -135,7 +135,7 @@ export default function SalesChannelPerformance({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">

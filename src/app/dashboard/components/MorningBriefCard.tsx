@@ -73,16 +73,16 @@ export default function MorningBriefCard() {
       {/* Top row */}
       <div className="flex items-start justify-between pb-4 border-b border-amber-200/70">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/25">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-600 text-white shadow-md shadow-amber-500/25">
             <Sun className="h-6 w-6 animate-spin-slow" />
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span>Good Morning, {(user?.fullName || 'Colleague').split(' ')[0]}</span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold border border-amber-200">
                 Daily Operations Brief
               </span>
-            </h3>
+            </h2>
             <p className="text-xs text-slate-600 font-medium mt-0.5 flex items-center gap-2">
               <span>{todayBs} BS</span>
               <span className="text-slate-300">&bull;</span>
@@ -94,7 +94,7 @@ export default function MorningBriefCard() {
         <button
           type="button"
           onClick={handleDismiss}
-          className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-amber-100/60 transition-colors"
+          className="p-1.5 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-amber-100/60 transition-colors"
           aria-label="Dismiss brief"
         >
           <X className="w-5 h-5" />
@@ -107,7 +107,7 @@ export default function MorningBriefCard() {
         {isOfficer && (<>
         {/* Yesterday's Summary */}
         <div className="space-y-3 bg-white/70 p-4 rounded-2xl border border-amber-100">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+          <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
             <span>Yesterday&apos;s Performance Summary</span>
           </div>
@@ -176,7 +176,7 @@ export default function MorningBriefCard() {
 
         {/* Today's Attention Required */}
         {hasAttentionData && <div className="space-y-3 bg-white/70 p-4 rounded-2xl border border-amber-100">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-rose-600 flex items-center gap-1.5">
+          <div className="text-[11px] font-bold text-rose-600 flex items-center gap-1.5">
             <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
             <span>Today&apos;s Action Priorities</span>
           </div>

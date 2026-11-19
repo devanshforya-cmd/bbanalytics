@@ -37,7 +37,7 @@ export default function OfflineBar() {
     syncing: {
       bg: 'bg-emerald-500',
       icon: <RefreshCw className="w-3.5 h-3.5 animate-spin" />,
-      text: 'Back online — syncing...',
+      text: 'Back online — syncing…',
     },
     online: {
       bg: 'bg-emerald-500',
@@ -50,7 +50,7 @@ export default function OfflineBar() {
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-[10000] flex items-center justify-center gap-2 py-1.5 text-white text-xs font-semibold transition-all duration-300 ${c.bg}`}
+      className={`fixed top-0 left-0 right-0 z-[10000] flex items-center justify-center gap-2 py-1.5 text-white text-xs font-semibold transition duration-300 ${c.bg}`}
       style={{ animation: 'slideDownBar 0.3s ease-out' }}
     >
       {c.icon}

@@ -174,8 +174,8 @@ export default function FeatureFlagsSettings() {
 
       {/* Flag List */}
       {loading ? (
-        <div className="p-12 text-center text-xs text-slate-400 bg-white rounded-2xl border border-slate-200">
-          Loading feature flags...
+        <div className="p-12 text-center text-xs text-slate-500 bg-white rounded-2xl border border-slate-200">
+          Loading feature flags…
         </div>
       ) : flags.length === 0 ? (
         <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-slate-300 space-y-4">
@@ -240,7 +240,7 @@ export default function FeatureFlagsSettings() {
                   {/* Controls: Enable toggle & Variant switcher */}
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold">
-                      <span className="text-[10px] text-slate-400 uppercase px-1">Variant:</span>
+                      <span className="text-[10px] text-slate-500 px-1">Variant:</span>
                       <button
                         type="button"
                         onClick={() => handleVariantChange(f, 'A')}
@@ -280,7 +280,7 @@ export default function FeatureFlagsSettings() {
                     <button
                       type="button"
                       onClick={() => openEditModal(f)}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                      className="p-1.5 text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition cursor-pointer"
                       title="Edit flag"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -289,7 +289,7 @@ export default function FeatureFlagsSettings() {
                     <button
                       type="button"
                       onClick={() => handleDelete(f)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                      className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
                       title="Delete flag"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -313,7 +313,7 @@ export default function FeatureFlagsSettings() {
                 {/* A/B Analytics Comparison Panel */}
                 {flagStat && (
                   <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-200/80 text-xs space-y-2">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 ">
                       <span className="flex items-center gap-1.5">
                         <BarChart3 className="w-3.5 h-3.5 text-indigo-500" />
                         <span>A/B Performance Telemetry</span>
@@ -387,7 +387,7 @@ export default function FeatureFlagsSettings() {
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer"
+                className="text-slate-500 hover:text-slate-600 p-1 rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -395,10 +395,10 @@ export default function FeatureFlagsSettings() {
 
             <div className="space-y-4 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Flag Identifier * <span className="text-slate-400 font-normal">(snake_case)</span>
+                <label htmlFor="featureflagssettings-flag-identifier-snake-case" className="block font-bold text-slate-700 mb-1">
+                  Flag Identifier * <span className="text-slate-500 font-normal">(snake_case)</span>
                 </label>
-                <input
+                <input id="featureflagssettings-flag-identifier-snake-case"
                   type="text"
                   required
                   value={name}
@@ -409,8 +409,8 @@ export default function FeatureFlagsSettings() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Description</label>
-                <input
+                <label htmlFor="featureflagssettings-description" className="block font-bold text-slate-700 mb-1">Description</label>
+                <input id="featureflagssettings-description"
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -421,8 +421,8 @@ export default function FeatureFlagsSettings() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Default Variant</label>
-                  <select
+                  <label htmlFor="featureflagssettings-default-variant" className="block font-bold text-slate-700 mb-1">Default Variant</label>
+                  <select id="featureflagssettings-default-variant"
                     value={variant}
                     onChange={(e) => setVariant(e.target.value as 'A' | 'B')}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white font-bold"
@@ -433,8 +433,8 @@ export default function FeatureFlagsSettings() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Status</label>
-                  <select
+                  <label htmlFor="featureflagssettings-status" className="block font-bold text-slate-700 mb-1">Status</label>
+                  <select id="featureflagssettings-status"
                     value={isEnabled ? 'ENABLED' : 'DISABLED'}
                     onChange={(e) => setIsEnabled(e.target.value === 'ENABLED')}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white font-bold"
@@ -485,7 +485,7 @@ export default function FeatureFlagsSettings() {
                         className="rounded text-indigo-600"
                       />
                       <span>
-                        {u.fullName} <span className="text-slate-400">({u.role})</span>
+                        {u.fullName} <span className="text-slate-500">({u.role})</span>
                       </span>
                     </label>
                   ))}
@@ -503,7 +503,7 @@ export default function FeatureFlagsSettings() {
                 <SubmitButton
                   onClick={handleSaveFlag}
                   label={editingFlag ? 'Save Changes' : 'Create Flag'}
-                  loadingLabel="Saving..."
+                  loadingLabel="Saving…"
                   variant="primary"
                 />
               </div>

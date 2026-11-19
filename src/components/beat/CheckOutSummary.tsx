@@ -73,7 +73,7 @@ export default function CheckOutSummary({
 
         {/* Accomplishments */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">What you accomplished</p>
+          <p className="text-[11px] font-bold text-slate-500 mb-3">What you accomplished</p>
           <div className="space-y-2.5">
             {done.map((a, i) => (
               <div key={i} className="flex items-center gap-2.5 text-xs">
@@ -84,7 +84,7 @@ export default function CheckOutSummary({
             {pending.map((a, i) => (
               <div key={i} className="flex items-center gap-2.5 text-xs">
                 <XCircle className="w-4 h-4 text-slate-300 shrink-0" />
-                <span className="text-slate-400 font-medium line-through">{a.label} — NOT DONE</span>
+                <span className="text-slate-500 font-medium line-through">{a.label} — NOT DONE</span>
               </div>
             ))}
           </div>
@@ -93,7 +93,7 @@ export default function CheckOutSummary({
         {/* Incomplete task reasons */}
         {pending.length > 0 && (
           <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4 shadow-xs">
-            <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-1">Incomplete Tasks</p>
+            <p className="text-[11px] font-bold text-amber-700 mb-1">Incomplete Tasks</p>
             {pending.map((p) => (
               <div key={p.label} className="mt-3">
                 <p className="text-xs text-amber-900 font-semibold mb-2">&ldquo;{p.label}&rdquo; was not completed. What happened?</p>
@@ -120,7 +120,7 @@ export default function CheckOutSummary({
         {/* Next store */}
         {nextBeat && (
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Next Store</p>
+            <p className="text-[11px] font-bold text-slate-500 mb-2">Next Store</p>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-slate-900">{nextBeat.storeName}</p>
@@ -145,7 +145,7 @@ export default function CheckOutSummary({
               type="button"
               onClick={() => { handleConfirmCheckOut(); onNavigateNext(); }}
               disabled={pending.length > 0 && !allReasonsSelected}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>Navigate to Next Store</span>
               <ChevronRight className="w-4 h-4" />
@@ -155,7 +155,7 @@ export default function CheckOutSummary({
             type="button"
             onClick={() => { handleConfirmCheckOut(); onEndDay(); }}
             disabled={pending.length > 0 && !allReasonsSelected}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm shadow-md transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Sun className="w-4 h-4" />
             <span>End My Day</span>

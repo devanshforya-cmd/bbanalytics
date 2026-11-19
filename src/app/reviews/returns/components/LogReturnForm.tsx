@@ -140,12 +140,12 @@ export default function LogReturnForm({ onClose, onSaved, onViewCustomer, initia
     <SlideOverPanel isOpen onClose={isSubmitting ? () => {} : onClose} width="lg" title="Log a product return" subtitle="A product that came back after delivery. Failed deliveries are logged separately." footer={footer}>
       <div className="space-y-5 p-5 text-xs">
         <section ref={lookupRef}>
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">1 · Customer</p>
+          <p className="mb-2 text-[11px] font-bold text-slate-500">1 · Customer</p>
           <CustomerLookup value={customer} onChange={pickCustomer} autoFocus error={errors.customer} />
         </section>
 
         <section>
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">2 · Order</p>
+          <p className="mb-2 text-[11px] font-bold text-slate-500">2 · Order</p>
           <OrderPicker required customerPhone={customer.link === 'LINKED' || customer.link === 'NEW' ? customer.phone : ''} selectedId={order?.id || ''} onSelect={pickOrder} error={errors.order}
             onCheckNumber={() => { setCustomer(EMPTY_CUSTOMER_LOOKUP); pickOrder(null); lookupRef.current?.querySelector('input')?.focus(); }} />
         </section>
@@ -161,7 +161,7 @@ export default function LogReturnForm({ onClose, onSaved, onViewCustomer, initia
                 )}</p>
             )}
             <section>
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">From the order</p>
+              <p className="mb-2 text-[11px] font-bold text-slate-500">From the order</p>
               <div className="flex flex-wrap gap-1.5">
                 {[['Customer', order.customerName], ['Brand', brandName(order.brandCode)], ['Ordered', formatDate(order.orderDateAd, order.orderDateBs)], ['Platform', order.platform], ['Valley', valleyOf(order.district)]].map(([term, detail]) => (
                   <span key={term} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1"><span className="text-slate-500">{term}:</span> <strong className="text-slate-900">{detail}</strong></span>
@@ -169,7 +169,7 @@ export default function LogReturnForm({ onClose, onSaved, onViewCustomer, initia
               </div>
             </section>
             <section>
-              <span className="mb-1.5 block font-bold text-slate-700">Which product came back? <span className="text-rose-500">*</span></span>
+              <span className="mb-1.5 block font-bold text-slate-700">Which product came back? <span className="text-rose-600">*</span></span>
               <div className="space-y-1.5" role="radiogroup" aria-label="Returned product">
                 {lines.map((entry) => { const on = entry.key === productId; const done = entry.remaining < 1; return (
                   <button key={entry.key} type="button" role="radio" aria-checked={on} disabled={done && !on} onClick={() => { setProductId(entry.key); setQuantity(1); setErrors({}); }}
@@ -196,7 +196,7 @@ export default function LogReturnForm({ onClose, onSaved, onViewCustomer, initia
         )}
 
         <section>
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">3 · Reason</p>
+          <p className="mb-2 text-[11px] font-bold text-slate-500">3 · Reason</p>
           <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Return reason">
             {REASONS.map((entry) => (
               <button key={entry} type="button" role="radio" aria-checked={reason === entry} onClick={() => { setReason(entry); setErrors((current) => ({ ...current, reason: '' })); }}

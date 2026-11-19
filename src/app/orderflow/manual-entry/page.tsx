@@ -431,7 +431,7 @@ export default function ManualOrderEntryPage() {
                 <Check className="h-6 w-6 stroke-[3]" />
               </div>
               <div>
-                <span className="rounded bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                <span className="rounded bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 text-[10px] ">
                   {savedOrder.pending ? 'Order pending sync' : 'Order successfully saved'}
                 </span>
                 <h2 className="text-xl font-black text-slate-900 mt-1">
@@ -503,7 +503,7 @@ export default function ManualOrderEntryPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <span className="text-[11px] font-semibold text-slate-500 block">Brand:</span>
-                <strong className="text-sm font-bold text-slate-900 uppercase">
+                <strong className="text-sm font-bold text-slate-900 ">
                   {brandCode}
                 </strong>
               </div>
@@ -638,10 +638,10 @@ export default function ManualOrderEntryPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Brand Selector */}
               <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Brand <span className="text-rose-500">*</span>
+                <label htmlFor="manual-entry-brand" className="block font-bold text-slate-700 mb-1">
+                  Brand <span className="text-rose-600">*</span>
                 </label>
-                <select
+                <select id="manual-entry-brand"
                   value={brandCode}
                   onChange={(e) => handleBrandChange(e.target.value as BrandCode)}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -652,7 +652,7 @@ export default function ManualOrderEntryPage() {
                     </option>
                   ))}
                 </select>
-                <span className="text-[10px] text-slate-400 mt-1 block">
+                <span className="text-[10px] text-slate-500 mt-1 block">
                   Determines catalog filter
                 </span>
               </div>
@@ -660,9 +660,9 @@ export default function ManualOrderEntryPage() {
               {/* Platform Selector */}
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Platform Channel <span className="text-rose-500">*</span>
+                  Platform Channel <span className="text-rose-600">*</span>
                 </label>
-                <select
+                <select aria-label="Platform Channel"
                   value={platform}
                   onChange={(e) => setPlatform(e.target.value as OrderPlatform)}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-semibold text-slate-900 focus:border-blue-500"
@@ -673,7 +673,7 @@ export default function ManualOrderEntryPage() {
                     </option>
                   ))}
                 </select>
-                <span className="text-[10px] text-slate-400 mt-1 block">
+                <span className="text-[10px] text-slate-500 mt-1 block">
                   Origin of customer inquiry
                 </span>
               </div>
@@ -682,9 +682,9 @@ export default function ManualOrderEntryPage() {
               {/* Order Date: Standard AD Date for Social Media Order */}
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Order Date <span className="text-rose-500">*</span>
+                  Order Date <span className="text-rose-600">*</span>
                 </label>
-                <input
+                <input aria-label="Order Date"
                   type="date"
                   value={orderDateAd}
                   onChange={(e) => handleAdDateChange(e.target.value)}
@@ -697,7 +697,7 @@ export default function ManualOrderEntryPage() {
             {/* Section 2: Customer Information & Auto-Check Badge */}
             <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="font-bold uppercase tracking-wider text-[11px] text-slate-700 flex items-center gap-1.5">
+                <span className="font-bold text-[11px] text-slate-700 flex items-center gap-1.5">
                   <User className="h-3.5 w-3.5 text-slate-500" />
                   Customer Details & Karma Check
                 </span>
@@ -712,7 +712,7 @@ export default function ManualOrderEntryPage() {
                     New Customer (First Order)
                   </span>
                 ) : (
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-[10px] text-slate-500">
                     Enter phone to auto-verify customer karma
                   </span>
                 )}
@@ -720,10 +720,10 @@ export default function ManualOrderEntryPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Customer Name <span className="text-rose-500">*</span>
+                  <label htmlFor="manual-entry-customer-name" className="block font-bold text-slate-700 mb-1">
+                    Customer Name <span className="text-rose-600">*</span>
                   </label>
-                  <input
+                  <input id="manual-entry-customer-name"
                     type="text"
                     placeholder="e.g. Sita Gurung"
                     value={customerName}
@@ -763,10 +763,10 @@ export default function ManualOrderEntryPage() {
                 <NepalLocationFields idPrefix="manual-location" province={province} city={district} onChange={next => { setProvince(next.province); setDistrict(next.city); }} />
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
+                  <label htmlFor="manual-entry-street-landmark-address" className="block font-bold text-slate-700 mb-1">
                     Street / Landmark Address
                   </label>
-                  <input
+                  <input id="manual-entry-street-landmark-address"
                     type="text"
                     placeholder="e.g. Lakeside Ward 6, Near Hallanchowk"
                     value={address}
@@ -781,7 +781,7 @@ export default function ManualOrderEntryPage() {
             {/* Section 3: Product(s) & Combo Detection */}
             <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
               <div className="flex items-center justify-between">
-                <span className="font-bold uppercase tracking-wider text-[11px] text-slate-700 flex items-center gap-1.5">
+                <span className="font-bold text-[11px] text-slate-700 flex items-center gap-1.5">
                   <Package className="h-3.5 w-3.5 text-slate-500" />
                   Order Products ({orderItems.length} SKU{orderItems.length > 1 ? 's' : ''})
                 </span>
@@ -821,7 +821,7 @@ export default function ManualOrderEntryPage() {
                           }))}
                           value={item.productId}
                           onChange={(val) => handleUpdateItem(idx, 'productId', val)}
-                          placeholder="Search product SKU..."
+                          placeholder="Search product SKU…"
                         />
                       </div>
 
@@ -845,6 +845,7 @@ export default function ManualOrderEntryPage() {
                             onChange={(e) =>
                               handleUpdateItem(idx, 'quantity', Math.max(1, parseInt(e.target.value) || 1))
                             }
+                            aria-label="Quantity"
                             className="w-10 text-center font-bold text-slate-900 bg-transparent text-xs outline-none"
                           />
                           <button
@@ -867,7 +868,7 @@ export default function ManualOrderEntryPage() {
                           <button
                             type="button"
                             onClick={() => handleRemoveItem(idx)}
-                            className="rounded p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                            className="rounded p-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50"
                             title="Remove SKU"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -920,10 +921,10 @@ export default function ManualOrderEntryPage() {
             {/* Section 4: Delivery, Payment & Remarks */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Delivery Method <span className="text-rose-500">*</span>
+                <label htmlFor="manual-entry-delivery-method" className="block font-bold text-slate-700 mb-1">
+                  Delivery Method <span className="text-rose-600">*</span>
                 </label>
-                <select
+                <select id="manual-entry-delivery-method"
                   value={deliveryMethod}
                   onChange={(e) => setDeliveryMethod(e.target.value as DeliveryMethod)}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-semibold text-slate-900 focus:border-blue-500"
@@ -938,9 +939,9 @@ export default function ManualOrderEntryPage() {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Payment Terms <span className="text-rose-500">*</span>
+                  Payment Terms <span className="text-rose-600">*</span>
                 </label>
-                <select
+                <select aria-label="Payment Terms"
                   value={paymentTerms}
                   onChange={(e) => setPaymentTerms(e.target.value as any)}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-semibold text-slate-900 focus:border-blue-500"
@@ -955,9 +956,9 @@ export default function ManualOrderEntryPage() {
               <label className="block font-bold text-slate-700 mb-1">
                 Remarks & Delivery Instructions
               </label>
-              <textarea
+              <textarea aria-label="Remarks & Delivery Instructions"
                 rows={3}
-                placeholder="e.g. Call before delivery, delicate packaging, gift wrapping requested..."
+                placeholder="e.g. Call before delivery, delicate packaging, gift wrapping requested…"
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 p-3 bg-white outline-none text-slate-900 focus:border-blue-500"
@@ -992,12 +993,11 @@ export default function ManualOrderEntryPage() {
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <span className="text-[10px] font-bold uppercase text-slate-400">Order Invoice</span>
-                <h3 className="text-lg font-black text-slate-900">{savedOrder.orderNumber}</h3>
+                <h3 className="text-lg font-black text-slate-900">Invoice {savedOrder.orderNumber}</h3>
               </div>
               <button
                 onClick={() => setShowOrderModal(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-600"
               >
                 <X className="h-5 w-5" />
               </button>

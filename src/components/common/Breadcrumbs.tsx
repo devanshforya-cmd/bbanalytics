@@ -22,7 +22,7 @@ export default function Breadcrumbs({ items, className = '' }: BreadcrumbsProps)
         <li>
           <Link
             href={getRedirectPathForUser(getSessionUser())}
-            className="flex items-center gap-1 text-slate-400 hover:text-slate-700 transition-colors"
+            className="flex items-center gap-1 text-slate-500 hover:text-slate-700 transition-colors"
           >
             <Home className="h-3.5 w-3.5" />
             <span className="sr-only">Home</span>

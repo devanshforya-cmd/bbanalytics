@@ -10,7 +10,7 @@ const Tile = ({ label, value, hint, tone = 'slate' }: { label: string; value: st
   const tones = { slate: 'text-slate-900', purple: 'text-purple-700', amber: 'text-amber-700', emerald: 'text-emerald-700', rose: 'text-rose-700' };
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="text-[10px] font-bold text-slate-500">{label}</p>
       <p className={`mt-1 text-lg font-black tabular-nums ${tones[tone]}`}>{value}</p>
       {hint && <p className="text-[10px] text-slate-500">{hint}</p>}
     </div>
@@ -71,7 +71,7 @@ export default function ExchangeAnalysisPanel({ returns }: { returns: ReturnEntr
                 <ul className="space-y-1.5 text-[11px]">
                   {a.swaps.map((swap) => (
                     <li key={`${swap.from}${swap.to}`} className="flex items-start justify-between gap-2">
-                      <span className="min-w-0 text-slate-700"><span className="font-semibold">{swap.from}</span> <span className="text-slate-400">→</span> {swap.from === swap.to ? <span className="text-slate-500">same product</span> : swap.to}</span>
+                      <span className="min-w-0 text-slate-700"><span className="font-semibold">{swap.from}</span> <span className="text-slate-500">→</span> {swap.from === swap.to ? <span className="text-slate-500">same product</span> : swap.to}</span>
                       <span className="shrink-0 font-bold tabular-nums text-slate-900">{swap.count}</span>
                     </li>
                   ))}

@@ -451,7 +451,7 @@ function FeedbackContent() {
         <Search className="h-4 w-4 text-slate-400" />
         <input
           type="text"
-          placeholder="Search by customer name, product, or review text..."
+          placeholder="Search by customer name, product, or review text…"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full text-xs outline-none"
@@ -464,7 +464,7 @@ function FeedbackContent() {
               setActiveProductFilter('');
               router.replace('/reviews/feedback');
             }}
-            className="text-slate-400 hover:text-slate-600 p-1"
+            className="text-slate-500 hover:text-slate-600 p-1"
             title="Clear search"
           >
             <X className="w-3.5 h-3.5" />
@@ -590,7 +590,7 @@ function FeedbackContent() {
                           e.stopPropagation();
                           setLightboxImageUrl(url);
                         }}
-                        className="relative group/img rounded-lg overflow-hidden border border-slate-200 h-12 w-16 shrink-0 shadow-2xs hover:ring-2 hover:ring-brand-500 transition-all"
+                        className="relative group/img rounded-lg overflow-hidden border border-slate-200 h-12 w-16 shrink-0 shadow-2xs hover:ring-2 hover:ring-brand-500 transition"
                         title="Click to zoom proof screenshot"
                       >
                         <img
@@ -604,7 +604,7 @@ function FeedbackContent() {
                         </div>
                       </button>
                     ))}
-                    <span className="text-[10px] text-slate-400 font-medium">Proof Attached</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Proof Attached</span>
                   </div>
                 )}
 
@@ -700,7 +700,7 @@ function FeedbackContent() {
               </div>
               <button
                 onClick={() => setSelectedEntry(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -727,7 +727,7 @@ function FeedbackContent() {
               {/* Proof Photos Gallery with Click-to-Zoom (PRD v2.2) */}
               <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-800 uppercase text-[10px] tracking-wider flex items-center gap-1.5">
+                  <span className="font-bold text-slate-800 text-[10px]  flex items-center gap-1.5">
                     <Camera className="w-3.5 h-3.5 text-blue-600" />
                     <span>Customer Proof &amp; Chat Evidence ({selectedEntry.screenshotUrls.length})</span>
                   </span>
@@ -793,7 +793,7 @@ function FeedbackContent() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 text-center text-slate-400 bg-white rounded-lg border border-dashed border-slate-200">
+                  <div className="p-4 text-center text-slate-500 bg-white rounded-lg border border-dashed border-slate-200">
                     <ImageIcon className="w-6 h-6 mx-auto text-slate-300 mb-1" />
                     <span>No proof photos attached yet. Click &ldquo;Attach Photo&rdquo; to add proof.</span>
                   </div>
@@ -802,7 +802,7 @@ function FeedbackContent() {
 
               {/* Marketing Toggles */}
               <div className="rounded-xl border border-slate-200 p-4 space-y-2">
-                <div className="font-bold text-slate-800 uppercase text-[10px] tracking-wider">
+                <div className="font-bold text-slate-800 text-[10px] ">
                   Marketing & Brand Intelligence Flags:
                 </div>
                 <div className="flex flex-wrap items-center gap-4">
@@ -831,7 +831,7 @@ function FeedbackContent() {
               {selectedEntry.type === 'COMPLAINT' && (
                 <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-rose-950 text-xs uppercase tracking-wider">
+                    <span className="font-bold text-rose-950 text-xs ">
                       Complaint Resolution Workflow
                     </span>
                     <span className="rounded-full bg-rose-200 px-2.5 py-0.5 text-[10px] font-bold text-rose-900">
@@ -866,7 +866,7 @@ function FeedbackContent() {
 
                   <div>
                     <label className="block text-rose-900 font-bold mb-1">Add Resolution Note:</label>
-                    <input
+                    <input aria-label="Add Resolution Note:"
                       type="text"
                       placeholder="e.g. Replacement unit sent via Pathao, customer satisfied"
                       value={resolutionNote}
@@ -880,7 +880,7 @@ function FeedbackContent() {
               {/* Timeline */}
               {selectedEntry.history && selectedEntry.history.length > 0 && (
                 <div className="space-y-2 border-t border-slate-100 pt-3">
-                  <div className="font-bold uppercase tracking-wider text-slate-400 text-[10px]">
+                  <div className="font-bold text-slate-500 text-[10px]">
                     Status History
                   </div>
                   {selectedEntry.history.map((h) => (
@@ -913,7 +913,7 @@ function FeedbackContent() {
                 <h3 className="font-bold text-slate-900 text-base">Log Customer Feedback / Review</h3>
                 <p className="text-xs text-slate-500">Captures customer sentiment and issue tags</p>
               </div>
-              <button onClick={() => setShowLogModal(false)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
+              <button onClick={() => setShowLogModal(false)} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1050,10 +1050,10 @@ function FeedbackContent() {
               {/* Exact Text */}
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Full Text (Exact Message) *</label>
-                <textarea
+                <textarea aria-label="Full Text (Exact Message)"
                   rows={3}
                   required
-                  placeholder="Paste the exact review or complaint received from the customer..."
+                  placeholder="Paste the exact review or complaint received from the customer…"
                   value={fullText}
                   onChange={(e) => {
                     setFullText(e.target.value);
@@ -1168,7 +1168,7 @@ function FeedbackContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-full flex items-center justify-between text-white pb-3 px-1">
-              <span className="text-xs font-semibold tracking-wide text-slate-300 flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
                 <Camera className="w-4 h-4 text-emerald-400" />
                 Customer Review Proof Evidence &bull; Full Resolution Zoom
               </span>
@@ -1210,7 +1210,7 @@ function FeedbackContent() {
             }}
             className="rounded-lg bg-slate-800 border border-slate-700 text-white text-xs px-2.5 py-1.5 outline-none font-medium cursor-pointer"
           >
-            <option value="" disabled>Set Status...</option>
+            <option value="" disabled>Set Status…</option>
             <option value="OPEN">Open</option>
             <option value="IN_PROGRESS">In Progress</option>
             <option value="RESOLVED">Resolved</option>
@@ -1231,7 +1231,7 @@ function FeedbackContent() {
             }}
             className="rounded-lg bg-slate-800 border border-slate-700 text-white text-xs px-2.5 py-1.5 outline-none font-medium cursor-pointer"
           >
-            <option value="" disabled>Assign to...</option>
+            <option value="" disabled>Assign to…</option>
             {db.getUsers().map((u) => (
               <option key={u.id} value={u.id}>
                 {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
@@ -1264,7 +1264,7 @@ function FeedbackContent() {
       >
         <div className="space-y-2 pt-1 text-xs">
           <label className="block font-bold text-slate-700">Assign Operations Staff:</label>
-          <select
+          <select aria-label="Assign Operations Staff:"
             value={escalateAssignee}
             onChange={(e) => setEscalateAssignee(e.target.value)}
             className="w-full rounded-xl border border-slate-300 p-2.5 bg-white text-xs font-medium outline-none"
@@ -1277,7 +1277,7 @@ function FeedbackContent() {
           </select>
 
           <label className="block font-bold text-slate-700 pt-1">Escalation Rationale / Action Directives:</label>
-          <input
+          <input aria-label="Escalation Rationale / Action Directives:"
             type="text"
             placeholder="e.g. Broken seal spilled on customer dress, immediate replacement required"
             value={escalateNote}
@@ -1296,7 +1296,7 @@ export default function FeedbackPage() {
     <Suspense
       fallback={
         <div className="p-8 text-center text-xs text-slate-500">
-          Loading feedback and reviews stream...
+          Loading feedback and reviews stream…
         </div>
       }
     >

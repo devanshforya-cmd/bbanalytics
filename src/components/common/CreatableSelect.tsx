@@ -86,7 +86,7 @@ export default function CreatableSelect({ id, label, options, value, onChange, o
 
   return (
     <div ref={rootRef} className="relative">
-      <label htmlFor={fieldId} className="mb-1 block text-xs font-bold text-slate-700">{label} {required && <span className="text-rose-500">*</span>}</label>
+      <label htmlFor={fieldId} className="mb-1 block text-xs font-bold text-slate-700">{label} {required && <span className="text-rose-600">*</span>}</label>
       <div onClick={() => { setOpen(true); inputRef.current?.focus(); }}
         className={`flex min-h-[38px] cursor-text flex-wrap items-center gap-1 rounded-xl border px-2 py-1 text-xs ${error ? 'border-rose-400 bg-rose-50/30' : 'border-slate-300 bg-white'} focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100`}>
         {multiple && selected.map((option) => (
@@ -99,7 +99,7 @@ export default function CreatableSelect({ id, label, options, value, onChange, o
           value={open || multiple ? query : selected[0]?.name || ''} onFocus={() => setOpen(true)} onKeyDown={onKeyDown}
           onChange={(event) => { setQuery(event.target.value); setOpen(true); setActive(0); }}
           placeholder={multiple ? (selected.length ? 'Add another…' : placeholder || 'Search or type to add') : selected[0]?.name || placeholder || 'Search or type to add'}
-          className="min-w-[90px] flex-1 bg-transparent py-1 text-xs text-slate-900 outline-none placeholder:text-slate-400" />
+          className="min-w-[90px] flex-1 bg-transparent py-1 text-xs text-slate-900 outline-none placeholder:text-slate-500" />
         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
       </div>
       {open && (
@@ -109,7 +109,7 @@ export default function CreatableSelect({ id, label, options, value, onChange, o
             const header = option.group && option.group !== filtered[index - 1]?.group;
             return (
               <React.Fragment key={option.id}>
-                {header && <li role="presentation" className="sticky top-0 bg-slate-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">{option.group}</li>}
+                {header && <li role="presentation" className="sticky top-0 bg-slate-50 px-3 py-1 text-[10px] font-bold text-slate-500">{option.group}</li>}
                 <li role="option" aria-selected={isSelected} onMouseDown={(event) => event.preventDefault()} onClick={() => toggle(option)} onMouseEnter={() => setActive(index)}
                   className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 ${index === active ? 'bg-blue-50' : ''}`}>
                   <span className="min-w-0"><span className="block truncate font-medium text-slate-800">{option.name}</span>{option.hint && <span className="block truncate text-[10px] text-slate-500">{option.hint}</span>}</span>
@@ -124,7 +124,7 @@ export default function CreatableSelect({ id, label, options, value, onChange, o
               <Plus className="h-3.5 w-3.5" /> Create &ldquo;{text}&rdquo;
             </li>
           )}
-          {!rows && <li className="px-3 py-3 text-center text-slate-400">{onCreate ? `Type a name to add a new ${noun}.` : 'Nothing matches.'}</li>}
+          {!rows && <li className="px-3 py-3 text-center text-slate-500">{onCreate ? `Type a name to add a new ${noun}.` : 'Nothing matches.'}</li>}
         </ul>
       )}
       {(error || helper) && <p className={`mt-1 text-[11px] ${error ? 'font-medium text-rose-600' : 'text-slate-500'}`}>{error || helper}</p>}

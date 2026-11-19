@@ -53,17 +53,17 @@ export default function RegionalPerformanceView({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
       <div className="border-b border-slate-100 pb-3">
-        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+        <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
           <MapPin className="w-4 h-4 text-emerald-600" />
           Regional Performance (Inside Valley vs Outside Valley)
-        </h3>
+        </h2>
         <p className="text-xs text-slate-500 mt-0.5">
           Geography-indexed order volume, logistics fulfillment, and return discrepancy analysis
         </p>
       </div>
 
       {/* Side-by-Side Comparison Table */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -142,7 +142,7 @@ export default function RegionalPerformanceView({
         </button>
 
         {isProvinceExpanded && (
-          <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs animate-in fade-in duration-200">
+          <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs animate-in fade-in duration-200" tabIndex={0}>
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">

@@ -795,7 +795,7 @@ export default function SheetsExportPage() {
       return;
     }
 
-    toast.success(`Exporting ${tabsToExport.length} tab(s) to CSV...`);
+    toast.success(`Exporting ${tabsToExport.length} tab(s) to CSV…`);
     tabsToExport.forEach((tab, index) => {
       setTimeout(() => {
         const csvContent = '\uFEFF' + tab.generateCsv(); // Add UTF-8 BOM for Excel compatibility
@@ -823,7 +823,7 @@ export default function SheetsExportPage() {
       return;
     }
 
-    toast.success(`Exporting ${tabsToExport.length} tab(s) to Excel...`);
+    toast.success(`Exporting ${tabsToExport.length} tab(s) to Excel…`);
 
     // Generate Excel 2003 XML Spreadsheet with multiple worksheets
     let xmlWorksheets = '';
@@ -917,7 +917,7 @@ export default function SheetsExportPage() {
           Home
         </Link>
         <ChevronRight className="h-3 w-3 text-slate-400" />
-        <span className="text-slate-400">OpsCore</span>
+        <span className="text-slate-500">OpsCore</span>
         <ChevronRight className="h-3 w-3 text-slate-400" />
         <span className="font-semibold text-slate-800">Google Sheets Export</span>
       </nav>
@@ -1013,13 +1013,13 @@ export default function SheetsExportPage() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-blue-600" />
               Permanent Auto-Updating Tabs ({permanentTabs.filter((tab) => visibleTabs.includes(tab)).length})
             </h2>
             <p className="text-[11px] text-slate-500">Fixed master worksheets updated in-place on every export.</p>
           </div>
-          <span className="text-[11px] font-semibold text-slate-400">PRD Part 10.1</span>
+          <span className="text-[11px] font-semibold text-slate-500">PRD Part 10.1</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -1038,7 +1038,7 @@ export default function SheetsExportPage() {
                   <button
                     type="button"
                     onClick={() => toggleTab(tab.id)}
-                    className="mt-0.5 text-slate-400 hover:text-blue-600"
+                    className="mt-0.5 text-slate-500 hover:text-blue-600"
                     aria-label={`Select ${tab.name}`}
                   >
                     {selected ? (
@@ -1052,7 +1052,7 @@ export default function SheetsExportPage() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-slate-900">{tab.name}</span>
-                        <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-blue-800">
+                        <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-800">
                           Permanent
                         </span>
                       </div>
@@ -1071,7 +1071,7 @@ export default function SheetsExportPage() {
                         </span>
                       ))}
                       {tab.columns.length > 4 && (
-                        <span className="text-[10px] text-slate-400 font-mono">+{tab.columns.length - 4} more</span>
+                        <span className="text-[10px] text-slate-500 font-mono">+{tab.columns.length - 4} more</span>
                       )}
                     </div>
 
@@ -1117,13 +1117,13 @@ export default function SheetsExportPage() {
       <div className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-600" />
               Monthly Dynamic Tabs ({monthlyTabs.filter((tab) => visibleTabs.includes(tab)).length}) — {selectedMonth}
             </h2>
             <p className="text-[11px] text-slate-500">Auto-created tabs tagged with the target operational month.</p>
           </div>
-          <span className="text-[11px] font-semibold text-slate-400">PRD Part 10.2</span>
+          <span className="text-[11px] font-semibold text-slate-500">PRD Part 10.2</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -1143,7 +1143,7 @@ export default function SheetsExportPage() {
                     <button
                       type="button"
                       onClick={() => toggleTab(tab.id)}
-                      className="mt-0.5 text-slate-400 hover:text-emerald-600"
+                      className="mt-0.5 text-slate-500 hover:text-emerald-600"
                       aria-label={`Select ${tab.name}`}
                     >
                       {selected ? (
@@ -1172,7 +1172,7 @@ export default function SheetsExportPage() {
                       </span>
                     ))}
                     {tab.columns.length > 3 && (
-                      <span className="text-[10px] text-slate-400 font-mono">+{tab.columns.length - 3} more</span>
+                      <span className="text-[10px] text-slate-500 font-mono">+{tab.columns.length - 3} more</span>
                     )}
                   </div>
                 </div>
@@ -1229,7 +1229,7 @@ export default function SheetsExportPage() {
               </div>
               <button
                 onClick={() => setPreviewTab(null)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1"
+                className="text-slate-500 hover:text-slate-600 text-sm font-bold p-1"
               >
                 ✕
               </button>
@@ -1238,7 +1238,7 @@ export default function SheetsExportPage() {
             {/* Preview table */}
             <div className="flex-1 overflow-auto border border-slate-200 rounded-xl">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-wider sticky top-0">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[10px] font-bold sticky top-0">
                   <tr>
                     {previewTab.columns.map((col) => (
                       <th key={col} className="py-2.5 px-3 whitespace-nowrap">
@@ -1262,7 +1262,7 @@ export default function SheetsExportPage() {
             </div>
 
             <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-              <span className="text-[11px] text-slate-400">Showing first {previewTab.sampleData.length} records sample</span>
+              <span className="text-[11px] text-slate-500">Showing first {previewTab.sampleData.length} records sample</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"

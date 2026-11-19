@@ -239,7 +239,7 @@ export default function Product360Page() {
           {/* Master Catalog MRP */}
           <div className="bg-slate-50 border border-slate-200 px-5 py-3 rounded-2xl flex items-center gap-4">
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+              <span className="text-[10px] font-bold text-slate-500 block ">
                 Catalog Reference MRP
               </span>
               <div className="text-xl sm:text-2xl font-black text-emerald-700 font-mono mt-0.5">
@@ -248,7 +248,7 @@ export default function Product360Page() {
             </div>
             <div className="border-l border-slate-200 pl-4 text-[10px] text-slate-500 font-medium">
               Consumer Catalog Price<br />
-              <span className="text-slate-400">VAT Inclusive</span>
+              <span className="text-slate-500">VAT Inclusive</span>
             </div>
           </div>
         </div>
@@ -297,7 +297,7 @@ export default function Product360Page() {
 
         <Link
           href={`/reviews/feedback?product=${encodeURIComponent(product.name)}`}
-          className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs hover:border-brand-500 hover:shadow-md transition-all cursor-pointer group block"
+          className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs hover:border-brand-500 hover:shadow-md transition cursor-pointer group block"
         >
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
             <span className="group-hover:text-brand-600 transition-colors">Feedback Summary</span>
@@ -311,7 +311,7 @@ export default function Product360Page() {
           </div>
           <div className="text-xs text-slate-500 mt-1 truncate flex items-center justify-between" title={`Top Issue: ${topIssue}`}>
             <span>Top Issue: <strong className="text-slate-700">{topIssue}</strong></span>
-            <span className="text-[10px] text-brand-600 font-bold group-hover:underline">View in Hub &rarr;</span>
+            <span className="text-[10px] text-brand-600 font-bold group-hover:underline">View in Hub</span>
           </div>
         </Link>
       </div>
@@ -356,7 +356,7 @@ export default function Product360Page() {
               <span className="text-[10px] font-bold text-slate-700 font-mono mb-1">{m.val}</span>
               <div className="w-full bg-slate-100 rounded-t h-20 flex items-end">
                 <div
-                  className={`w-full rounded-t transition-all ${
+                  className={`w-full rounded-t transition ${
                     m.current
                       ? 'bg-blue-600 ring-2 ring-blue-300'
                       : m.peak
@@ -481,7 +481,7 @@ export default function Product360Page() {
                       );
                     })}
                   </div>
-                  <span className="text-[10px] text-slate-400 font-mono">{f.dateReceivedBs || f.dateReceivedAd || ''}</span>
+                  <span className="text-[10px] text-slate-500 font-mono">{f.dateReceivedBs || f.dateReceivedAd || ''}</span>
                 </div>
                 <p className="text-slate-700 font-medium line-clamp-2">
                   &ldquo;{f.fullText}&rdquo;
@@ -539,19 +539,19 @@ export default function Product360Page() {
             href="/offline-sales/beat-plan"
             className="text-xs font-bold text-brand-600 hover:text-brand-700"
           >
-            Go to Beat Plan &rarr;
+            Go to Beat Plan
           </Link>
         </div>
 
         {relatedOrders.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-400">
+          <div className="p-8 text-center text-xs text-slate-500">
             No secondary orders logged for this SKU yet.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0}>
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase tracking-wider">
+                <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold ">
                   <th className="p-3">Order #</th>
                   <th className="p-3">Store Name</th>
                   <th className="p-3">Sales Rep</th>
@@ -578,7 +578,7 @@ export default function Product360Page() {
                           {ord.storeName}
                           <ArrowUpRight className="h-3 w-3 text-slate-400" />
                         </Link>
-                        <div className="text-[10px] text-slate-400">{ord.contactPhone}</div>
+                        <div className="text-[10px] text-slate-500">{ord.contactPhone}</div>
                       </td>
                       <td className="p-3">
                         <Link
@@ -624,14 +624,14 @@ export default function Product360Page() {
         </div>
 
         {productStores.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-400">
+          <div className="p-8 text-center text-xs text-slate-500">
             No retail stores currently mapped to this SKU.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0}>
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase tracking-wider">
+                <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold ">
                   <th className="p-3">Store</th>
                   <th className="p-3">Branch</th>
                   <th className="p-3">Assigned Officer</th>
@@ -719,7 +719,7 @@ export default function Product360Page() {
         </div>
 
         {relatedFeedback.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-400">
+          <div className="p-8 text-center text-xs text-slate-500">
             No customer reviews or complaints logged for this SKU yet.
           </div>
         ) : (
@@ -728,7 +728,7 @@ export default function Product360Page() {
               <Link
                 key={item.id}
                 href={`/reviews/feedback?product=${encodeURIComponent(product.name)}`}
-                className="p-3.5 rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-brand-300 hover:shadow-xs transition-all text-xs flex flex-col justify-between group cursor-pointer"
+                className="p-3.5 rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-brand-300 hover:shadow-xs transition text-xs flex flex-col justify-between group cursor-pointer"
               >
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
@@ -749,10 +749,10 @@ export default function Product360Page() {
                     &ldquo;{item.fullText}&rdquo;
                   </p>
                 </div>
-                <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 text-[10px] text-slate-400 font-medium">
+                <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 text-[10px] text-slate-500 font-medium">
                   <span>{item.dateReceivedBs || item.dateReceivedAd}</span>
                   <span className="text-brand-600 font-semibold group-hover:underline flex items-center gap-0.5">
-                    View Details &rarr;
+                    View Details
                   </span>
                 </div>
               </Link>

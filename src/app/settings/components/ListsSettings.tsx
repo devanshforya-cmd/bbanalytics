@@ -79,26 +79,26 @@ export default function ListsSettings() {
                       </form>
                     ) : (
                       <>
-                        <span className={`min-w-0 font-semibold ${row.isArchived ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{row.name}
+                        <span className={`min-w-0 font-semibold ${row.isArchived ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{row.name}
                           {row.isArchived && <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 no-underline">Archived</span>}
-                          {section.niche && <span className="ml-2 text-[11px] font-medium text-slate-400 no-underline">{row.usage} influencer{row.usage === 1 ? '' : 's'}</span>}
+                          {section.niche && <span className="ml-2 text-[11px] font-medium text-slate-500 no-underline">{row.usage} influencer{row.usage === 1 ? '' : 's'}</span>}
                         </span>
                         {canEdit && (
                           <span className="flex shrink-0 items-center gap-0.5">
-                            {!row.isArchived && <button type="button" title="Rename" aria-label={`Rename ${row.name}`} onClick={() => setEditing({ key: section.key, id: row.id, name: row.name })} className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600"><Pencil className="h-3.5 w-3.5" /></button>}
-                            {section.niche && !row.isArchived && rows.filter((entry) => !entry.isArchived).length > 1 && <button type="button" title="Merge into another niche" aria-label={`Merge ${row.name}`} onClick={() => setMerging({ id: row.id, name: row.name, target: '' })} className="rounded-lg p-1.5 text-slate-400 hover:bg-purple-50 hover:text-purple-600"><GitMerge className="h-3.5 w-3.5" /></button>}
+                            {!row.isArchived && <button type="button" title="Rename" aria-label={`Rename ${row.name}`} onClick={() => setEditing({ key: section.key, id: row.id, name: row.name })} className="rounded-lg p-1.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600"><Pencil className="h-3.5 w-3.5" /></button>}
+                            {section.niche && !row.isArchived && rows.filter((entry) => !entry.isArchived).length > 1 && <button type="button" title="Merge into another niche" aria-label={`Merge ${row.name}`} onClick={() => setMerging({ id: row.id, name: row.name, target: '' })} className="rounded-lg p-1.5 text-slate-500 hover:bg-purple-50 hover:text-purple-600"><GitMerge className="h-3.5 w-3.5" /></button>}
                             <button type="button" disabled={busy} title={row.isArchived ? 'Restore' : 'Archive'} aria-label={`${row.isArchived ? 'Restore' : 'Archive'} ${row.name}`}
-                              onClick={() => void run(() => db.setLookupArchived(section.collection, row.id, !row.isArchived), row.isArchived ? `Restored "${row.name}"` : `Archived "${row.name}"`)} className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-700">
+                              onClick={() => void run(() => db.setLookupArchived(section.collection, row.id, !row.isArchived), row.isArchived ? `Restored "${row.name}"` : `Archived "${row.name}"`)} className="rounded-lg p-1.5 text-slate-500 hover:bg-amber-50 hover:text-amber-700">
                               {row.isArchived ? <RotateCcw className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
                             </button>
-                            {section.niche && row.usage === 0 && <button type="button" title="Delete (not used by any influencer)" aria-label={`Delete ${row.name}`} onClick={() => setDeleting(row)} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>}
+                            {section.niche && row.usage === 0 && <button type="button" title="Delete (not used by any influencer)" aria-label={`Delete ${row.name}`} onClick={() => setDeleting(row)} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>}
                           </span>
                         )}
                       </>
                     )}
                   </li>
                 ))}
-                {!rows.length && <li className="px-3 py-4 text-center text-xs text-slate-400">Nothing here yet. {canEdit ? 'Add the first one above, or let staff add them from a form.' : ''}</li>}
+                {!rows.length && <li className="px-3 py-4 text-center text-xs text-slate-500">Nothing here yet. {canEdit ? 'Add the first one above, or let staff add them from a form.' : ''}</li>}
               </ul>
             </section>
           );

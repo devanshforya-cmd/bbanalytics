@@ -29,7 +29,7 @@ export default function SeasonalInsightsSection() {
           <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-700">
             <Sparkles className="w-4 h-4" />
           </div>
-          <h3 className="text-sm font-bold text-slate-900 tracking-tight">Seasonal Pattern Intelligence</h3>
+          <h2 className="text-sm font-bold text-slate-900 tracking-tight">Seasonal Pattern Intelligence</h2>
         </div>
         <span className="text-xs text-slate-500 font-medium">Rolling 30-day comparison</span>
       </div>
@@ -38,7 +38,7 @@ export default function SeasonalInsightsSection() {
         {patterns.slice(0, 3).map((pat) => (
           <div
             key={pat.id}
-            className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 space-y-3 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between"
+            className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 space-y-3 shadow-xs hover:border-blue-300 transition flex flex-col justify-between"
           >
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -56,7 +56,7 @@ export default function SeasonalInsightsSection() {
                 </span>
               </div>
 
-              <h4 className="text-sm font-bold text-slate-900 leading-snug">{pat.description}</h4>
+              <h3 className="text-sm font-bold text-slate-900 leading-snug">{pat.description}</h3>
               <p className="text-xs text-slate-500 leading-relaxed">{pat.evidence}</p>
             </div>
 

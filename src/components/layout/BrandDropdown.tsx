@@ -149,7 +149,7 @@ export default function BrandDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-xs hover:border-slate-300 hover:bg-slate-50/80 transition-all active:scale-98 ${
+        className={`flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-xs hover:border-slate-300 hover:bg-slate-50/80 transition active:scale-98 ${
           isCompact ? 'w-36 sm:w-44' : 'w-44 sm:w-52'
         }`}
         aria-expanded={isOpen}
@@ -187,7 +187,7 @@ export default function BrandDropdown({
               <Search className="absolute left-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search brands or categories..."
+                placeholder="Search brands or categories…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
@@ -197,7 +197,7 @@ export default function BrandDropdown({
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2 text-[10px] text-slate-400 hover:text-slate-600"
+                  className="absolute right-2 text-[10px] text-slate-500 hover:text-slate-600"
                 >
                   ✕
                 </button>
@@ -241,7 +241,7 @@ export default function BrandDropdown({
 
             {/* Categorized Brands */}
             {filteredBrands.length === 0 ? (
-              <div className="py-6 text-center text-xs text-slate-400">
+              <div className="py-6 text-center text-xs text-slate-500">
                 No brand matching &ldquo;{searchQuery}&rdquo;
               </div>
             ) : (
@@ -253,7 +253,7 @@ export default function BrandDropdown({
 
                 return (
                   <div key={cat} className="space-y-0.5">
-                    <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <div className="px-2 py-1 text-[10px] font-bold text-slate-500">
                       {cat}
                     </div>
                     {catBrands.map((brand) => {
@@ -291,7 +291,7 @@ export default function BrandDropdown({
                                 )}
                               </div>
                               {brand.principalCompany && (
-                                <div className="text-[10px] text-slate-400 truncate">
+                                <div className="text-[10px] text-slate-500 truncate">
                                   {brand.principalCompany}
                                 </div>
                               )}
@@ -299,7 +299,7 @@ export default function BrandDropdown({
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="text-[10px] text-slate-400 font-medium">
+                            <span className="text-[10px] text-slate-500 font-medium">
                               {skuCount} SKUs
                             </span>
                             {isSelected && <Check className="h-4 w-4 text-blue-600" />}

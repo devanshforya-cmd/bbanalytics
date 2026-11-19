@@ -51,7 +51,7 @@ export default function LoginPage() {
   const isEmail = identifier.includes('@') || /[a-zA-Z]/.test(identifier);
 
   return (
-    <main className="flex min-h-dvh flex-col bg-[#f5f5f7] text-slate-900">
+    <main className="flex min-h-dvh flex-col bg-slate-100 text-slate-900">
       <div className="flex flex-1 flex-col items-center justify-center px-5 py-12">
         <BrandLogo variant="full" priority className="h-12 sm:h-14" />
         <h1 className="mt-10 text-center text-[28px] font-semibold leading-tight text-slate-900 sm:text-[32px]">Sign in</h1>
@@ -72,7 +72,7 @@ export default function LoginPage() {
                 type="text" inputMode="email" autoComplete="username" autoCapitalize="none" spellCheck={false}
                 value={identifier} onChange={(e) => setIdentifier(e.target.value)}
                 placeholder="Email or mobile number"
-                className="h-[52px] w-full bg-transparent text-[16px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:shadow-none"
+                className="h-[52px] w-full bg-transparent text-[16px] text-slate-900 placeholder:text-slate-500 focus:outline-none focus-visible:shadow-none"
                 required autoFocus
               />
             </label>
@@ -84,11 +84,11 @@ export default function LoginPage() {
                 type={showPassword ? 'text' : 'password'} autoComplete="current-password"
                 value={password} onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
-                className="h-[52px] w-full bg-transparent text-[16px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:shadow-none"
+                className="h-[52px] w-full bg-transparent text-[16px] text-slate-900 placeholder:text-slate-500 focus:outline-none focus-visible:shadow-none"
                 required
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="-mr-1 rounded-full p-1.5 text-slate-400 hover:bg-black/[0.04] hover:text-slate-700">
+                className="-mr-1 rounded-full p-1.5 text-slate-500 hover:bg-black/[0.04] hover:text-slate-700">
                 {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
               </button>
             </label>
@@ -98,11 +98,11 @@ export default function LoginPage() {
             className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[15px] font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-70">
             {loading ? <><span className="bb-spinner" aria-hidden="true" /> Signing in…</> : 'Sign in'}
           </button>
-          <p className="mt-4 text-center text-[12px] text-slate-400">You stay signed in for 24 hours on this device.</p>
+          <p className="mt-4 text-center text-[12px] text-slate-500">You stay signed in for 24 hours on this device.</p>
         </form>
       </div>
 
-      <footer className="pb-6 text-center text-[12px] text-slate-400">Brand Bucket Nepal Pvt. Ltd. · Kathmandu</footer>
+      <footer className="pb-6 text-center text-[12px] text-slate-500">Brand Bucket Nepal Pvt. Ltd. · Kathmandu</footer>
     </main>
   );
 }

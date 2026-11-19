@@ -159,7 +159,7 @@ export default function CustomerLookup({ value, onChange, allowNoPhone, error, a
         </div>
       ) : noPhone ? (
         <div className="relative">
-          <label htmlFor={`${uid}-handle`} className="mb-1 block text-xs font-bold text-slate-700">Name or handle <span className="text-rose-500">*</span></label>
+          <label htmlFor={`${uid}-handle`} className="mb-1 block text-xs font-bold text-slate-700">Name or handle <span className="text-rose-600">*</span></label>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input id={`${uid}-handle`} type="text" role="combobox" aria-expanded={open} aria-controls={`${uid}-list`} autoComplete="off" value={handleQuery} placeholder="e.g. Sita Gurung or @sita.g"
@@ -172,7 +172,7 @@ export default function CustomerLookup({ value, onChange, allowNoPhone, error, a
         </div>
       ) : (
         <div className="relative">
-          <label htmlFor={`${uid}-phone`} className="mb-1 block text-xs font-bold text-slate-700">{phoneLabel} <span className="text-rose-500">*</span></label>
+          <label htmlFor={`${uid}-phone`} className="mb-1 block text-xs font-bold text-slate-700">{phoneLabel} <span className="text-rose-600">*</span></label>
           <div className="relative">
             <Phone className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input id={`${uid}-phone`} type="tel" inputMode="tel" role="combobox" aria-expanded={open} aria-controls={`${uid}-list`} aria-autocomplete="list" autoComplete="off" autoFocus={autoFocus}
@@ -201,7 +201,7 @@ export default function CustomerLookup({ value, onChange, allowNoPhone, error, a
 
       {value.link !== 'UNLINKED' && (
         <div>
-          <label htmlFor={`${uid}-name`} className="mb-1 block text-xs font-bold text-slate-700">Customer name {value.link === 'NEW' && <span className="text-rose-500">*</span>}</label>
+          <label htmlFor={`${uid}-name`} className="mb-1 block text-xs font-bold text-slate-700">Customer name {value.link === 'NEW' && <span className="text-rose-600">*</span>}</label>
           <div className="relative">
             <UserRound className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input id={`${uid}-name`} type="text" value={value.name} maxLength={120} placeholder={value.link === 'LINKED' ? '' : 'Fills in when a customer is linked'}

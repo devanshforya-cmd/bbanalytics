@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 @config "../../tailwind.config.js";
 
 /*
@@ -12,10 +13,10 @@
 
   /* Neutrals (Apple greys) */
   --color-slate-50: #fafafc;  --color-slate-100: #f5f5f7; --color-slate-200: #e5e5ea; --color-slate-300: #d2d2d7;
-  --color-slate-400: #aeaeb2; --color-slate-500: #86868b; --color-slate-600: #6e6e73; --color-slate-700: #48484a;
+  --color-slate-400: #aeaeb2; --color-slate-500: #6e6e73; --color-slate-600: #5b5b60; --color-slate-700: #48484a;
   --color-slate-800: #2c2c2e; --color-slate-900: #1c1c1e; --color-slate-950: #000000;
   --color-gray-50: #fafafc;   --color-gray-100: #f5f5f7;  --color-gray-200: #e5e5ea;  --color-gray-300: #d2d2d7;
-  --color-gray-400: #aeaeb2;  --color-gray-500: #86868b;  --color-gray-600: #6e6e73;  --color-gray-700: #48484a;
+  --color-gray-400: #aeaeb2;  --color-gray-500: #6e6e73;  --color-gray-600: #5b5b60;  --color-gray-700: #48484a;
   --color-gray-800: #2c2c2e;  --color-gray-900: #1c1c1e;
 
   /* Accent: Brand Bucket blue from the logo */
@@ -27,16 +28,16 @@
 
   /* Status colours (Apple system green, red, orange, purple) */
   --color-emerald-50: #edfaf1; --color-emerald-100: #d3f3dd; --color-emerald-200: #a8e7bb; --color-emerald-300: #7bd996;
-  --color-emerald-400: #4fcd73; --color-emerald-500: #34c759; --color-emerald-600: #28a745; --color-emerald-700: #248a3d;
-  --color-emerald-800: #1d6b30; --color-emerald-900: #154f24;
+  --color-emerald-400: #4fcd73; --color-emerald-500: #34c759; --color-emerald-600: #188038; --color-emerald-700: #137333;
+  --color-emerald-800: #0f5c28; --color-emerald-900: #154f24;
   --color-rose-50: #fff0ef;  --color-rose-100: #ffdcd9; --color-rose-200: #ffb9b4; --color-rose-300: #ff8f87;
-  --color-rose-400: #ff6259; --color-rose-500: #ff453a; --color-rose-600: #ff3b30; --color-rose-700: #d70015;
-  --color-rose-800: #a50011; --color-rose-900: #73000c;
+  --color-rose-400: #ff6259; --color-rose-500: #ff453a; --color-rose-600: #d70015; --color-rose-700: #b3000f;
+  --color-rose-800: #8c000c; --color-rose-900: #73000c;
   --color-amber-50: #fff7eb; --color-amber-100: #ffebcc; --color-amber-200: #ffd699; --color-amber-300: #ffc266;
-  --color-amber-400: #ffad33; --color-amber-500: #ff9f0a; --color-amber-600: #e68600; --color-amber-700: #b86a00;
-  --color-amber-800: #8f5200; --color-amber-900: #663a00;
+  --color-amber-400: #ffad33; --color-amber-500: #ff9f0a; --color-amber-600: #a15500; --color-amber-700: #8a4700;
+  --color-amber-800: #6e3a00; --color-amber-900: #663a00;
   --color-purple-50: #f8effd; --color-purple-100: #eedcfa; --color-purple-200: #ddb9f5; --color-purple-500: #bf5af2;
-  --color-purple-600: #af52de; --color-purple-700: #8e3fb8; --color-purple-800: #6e3090;
+  --color-purple-600: #8e3fb8; --color-purple-700: #7a35a0; --color-purple-800: #5f2a80;
 
   /* Softer, more diffuse shadows */
   --shadow-2xs: 0 1px 1px rgb(0 0 0 / 0.03);
@@ -63,6 +64,7 @@
   color-scheme: light;
 }
 
+html, body { overflow-x: clip; }
 html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
 
 body {
@@ -77,6 +79,11 @@ body {
 
 h1, h2, h3 { letter-spacing: -0.015em; }
 h1 { letter-spacing: -0.022em; }
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+table { font-variant-numeric: tabular-nums; }
+button, a, [role="button"], input, select, textarea, label { touch-action: manipulation; }
+button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, label[for] { cursor: pointer; }
 .tabular-nums, .font-mono { font-variant-numeric: tabular-nums; }
 
 /* Sentence case everywhere: no shouty all-caps labels. Unlayered, so it wins over utility classes. */
@@ -102,9 +109,10 @@ button[data-auto-busy] { pointer-events: none; opacity: 0.85; }
 a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab"]:focus-visible, summary:focus-visible { outline: 2px solid var(--bb-accent); outline-offset: 2px; }
 @layer base {
   input:focus, select:focus, textarea:focus { outline: none; }
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible, select:focus-visible, textarea:focus-visible { box-shadow: 0 0 0 3px rgb(20 112 176 / 0.18); border-color: #1470b0; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid color-mix(in srgb, var(--bb-accent) 22%, transparent); outline-offset: 0; border-color: var(--bb-accent); }
+  input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline: 2px solid var(--bb-accent); outline-offset: 2px; }
 }
-::selection { background: #b9d6ee; color: #1c1c1e; }
+::selection { background: var(--color-blue-200); color: var(--color-slate-900); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
@@ -124,8 +132,8 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab
 /* Custom Scrollbars */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgb(0 0 0 / 0.14); border-radius: 9999px; border: 2px solid transparent; background-clip: content-box; }
-::-webkit-scrollbar-thumb:hover { background: rgb(0 0 0 / 0.28); background-clip: content-box; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-slate-900) 14%, transparent); border-radius: 9999px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--color-slate-900) 28%, transparent); background-clip: content-box; }
 
 /* Glass & Card Effects */
 .card-hover { transition: box-shadow 0.2s ease, border-color 0.2s ease; }
@@ -137,7 +145,7 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab
   100% { background-position: 400px 0; }
 }
 .skeleton-shimmer {
-  background: linear-gradient(90deg, #f5f5f7 25%, #ebebef 50%, #f5f5f7 75%);
+  background: linear-gradient(90deg, var(--color-slate-100) 25%, var(--color-slate-200) 50%, var(--color-slate-100) 75%);
   background-size: 800px 100%;
   animation: shimmer 1.5s infinite linear;
 }
@@ -156,13 +164,11 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab
 }
 
 /* ── Scale bounce (check-in ✅) ───────────────────── */
-@keyframes scaleBounce {
-  0%   { transform: scale(0); opacity: 0; }
-  60%  { transform: scale(1.15); opacity: 1; }
-  80%  { transform: scale(0.95); }
-  100% { transform: scale(1); }
+@keyframes scalePop {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
 }
-.animate-scale-bounce { animation: scaleBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-scale-bounce { animation: scalePop 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
 /* ── Draw checkmark (SVG stroke) ─────────────────── */
 @keyframes drawCheck {
@@ -173,14 +179,14 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab
 
 /* ── Strikethrough task title ─────────────────────── */
 @keyframes strikeThrough {
-  from { width: 0; }
-  to   { width: 100%; }
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 }
 .line-through-animate::after {
   content: '';
   position: absolute;
   top: 50%; left: 0;
-  height: 1px;
+  width: 100%; height: 1px; transform-origin: left center;
   background: currentColor;
   animation: strikeThrough 0.2s ease-out forwards;
 }
@@ -188,15 +194,15 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab
 /* ── Status flash (row color pulse) ─────────────── */
 @keyframes statusFlashGreen {
   0%, 100% { background-color: transparent; }
-  30%       { background-color: rgba(16,185,129,0.12); }
+  30%       { background-color: color-mix(in srgb, var(--color-emerald-600) 12%, transparent); }
 }
 @keyframes statusFlashRed {
   0%, 100% { background-color: transparent; }
-  30%       { background-color: rgba(239,68,68,0.12); }
+  30%       { background-color: color-mix(in srgb, var(--color-rose-600) 12%, transparent); }
 }
 @keyframes statusFlashAmber {
   0%, 100% { background-color: transparent; }
-  30%       { background-color: rgba(245,158,11,0.12); }
+  30%       { background-color: color-mix(in srgb, var(--color-amber-600) 12%, transparent); }
 }
 .flash-green  { animation: statusFlashGreen  0.6s ease-out; }
 .flash-red    { animation: statusFlashRed    0.6s ease-out; }
@@ -215,6 +221,13 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab
   to   { opacity: 1; transform: translateY(0); }
 }
 .page-enter { animation: pageFadeIn 0.2s ease-out forwards; }
+@keyframes bbFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.animate-fade-in { animation: bbFadeIn 0.18s ease-out both; }
+.animate-spin-slow { animation: bb-spin 12s linear infinite; }
+
+/* Skip link: hidden until focused from the keyboard */
+.skip-link { position: fixed; left: 12px; top: -100px; z-index: 100; padding: 10px 16px; border-radius: 12px; background: var(--bb-accent); color: #fff; font-weight: 600; font-size: 14px; }
+.skip-link:focus { top: 12px; }
 
 /* ── Confetti burst (small particles) ───────────── */
 @keyframes confettiFly {

@@ -389,23 +389,25 @@ export default function DailyOrdersPage() {
         </div>
 
         {/* View Toggle Tabs: Orders Table vs Breakdown */}
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-1 text-xs font-bold">
+        <div role="tablist" aria-label="Daily orders view" className="inline-flex items-center gap-1 rounded-xl bg-slate-200/70 p-1 text-xs font-semibold">
           <button
             onClick={() => setActiveTab('ORDERS')}
-            className={`px-4 py-2 rounded-t-xl transition border-b-2 ${
+            role="tab" aria-selected={activeTab === 'ORDERS'}
+            className={`px-4 py-2 rounded-lg transition ${
               activeTab === 'ORDERS'
-                ? 'border-blue-600 text-blue-600 bg-white'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             Order Cross-Check Table ({findQuery.trim() ? `${visibleOrders.length} of ${filteredOrders.length}` : filteredOrders.length})
           </button>
           <button
             onClick={() => setActiveTab('BREAKDOWN')}
-            className={`px-4 py-2 rounded-t-xl transition border-b-2 flex items-center gap-1.5 ${
+            role="tab" aria-selected={activeTab === 'BREAKDOWN'}
+            className={`px-4 py-2 rounded-lg transition flex items-center gap-1.5 ${
               activeTab === 'BREAKDOWN'
-                ? 'border-blue-600 text-blue-600 bg-white'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Package className="w-3.5 h-3.5" />
@@ -436,19 +438,19 @@ export default function DailyOrdersPage() {
         {activeTab === 'ORDERS' && (
           <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
             {filteredOrders.length === 0 ? (
-              <div className="p-12 text-center text-slate-400 text-xs">
+              <div className="p-12 text-center text-slate-500 text-xs">
                 No orders recorded for <strong className="font-mono text-slate-600">{selectedDateAd}</strong>. Use the date arrows above to inspect other dates.
               </div>
             ) : visibleOrders.length === 0 ? (
               <div className="p-10 text-center text-xs text-slate-500">
                 No order on this day matches <strong className="font-mono text-slate-700">{findQuery.trim()}</strong>.{' '}
                 <button type="button" onClick={() => setFindQuery('')} className="font-bold text-blue-700 hover:underline">Clear</button>
-                <span className="mt-1 block text-[11px] text-slate-400">To search every date, press Ctrl+K (⌘K on Mac) and type the order ID.</span>
+                <span className="mt-1 block text-[11px] text-slate-500">To search every date, press Ctrl+K (⌘K on Mac) and type the order ID.</span>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" tabIndex={0}>
                 <table className="w-full text-left text-xs text-slate-600">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold text-[11px]">
                     <tr>
                       <th className="py-3 px-3" title="Day number: the order's position among today's orders">Day #</th>
                       <th className="py-3 px-3">Order ID</th>
@@ -505,7 +507,7 @@ export default function DailyOrdersPage() {
                             <span className="font-semibold text-slate-900 block">
                               {ord.customerName}
                             </span>
-                            <span className="text-[10px] text-slate-400 block truncate max-w-[140px]">
+                            <span className="text-[10px] text-slate-500 block truncate max-w-[140px]">
                               {ord.address}
                             </span>
                             <span className="text-[10px] text-slate-500 block">{[ord.district, ord.province].filter(Boolean).join(', ') || 'City and province not added'}</span>
@@ -513,7 +515,7 @@ export default function DailyOrdersPage() {
                           </td>
                           <td className="py-3 px-3 font-mono text-[11px] text-slate-600">
                             {ord.customerPhone}
-                            {ord.alternatePhone && <span className="block text-slate-400">Alt: {ord.alternatePhone}</span>}
+                            {ord.alternatePhone && <span className="block text-slate-500">Alt: {ord.alternatePhone}</span>}
                           </td>
                           <td className="py-3 px-3">
                             <span className="text-slate-700">{ord.platform}</span>
@@ -523,7 +525,7 @@ export default function DailyOrdersPage() {
                               <div key={i} className="truncate text-slate-700">
                                 {it.productName}{' '}
                                 {it.quantity > 1 && (
-                                  <span className="text-slate-400 font-bold">×{it.quantity}</span>
+                                  <span className="text-slate-500 font-bold">×{it.quantity}</span>
                                 )}
                               </div>
                             ))}
@@ -587,14 +589,14 @@ export default function DailyOrdersPage() {
                               </Link>}
                               {hasAccess(db.getCurrentUser(), 'customers') && <Link
                                 href={`/customers/${ord.customerPhone.replace(/\D/g, '')}`}
-                                className="p-1 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded"
+                                className="p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded"
                                 title="Customer 360"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
                               </Link>}
                               {canPerform(db.getCurrentUser(), 'orderflow', 'DELETE') && <button
                                 onClick={() => setOrderToDelete(ord)}
-                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded"
+                                className="p-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded"
                                 title="Delete Order"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -621,7 +623,7 @@ export default function DailyOrdersPage() {
                 Product Breakdown ({productBreakdown.length} SKUs)
               </h2>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" tabIndex={0}>
                 <table className="w-full text-left text-xs text-slate-600">
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
                     <tr>
@@ -660,7 +662,7 @@ export default function DailyOrdersPage() {
                 Combo &amp; Bundle Breakdown ({comboBreakdown.length} Combos)
               </h2>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" tabIndex={0}>
                 <table className="w-full text-left text-xs text-slate-600">
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
                     <tr>
@@ -673,7 +675,7 @@ export default function DailyOrdersPage() {
                   <tbody className="divide-y divide-slate-100 font-medium">
                     {comboBreakdown.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="py-8 text-center text-slate-400">
+                        <td colSpan={4} className="py-8 text-center text-slate-500">
                           No promotional combos sold on this date.
                         </td>
                       </tr>

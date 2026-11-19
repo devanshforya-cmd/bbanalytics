@@ -88,7 +88,7 @@ export default function StoreActionDashboard({ beat, checkInTime, onCheckOut, on
               onClick={() => onAction('SALES_ASSIST')}
               className="text-[11px] font-bold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition"
             >
-              View Details →
+              View details
             </button>
           </div>
         )}
@@ -102,7 +102,7 @@ export default function StoreActionDashboard({ beat, checkInTime, onCheckOut, on
               onClick={a.onClick}
               className={`
                 relative flex flex-col items-start gap-1 p-4 rounded-2xl border text-left
-                transition-all active:scale-[0.97] shadow-xs
+                transition active:scale-[0.97] shadow-xs
                 ${a.done
                   ? 'bg-emerald-50 border-emerald-200'
                   : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm'
@@ -113,10 +113,10 @@ export default function StoreActionDashboard({ beat, checkInTime, onCheckOut, on
                 {a.icon}
               </div>
               <span className={`text-xs font-bold ${a.done ? 'text-emerald-800' : 'text-slate-900'}`}>{a.label}</span>
-              <span className="text-[10px] text-slate-400">{a.sublabel}</span>
+              <span className="text-[10px] text-slate-500">{a.sublabel}</span>
               {a.done && (
                 <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
-                  <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
+                  <svg aria-hidden="true" className="w-3 h-3" viewBox="0 0 12 12" fill="none">
                     <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
@@ -131,7 +131,7 @@ export default function StoreActionDashboard({ beat, checkInTime, onCheckOut, on
         {/* Manager Note */}
         {beat.managerNotes && (
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-            <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-1.5">Manager Note</p>
+            <p className="text-[11px] font-bold text-blue-600 mb-1.5">Manager Note</p>
             <p className="text-xs text-slate-700 leading-relaxed">&ldquo;{beat.managerNotes}&rdquo;</p>
           </div>
         )}
@@ -144,7 +144,7 @@ export default function StoreActionDashboard({ beat, checkInTime, onCheckOut, on
           </div>
           <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+              className="h-full bg-emerald-500 rounded-full transition duration-500"
               style={{ width: `${(completedActions.size / actions.length) * 100}%` }}
             />
           </div>

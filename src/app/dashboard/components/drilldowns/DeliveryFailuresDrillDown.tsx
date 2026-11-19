@@ -52,25 +52,25 @@ export default function DeliveryFailuresDrillDown({
         {/* Metric Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Total Failures
             </div>
             <div className="text-xl font-black text-rose-600 mt-1">{deliveryFailures.length}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Failure Rate
             </div>
             <div className="text-xl font-black text-slate-900 mt-1">{failureRate}%</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Inside Valley
             </div>
             <div className="text-xl font-black text-slate-900 mt-1">{insideValleyCount}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Outside Valley
             </div>
             <div className="text-xl font-black text-amber-600 mt-1">{outsideValleyCount}</div>
@@ -100,7 +100,7 @@ function DeliveryFailuresListTab({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
       <table className="w-full text-left text-xs">
         <thead>
           <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -179,7 +179,7 @@ function DeliveryFailuresReasonTab({ failures }: { failures: DeliveryFailure[] }
   return (
     <div className="space-y-6">
       <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        <h4 className="text-xs font-bold text-slate-500">
           Failure Reason Distribution
         </h4>
         <div className="space-y-3">
@@ -202,7 +202,7 @@ function DeliveryFailuresReasonTab({ failures }: { failures: DeliveryFailure[] }
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -252,7 +252,7 @@ function DeliveryFailuresTrendTab({
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          <h4 className="text-xs font-bold text-slate-500">
             Failures by Region (Inside vs Outside)
           </h4>
           <div className="space-y-3 pt-2">
@@ -268,7 +268,7 @@ function DeliveryFailuresTrendTab({
         </div>
 
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          <h4 className="text-xs font-bold text-slate-500">
             By Delivery Partner
           </h4>
           <div className="space-y-3 pt-2">
@@ -285,7 +285,7 @@ function DeliveryFailuresTrendTab({
       </div>
 
       <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        <h4 className="text-xs font-bold text-slate-500">
           Weekday Delivery Failure Heatmap
         </h4>
         <div className="grid grid-cols-7 gap-2 pt-2 text-center">
@@ -293,10 +293,10 @@ function DeliveryFailuresTrendTab({
             <div
               key={w.day}
               className={`p-2.5 rounded-lg border text-xs ${
-                w.count > 0 ? 'bg-rose-50 border-rose-200 text-rose-900 font-bold' : 'bg-slate-50 border-slate-100 text-slate-400'
+                w.count > 0 ? 'bg-rose-50 border-rose-200 text-rose-900 font-bold' : 'bg-slate-50 border-slate-100 text-slate-500'
               }`}
             >
-              <div className="text-[10px] uppercase">{w.day.slice(0, 3)}</div>
+              <div className="text-[10px] ">{w.day.slice(0, 3)}</div>
               <div className="text-base mt-1">{w.count}</div>
             </div>
           ))}

@@ -110,7 +110,7 @@ export default function InfluencerDirectoryPage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs"><p className="text-xs font-medium text-slate-500">Active influencers</p><p className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">{active.length}</p></div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs"><p className="text-xs font-medium text-slate-500">Sends recorded</p><p className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">{liveSends.length}</p></div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs"><p className="text-xs font-medium text-slate-500">Sends with content</p><p className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">{withContent}<span className="text-sm font-bold text-slate-400"> / {liveSends.length}</span></p></div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs"><p className="text-xs font-medium text-slate-500">Sends with content</p><p className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">{withContent}<span className="text-sm font-bold text-slate-500"> / {liveSends.length}</span></p></div>
           <div className={`rounded-2xl border p-4 shadow-2xs ${overdueTotal ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-white'}`}><p className="text-xs font-medium text-slate-500">Content overdue</p><p className={`mt-1 text-xl font-black sm:text-2xl ${overdueTotal ? 'text-amber-800' : 'text-slate-900'}`}>{overdueTotal}</p></div>
         </div>
 
@@ -154,7 +154,7 @@ export default function InfluencerDirectoryPage() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
-            <div className="hidden grid-cols-[2fr_1.4fr_1fr_0.8fr_0.8fr_1.1fr_auto] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 lg:grid">
+            <div className="hidden grid-cols-[2fr_1.4fr_1fr_0.8fr_0.8fr_1.1fr_auto] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-[11px] font-bold text-slate-500 lg:grid">
               <span>Influencer</span><span>Niches</span><span>Rating</span><span className="text-right">Sends</span><span className="text-right">Content</span><span>Last send</span><span className="w-28" />
             </div>
             <ul className="divide-y divide-slate-100">
@@ -173,7 +173,7 @@ export default function InfluencerDirectoryPage() {
                     <div><span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${RATING[influencer.qualityRating].style}`}>{RATING[influencer.qualityRating].label}</span></div>
                     <div className="font-bold text-slate-900 lg:text-right"><span className="font-medium text-slate-500 lg:hidden">Sends </span>{stats.totalSends}{overdue > 0 && <span className="ml-1.5 rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">{overdue} overdue</span>}</div>
                     <div className="font-bold text-slate-900 lg:text-right"><span className="font-medium text-slate-500 lg:hidden">Content </span>{contentCount}</div>
-                    <div className="text-slate-600">{stats.lastSendDate ? formatDate(stats.lastSendDate, stats.lastSendDateBs) : <span className="text-slate-400">No sends yet</span>}</div>
+                    <div className="text-slate-600">{stats.lastSendDate ? formatDate(stats.lastSendDate, stats.lastSendDateBs) : <span className="text-slate-500">No sends yet</span>}</div>
                     <div className="flex items-center justify-end gap-1 lg:w-28">
                       <span className="inline-flex items-center gap-1 rounded-lg bg-purple-50 px-2.5 py-1.5 font-bold text-purple-800"><Send className="h-3 w-3" /> Open</span>
                       <ChevronRight className="h-4 w-4 text-slate-300" />

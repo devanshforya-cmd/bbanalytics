@@ -79,21 +79,21 @@ export default function DistributorHealthSection({
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
         <div>
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Building2 className="w-4 h-4 text-purple-600" />
             Distributor & Retailer Network (GT / MT Summary)
-          </h3>
+          </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Wholesale channel health, store visit coverage, stock thresholds, and cheque collection alerts
           </p>
         </div>
-        <span className="text-[11px] text-slate-400 font-medium">
+        <span className="text-[11px] text-slate-500 font-medium">
           Click row for branch breakdown & document log
         </span>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -127,7 +127,7 @@ export default function DistributorHealthSection({
                     )}
                     <div>
                       <div className="font-bold text-slate-900">{d.name}</div>
-                      <div className="text-[10px] text-slate-400">{d.city} • {d.type}</div>
+                      <div className="text-[10px] text-slate-500">{d.city} • {d.type}</div>
                     </div>
                   </div>
                 </td>
@@ -195,7 +195,7 @@ export default function DistributorHealthSection({
                       {d.pendingChequesCount} active
                     </span>
                   ) : (
-                    <span className="text-slate-400 font-medium">0</span>
+                    <span className="text-slate-500 font-medium">0</span>
                   )}
                 </td>
 
