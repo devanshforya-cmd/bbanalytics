@@ -2,7 +2,7 @@
 
 import { User } from './types';
 import { db } from './db/db-service';
-import { hasAccess, isSuperAdmin } from './permissions';
+import { firstAllowedPath, hasAccess, isSuperAdmin } from './permissions';
 import { normalizePhoneNumber } from './auth-utils';
 
 const SESSION_KEY = 'bb_auth_user_session_v3';
@@ -55,6 +55,26 @@ export async function loginWithMobile(
   }
 }
 
+/** Ask the server who is signed in and what they may open. Resolves to null when signed out. */
+export async function confirmSessionWithServer(timeoutMs = 4000): Promise<{ user: User | null; offline: boolean }> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
+    if (response.status === 401 || response.status === 403) return { user: null, offline: false };
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.user) return { user: getSessionUser(), offline: true };
+    const fresh = result.user as User;
+    const stored = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null') as UserSessionData | null;
+    if (stored?.user?.id && stored.user.id !== fresh.id) return { user: null, offline: false };
+    if (stored) localStorage.setItem(SESSION_KEY, JSON.stringify({ ...stored, user: fresh }));
+    db.setSessionUser(fresh);
+    return { user: fresh, offline: false };
+  } catch {
+    return { user: getSessionUser(), offline: true };
+  } finally { window.clearTimeout(timer); }
+}
+
 export function getSessionUser(): User | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -79,7 +99,11 @@ export function getSessionUser(): User | null {
       localStorage.removeItem(SESSION_KEY);
       return null;
     }
-    return (currentDbUser || user) as User;
+    // Access always comes from the session, which sign-in, the server check and every sync keep current.
+    // A copy saved on this device earlier must never widen or narrow what is shown.
+    if (!currentDbUser) return user as User;
+    return { ...currentDbUser, role: user.role, isSuperAdmin: user.isSuperAdmin, assignedBrands: user.assignedBrands,
+      permissions: user.permissions, customPermissions: user.customPermissions, reportsToId: user.reportsToId } as User;
   } catch {
     localStorage.removeItem(SESSION_KEY);
     return null;
@@ -114,26 +138,9 @@ export function logout(): void {
 export function getRedirectPathForUser(user: any): string {
   if (!user) return '/login';
   if (isSuperAdmin(user)) return '/dashboard';
-  if (user?.role === 'SALES_OFFICER' && hasAccess(user, 'beat_plans')) return '/offline-sales/beat-plan';
-  if (hasAccess(user, 'dashboard')) return '/dashboard';
-  if (hasAccess(user, 'beat_plans')) return '/offline-sales/beat-plan';
-  if (hasAccess(user, 'orderflow')) return '/orderflow/manual-entry';
-  if (hasAccess(user, 'order_desk')) return '/orderflow/orders';
-  if (hasAccess(user, 'stores')) return '/offline-sales/stores';
-  if (hasAccess(user, 'products')) return '/products';
-  if (hasAccess(user, 'tasks')) return '/opscore/tasks';
-  if (hasAccess(user, 'cheque_tracker')) return '/offline-sales/cheques';
-  if (hasAccess(user, 'gps_tracking')) return '/offline-sales/live-tracking';
-  if (hasAccess(user, 'settings')) return '/settings';
-  if (hasAccess(user, 'activity')) return '/opscore/activity';
-  if (hasAccess(user, 'customers')) return '/customers';
-  if (hasAccess(user, 'marketing')) return '/marketing/influencers';
-  if (hasAccess(user, 'reviews')) return '/reviews/feedback';
-  if (hasAccess(user, 'dispatches')) return '/offline-sales/dispatch';
-  if (hasAccess(user, 'shelf_photos')) return '/offline-sales/shelf-photos';
-  if (hasAccess(user, 'call_tracker')) return '/offline-sales/calls';
-  if (hasAccess(user, 'document_handover')) return '/offline-sales/documents';
-  return '/no-access';
+  // Field staff land on today's route when they have it.
+  if (user?.role === 'SALES_OFFICER' && hasAccess(user, 'p.beat_plan')) return '/offline-sales/beat-plan';
+  return firstAllowedPath(user);
 }
 
 export function getRedirectPathForRole(role?: any, user?: any): string {

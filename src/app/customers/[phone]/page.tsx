@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import { failureReasonLabel } from '@/lib/failure-reason';
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
@@ -716,7 +717,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                             Order #{ord.orderNumber} Placed ({ord.brandCode})
                           </div>
                           <div className="text-slate-500 text-[11px] mt-0.5">
-                            {ord.orderDateAd} • Platform: <strong>{ord.platform}</strong> • Total: <strong className="text-slate-800">NPR {ord.totalAmount?.toLocaleString()}</strong>
+                            {ord.orderDateAd} • Platform: <strong>{ord.platform}</strong> • Total: <strong className="text-slate-800"><Money>{ord.totalAmount?.toLocaleString()}</Money></strong>
                           </div>
                         </div>
                         <span className="rounded-full bg-blue-100 text-blue-800 font-bold px-2 py-0.5 text-[10px]">

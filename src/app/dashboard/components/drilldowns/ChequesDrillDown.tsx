@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { CreditCard, AlertTriangle } from 'lucide-react';
@@ -64,7 +65,7 @@ export default function ChequesDrillDown({
               Total Value
             </div>
             <div className="text-xl font-black text-blue-600 mt-1">
-              NPR {(totalAmount / 1000).toFixed(0)}K
+              <Money>{(totalAmount / 1000).toFixed(0)}</Money>K
             </div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
@@ -154,7 +155,7 @@ function ChequesRegisterTab({
                   </Link>
                 </td>
                 <td className="p-2.5 text-right font-black text-slate-900">
-                  NPR {c.amount.toLocaleString()}
+                  <Money>{c.amount.toLocaleString()}</Money>
                 </td>
                 <td className="p-2.5 text-slate-600">{c.bankName}</td>
                 <td className="p-2.5 font-medium text-slate-700">
@@ -221,7 +222,7 @@ function ChequesStatusSummaryTab({ cheques }: { cheques: Cheque[] }) {
               <div key={c.id} className="py-2 flex items-center justify-between text-xs">
                 <div>
                   <span className="font-bold text-rose-950">{c.chequeNumber}</span> —{' '}
-                  <span>{c.storeName}</span> (NPR {c.amount.toLocaleString()})
+                  <span>{c.storeName}</span> (<Money>{c.amount.toLocaleString()}</Money>)
                 </div>
                 <div className="text-rose-800 font-semibold">
                   Held by <strong>{c.officerName}</strong>
@@ -247,7 +248,7 @@ function ChequesStatusSummaryTab({ cheques }: { cheques: Cheque[] }) {
                 <td className="p-2.5 font-bold text-slate-900">{status.replace(/_/g, ' ')}</td>
                 <td className="p-2.5 text-right font-bold text-blue-600">{d.count}</td>
                 <td className="p-2.5 text-right font-mono font-bold text-slate-900">
-                  NPR {d.total.toLocaleString()}
+                  <Money>{d.total.toLocaleString()}</Money>
                 </td>
               </tr>
             ))}

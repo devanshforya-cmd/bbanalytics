@@ -10,7 +10,7 @@ import type { CsvImportInput } from '@/lib/import-validation';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
-  const auth = await requireFeatureAccess(request, 'settings', 'CREATE');
+  const auth = await requireFeatureAccess(request, 'p.settings_import', 'CREATE');
   if (auth.response) return auth.response;
   if (!isSuperAdmin(auth.user)) return NextResponse.json({ success: false, error: 'Only a Super Admin can import workspace batches.' }, { status: 403 });
   if (request.headers.get('x-workspace-user') !== auth.user.id) return NextResponse.json({ success: false, error: 'The signed-in account changed. Sign in again before importing.' }, { status: 409 });

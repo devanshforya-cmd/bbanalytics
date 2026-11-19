@@ -6,7 +6,8 @@ export type UserRole =
   | 'BRAND_MANAGER'
   | 'SALES_OFFICER'
   | 'DATA_ENTRY'
-  | 'VIEWER';
+  | 'VIEWER'
+  | 'STAFF';
 
 export type BrandCode = string;
 

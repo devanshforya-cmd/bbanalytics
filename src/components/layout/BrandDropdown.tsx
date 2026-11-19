@@ -124,7 +124,7 @@ export default function BrandDropdown({
   const totalSkus = db.getProducts().length;
 
   const canOnboardBrand =
-    isSuperAdmin(currentUser) || hasAccess(currentUser, 'settings');
+    isSuperAdmin(currentUser) || hasAccess(currentUser, 'p.settings_brands');
 
   if (loading && brands.length === 0) return <span role="status" className={`px-3 py-1.5 text-xs text-slate-500 ${className}`}>Loading brands…</span>;
 

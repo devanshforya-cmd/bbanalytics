@@ -19,26 +19,24 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { User, UserRole, BrandCode } from '@/lib/types';
-import {
-  FeatureKey,
-  FeatureAccess,
-  DataScope,
-  ActionPermission,
-  UserCustomPermissions,
-  FIELD_SALES_OFFICER_TEMPLATE,
-  OFFICE_STAFF_TEMPLATE,
-  D2C_OFFICER_TEMPLATE,
-  MANAGER_TEMPLATE,
-  VIEWER_TEMPLATE,
-  FEATURE_METADATA,
-  ALL_FEATURE_KEYS,
-  isSuperAdmin,
-} from '@/lib/permissions';
+import { User } from '@/lib/types';
+import { isSuperAdmin } from '@/lib/permissions';
+import { diffAccess, isResolvedAccess, normalizeAccessMap, pagesFromFeatures, pagesOf, resolveAccess, type AccessMap, type StaffRole } from '@/lib/roles';
 import { db } from '@/lib/db/db-service';
 import { createUser as apiCreateUser, updateUser as apiUpdateUser, fetchUsersFromSupabase } from '@/lib/db/users-service';
+import { fetchRoles } from '@/lib/db/roles-service';
 import { getBrands } from '@/lib/db/brands-service';
 import { toast } from '@/components/common/Toast';
+import AccessGrid from '@/components/access/AccessGrid';
+import MenuPreview from '@/components/access/MenuPreview';
+import RolesManager from '@/components/access/RolesManager';
+
+/** The role a person is in, and their own access map, read from what is stored on them. */
+function accessOf(user: User): { roleId: string; access: AccessMap } {
+  const stored = user.customPermissions as Record<string, any> | undefined;
+  if (isResolvedAccess(stored)) return { roleId: stored._role?.id || '', access: pagesOf(stored) };
+  return { roleId: '', access: pagesFromFeatures(stored || {}, ['s.money', 's.customers', 's.influencers']) };
+}
 
 export default function StaffManagement() {
   const [users, setUsers] = useState<User[]>(() => db.getUsers());
@@ -53,7 +51,20 @@ export default function StaffManagement() {
   const [staffPassword, setStaffPassword] = useState('');
   const [reportsToId, setReportsToId] = useState<string>('');
   const [assignedTerritory, setAssignedTerritory] = useState('Kathmandu Valley');
-  const [permissionsState, setPermissionsState] = useState<UserCustomPermissions>(FIELD_SALES_OFFICER_TEMPLATE);
+  const [view, setView] = useState<'PEOPLE' | 'ROLES'>('PEOPLE');
+  const [roles, setRoles] = useState<StaffRole[]>([]);
+  const [rolesError, setRolesError] = useState('');
+  const [roleId, setRoleId] = useState('');
+  const [personAccess, setPersonAccess] = useState<AccessMap>({});
+  const [makeSuperAdmin, setMakeSuperAdmin] = useState(false);
+  const [brandCodes, setBrandCodes] = useState<string[]>(['ALL']);
+  const [showAccess, setShowAccess] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const activeBrands = getBrands('ACTIVE');
+  const role = roles.find((entry) => entry.id === roleId);
+  const roleAccess = normalizeAccessMap(role?.permissions);
+  const oneOff = roleId ? diffAccess(roleAccess, personAccess) : {};
+  const oneOffCount = Object.keys(oneOff).length;
 
   const refreshUsers = async () => {
     try {
@@ -66,13 +77,21 @@ export default function StaffManagement() {
     }
   };
 
+  const refreshRoles = async () => {
+    try { setRoles(await fetchRoles()); setRolesError(''); }
+    catch (error) { setRolesError(error instanceof Error ? error.message : 'Roles could not be loaded.'); }
+  };
+
   React.useEffect(() => {
     refreshUsers();
+    refreshRoles();
   }, []);
 
-  const applyTemplate = (template: UserCustomPermissions, templateName: string) => {
-    setPermissionsState(JSON.parse(JSON.stringify(template)));
-    toast.info(`Applied "${templateName}" template.`);
+  const chooseRole = (id: string) => {
+    setRoleId(id);
+    const next = roles.find((entry) => entry.id === id);
+    // Picking a role starts from exactly that role; one-off changes are made after.
+    setPersonAccess(next ? normalizeAccessMap(next.permissions) : {});
   };
 
   const openCreateModal = () => {
@@ -84,7 +103,12 @@ export default function StaffManagement() {
     setShowPassword(false);
     setReportsToId(db.getCurrentUser().id);
     setAssignedTerritory('');
-    setPermissionsState(JSON.parse(JSON.stringify(FIELD_SALES_OFFICER_TEMPLATE)));
+    setMakeSuperAdmin(false);
+    setBrandCodes(['ALL']);
+    setShowAccess(false);
+    const first = roles[0];
+    setRoleId(first?.id || '');
+    setPersonAccess(first ? normalizeAccessMap(first.permissions) : {});
     setShowAddStaffModal(true);
   };
 
@@ -97,48 +121,13 @@ export default function StaffManagement() {
     setShowPassword(false);
     setReportsToId(u.reportsToId || '');
     setAssignedTerritory(u.territory || 'Kathmandu Valley');
-    setPermissionsState(u.customPermissions ? JSON.parse(JSON.stringify(u.customPermissions)) : FIELD_SALES_OFFICER_TEMPLATE);
+    const current = accessOf(u);
+    setRoleId(current.roleId);
+    setPersonAccess(current.access);
+    setMakeSuperAdmin(isSuperAdmin(u));
+    setBrandCodes(Array.isArray(u.assignedBrands) && u.assignedBrands.length ? u.assignedBrands as string[] : ['ALL']);
+    setShowAccess(!current.roleId);
     setShowAddStaffModal(true);
-  };
-
-  const handleAccessChange = (key: FeatureKey, access: FeatureAccess) => {
-    setPermissionsState((prev) => {
-      const next = { ...prev };
-      const current = next[key] || { access: 'HIDDEN', scope: 'OWN', actions: [] };
-
-      if (access === 'HIDDEN') {
-        next[key] = { access: 'HIDDEN', scope: null, actions: [] };
-      } else if (access === 'VIEW_ONLY') {
-        next[key] = { access: 'VIEW_ONLY', scope: current.scope || 'ALL', actions: ['VIEW'] };
-      } else if (access === 'VIEW_EDIT') {
-        next[key] = { access: 'VIEW_EDIT', scope: current.scope || 'OWN', actions: ['VIEW', 'CREATE', 'EDIT'] };
-      } else {
-        next[key] = { access: 'FULL', scope: current.scope || 'OWN', actions: ['VIEW', 'CREATE', 'EDIT', 'DELETE'] };
-      }
-      return next;
-    });
-  };
-
-  const handleScopeChange = (key: FeatureKey, scope: DataScope) => {
-    setPermissionsState((prev) => {
-      const next = { ...prev };
-      const current = next[key] || { access: 'FULL', scope: 'OWN', actions: ['VIEW'] };
-      next[key] = { ...current, scope };
-      return next;
-    });
-  };
-
-  const handleActionsChange = (key: FeatureKey, actionsPattern: 'VIEW' | 'VIEW_CREATE' | 'VIEW_CREATE_EDIT' | 'FULL') => {
-    setPermissionsState((prev) => {
-      const next = { ...prev };
-      const current = next[key] || { access: 'FULL', scope: 'OWN', actions: ['VIEW'] };
-      let actions: ActionPermission[] = ['VIEW'];
-      if (actionsPattern === 'VIEW_CREATE') actions = ['VIEW', 'CREATE'];
-      if (actionsPattern === 'VIEW_CREATE_EDIT') actions = ['VIEW', 'CREATE', 'EDIT'];
-      if (actionsPattern === 'FULL') actions = ['VIEW', 'CREATE', 'EDIT', 'DELETE'];
-      next[key] = { ...current, actions };
-      return next;
-    });
   };
 
   const handleSaveStaff = async (e: React.FormEvent) => {
@@ -163,63 +152,44 @@ export default function StaffManagement() {
     const cleanName = staffName.trim();
     const cleanTerritory = assignedTerritory.trim() || 'Kathmandu Valley';
 
+    if (!makeSuperAdmin && !roleId && !Object.keys(personAccess).length) {
+      toast.error('Choose a role, or turn on at least one page for this person.');
+      return;
+    }
+    if (!makeSuperAdmin && !brandCodes.length) {
+      toast.error('Choose at least one brand, or All brands.');
+      return;
+    }
+    // The server works out the final access from the role and these one-off changes.
+    const access = {
+      isSuperAdmin: makeSuperAdmin,
+      roleId: makeSuperAdmin ? null : (roleId || null),
+      accessOverrides: makeSuperAdmin ? {} : (roleId ? oneOff : personAccess),
+      assignedBrands: makeSuperAdmin ? ['ALL'] : brandCodes,
+    };
+    setSaving(true);
     try {
       if (editingUser) {
-        const updates: Partial<User> = {
-          fullName: cleanName,
-          email: cleanEmail,
-          phone: cleanPhone,
-          reportsToId: reportsToId || '',
-          territory: cleanTerritory,
-          customPermissions: permissionsState,
-          ...(staffPassword.trim() ? { password: staffPassword.trim() } : {}),
-        };
-        const saved = await apiUpdateUser(editingUser.id, updates);
+        const saved = await apiUpdateUser(editingUser.id, {
+          fullName: cleanName, email: cleanEmail, phone: cleanPhone, reportsToId: reportsToId || '', territory: cleanTerritory,
+          ...(staffPassword.trim() ? { password: staffPassword.trim() } : {}), ...access,
+        } as Partial<User>);
         db.updateUser(editingUser.id, saved);
-        toast.success(`Updated account for ${cleanName}.`);
+        toast.success(`Saved ${cleanName}.`, editingUser.id === db.getCurrentUser().id ? undefined : 'Their menu updates the next time their app refreshes.');
       } else {
-        let inferredRole: UserRole = 'SALES_OFFICER';
-        if (permissionsState.settings?.access !== 'HIDDEN') inferredRole = 'ADMIN';
-        else if (permissionsState.orderflow?.access !== 'HIDDEN' && permissionsState.beat_plans?.access === 'HIDDEN') inferredRole = 'DATA_ENTRY';
-        else if (permissionsState.beat_plans?.scope === 'TEAM' || permissionsState.beat_plans?.scope === 'ALL') inferredRole = 'ADMIN';
-
-        const activeBrands = getBrands('ACTIVE').map((b) => b.code);
-        const assignedBrands = activeBrands.length > 0 ? (activeBrands as any) : ['ALL'];
-
-        const newId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        const newUserObj: User = {
-          id: newId,
-          fullName: cleanName,
-          email: cleanEmail,
-          phone: cleanPhone,
-          password: staffPassword.trim(),
-          role: inferredRole,
-          territory: cleanTerritory,
-          assignedBrands: assignedBrands,
-          reportsToId: reportsToId || '',
-          customPermissions: permissionsState,
-          active: true,
-          permissions: {
-            canViewAnalytics: true,
-            canExportSheets: permissionsState.settings?.access !== 'HIDDEN',
-            canManageDispatches: permissionsState.dispatches?.access !== 'HIDDEN',
-            canManageCheques: permissionsState.cheque_tracker?.access !== 'HIDDEN',
-            canApproveSkips: permissionsState.beat_plans?.actions.includes('EDIT'),
-            canManageStaff: false,
-            canConfigureSettings: permissionsState.settings?.access !== 'HIDDEN',
-          },
-        };
-
-        const saved = await apiCreateUser(newUserObj);
+        const saved = await apiCreateUser({
+          id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, fullName: cleanName, email: cleanEmail, phone: cleanPhone,
+          password: staffPassword.trim(), territory: cleanTerritory, reportsToId: reportsToId || '', active: true, ...access,
+        } as unknown as User);
         db.addNewUser(saved);
-        toast.success(`Staff account created for ${cleanName}. Login enabled immediately.`);
+        toast.success(`Created ${cleanName}'s account.`, 'They can sign in now.');
       }
 
       setShowAddStaffModal(false);
       refreshUsers();
     } catch (err: any) {
-      toast.error('Failed to save staff user: ' + (err?.message || 'Unknown error'));
-    }
+      toast.error('Staff account not saved', err?.message || undefined);
+    } finally { setSaving(false); }
   };
 
   const handleToggleActive = async (user: User) => {
@@ -234,28 +204,6 @@ export default function StaffManagement() {
     }
   };
 
-  const offlineSalesKeys: FeatureKey[] = [
-    'beat_plans',
-    'stores',
-    'distributors',
-    'dispatches',
-    'gps_tracking',
-    'shelf_photos',
-    'call_tracker',
-    'cheque_tracker',
-    'document_handover',
-    'staff_scorecards',
-  ];
-
-  const platformKeys: FeatureKey[] = [
-    'dashboard',
-    'settings',
-    'orderflow',
-    'reviews',
-    'customers',
-    'marketing',
-  ];
-
   const getManagerName = (managerId?: string) => {
     if (!managerId) return 'None (Direct)';
     const mgr = users.find((u) => u.id === managerId);
@@ -264,21 +212,29 @@ export default function StaffManagement() {
 
   return (
     <div className="space-y-6">
+      <div role="tablist" aria-label="Staff and roles" className="inline-flex rounded-xl bg-slate-200/70 p-1 text-sm font-semibold">
+        {(['PEOPLE', 'ROLES'] as const).map((tab) => (
+          <button key={tab} type="button" role="tab" aria-selected={view === tab} onClick={() => setView(tab)}
+            className={`rounded-lg px-4 py-1.5 transition ${view === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+            {tab === 'PEOPLE' ? `People (${users.length})` : `Roles (${roles.length})`}
+          </button>
+        ))}
+      </div>
+
+      {view === 'ROLES' ? <RolesManager roles={roles} people={users} onChanged={() => { refreshRoles(); refreshUsers(); }} /> : <>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div>
-          <h2 className="text-base font-bold text-slate-900">Custom Permissions &amp; Staff Hierarchy</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Configure 3-layer permissions (Feature Access, Data Scope, Actions) and &quot;Reports To&quot; management chains.
-          </p>
+          <h3 className="text-base font-semibold text-slate-900">People</h3>
+          <p className="text-sm text-slate-600 mt-0.5">Each person has one role and the brands they work on. Only Super Admins can change this.</p>
         </div>
         <button
           type="button"
           onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-xs transition-colors"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 shadow-xs transition-colors"
         >
           <Plus className="w-4 h-4" />
-          <span>Create Staff Account</span>
+          <span>Add person</span>
         </button>
       </div>
 
@@ -306,11 +262,20 @@ export default function StaffManagement() {
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">
                           Super Admin
                         </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                          Custom Permissions
-                        </span>
-                      )}
+                      ) : (() => {
+                        const stored = u.customPermissions as Record<string, any> | undefined;
+                        const memberRole = isResolvedAccess(stored) && stored._role ? roles.find((entry) => entry.id === stored._role?.id) : undefined;
+                        const changes = isResolvedAccess(stored) ? Object.keys(stored._overrides || {}).length : 0;
+                        return (
+                          <>
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-800">
+                              {memberRole && <span className="h-2 w-2 rounded-full" style={{ backgroundColor: memberRole.color }} aria-hidden="true" />}
+                              {memberRole?.name || (isResolvedAccess(stored) ? (stored._role?.name || 'No role') : 'Old permissions')}
+                            </span>
+                            {changes > 0 && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Custom · {changes}</span>}
+                          </>
+                        );
+                      })()}
                       <span
                         className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                           isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
@@ -356,7 +321,7 @@ export default function StaffManagement() {
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
-                    <span>Edit Permissions</span>
+                    <span>Edit</span>
                   </button>
 
                   {!u.isSuperAdmin && (
@@ -380,18 +345,20 @@ export default function StaffManagement() {
         })}
       </div>
 
+      </>}
+
       {/* Account Creation / Permissions Editor Modal (Section 1d) */}
       {showAddStaffModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full my-6 p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col">
+          <div className="bg-white rounded-3xl max-w-5xl w-full my-6 p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
               <div>
                 <h3 className="font-bold text-slate-900 text-base">
-                  {editingUser ? `Edit Account: ${editingUser.fullName}` : 'Create Staff Account'}
+                  {editingUser ? `Edit ${editingUser.fullName}` : 'New staff account'}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Configure identity credentials, reporting line, and 3-layer feature permissions.
+                  Sign-in details, who they report to, their role and brands.
                 </p>
               </div>
               <button
@@ -502,211 +469,82 @@ export default function StaffManagement() {
                 </div>
               </div>
 
-              {/* SECTION: QUICK TEMPLATES */}
-              <div>
-                <div className="text-[11px] font-bold text-slate-500 mb-2">
-                  Quick Templates (Starting Point)
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button type="button" onClick={() => applyTemplate(D2C_OFFICER_TEMPLATE, 'D2C Officer')} className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold">D2C Officer (own orders)</button>
-                  <button
-                    type="button"
-                    onClick={() => applyTemplate(FIELD_SALES_OFFICER_TEMPLATE, 'Field Sales Officer')}
-                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors"
-                  >
-                    Field Sales Officer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyTemplate(OFFICE_STAFF_TEMPLATE, 'Office Staff')}
-                    className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-colors"
-                  >
-                    Office Staff
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyTemplate(MANAGER_TEMPLATE, 'Manager')}
-                    className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-colors"
-                  >
-                    Manager
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyTemplate(VIEWER_TEMPLATE, 'Viewer')}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-colors"
-                  >
-                    Viewer
-                  </button>
-                </div>
-              </div>
-
-              {/* SECTION: FEATURE PERMISSIONS MATRIX */}
+              {/* SECTION: ACCESS */}
               <div className="space-y-4">
-                <div className="text-[11px] font-bold text-slate-500">
-                  Feature Permissions Matrix
+                <div className="flex items-start justify-between gap-3 rounded-2xl border border-slate-200 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Super Admin</p>
+                    <p className="text-xs text-slate-600">Everything, on every brand, including staff and roles. Keep this to the owners.</p>
+                  </div>
+                  <button type="button" role="switch" aria-checked={makeSuperAdmin} aria-label="Super Admin" onClick={() => setMakeSuperAdmin(!makeSuperAdmin)}
+                    className={`relative inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors ${makeSuperAdmin ? 'bg-emerald-600' : 'bg-slate-300'}`}>
+                    <span className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${makeSuperAdmin ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                  </button>
                 </div>
 
-                {/* 1. Offline Sales Section */}
-                <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                  <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-700">
-                    Offline Sales (Field Force)
-                  </div>
-                  <div className="divide-y divide-slate-100">
-                    {offlineSalesKeys.map((key) => {
-                      const meta = FEATURE_METADATA[key];
-                      const perm = permissionsState[key] || { access: 'HIDDEN', scope: null, actions: [] };
-                      const isHidden = perm.access === 'HIDDEN';
-                      const isViewOnly = perm.access === 'VIEW_ONLY';
-
-                      return (
-                        <div key={key} className="p-3 grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center text-xs">
-                          <div className="md:col-span-5">
-                            <span className="font-bold text-slate-800">{meta.label}</span>
-                            <p className="text-[11px] text-slate-500">{meta.description}</p>
-                          </div>
-
-                          {/* Access Column */}
-                          <div className="md:col-span-2">
-                            <select
-                              value={perm.access}
-                              onChange={(e) => handleAccessChange(key, e.target.value as FeatureAccess)}
-                              className="w-full px-2 py-1.5 rounded-lg border border-slate-200 font-medium focus:ring-1 focus:ring-blue-500"
-                            >
-                              <option value="HIDDEN">Hidden</option>
-                              <option value="VIEW_ONLY">View Only</option>
-                              <option value="VIEW_EDIT">View + Edit</option>
-                              <option value="FULL">Full Access</option>
-                            </select>
-                          </div>
-
-                          {/* Scope Column */}
-                          <div className="md:col-span-2">
-                            <select
-                              disabled={isHidden}
-                              value={perm.scope || 'OWN'}
-                              onChange={(e) => handleScopeChange(key, e.target.value as DataScope)}
-                              className={`w-full px-2 py-1.5 rounded-lg border border-slate-200 font-medium ${
-                                isHidden ? 'bg-slate-100 text-slate-500 border-dashed cursor-not-allowed' : ''
-                              }`}
-                            >
-                              <option value="OWN">Own Only</option>
-                              <option value="TEAM">Team (Reports)</option>
-                              <option value="ALL">All Data</option>
-                            </select>
-                          </div>
-
-                          {/* Actions Column */}
-                          <div className="md:col-span-3">
-                            <select
-                              disabled={isHidden || isViewOnly}
-                              value={
-                                isViewOnly
-                                  ? 'VIEW'
-                                  : perm.actions.includes('DELETE')
-                                  ? 'FULL'
-                                  : perm.actions.includes('EDIT')
-                                  ? 'VIEW_CREATE_EDIT'
-                                  : perm.actions.includes('CREATE')
-                                  ? 'VIEW_CREATE'
-                                  : 'VIEW'
-                              }
-                              onChange={(e) => handleActionsChange(key, e.target.value as any)}
-                              className={`w-full px-2 py-1.5 rounded-lg border border-slate-200 font-medium ${
-                                isHidden || isViewOnly ? 'bg-slate-100 text-slate-500 border-dashed cursor-not-allowed' : ''
-                              }`}
-                            >
-                              <option value="VIEW">View Only</option>
-                              <option value="VIEW_CREATE">View + Create</option>
-                              <option value="VIEW_CREATE_EDIT">View+Create+Edit</option>
-                              <option value="FULL">Full (Create+Edit+Delete)</option>
-                            </select>
-                          </div>
+                {!makeSuperAdmin && (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block text-xs">
+                        <span className="mb-1 block font-bold text-slate-700">Role</span>
+                        <select value={roleId} onChange={(event) => chooseRole(event.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                          <option value="">No role (only what you turn on below)</option>
+                          {roles.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
+                        </select>
+                        {rolesError && <span className="mt-1 block text-rose-700">{rolesError}</span>}
+                        {!rolesError && roles.length === 0 && <span className="mt-1 block text-slate-600">No roles yet. Create them in the Roles tab.</span>}
+                      </label>
+                      <fieldset className="text-xs">
+                        <legend className="mb-1 block font-bold text-slate-700">Brands</legend>
+                        <div className="flex flex-wrap gap-1.5">
+                          <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 ${brandCodes.includes('ALL') ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-700'}`}>
+                            <input type="checkbox" className="sr-only" checked={brandCodes.includes('ALL')} onChange={() => setBrandCodes(brandCodes.includes('ALL') ? [] : ['ALL'])} />All brands
+                          </label>
+                          {brandCodes.filter((code) => code !== 'ALL' && !activeBrands.some((brand) => brand.code === code)).map((code) => (
+                            <label key={code} className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-blue-600 bg-blue-50 px-2.5 py-1 text-blue-800">
+                              <input type="checkbox" className="sr-only" checked onChange={() => setBrandCodes(brandCodes.filter((entry) => entry !== code))} />{code}
+                            </label>
+                          ))}
+                          {activeBrands.map((brand) => {
+                            const checked = !brandCodes.includes('ALL') && brandCodes.includes(brand.code);
+                            return (
+                              <label key={brand.code} className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 ${checked ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-700'}`}>
+                                <input type="checkbox" className="sr-only" checked={checked} onChange={() => setBrandCodes(checked ? brandCodes.filter((code) => code !== brand.code) : [...brandCodes.filter((code) => code !== 'ALL'), brand.code])} />
+                                {brand.name}
+                              </label>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                      </fieldset>
+                    </div>
 
-                {/* 2. Platform Section */}
-                <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                  <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-700">
-                    Platform &amp; Online Modules
-                  </div>
-                  <div className="divide-y divide-slate-100">
-                    {platformKeys.map((key) => {
-                      const meta = FEATURE_METADATA[key];
-                      const perm = permissionsState[key] || { access: 'HIDDEN', scope: null, actions: [] };
-                      const isHidden = perm.access === 'HIDDEN';
-                      const isViewOnly = perm.access === 'VIEW_ONLY';
-
-                      return (
-                        <div key={key} className="p-3 grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center text-xs">
-                          <div className="md:col-span-5">
-                            <span className="font-bold text-slate-800">{meta.label}</span>
-                            <p className="text-[11px] text-slate-500">{meta.description}</p>
+                    <div className="rounded-2xl border border-slate-200">
+                      <button type="button" onClick={() => setShowAccess(!showAccess)} aria-expanded={showAccess} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
+                        <span>
+                          <span className="block text-sm font-semibold text-slate-900">Access for this person</span>
+                          <span className="block text-xs text-slate-600">
+                            {roleId ? (oneOffCount ? `${role?.name} with ${oneOffCount} one-off ${oneOffCount === 1 ? 'change' : 'changes'}` : `Exactly the ${role?.name} role`) : 'Set page by page'}
+                          </span>
+                        </span>
+                        <ChevronRight className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${showAccess ? 'rotate-90' : ''}`} aria-hidden="true" />
+                      </button>
+                      {showAccess && (
+                        <div className="grid gap-4 border-t border-slate-100 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+                          <div className="min-w-0 space-y-2">
+                            {roleId && oneOffCount > 0 && (
+                              <div className="flex items-center justify-between gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                                <span>Rows marked Custom differ from the role and stay with this person when the role changes.</span>
+                                <button type="button" onClick={() => setPersonAccess(roleAccess)} className="shrink-0 font-semibold underline">Undo all</button>
+                              </div>
+                            )}
+                            <AccessGrid idPrefix="person" value={personAccess} base={roleId ? roleAccess : undefined} onChange={setPersonAccess} />
                           </div>
-
-                          {/* Access Column */}
-                          <div className="md:col-span-2">
-                            <select
-                              value={perm.access}
-                              onChange={(e) => handleAccessChange(key, e.target.value as FeatureAccess)}
-                              className="w-full px-2 py-1.5 rounded-lg border border-slate-200 font-medium focus:ring-1 focus:ring-blue-500"
-                            >
-                              <option value="HIDDEN">Hidden</option>
-                              <option value="VIEW_ONLY">View Only</option>
-                              <option value="VIEW_EDIT">View + Edit</option>
-                              <option value="FULL">Full Access</option>
-                            </select>
-                          </div>
-
-                          {/* Scope Column */}
-                          <div className="md:col-span-2">
-                            <select
-                              disabled={isHidden}
-                              value={perm.scope || 'ALL'}
-                              onChange={(e) => handleScopeChange(key, e.target.value as DataScope)}
-                              className={`w-full px-2 py-1.5 rounded-lg border border-slate-200 font-medium ${
-                                isHidden ? 'bg-slate-100 text-slate-500 border-dashed cursor-not-allowed' : ''
-                              }`}
-                            >
-                              <option value="ALL">All Data</option>
-                              <option value="TEAM">Team (Reports)</option>
-                              <option value="OWN">Own Only</option>
-                            </select>
-                          </div>
-
-                          {/* Actions Column */}
-                          <div className="md:col-span-3">
-                            <select
-                              disabled={isHidden || isViewOnly}
-                              value={
-                                isViewOnly
-                                  ? 'VIEW'
-                                  : perm.actions.includes('DELETE')
-                                  ? 'FULL'
-                                  : perm.actions.includes('EDIT')
-                                  ? 'VIEW_CREATE_EDIT'
-                                  : perm.actions.includes('CREATE')
-                                  ? 'VIEW_CREATE'
-                                  : 'VIEW'
-                              }
-                              onChange={(e) => handleActionsChange(key, e.target.value as any)}
-                              className={`w-full px-2 py-1.5 rounded-lg border border-slate-200 font-medium ${
-                                isHidden || isViewOnly ? 'bg-slate-100 text-slate-500 border-dashed cursor-not-allowed' : ''
-                              }`}
-                            >
-                              <option value="VIEW">View Only</option>
-                              <option value="VIEW_CREATE">View + Create</option>
-                              <option value="VIEW_CREATE_EDIT">View+Create+Edit</option>
-                              <option value="FULL">Full (Create+Edit+Delete)</option>
-                            </select>
-                          </div>
+                          <aside className="lg:sticky lg:top-0 lg:self-start"><MenuPreview access={personAccess} /></aside>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Submit Buttons */}
@@ -720,9 +558,10 @@ export default function StaffManagement() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs"
+                  disabled={saving}
+                  className="px-6 py-2.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs disabled:opacity-60"
                 >
-                  {editingUser ? 'Save Permissions' : 'Create Account'}
+                  {saving ? 'Saving…' : editingUser ? 'Save' : 'Create account'}
                 </button>
               </div>
             </form>

@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db, OrderRealtimeEvent } from '@/lib/db/db-service';
@@ -543,7 +544,7 @@ export default function DailyOrdersPage() {
                             )}
                           </td>
                           <td className="py-3 px-3 text-right font-bold text-slate-900">
-                            NPR {ord.totalAmount.toLocaleString()}
+                            <Money>{ord.totalAmount.toLocaleString()}</Money>
                           </td>
                           <td className="py-3 px-3 text-right">
                             {ord.statedPrice ? (
@@ -554,7 +555,7 @@ export default function DailyOrdersPage() {
                                     : 'text-slate-500'
                                 }`}
                               >
-                                NPR {ord.statedPrice.toLocaleString()}
+                                <Money>{ord.statedPrice.toLocaleString()}</Money>
                               </span>
                             ) : (
                               <span className="text-slate-300">—</span>

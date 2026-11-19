@@ -23,7 +23,7 @@ export function staffPatch(body: Record<string, any>, creating: boolean): Record
   } else if (creating) throw new Error('A password is required for a new staff account.');
   if (creating || body.role !== undefined) {
     const role = body.role || 'SALES_OFFICER';
-    if (!['SUPER_ADMIN', 'ADMIN', 'BRAND_MANAGER', 'SALES_OFFICER', 'DATA_ENTRY', 'VIEWER', 'OFFICE_STAFF'].includes(role)) throw new Error('Choose a valid staff role.');
+    if (!['SUPER_ADMIN', 'STAFF', 'ADMIN', 'BRAND_MANAGER', 'SALES_OFFICER', 'DATA_ENTRY', 'VIEWER', 'OFFICE_STAFF'].includes(role)) throw new Error('Choose a valid staff role.');
     patch.role = role; patch.is_super_admin = role === 'SUPER_ADMIN';
   }
   if (creating || body.active !== undefined) {

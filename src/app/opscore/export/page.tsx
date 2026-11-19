@@ -1,5 +1,6 @@
 'use client';
 
+import { nprText } from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import { failureReasonLabel } from '@/lib/failure-reason';
 import React, { useState, useEffect } from 'react';
@@ -96,16 +97,16 @@ export default function SheetsExportPage() {
       rowCount: 18,
       columns: ['Metric Category', 'Key Performance Indicator', 'Value', 'Unit', 'Trend / Status', 'Last Updated'],
       sampleData: [
-        ['Revenue', 'Total D2C Sales Value', `NPR ${totalD2cSales.toLocaleString()}`, 'Currency', 'Real-time', 'Real-time'],
+        ['Revenue', 'Total D2C Sales Value', `${nprText(totalD2cSales.toLocaleString())}`, 'Currency', 'Real-time', 'Real-time'],
         ['Orders', 'Total Dispatched Orders', String(orders.length), 'Orders', 'On Track', 'Real-time'],
         ['Returns', 'Product Returns Rate', `${((returns.length / Math.max(1, orders.length)) * 100).toFixed(1)}%`, 'Percentage', 'Healthy (<2%)', 'Real-time'],
         ['Logistics', 'Delivery Failure Rate', `${((failures.length / Math.max(1, orders.length)) * 100).toFixed(1)}%`, 'Percentage', 'Separated Courier', 'Real-time'],
-        ['Field Ops', 'Total Cheques Collected', `${cheques.length} cheques`, 'Count', `NPR ${totalChequesAmount.toLocaleString()}`, 'Real-time'],
+        ['Field Ops', 'Total Cheques Collected', `${cheques.length} cheques`, 'Count', `${nprText(totalChequesAmount.toLocaleString())}`, 'Real-time'],
       ],
       generateCsv: () => {
         const rows = [
           ['Metric Category', 'Key Performance Indicator', 'Value', 'Unit', 'Trend / Status', 'Last Updated'],
-          ['Revenue', 'Total D2C Sales Value', `NPR ${totalD2cSales.toLocaleString()}`, 'Currency', 'Real-time', new Date().toISOString()],
+          ['Revenue', 'Total D2C Sales Value', `${nprText(totalD2cSales.toLocaleString())}`, 'Currency', 'Real-time', new Date().toISOString()],
           ['Orders', 'Total Dispatched Orders', String(orders.length), 'Orders', 'On Track', new Date().toISOString()],
           ['Returns', 'Genuine Product Returns', String(returns.length), 'Items', 'Quality Inspected', new Date().toISOString()],
           ['Logistics', 'Delivery Failures', String(failures.length), 'Parcels', 'Separated Courier Log', new Date().toISOString()],
@@ -220,7 +221,7 @@ export default function SheetsExportPage() {
         o.customerPhone,
         o.brandCode,
         o.platform,
-        `NPR ${o.totalAmount.toLocaleString()}`,
+        `${nprText(o.totalAmount.toLocaleString())}`,
         o.paymentTerms,
         o.status,
       ]),
@@ -390,7 +391,7 @@ export default function SheetsExportPage() {
         c.chequeNumber,
         c.bankName,
         c.storeName,
-        `NPR ${c.amount.toLocaleString()}`,
+        `${nprText(c.amount.toLocaleString())}`,
         c.cashDateBs || c.receivedDateBs,
         c.status,
         c.handedOverTo || c.officerName || '',
@@ -519,7 +520,7 @@ export default function SheetsExportPage() {
         d.branchName || '',
         d.items?.[0]?.brandCode || '',
         String(d.items?.reduce((acc, it) => acc + (it.quantity || it.quantityPcs || 0), 0) || 0),
-        `NPR ${(d.amountDue ?? 0).toLocaleString()}`,
+        `${nprText((d.amountDue ?? 0).toLocaleString())}`,
         d.paymentTerms || '',
         d.paymentDueDateAd || '',
         d.paymentStatus || 'PENDING',

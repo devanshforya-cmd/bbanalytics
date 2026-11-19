@@ -1,5 +1,6 @@
 'use client';
 
+import { nprText } from '@/components/common/Money';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -12,7 +13,7 @@ import { canManageSales } from '@/lib/permissions';
 import { campaignState, describeReward, nepalNow } from '@/lib/offers';
 import { saleResults, type PeriodStats } from '@/lib/sale-results';
 
-const npr = (cents: number) => `NPR ${(Math.round(cents) / 100).toLocaleString('en-NP', { maximumFractionDigits: 0 })}`;
+const npr = (cents: number) => `${nprText((Math.round(cents) / 100).toLocaleString('en-NP', { maximumFractionDigits: 0 }))}`;
 const change = (value: number | null) => value === null ? '—' : `${value > 0 ? '+' : ''}${value}%`;
 const tone = (value: number | null) => value === null ? 'text-slate-500' : value >= 0 ? 'text-emerald-700' : 'text-rose-700';
 
@@ -43,7 +44,7 @@ function SaleDetail() {
   const campaign = useMemo(() => db.getCampaign(params.id), [params.id, revision]); // eslint-disable-line react-hooks/exhaustive-deps
   const now = nepalNow();
   const results = useMemo(() => campaign && !campaign.isTemplate ? saleResults(campaign, db.getOrders('ALL'), { today: now.slice(0, 10), failures: db.getDeliveryFailures('ALL'), returns: db.getReturns('ALL'), comboIds: db.getCombos('ALL').map((combo) => combo.id) }) : null, [campaign, revision]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!campaign) return <div className="mx-auto max-w-5xl p-6"><Link href="/orderflow/sales" className="text-sm text-blue-700">← Sales &amp; Offers</Link><p className="mt-4 text-sm text-slate-600">This sale no longer exists.</p></div>;
+  if (!campaign) return <div className="mx-auto max-w-5xl p-6"><Link href="/orderflow/sales" className="text-sm text-blue-700">← Sales &amp; Offers</Link><h1 className="mt-4 text-lg font-semibold text-slate-900">This sale no longer exists</h1><p className="mt-1 text-sm text-slate-600">It may have been deleted. Go back to Sales &amp; offers to see the others.</p></div>;
   const state = campaignState(campaign, now);
   const giftName = (id: string) => db.getProducts('ALL').find((product) => product.id === id)?.name || 'gift';
   const row = (pick: (stats: PeriodStats) => string) => results ? { during: pick(results.during), before: pick(results.before), ...(results.after ? { after: pick(results.after) } : {}) } : { during: '', before: '' };

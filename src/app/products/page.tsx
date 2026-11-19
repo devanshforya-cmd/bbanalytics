@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import { countsAsSale } from '@/lib/order-status';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -666,7 +667,7 @@ export default function ProductsPage() {
                         MRP (Catalog)
                       </div>
                       <div className="font-black text-emerald-700 mt-0.5 font-mono">
-                        NPR {p.mrp}
+                        <Money>{p.mrp}</Money>
                       </div>
                     </div>
                     <div className="border-x border-slate-200">
@@ -761,7 +762,7 @@ export default function ProductsPage() {
                         {p.caseSize || 24} units / box
                       </td>
                       <td className="p-3.5 text-right font-mono font-bold text-emerald-700">
-                        NPR {p.mrp}
+                        <Money>{p.mrp}</Money>
                       </td>
                       <td className="p-3.5 text-center">
                         <span
@@ -928,10 +929,10 @@ export default function ProductsPage() {
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                   <div>
                     <span className="text-[10px] text-slate-500 line-through mr-2 font-mono">
-                      NPR {currentMrp.toFixed(2)}
+                      <Money>{currentMrp.toFixed(2)}</Money>
                     </span>
                     <span className="text-lg font-black text-purple-700 font-mono">
-                      NPR {c.comboPrice}
+                      <Money>{c.comboPrice}</Money>
                     </span>
                   </div>
                   <div className="text-right">
@@ -974,7 +975,7 @@ export default function ProductsPage() {
                     {selectedPerfProduct.name}
                   </h2>
                   <p className="text-xs text-slate-500">
-                    {selectedPerfProduct.category} &bull; Case size {selectedPerfProduct.caseSize || 24} units &bull; MRP NPR {selectedPerfProduct.mrp}
+                    {selectedPerfProduct.category} &bull; Case size {selectedPerfProduct.caseSize || 24} units &bull; MRP <Money>{selectedPerfProduct.mrp}</Money>
                   </p>
                 </div>
 
@@ -1571,7 +1572,7 @@ export default function ProductsPage() {
           <div className="p-3.5 bg-purple-50 rounded-2xl border border-purple-200 space-y-2">
             <div className="flex items-center justify-between text-xs font-bold text-purple-900">
               <span>Total Original Individual MRP:</span>
-              <span className="font-mono text-sm">NPR {dynamicComboOriginalMrp}</span>
+              <span className="font-mono text-sm"><Money>{dynamicComboOriginalMrp}</Money></span>
             </div>
             <div className="flex items-center justify-between text-xs font-semibold text-emerald-800">
               <span>Consumer Discount Spread:</span>
@@ -1706,7 +1707,7 @@ export default function ProductsPage() {
             />
             <label htmlFor="priceDetectionEnabled" className="text-xs text-purple-950 font-medium cursor-pointer">
               <span className="font-bold block text-purple-900">Suggest based on components and price</span>
-              Show a suggestion when the message names these components and states <span className="font-mono font-bold">NPR {newCombo.comboPrice}</span>. The extractor keeps the products separate unless you select the combo.
+              Show a suggestion when the message names these components and states <span className="font-mono font-bold"><Money>{newCombo.comboPrice}</Money></span>. The extractor keeps the products separate unless you select the combo.
             </label>
           </div>
 

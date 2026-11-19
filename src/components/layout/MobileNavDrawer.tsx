@@ -38,7 +38,8 @@ import {
   Navigation,
 } from 'lucide-react';
 import { User, BrandCode } from '@/lib/types';
-import { hasAccess, isSuperAdmin } from '@/lib/permissions';
+import { isSuperAdmin } from '@/lib/permissions';
+import { visibleNavSections } from './nav-items';
 
 interface MobileNavDrawerProps {
   isOpen: boolean;
@@ -48,94 +49,6 @@ interface MobileNavDrawerProps {
   onBrandChange: (brand: BrandCode) => void;
   onOpenProfile: () => void;
 }
-
-interface MenuItem {
-  name: string;
-  href: string;
-  permKey: string;
-  /** Also shown to people with this permission. */
-  alsoPermKey?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  badge?: string;
-}
-
-interface MenuSection {
-  title: string;
-  items: MenuItem[];
-}
-
-const menuSections: MenuSection[] = [
-  {
-    title: 'Overview',
-    items: [
-      { name: 'Dashboard', href: '/dashboard', permKey: 'dashboard', icon: LayoutDashboard },
-      { name: 'Products & Combos', href: '/products', permKey: 'products', icon: Package },
-    ],
-  },
-  {
-    title: 'Offline sales',
-    items: [
-      { name: 'Beat Plans & Routes', href: '/offline-sales/beat-plan', permKey: 'beat_plans', icon: Compass },
-      { name: 'Stores & Branches', href: '/offline-sales/stores', permKey: 'stores', icon: Store },
-      { name: 'Distributor Dispatches', href: '/offline-sales/dispatch', permKey: 'dispatches', icon: Truck },
-      { name: 'Live GPS Tracking', href: '/offline-sales/live-tracking', permKey: 'gps_tracking', icon: Navigation },
-      { name: 'Shelf Photos', href: '/offline-sales/shelf-photos', permKey: 'shelf_photos', icon: Camera },
-      { name: 'Call Tracker', href: '/offline-sales/calls', permKey: 'call_tracker', icon: Phone },
-      { name: 'Cheque Tracker', href: '/offline-sales/cheques', permKey: 'cheque_tracker', icon: CreditCard },
-      { name: 'Document Handover', href: '/offline-sales/documents', permKey: 'document_handover', icon: FileText },
-      { name: 'Staff Scorecards', href: '/offline-sales/scorecard', permKey: 'staff_scorecards', icon: Award },
-    ],
-  },
-  {
-    title: 'Online orders',
-    items: [
-      { name: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles },
-      { name: 'Manual Order Entry', href: '/orderflow/manual-entry', permKey: 'orderflow', icon: ClipboardPen },
-      { name: 'All Orders', href: '/orderflow/orders', permKey: 'orderflow', alsoPermKey: 'order_desk', icon: ListChecks },
-      { name: 'Daily Orders', href: '/orderflow/daily-orders', permKey: 'orderflow', icon: ClipboardCheck },
-      { name: 'Monthly Sales Sheet', href: '/orderflow/monthly-sales', permKey: 'orderflow', icon: FileSpreadsheet },
-      { name: 'Sales & Offers', href: '/orderflow/sales', permKey: 'orderflow', alsoPermKey: 'marketing', icon: BadgePercent },
-      { name: 'Delivery Failures', href: '/orderflow/delivery-failures', permKey: 'orderflow', icon: TruckIcon },
-    ],
-  },
-  {
-    title: 'Reviews & returns',
-    items: [
-      { name: 'Feedback & Complaints', href: '/reviews/feedback', permKey: 'reviews', icon: MessageSquareHeart },
-      { name: 'Returns', href: '/reviews/returns', permKey: 'reviews', icon: RotateCcw },
-      { name: 'Issue Categories', href: '/reviews/categories', permKey: 'reviews', icon: Tags },
-    ],
-  },
-  {
-    title: 'Customers',
-    items: [
-      { name: 'Customer 360 Directory', href: '/customers', permKey: 'customers', icon: Users },
-      { name: 'Cohort Insights', href: '/customers/insights', permKey: 'customers', icon: PieChart },
-    ],
-  },
-  {
-    title: 'Marketing',
-    items: [
-      { name: 'Influencer Directory', href: '/marketing/influencers', permKey: 'marketing', icon: Megaphone },
-      { name: 'Marketing Sends', href: '/marketing/sends', permKey: 'marketing', icon: Gift },
-    ],
-  },
-  {
-    title: 'Operations',
-    items: [
-      { name: 'Calendar To-Do', href: '/opscore/calendar-tasks', permKey: 'tasks', icon: Calendar, badge: 'BS/AD' },
-      { name: 'Task Management', href: '/opscore/tasks', permKey: 'tasks', icon: CheckSquare },
-      { name: 'Activity Trail', href: '/opscore/activity', permKey: 'activity', icon: History },
-      { name: 'Google Sheets Export', href: '/opscore/export', permKey: 'export', icon: FileSpreadsheet },
-    ],
-  },
-  {
-    title: 'Admin',
-    items: [
-      { name: 'System Settings', href: '/settings', permKey: 'settings', icon: Settings },
-    ],
-  },
-];
 
 export default function MobileNavDrawer({
   isOpen,
@@ -151,19 +64,14 @@ export default function MobileNavDrawer({
   if (!isOpen) return null;
 
   // Filter sections by user permissions
-  const permittedSections = menuSections
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((item) => (hasAccess(currentUser, item.permKey) || (!!item.alsoPermKey && hasAccess(currentUser, item.alsoPermKey)))),
-    }))
-    .filter((section) => section.items.length > 0);
+  const permittedSections = visibleNavSections(currentUser);
 
   // Filter sections by search query
   const q = searchQuery.toLowerCase().trim();
   const filteredSections = permittedSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => item.name.toLowerCase().includes(q)),
+      items: section.items.filter((item) => item.label.toLowerCase().includes(q)),
     }))
     .filter((section) => section.items.length > 0);
 
@@ -240,7 +148,7 @@ export default function MobileNavDrawer({
                                 isActive ? 'text-blue-600' : 'text-slate-400'
                               }`}
                             />
-                            <span>{item.name}</span>
+                            <span>{item.label}</span>
                           </div>
                           {item.badge && (
                             <span

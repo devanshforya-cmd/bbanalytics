@@ -1,5 +1,6 @@
 'use client';
 
+import { nprText } from '@/components/common/Money';
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, Repeat } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -38,7 +39,7 @@ export default function ExchangeAnalysisPanel({ returns }: { returns: ReturnEntr
             <Tile label="Undecided" value={String(a.pendingCount)} hint="resolution pending" tone={a.pendingCount ? 'amber' : 'slate'} />
             <Tile label="Not linked" value={String(a.unlinked + a.awaitingReturn)} hint={`${a.unlinked} exchange${a.unlinked === 1 ? '' : 's'} without an order · ${a.awaitingReturn} exchange order${a.awaitingReturn === 1 ? '' : 's'} without a return`} tone={a.unlinked + a.awaitingReturn ? 'amber' : 'slate'} />
             <Tile label="Replacements delivered" value={`${a.replacementsDelivered}/${a.linked}`} hint={`${a.replacementsInTransit} on the way · ${a.replacementsFailed} failed`} tone="emerald" />
-            <Tile label="Difference collected" value={`NPR ${a.differenceCollected.toLocaleString()}`} hint="on replacement orders" />
+            <Tile label="Difference collected" value={`${nprText(a.differenceCollected.toLocaleString())}`} hint="on replacement orders" />
             <Tile label="Order → return" value={days(a.medianDaysOrderToReturn)} hint="median" />
             <Tile label="Return → replaced" value={days(a.medianDaysReturnToReplacementDelivered)} hint="median, delivered" />
           </div>

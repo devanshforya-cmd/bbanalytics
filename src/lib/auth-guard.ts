@@ -5,6 +5,7 @@ import { User, UserRole } from '@/lib/types';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 import { AUTH_SESSION_COOKIE, getAuthSessionSecret, verifySessionToken } from '@/lib/auth-session';
 import { canPerform, hasAccess, isSuperAdmin, type FeatureKey } from '@/lib/permissions';
+import type { PageKey } from '@/lib/access-catalog';
 import { isLocalPreviewAuthEnabled, LOCAL_PREVIEW_USER } from '@/lib/local-preview-auth';
 
 export interface AuthContext {
@@ -140,7 +141,7 @@ export async function requireAuth(request: Request, allowedRoles?: UserRole[]): 
 /** Enforce the same per-feature access configured by Super Admin on server routes. */
 export async function requireFeatureAccess(
   request: Request,
-  feature: FeatureKey,
+  feature: FeatureKey | PageKey,
   action: 'VIEW' | 'CREATE' | 'EDIT' | 'DELETE' = 'VIEW'
 ): Promise<AuthResult> {
   const auth = await requireAuth(request);

@@ -22,33 +22,36 @@ import {
   CheckSquare,
   FileSpreadsheet,
   RotateCcw,
+  ListChecks,
 } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
 import { User } from '@/lib/types';
 import { hasAccess, isSuperAdmin } from '@/lib/permissions';
+import type { PageKey } from '@/lib/access-catalog';
 
 interface MobileBottomTab {
   label: string;
   href: string;
-  permKey: string;
+  permKey: PageKey;
   icon: React.ComponentType<{ className?: string }>;
 }
 
 const CANDIDATE_BOTTOM_TABS: MobileBottomTab[] = [
-  { label: 'Dashboard', href: '/dashboard', permKey: 'dashboard', icon: LayoutDashboard },
-  { label: 'My Day', href: '/offline-sales/beat-plan', permKey: 'beat_plans', icon: Compass },
-  { label: 'Stores', href: '/offline-sales/stores', permKey: 'stores', icon: Store },
-  { label: 'Orders', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles },
-  { label: 'Cheques', href: '/offline-sales/cheques', permKey: 'cheque_tracker', icon: CreditCard },
-  { label: 'Tasks', href: '/opscore/tasks', permKey: 'tasks', icon: CheckSquare },
-  { label: 'Feedback', href: '/reviews/feedback', permKey: 'reviews', icon: MessageSquareHeart },
-  { label: 'Scorecard', href: '/offline-sales/scorecard', permKey: 'staff_scorecards', icon: Award },
-  { label: 'Products', href: '/products', permKey: 'products', icon: Package },
-  { label: 'Customers', href: '/customers', permKey: 'customers', icon: Users },
+  { label: 'Dashboard', href: '/dashboard', permKey: 'p.dashboard', icon: LayoutDashboard },
+  { label: 'My Day', href: '/offline-sales/beat-plan', permKey: 'p.beat_plan', icon: Compass },
+  { label: 'Stores', href: '/offline-sales/stores', permKey: 'p.stores', icon: Store },
+  { label: 'Orders', href: '/orderflow/extractor', permKey: 'p.orders_extractor', icon: Sparkles },
+  { label: 'Orders', href: '/orderflow/orders', permKey: 'p.orders_all', icon: ListChecks },
+  { label: 'Cheques', href: '/offline-sales/cheques', permKey: 'p.cheques', icon: CreditCard },
+  { label: 'Tasks', href: '/opscore/tasks', permKey: 'p.tasks', icon: CheckSquare },
+  { label: 'Feedback', href: '/reviews/feedback', permKey: 'p.feedback', icon: MessageSquareHeart },
+  { label: 'Scorecard', href: '/offline-sales/scorecard', permKey: 'p.scorecards', icon: Award },
+  { label: 'Products', href: '/products', permKey: 'p.products', icon: Package },
+  { label: 'Customers', href: '/customers', permKey: 'p.customers', icon: Users },
 ];
 
-export default function MobileNav() {
+export default function MobileNav({ pending = false }: { pending?: boolean }) {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<User>(() => getSessionUser() || db.getCurrentUser());
   const [showFabDrawer, setShowFabDrawer] = useState(false);
@@ -60,7 +63,9 @@ export default function MobileNav() {
     return () => window.removeEventListener('bb-db-updated', refresh);
   }, [pathname]);
 
-  const visibleBottomTabs = CANDIDATE_BOTTOM_TABS.filter((t) => hasAccess(currentUser, t.permKey)).slice(0, 5);
+  // One tab per destination label: someone with the extractor gets it, someone with only All orders gets that.
+  const visibleBottomTabs = pending ? [] : CANDIDATE_BOTTOM_TABS.filter((t) => hasAccess(currentUser, t.permKey))
+    .filter((tab, index, list) => list.findIndex((other) => other.label === tab.label) === index).slice(0, 5);
 
   return (
     <>
@@ -98,7 +103,7 @@ export default function MobileNav() {
 
             {/* Permission-Filtered Speed Actions */}
             <div className="grid grid-cols-2 gap-2.5">
-              {hasAccess(currentUser, 'beat_plans') && (
+              {hasAccess(currentUser, 'p.beat_plan') && (
                 <Link
                   href="/offline-sales/beat-plan"
                   onClick={() => setShowFabDrawer(false)}
@@ -109,7 +114,7 @@ export default function MobileNav() {
                 </Link>
               )}
 
-              {hasAccess(currentUser, 'stores') && (
+              {hasAccess(currentUser, 'p.stores') && (
                 <Link
                   href="/offline-sales/stores"
                   onClick={() => setShowFabDrawer(false)}
@@ -120,7 +125,7 @@ export default function MobileNav() {
                 </Link>
               )}
 
-              {hasAccess(currentUser, 'cheque_tracker') && (
+              {hasAccess(currentUser, 'p.cheques') && (
                 <Link
                   href="/offline-sales/cheques"
                   onClick={() => setShowFabDrawer(false)}
@@ -131,7 +136,7 @@ export default function MobileNav() {
                 </Link>
               )}
 
-              {hasAccess(currentUser, 'shelf_photos') && (
+              {hasAccess(currentUser, 'p.shelf_photos') && (
                 <Link
                   href="/offline-sales/shelf-photos"
                   onClick={() => setShowFabDrawer(false)}
@@ -142,7 +147,7 @@ export default function MobileNav() {
                 </Link>
               )}
 
-              {hasAccess(currentUser, 'call_tracker') && (
+              {hasAccess(currentUser, 'p.calls') && (
                 <Link
                   href="/offline-sales/calls"
                   onClick={() => setShowFabDrawer(false)}
@@ -153,8 +158,7 @@ export default function MobileNav() {
                 </Link>
               )}
 
-              {hasAccess(currentUser, 'orderflow') && (
-                <>
+              {hasAccess(currentUser, 'p.orders_extractor') && (
                   <Link
                     href="/orderflow/extractor"
                     onClick={() => setShowFabDrawer(false)}
@@ -163,7 +167,9 @@ export default function MobileNav() {
                     <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
                     <span>WhatsApp Extractor</span>
                   </Link>
+              )}
 
+              {hasAccess(currentUser, 'p.orders_manual') && (
                   <Link
                     href="/orderflow/manual-entry"
                     onClick={() => setShowFabDrawer(false)}
@@ -172,10 +178,9 @@ export default function MobileNav() {
                     <ClipboardPen className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span>Manual Order</span>
                   </Link>
-                </>
               )}
 
-              {hasAccess(currentUser, 'reviews') && (
+              {hasAccess(currentUser, 'p.feedback') && (
                 <Link
                   href="/reviews/feedback"
                   onClick={() => setShowFabDrawer(false)}
@@ -186,7 +191,7 @@ export default function MobileNav() {
                 </Link>
               )}
 
-              {hasAccess(currentUser, 'tasks') && (
+              {hasAccess(currentUser, 'p.tasks') && (
                 <Link
                   href="/opscore/tasks"
                   onClick={() => setShowFabDrawer(false)}

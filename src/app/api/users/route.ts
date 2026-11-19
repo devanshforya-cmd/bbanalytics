@@ -5,7 +5,8 @@ import { requireFeatureAccess } from '@/lib/auth-guard';
 import { isSuperAdmin } from '@/lib/permissions';
 import { hashPassword } from '@/lib/password-utils';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
-import { mapStoredUser, readStoredUsers } from '@/lib/db/server-workspace';
+import { mapStoredUser, readStoredUsers, recordAccessChange } from '@/lib/db/server-workspace';
+import { normalizeAccessMap, resolveAccess } from '@/lib/roles';
 import { staffPatch } from '@/lib/staff-validation';
 
 export const dynamic = 'force-dynamic';
@@ -28,9 +29,31 @@ async function save(request: Request, creating: boolean) {
     if (!body || typeof body !== 'object' || Array.isArray(body)) return failure('Invalid staff request.');
     const id = creating ? (body.id || `user_${randomUUID()}`) : body.id;
     if (typeof id !== 'string' || !/^[A-Za-z0-9_:-]{1,180}$/.test(id)) return failure('A valid staff ID is required.');
+    // Access comes from a role plus one-off changes, worked out here, never taken from the browser as-is.
+    const access = body.roleId !== undefined || body.accessOverrides !== undefined || body.isSuperAdmin !== undefined;
+    if (access) delete body.customPermissions;
+    if (body.isSuperAdmin !== undefined) body.role = body.isSuperAdmin === true ? 'SUPER_ADMIN' : (body.role && body.role !== 'SUPER_ADMIN' ? body.role : 'STAFF');
     let patch: Record<string, any>;
     try { patch = staffPatch(body, creating); } catch (error) { return failure(error instanceof Error ? error.message : 'Invalid staff details.'); }
     const users = await readStoredUsers();
+    const before = users.find((user) => user.id === id);
+    if (access) {
+      const superAdmin = body.isSuperAdmin !== undefined ? body.isSuperAdmin === true : !!before && isSuperAdmin(before);
+      if (superAdmin) patch.custom_permissions = {};
+      else {
+        const roleId = body.roleId === undefined ? (before?.customPermissions?._role?.id ?? null) : body.roleId;
+        let role: { id: string; name: string; permissions: Record<string, any> } | null = null;
+        if (roleId) {
+          if (typeof roleId !== 'string' || !/^role_[A-Za-z0-9_-]{6,80}$/.test(roleId)) return failure('Choose a valid role.');
+          const { data, error } = await supabaseAdmin.from('staff_roles').select('id,name,permissions').eq('id', roleId).maybeSingle();
+          if (error) return failure('Roles are temporarily unavailable.', 503);
+          if (!data) return failure('That role no longer exists. Choose another.');
+          role = data;
+        }
+        const overrides = normalizeAccessMap(body.accessOverrides ?? before?.customPermissions?._overrides ?? {});
+        patch.custom_permissions = resolveAccess(normalizeAccessMap(role?.permissions), overrides, role ? { id: role.id, name: role.name } : null);
+      }
+    }
     if (!creating && !users.some((user) => user.id === id)) return failure('Staff account not found.', 404);
     if (patch.email && users.some((user) => user.id !== id && user.email.toLowerCase() === patch.email)) return failure('This email is already assigned to another account.', 409);
     if (patch.phone && users.some((user) => user.id !== id && user.phone === patch.phone)) return failure('This mobile number is already assigned to another account.', 409);
@@ -53,6 +76,10 @@ async function save(request: Request, creating: boolean) {
       console.error('[Staff] Save failed:', result.error.code);
       return failure('The staff account was not saved. Please retry.', 503);
     }
+    if (access || creating) await recordAccessChange(auth.user, creating ? 'CREATE' : 'UPDATE', 'users', id, {
+      name: patch.full_name || before?.fullName, role: patch.custom_permissions?._role?.name || (patch.is_super_admin ? 'Super Admin' : null),
+      oneOffChanges: Object.keys(patch.custom_permissions?._overrides || {}).length,
+    });
     return NextResponse.json({ success: true, data: mapStoredUser(result.data) }, { status: creating ? 201 : 200 });
   } catch (error) {
     return failure(error instanceof SyntaxError ? 'Invalid JSON request.' : 'The staff account was not saved. Please retry.', error instanceof SyntaxError ? 400 : 503);

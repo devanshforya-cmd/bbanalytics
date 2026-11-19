@@ -175,7 +175,7 @@ test('Role Redirects - routes each role to optimal landing page', () => {
     role: 'CUSTOM',
     customPermissions: { tasks: { access: 'FULL', scope: 'OWN', actions: ['VIEW'] } },
   };
-  assert.equal(getRedirectPathForUser(tasksOnly), '/opscore/tasks');
+  assert.equal(getRedirectPathForUser(tasksOnly), '/opscore/calendar-tasks');
 });
 
 // Test 5: WhatsApp Extractor Pattern Separation

@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
@@ -438,7 +439,7 @@ export default function ManualOrderEntryPage() {
                   Order {savedOrder.orderNumber}
                 </h2>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  Registered for <strong>{savedOrder.customerName}</strong> ({savedOrder.customerPhone}) • Grand Total: <strong className="text-slate-900">NPR {savedOrder.totalAmount.toLocaleString()}</strong>
+                  Registered for <strong>{savedOrder.customerName}</strong> ({savedOrder.customerPhone}) • Grand Total: <strong className="text-slate-900"><Money>{savedOrder.totalAmount.toLocaleString()}</Money></strong>
                 </p>
               </div>
             </div>
@@ -538,7 +539,7 @@ export default function ManualOrderEntryPage() {
                         {it.quantity}× {p?.name || 'Item'} — {`NPR ${price.toLocaleString()} each`}
                       </span>
                       <strong className="font-mono text-slate-900">
-                        NPR {lineTotal.toLocaleString()}
+                        <Money>{lineTotal.toLocaleString()}</Money>
                       </strong>
                     </div>
                   );
@@ -559,7 +560,7 @@ export default function ManualOrderEntryPage() {
             {appliedCombo && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-[11px] text-amber-900 flex items-center justify-between">
                 <span>Promotional Combo Applied: <strong>{appliedCombo.name}</strong></span>
-                <span className="font-bold text-amber-800">Saves NPR {appliedCombo.savings.toLocaleString()}</span>
+                <span className="font-bold text-amber-800">Saves <Money>{appliedCombo.savings.toLocaleString()}</Money></span>
               </div>
             )}
 
@@ -590,7 +591,7 @@ export default function ManualOrderEntryPage() {
             <div className="border-t-2 border-slate-300 pt-3 flex justify-between items-center">
               <span className="font-bold text-slate-900 text-sm">Total Order Value:</span>
               <span className="font-mono font-black text-xl text-slate-900">
-                NPR {totalAmount.toLocaleString()}
+                <Money>{totalAmount.toLocaleString()}</Money>
               </span>
             </div>
           </div>
@@ -860,7 +861,7 @@ export default function ManualOrderEntryPage() {
                         {/* Amount */}
                         <div className="w-24 text-right">
                           <span className="font-mono font-bold text-slate-900 text-xs">
-                            NPR {lineTotal.toLocaleString()}
+                            <Money>{lineTotal.toLocaleString()}</Money>
                           </span>
                         </div>
 
@@ -887,7 +888,7 @@ export default function ManualOrderEntryPage() {
                     <Sparkles className="h-5 w-5 text-amber-600 shrink-0" />
                     <span className="text-xs">
                       These items form the <strong>{detectedCombo.name}</strong> — apply combo price of{' '}
-                      <strong>NPR {detectedCombo.comboPrice.toLocaleString()}</strong> (saves NPR{' '}
+                      <strong><Money>{detectedCombo.comboPrice.toLocaleString()}</Money></strong> (saves NPR{' '}
                       {detectedCombo.savings.toLocaleString()})?
                     </span>
                   </div>
@@ -970,9 +971,9 @@ export default function ManualOrderEntryPage() {
               <div>
                 <span className="text-slate-500 text-xs">Calculated Total:</span>{' '}
                 <strong className="text-xl font-mono font-black text-slate-900 block sm:inline sm:ml-1">
-                  NPR {totalAmount.toLocaleString()}
+                  <Money>{totalAmount.toLocaleString()}</Money>
                 </strong>
-                {trail && trail.offerDiscount > 0 && <span className="block text-[11px] text-emerald-700">{trail.pricing?.applied.filter((entry) => entry.amount > 0).map((entry) => entry.offerName).join(' + ')}: −NPR {trail.offerDiscount.toLocaleString()} from MRP {trail.mrpTotal.toLocaleString()}</span>}
+                {trail && trail.offerDiscount > 0 && <span className="block text-[11px] text-emerald-700">{trail.pricing?.applied.filter((entry) => entry.amount > 0).map((entry) => entry.offerName).join(' + ')}: −<Money>{trail.offerDiscount.toLocaleString()}</Money> from MRP {trail.mrpTotal.toLocaleString()}</span>}
               </div>
               {canPerform(currentUser, 'orderflow', 'CREATE') && <button
                 type="submit"
@@ -1017,13 +1018,13 @@ export default function ManualOrderEntryPage() {
                 {savedOrder.items.map((it, idx) => (
                   <div key={idx} className="flex justify-between text-[11px] text-slate-700">
                     <span>{it.quantity}x {it.name}</span>
-                    <span className="font-mono font-semibold">NPR {it.totalPrice.toLocaleString()}</span>
+                    <span className="font-mono font-semibold"><Money>{it.totalPrice.toLocaleString()}</Money></span>
                   </div>
                 ))}
               </div>
               <div className="border-t border-slate-200 pt-2 flex justify-between items-center">
                 <span className="font-bold text-slate-800 text-sm">Amount Payable:</span>
-                <span className="font-mono font-black text-lg text-emerald-700">NPR {savedOrder.totalAmount.toLocaleString()}</span>
+                <span className="font-mono font-black text-lg text-emerald-700"><Money>{savedOrder.totalAmount.toLocaleString()}</Money></span>
               </div>
             </div>
 

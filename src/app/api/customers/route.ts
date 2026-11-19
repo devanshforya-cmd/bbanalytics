@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { redactRecord } from '@/lib/sensitive-data';
 import { requireFeatureAccess } from '@/lib/auth-guard';
 import { openServerWorkspace } from '@/lib/db/server-workspace';
 import { apiFailure, visibleCustomers } from '../_workspace';
@@ -11,6 +12,6 @@ export async function GET(request: Request) {
   try {
     const { db } = await openServerWorkspace(auth.user);
     const customers = visibleCustomers(db, auth.user);
-    return NextResponse.json({ success: true, count: customers.length, data: customers });
+    return NextResponse.json({ success: true, count: customers.length, data: customers.map((row) => redactRecord('customers', row, auth.user)) });
   } catch (error) { return apiFailure(error, 'Failed to load customers.'); }
 }

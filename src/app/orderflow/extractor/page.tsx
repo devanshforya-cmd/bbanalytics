@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -618,14 +619,14 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           </div>
                           {kind === 'ADD_ON' && target?.order && (
                             <p className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-                              Adds to <strong>{displayDocumentId(target.order.orderNumber)}</strong>{target.order.items.length ? ` (${itemSummary(target.order.items)})` : ''}. New total NPR {(target.order.totalAmount + ord.totalAmount.value).toLocaleString()}.
+                              Adds to <strong>{displayDocumentId(target.order.orderNumber)}</strong>{target.order.items.length ? ` (${itemSummary(target.order.items)})` : ''}. New total <Money>{(target.order.totalAmount + ord.totalAmount.value).toLocaleString()}</Money>.
                               {!!target.others && <span className="block text-blue-700">This customer has {target.others + 1} open orders that day; the latest one is used.</span>}
                             </p>
                           )}
                           {kind === 'ADD_ON' && target?.problem && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-800">{target.problem}</p>}
                           {kind === 'EXCHANGE' && (
                             <p className="rounded-xl border border-purple-200 bg-purple-50 px-3 py-2 text-xs text-purple-900">
-                              Saved as a replacement order with <strong>NPR {ord.totalAmount.value.toLocaleString()}</strong> to collect{ord.statedPrice.provided ? '' : ' (write an amount in the message or below to collect a difference)'}. It is not counted as a sale. Link it to the return when the return is logged.
+                              Saved as a replacement order with <strong><Money>{ord.totalAmount.value.toLocaleString()}</Money></strong> to collect{ord.statedPrice.provided ? '' : ' (write an amount in the message or below to collect a difference)'}. It is not counted as a sale. Link it to the return when the return is logged.
                             </p>
                           )}
                         </div>
@@ -646,7 +647,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                                   <input type="checkbox" className="mt-0.5" checked={!candidate.disabled} onChange={() => toggleOffer(ord.id, candidate.offerId)} aria-label={`Use ${candidate.offerName}`} />
                                   <span className={applied ? 'text-slate-900' : 'text-slate-500'}>
                                     <strong className="font-semibold">{candidate.offerName}</strong> <span className="text-slate-500">· {candidate.campaignName}</span>
-                                    {applied && (applied.amount > 0 ? <span className="ml-1 text-emerald-700">−NPR {applied.amount.toLocaleString()}</span> : applied.giftName ? <span className="ml-1 text-emerald-700">+ {applied.giftQuantity}× {applied.giftName} free</span> : applied.freeDelivery ? <span className="ml-1 text-emerald-700">free delivery</span> : null)}
+                                    {applied && (applied.amount > 0 ? <span className="ml-1 text-emerald-700">−<Money>{applied.amount.toLocaleString()}</Money></span> : applied.giftName ? <span className="ml-1 text-emerald-700">+ {applied.giftQuantity}× {applied.giftName} free</span> : applied.freeDelivery ? <span className="ml-1 text-emerald-700">free delivery</span> : null)}
                                     {!applied && <span className="block text-[11px]">{candidate.disabled ? 'Switched off for this order.' : why || 'Does not apply.'}</span>}
                                   </span>
                                 </label>
@@ -781,8 +782,8 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                             className="bg-white border border-slate-200 rounded px-2 py-0.5 text-xs font-normal"
                           >
                             <option value="">+ Add from catalog…</option>
-                            <optgroup label="Products">{activeCatalogProducts.map(product => <option key={product.id} value={`product:${product.id}`}>{product.name} (NPR {product.mrp})</option>)}</optgroup>
-                            <optgroup label="Combos">{activeCatalogCombos.map(combo => <option key={combo.id} value={`combo:${combo.id}`}>{combo.name} (NPR {combo.comboPrice || combo.comboMrp})</option>)}</optgroup>
+                            <optgroup label="Products">{activeCatalogProducts.map(product => <option key={product.id} value={`product:${product.id}`}>{product.name} (<Money>{product.mrp}</Money>)</option>)}</optgroup>
+                            <optgroup label="Combos">{activeCatalogCombos.map(combo => <option key={combo.id} value={`combo:${combo.id}`}>{combo.name} (<Money>{combo.comboPrice || combo.comboMrp}</Money>)</option>)}</optgroup>
                           </select>
                         </div>
                       </div>
@@ -801,7 +802,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                                 </span>
                               )}
                               <span className="font-semibold text-slate-900">{item.name}</span>
-                              <span className="text-slate-500">Catalogue NPR {item.unitPrice.toLocaleString()}</span>
+                              <span className="text-slate-500">Catalogue <Money>{item.unitPrice.toLocaleString()}</Money></span>
                               <label className="text-slate-600">Selling price per unit (NPR)<input aria-label={`Selling price per unit for ${item.name}`} type="number" min="0" max={item.unitPrice} step="0.01" value={item.saleUnitPrice ?? ''} placeholder={String(item.unitPrice)} onChange={event => handleUpdateItemPrice(ord.id, itIdx, event.target.value)} className="ml-2 w-24 rounded-lg border border-slate-200 p-1" /></label>
                             </div>
 
@@ -826,8 +827,8 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                               </div>
 
                               <span className="w-24 text-right">
-                                <span className="block font-bold text-slate-900">NPR {(ord.trail?.lines[itIdx]?.total ?? item.totalPrice).toLocaleString()}</span>
-                                {ord.trail && ord.trail.lines[itIdx] && ord.trail.lines[itIdx].total < item.unitPrice * item.quantity && <span className="block text-[11px] text-slate-500 line-through">NPR {(item.unitPrice * item.quantity).toLocaleString()}</span>}
+                                <span className="block font-bold text-slate-900"><Money>{(ord.trail?.lines[itIdx]?.total ?? item.totalPrice).toLocaleString()}</Money></span>
+                                {ord.trail && ord.trail.lines[itIdx] && ord.trail.lines[itIdx].total < item.unitPrice * item.quantity && <span className="block text-[11px] text-slate-500 line-through"><Money>{(item.unitPrice * item.quantity).toLocaleString()}</Money></span>}
                               </span>
 
                               <button
@@ -849,15 +850,15 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       <div className="flex items-center gap-4 flex-wrap">
                         <div>
                           <span className="text-slate-500">Catalogue total: </span>
-                          <span className="font-bold text-slate-900">NPR {ord.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0).toLocaleString()}</span>
+                          <span className="font-bold text-slate-900"><Money>{ord.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0).toLocaleString()}</Money></span>
                         </div>
                         <div>
                           <label className="text-slate-500" htmlFor={`amount_${ord.id}`}>{ord.entryKind === 'EXCHANGE' ? 'Amount to collect (NPR)' : 'Stated total (NPR)'}</label>
                           <input id={`amount_${ord.id}`} type="number" min="0" step="0.01" value={ord.statedPrice.provided ? ord.statedPrice.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, statedPrice: { ...order.statedPrice, provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-28 rounded-lg border border-slate-200 p-1" placeholder="Optional" />
                         </div>
                         {ord.entryKind !== 'EXCHANGE' && <div><label className="text-slate-500" htmlFor={`discount_${ord.id}`}>Order discount (%)</label><input id={`discount_${ord.id}`} type="number" min="0" max="100" step="0.01" value={ord.discountPercent?.provided ? ord.discountPercent.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, discountPercent: { confidence: 'HIGH', provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-20 rounded-lg border border-slate-200 p-1" placeholder="Optional" /></div>}
-                        <div><span className="text-slate-500">{ord.entryKind === 'EXCHANGE' ? 'To collect: ' : 'Order total: '}</span><span className="font-bold text-slate-900">NPR {ord.totalAmount.value.toLocaleString()}</span>
-                          {ord.entryKind !== 'EXCHANGE' && extractedDiscount(ord).amount > 0 && <span className="ml-1.5 text-emerald-700">− NPR {extractedDiscount(ord).amount.toLocaleString()} ({extractedDiscount(ord).percent}% off)</span>}
+                        <div><span className="text-slate-500">{ord.entryKind === 'EXCHANGE' ? 'To collect: ' : 'Order total: '}</span><span className="font-bold text-slate-900"><Money>{ord.totalAmount.value.toLocaleString()}</Money></span>
+                          {ord.entryKind !== 'EXCHANGE' && extractedDiscount(ord).amount > 0 && <span className="ml-1.5 text-emerald-700">− <Money>{extractedDiscount(ord).amount.toLocaleString()}</Money> ({extractedDiscount(ord).percent}% off)</span>}
                           {ord.entryKind !== 'EXCHANGE' && ord.trail && (ord.trail.offerDiscount > 0 || ord.trail.customerDiscount > 0) && (
                             <span className="block text-[11px] text-slate-500">MRP {ord.trail.mrpTotal.toLocaleString()}{ord.trail.offerDiscount > 0 ? ` · offers −${ord.trail.offerDiscount.toLocaleString()}` : ''}{ord.trail.customerDiscount > 0 ? ` · customer discount −${ord.trail.customerDiscount.toLocaleString()}` : ''}</span>
                           )}</div>
@@ -995,7 +996,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         </span>
                       </td>
                       <td className="py-2.5 px-3 max-w-xs truncate text-slate-700">{item.productSummary}</td>
-                      <td className="py-2.5 px-3 font-bold text-slate-900">NPR {item.totalAmount.toLocaleString()}</td>
+                      <td className="py-2.5 px-3 font-bold text-slate-900"><Money>{item.totalAmount.toLocaleString()}</Money></td>
                       <td className="py-2.5 px-3">
                         {item.status === 'PUSHED' ? (
                           <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">

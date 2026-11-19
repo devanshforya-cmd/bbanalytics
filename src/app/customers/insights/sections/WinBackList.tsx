@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import React from 'react';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
@@ -81,7 +82,7 @@ export default function WinBackList({
                       <div className="text-[10px] text-slate-500">{item.customer.phone}</div>
                     </td>
                     <td className="py-3 px-3 text-right font-black text-slate-900">
-                      NPR {item.spend.toLocaleString()}
+                      <Money>{item.spend.toLocaleString()}</Money>
                     </td>
                     <td className="py-3 px-3 text-center font-bold text-slate-800">
                       {item.customer.totalOrders}

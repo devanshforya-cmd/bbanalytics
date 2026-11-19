@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Check, Package, Sparkles } from 'lucide-react';
 import { Product, BrandCode } from '@/lib/types';
@@ -122,7 +123,7 @@ export default function SmartDropdown({
               </span>
               {selectedItem.price !== undefined && (
                 <span className="text-[11px] font-mono font-bold text-slate-500 shrink-0">
-                  NPR {selectedItem.price}
+                  <Money>{selectedItem.price}</Money>
                 </span>
               )}
               {selectedItem.group && (

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { redactRecord } from '@/lib/sensitive-data';
 import { requireFeatureAccess } from '@/lib/auth-guard';
 import { openServerWorkspace } from '@/lib/db/server-workspace';
 import { getTodayBs } from '@/lib/nepali-calendar';
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
   try {
     const { db } = await openServerWorkspace(auth.user);
     const orders = visibleOrders(db, auth.user);
-    return NextResponse.json({ success: true, count: orders.length, data: orders });
+    return NextResponse.json({ success: true, count: orders.length, data: orders.map((row) => redactRecord('orders', row, auth.user)) });
   } catch (error) { return apiFailure(error, 'Failed to load orders.'); }
 }
 

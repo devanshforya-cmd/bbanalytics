@@ -32,7 +32,8 @@ import DataUpgradeSettings from './components/DataUpgradeSettings';
 import SetupWizard from '@/components/dashboard/SetupWizard';
 import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
-import { hasAccess, isSuperAdmin } from '@/lib/permissions';
+import { hasAccess, isSuperAdmin, setActivePage } from '@/lib/permissions';
+import { pageForSettingsTab } from '@/lib/access-catalog';
 import { Compass, Sliders, ListChecks, DatabaseZap, Sparkles, Truck, Link2 } from 'lucide-react';
 
 export type SettingsTab =
@@ -88,7 +89,7 @@ export default function SettingsPage() {
       { id: 'PROMOTIONS', label: 'Promotions', icon: Flame, tile: 'bg-rose-500' },
     ] },
     { title: 'People & access', items: [
-      { id: 'STAFF', label: 'Staff & permissions', icon: Users, tile: 'bg-blue-900' },
+      { id: 'STAFF', label: 'Staff & roles', icon: Users, tile: 'bg-blue-900' },
       { id: 'SHARED_ACCESS', label: 'Shared links', icon: Link2, tile: 'bg-slate-500' },
       { id: 'RULES', label: 'Alerts & notifications', icon: Bell, tile: 'bg-rose-600' },
     ] },
@@ -104,11 +105,12 @@ export default function SettingsPage() {
       { id: 'FEATURE_FLAGS', label: 'Experiments', icon: Sliders, tile: 'bg-purple-500' },
     ] },
   ];
+  // Each tab is its own permission. Staff & roles stays with Super Admins.
   const allowed = (id: SettingsTab) => {
-    if (['GOOGLE', 'STAFF', 'RULES', 'IMPORT', 'SHARED_ACCESS', 'FEATURE_FLAGS', 'UPGRADE'].includes(id)) return isSuperAdmin(user);
-    if (id === 'CHANNELS') return hasAccess(user, 'orderflow');
-    if (id === 'FIELD_SALES') return hasAccess(user, 'beat_plans') || hasAccess(user, 'stores');
-    return true;
+    if (isSuperAdmin(user)) return true;
+    if (id === 'STAFF') return false;
+    const page = pageForSettingsTab(id);
+    return !!page && hasAccess(user, page.key);
   };
   const visibleGroups = groups.map((group) => ({ ...group, items: group.items.filter((item) => allowed(item.id)) })).filter((group) => group.items.length);
   const tabs = visibleGroups.flatMap((group) => group.items);
@@ -126,9 +128,11 @@ export default function SettingsPage() {
     window.history.replaceState(null, '', url);
   };
   const current = tabs.find((tab) => tab.id === activeTab);
+  // Checks inside a tab answer for that tab, so Edit on Holidays never opens Brands.
+  useEffect(() => { setActivePage(pageForSettingsTab(activeTab)?.key || null); }, [activeTab]);
 
   return (
-    <PageGuard feature="settings">
+    <PageGuard>
       <div className="mx-auto max-w-7xl pb-20">
         <div className="mb-5 flex items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>

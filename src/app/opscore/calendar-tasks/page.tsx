@@ -1,5 +1,6 @@
 'use client';
 
+import { nprText } from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -240,7 +241,7 @@ export default function CalendarTasksPage() {
       return {
         id: c.id,
         type: 'CHEQUE_DUE' as const,
-        title: `Cheque Clearance: NPR ${c.amount.toLocaleString()} (${c.bankName})`,
+        title: `Cheque Clearance: ${nprText(c.amount.toLocaleString())} (${c.bankName})`,
         description: `Cheque #${c.chequeNumber} from ${c.storeName}. Current holder: ${c.handedOverTo || c.officerName}`,
         assignedToName: c.officerName,
         assignedToId: c.officerId,

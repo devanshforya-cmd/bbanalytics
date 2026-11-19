@@ -1,5 +1,6 @@
 'use client';
 
+import { nprText } from '@/components/common/Money';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
@@ -107,7 +108,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
     setProducts(hasAccess(currentUser, 'products')
       ? db.getProducts().filter((p) => canAccessBrand(currentUser, p.brandCode))
       : []);
-    setOrders(hasAccess(currentUser, 'orderflow')
+    setOrders(hasAccess(currentUser, 'p.orders_all')
       ? db.getOrders().filter((o) => canAccessBrand(currentUser, o.brandCode))
       : []);
     setCheques(hasAccess(currentUser, 'cheque_tracker')
@@ -273,7 +274,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
         category: 'CHEQUES',
         title: `Cheque #${c.chequeNumber}`,
         subtitle: `${c.bankName} — ${c.storeName}`,
-        extraInfo: `NPR ${c.amount.toLocaleString()}`,
+        extraInfo: `${nprText(c.amount.toLocaleString())}`,
         metaBadge: {
           text: c.status.replace(/_/g, ' '),
           variant: c.status === 'CASHED' ? 'green' : c.status === 'BOUNCED' ? 'red' : 'amber',
@@ -550,7 +551,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
               {/* Category 4: ORDERS */}
               <CategorySection
-                allowed={hasAccess(currentUser, 'orderflow')}
+                allowed={hasAccess(currentUser, 'p.orders_all')}
                 title="ORDERS"
                 count={categorizedResults.orders.length}
                 emptyText="No matching orders"
@@ -602,7 +603,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                       iconBg="bg-amber-50"
                       title={`Cheque #${c.chequeNumber}`}
                       subtitle={`${c.bankName} — ${c.storeName}`}
-                      extraInfo={`NPR ${c.amount.toLocaleString()}`}
+                      extraInfo={`${nprText(c.amount.toLocaleString())}`}
                       badgeText={c.status.replace(/_/g, ' ')}
                       badgeColor={
                         c.status === 'CASHED'

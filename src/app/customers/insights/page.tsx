@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import { failureReasonLabel } from '@/lib/failure-reason';
 import React, { useState, useMemo, useEffect } from 'react';
@@ -639,7 +640,7 @@ export default function CustomerInsightsPage() {
             <DollarSign className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-slate-900">
-            NPR {ltvDistribution.avgLtv.toLocaleString()}
+            <Money>{ltvDistribution.avgLtv.toLocaleString()}</Money>
           </div>
           <div className="mt-1 text-[11px] text-emerald-600 font-bold">Lifetime Value per customer</div>
         </div>

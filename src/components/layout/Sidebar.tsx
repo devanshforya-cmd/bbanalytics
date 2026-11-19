@@ -1,5 +1,6 @@
 'use client';
 
+import { roleLabel } from '@/lib/roles';
 import BrandLogo from './BrandLogo';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -7,128 +8,9 @@ import { usePathname } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
 import { User } from '@/lib/types';
-import { hasAccess, isSuperAdmin } from '@/lib/permissions';
-import {
-  ListChecks,
-  LayoutDashboard,
-  Compass,
-  Store,
-  Truck,
-  Camera,
-  Phone,
-  CreditCard,
-  FileText,
-  Award,
-  Sparkles,
-  ClipboardPen,
-  ClipboardCheck,
-  TruckIcon,
-  MessageSquareHeart,
-  RotateCcw,
-  Tags,
-  Users,
-  PieChart,
-  CheckSquare,
-  History,
-  FileSpreadsheet,
-  BadgePercent,
-  Navigation,
-  Calendar,
-  Settings,
-  Package,
-  Megaphone,
-  Gift,
-} from 'lucide-react';
+import { visibleNavSections } from './nav-items';
 
-interface MenuItem {
-  label: string;
-  href: string;
-  permKey: string;
-  /** Also shown to people with this permission. */
-  alsoPermKey?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  badge?: string;
-}
-
-interface MenuSection {
-  title: string;
-  items: MenuItem[];
-}
-
-const menuSections: MenuSection[] = [
-  {
-    title: 'Overview',
-    items: [
-      { label: 'Dashboard', href: '/dashboard', permKey: 'dashboard', icon: LayoutDashboard },
-      { label: 'Products & Combos', href: '/products', permKey: 'products', icon: Package },
-    ],
-  },
-  {
-    title: 'Offline sales',
-    items: [
-      { label: 'Beat Plans & Routes', href: '/offline-sales/beat-plan', permKey: 'beat_plans', icon: Compass },
-      { label: 'Stores & Branches', href: '/offline-sales/stores', permKey: 'stores', icon: Store },
-      { label: 'Distributor Dispatches', href: '/offline-sales/dispatch', permKey: 'dispatches', icon: Truck },
-      { label: 'Live GPS Tracking', href: '/offline-sales/live-tracking', permKey: 'gps_tracking', icon: Navigation },
-      { label: 'Shelf Photos', href: '/offline-sales/shelf-photos', permKey: 'shelf_photos', icon: Camera },
-      { label: 'Call Tracker', href: '/offline-sales/calls', permKey: 'call_tracker', icon: Phone },
-      { label: 'Cheque Tracker', href: '/offline-sales/cheques', permKey: 'cheque_tracker', icon: CreditCard },
-      { label: 'Document Handover', href: '/offline-sales/documents', permKey: 'document_handover', icon: FileText },
-      { label: 'Staff Scorecards', href: '/offline-sales/scorecard', permKey: 'staff_scorecards', icon: Award },
-    ],
-  },
-  {
-    title: 'Online orders',
-    items: [
-      { label: 'WhatsApp Extractor', href: '/orderflow/extractor', permKey: 'orderflow', icon: Sparkles },
-      { label: 'Manual Order Entry', href: '/orderflow/manual-entry', permKey: 'orderflow', icon: ClipboardPen },
-      { label: 'All Orders', href: '/orderflow/orders', permKey: 'orderflow', alsoPermKey: 'order_desk', icon: ListChecks },
-      { label: 'Daily Orders', href: '/orderflow/daily-orders', permKey: 'orderflow', icon: ClipboardCheck },
-      { label: 'Monthly Sales Sheet', href: '/orderflow/monthly-sales', permKey: 'orderflow', icon: FileSpreadsheet },
-      { label: 'Sales & Offers', href: '/orderflow/sales', permKey: 'orderflow', alsoPermKey: 'marketing', icon: BadgePercent },
-      { label: 'Delivery Failures', href: '/orderflow/delivery-failures', permKey: 'orderflow', icon: TruckIcon },
-    ],
-  },
-  {
-    title: 'Reviews & returns',
-    items: [
-      { label: 'Feedback & Complaints', href: '/reviews/feedback', permKey: 'reviews', icon: MessageSquareHeart },
-      { label: 'Returns', href: '/reviews/returns', permKey: 'reviews', icon: RotateCcw },
-      { label: 'Issue Categories', href: '/reviews/categories', permKey: 'reviews', icon: Tags },
-    ],
-  },
-  {
-    title: 'Customers',
-    items: [
-      { label: 'Customer 360 Directory', href: '/customers', permKey: 'customers', icon: Users },
-      { label: 'Cohort Insights', href: '/customers/insights', permKey: 'customers', icon: PieChart },
-    ],
-  },
-  {
-    title: 'Marketing',
-    items: [
-      { label: 'Influencer Directory', href: '/marketing/influencers', permKey: 'marketing', icon: Megaphone },
-      { label: 'Marketing Sends', href: '/marketing/sends', permKey: 'marketing', icon: Gift },
-    ],
-  },
-  {
-    title: 'Operations',
-    items: [
-      { label: 'Calendar To-Do', href: '/opscore/calendar-tasks', permKey: 'tasks', icon: Calendar, badge: 'BS/AD' },
-      { label: 'Task Management', href: '/opscore/tasks', permKey: 'tasks', icon: CheckSquare },
-      { label: 'Activity Trail', href: '/opscore/activity', permKey: 'activity', icon: History },
-      { label: 'Google Sheets Export', href: '/opscore/export', permKey: 'export', icon: FileSpreadsheet },
-    ],
-  },
-  {
-    title: 'Admin',
-    items: [
-      { label: 'System Settings', href: '/settings', permKey: 'settings', icon: Settings },
-    ],
-  },
-];
-
-export default function Sidebar() {
+export default function Sidebar({ pending = false }: { pending?: boolean }) {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<User>(() => getSessionUser() || db.getCurrentUser());
 
@@ -150,9 +32,8 @@ export default function Sidebar() {
 
       {/* Nav List Filtered Strictly by Permissions */}
       <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-3 pb-4 pt-1">
-        {menuSections.map((section) => {
-          const visibleItems = section.items.filter((item) => (hasAccess(currentUser, item.permKey) || (!!item.alsoPermKey && hasAccess(currentUser, item.alsoPermKey))));
-          if (visibleItems.length === 0) return null;
+        {pending ? <NavSkeleton /> : visibleNavSections(currentUser).map((section) => {
+          const visibleItems = section.items;
 
           return (
             <div key={section.title}>
@@ -180,9 +61,7 @@ export default function Sidebar() {
                             isActive ? 'text-blue-600' : 'text-slate-500'
                           }`}
                         />
-                        <span>
-                          {item.label}
-                        </span>
+                        <span>{item.label}</span>
                       </div>
                       {item.badge && (
                         <span
@@ -216,11 +95,25 @@ export default function Sidebar() {
           <div className="overflow-hidden flex-1 min-w-0">
             <div className="truncate text-xs font-bold text-slate-900">{currentUser.fullName}</div>
             <div className="truncate text-[10px] font-medium text-slate-500">
-              {isSuperAdmin(currentUser) ? 'Super Admin' : currentUser.role || 'Authorized User'}
+              {roleLabel(currentUser)}
             </div>
           </div>
         </div>
       </div>
     </aside>
+  );
+}
+
+/** Grey placeholders while the server confirms access, so no one else's menu ever shows. */
+export function NavSkeleton() {
+  return (
+    <div role="status" aria-label="Loading your menu" className="space-y-5 px-1 pt-1">
+      {[4, 3, 5].map((rows, index) => (
+        <div key={index} className="space-y-2">
+          <div className="h-2.5 w-20 rounded-full bg-slate-200/80" />
+          {Array.from({ length: rows }).map((_, row) => <div key={row} className="flex items-center gap-2.5 px-1.5 py-1"><div className="h-[18px] w-[18px] rounded-md bg-slate-200/80" /><div className="h-3 rounded-full bg-slate-200/80" style={{ width: `${55 + ((row * 17 + index * 11) % 35)}%` }} /></div>)}
+        </div>
+      ))}
+    </div>
   );
 }

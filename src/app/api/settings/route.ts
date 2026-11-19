@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireFeatureAccess(request, 'settings', 'EDIT');
+  const auth = await requireFeatureAccess(request, 'p.settings_holidays', 'EDIT');
   if (auth.response) return auth.response;
   try {
     const body = await readBody(request);
