@@ -155,7 +155,7 @@ export default function Header() {
   return (
     <>
       <header
-        className={`sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b px-3 sm:px-6 transition-all duration-200 ${
+        className={`sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b px-3 sm:px-6 transition duration-200 ${
           isGlassVariant
             ? 'border-black/[0.06] bg-white/70 backdrop-blur-xl backdrop-saturate-150'
             : 'border-black/[0.06] bg-white/80 backdrop-blur-xl backdrop-saturate-150'
@@ -188,14 +188,14 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setShowSearchModal(true)}
-            className="flex w-full items-center gap-2.5 px-3.5 py-1.5 rounded-xl border border-slate-200/90 bg-slate-50/70 hover:bg-white hover:border-blue-300 hover:shadow-xs text-slate-400 hover:text-slate-600 transition duration-150 shadow-2xs group cursor-pointer"
+            className="flex w-full items-center gap-2.5 px-3.5 py-1.5 rounded-xl border border-slate-200/90 bg-slate-50/70 hover:bg-white hover:border-blue-300 hover:shadow-xs text-slate-500 hover:text-slate-600 transition duration-150 shadow-2xs group cursor-pointer"
             aria-label="Search your workspace"
           >
             <Search className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition shrink-0" />
-            <span className="text-xs text-slate-400 group-hover:text-slate-600 font-medium truncate">
+            <span className="text-xs text-slate-500 group-hover:text-slate-600 font-medium truncate">
               Search your workspace
             </span>
-            <kbd className="ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold text-slate-400 bg-white border border-slate-200 rounded-md shadow-2xs shrink-0">
+            <kbd className="ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 bg-white border border-slate-200 rounded-md shadow-2xs shrink-0">
               <span className="text-xs">⌘</span>K
             </kbd>
           </button>
@@ -244,7 +244,7 @@ export default function Header() {
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 bg-slate-50/70">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                    <span className="text-xs font-bold text-slate-800">
                       Notifications
                     </span>
                     {unreadNotifs.length > 0 && (
@@ -295,7 +295,7 @@ export default function Header() {
                 {/* Notification Items List */}
                 <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
                   {displayedNotifs.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-slate-400">
+                    <div className="p-6 text-center text-xs text-slate-500">
                       <Sparkles className="w-6 h-6 mx-auto text-slate-300 mb-1" />
                       <span>No {notifTab === 'UNREAD' ? 'unread ' : ''}notifications</span>
                     </div>
@@ -343,7 +343,7 @@ export default function Header() {
                             <p className="text-slate-500 mt-0.5 line-clamp-2 text-[11px] leading-snug">
                               {n.message}
                             </p>
-                            <span className="text-[10px] text-slate-400 mt-1 block">
+                            <span className="text-[10px] text-slate-500 mt-1 block">
                               {n.createdAt || 'Today 10:30 AM'} • Click to view
                             </span>
                           </div>

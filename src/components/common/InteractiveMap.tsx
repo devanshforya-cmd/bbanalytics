@@ -453,7 +453,7 @@ export default function InteractiveMap({
       </div>
 
       {/* SVG Polylines for Rep Routes */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
+      <svg aria-hidden="true" className="absolute inset-0 w-full h-full pointer-events-none z-10">
         <defs>
           <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.8" />
@@ -584,7 +584,7 @@ export default function InteractiveMap({
                   ? 'bg-emerald-500 border-white text-white'
                   : isSkipped
                   ? 'bg-rose-500 border-white text-white'
-                  : 'bg-amber-500 border-white text-white'
+                  : 'bg-amber-600 border-white text-white'
               }`}
             >
               {isVisited ? (
@@ -689,7 +689,7 @@ export default function InteractiveMap({
                 <button
                   type="button"
                   onClick={() => setActivePopup(null)}
-                  className="text-slate-400 hover:text-slate-600 text-xs px-1"
+                  className="text-slate-500 hover:text-slate-600 text-xs px-1"
                 >
                   ✕
                 </button>
@@ -745,7 +745,7 @@ export default function InteractiveMap({
               </div>
 
               <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                <span className="text-slate-400 font-mono">
+                <span className="text-slate-500 font-mono">
                   {activePopup.rep.currentLat.toFixed(4)}, {activePopup.rep.currentLng.toFixed(4)}
                 </span>
                 <span className="font-semibold text-emerald-600">GPS Ping Active</span>
@@ -762,7 +762,7 @@ export default function InteractiveMap({
                 <button
                   type="button"
                   onClick={() => setActivePopup(null)}
-                  className="text-slate-400 hover:text-slate-600 text-xs px-1"
+                  className="text-slate-500 hover:text-slate-600 text-xs px-1"
                 >
                   ✕
                 </button>
@@ -771,7 +771,7 @@ export default function InteractiveMap({
                 {activePopup.store.address}
               </p>
               <div className="mt-2 flex items-center justify-between text-xs">
-                <span className="text-[10px] uppercase font-bold text-slate-400">
+                <span className="text-[10px] font-bold text-slate-500">
                   Beat Status
                 </span>
                 <span
@@ -787,7 +787,7 @@ export default function InteractiveMap({
                 </span>
               </div>
               {activePopup.store.checkedInAt && (
-                <div className="mt-1 text-[10px] text-slate-400">
+                <div className="mt-1 text-[10px] text-slate-500">
                   Checked in at: {new Date(activePopup.store.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               )}

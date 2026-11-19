@@ -72,7 +72,7 @@ export default function DualDateField({ id, label, valueAd, onChange, required, 
     <div>
       <div className="mb-1 flex items-center justify-between gap-2">
         <label htmlFor={`${id}-${mode === 'AD' ? 'ad' : 'bs-day'}`} className="block text-xs font-bold text-slate-700">
-          {label} {required && <span className="text-rose-500">*</span>}
+          {label} {required && <span className="text-rose-600">*</span>}
         </label>
         {!adOnly && <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[10px] font-bold" role="group" aria-label={`${label} calendar`}>
           {(['BS', 'AD'] as const).map((option) => (

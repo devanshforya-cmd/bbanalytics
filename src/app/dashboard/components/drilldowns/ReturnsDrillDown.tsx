@@ -54,25 +54,25 @@ export default function ReturnsDrillDown({
         {/* Metric Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Total Returns
             </div>
             <div className="text-xl font-black text-rose-600 mt-1">{returns.length}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Return Rate
             </div>
             <div className="text-xl font-black text-slate-900 mt-1">{returnRate}%</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Units Returned
             </div>
             <div className="text-xl font-black text-slate-900 mt-1">{totalReturnUnits}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Resolved / Exchanged
             </div>
             <div className="text-xl font-black text-emerald-600 mt-1">{resolvedCount}</div>
@@ -106,7 +106,7 @@ function ReturnsListTab({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
       <table className="w-full text-left text-xs">
         <thead>
           <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -135,7 +135,7 @@ function ReturnsListTab({
                 >
                   {r.customerName}
                 </Link>
-                <div className="text-[10px] text-slate-400 font-mono">{r.customerPhone}</div>
+                <div className="text-[10px] text-slate-500 font-mono">{r.customerPhone}</div>
               </td>
               <td className="p-2.5 whitespace-nowrap">
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getBrandColor(r.brandCode)}`}>
@@ -242,7 +242,7 @@ function ReturnsByProductTab({
         Products with <strong>&gt;10% return rate</strong> are flagged in red to isolate packaging defects and formulation complaints.
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -335,7 +335,7 @@ function ReturnsByCategoryTab({
     <div className="space-y-6">
       <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          <h4 className="text-xs font-bold text-slate-500">
             Click a Dynamic Category to Filter
           </h4>
           {selectedCategory && (
@@ -352,7 +352,7 @@ function ReturnsByCategoryTab({
             <button
               key={c.name}
               onClick={() => onSelectCategory(selectedCategory === c.name ? null : c.name)}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1.5 ${
                 selectedCategory === c.name
                   ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                   : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -371,7 +371,7 @@ function ReturnsByCategoryTab({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">

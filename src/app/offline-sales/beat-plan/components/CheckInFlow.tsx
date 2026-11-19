@@ -116,7 +116,7 @@ export default function CheckInFlow({
               </div>
               <button
                 onClick={onDismissCheckIn}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+                className="p-1.5 text-slate-500 hover:text-slate-600 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -140,7 +140,7 @@ export default function CheckInFlow({
                   <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <Camera className="w-4 h-4 text-blue-600" />
                     <span>Store Entrance Photo</span>
-                    <span className="text-rose-500 font-bold">*Required</span>
+                    <span className="text-rose-600 font-bold">*Required</span>
                   </label>
                   {photoUrl && (
                     <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
@@ -255,7 +255,7 @@ export default function CheckInFlow({
               <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
+                  <span className="text-[10px] text-emerald-400 font-bold ">
                     In-Store Session
                   </span>
                   <span className="text-xs font-mono font-bold text-amber-300 bg-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -270,7 +270,7 @@ export default function CheckInFlow({
             {/* Quick close / minimize */}
             <button
               onClick={onDismissCheckIn}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg transition"
+              className="p-1.5 text-slate-500 hover:text-white rounded-lg transition"
               title="Minimize workspace"
             >
               <X className="w-5 h-5" />

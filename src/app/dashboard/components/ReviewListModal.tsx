@@ -58,7 +58,7 @@ export default function ReviewListModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-bold text-slate-900">{title}</h3>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">{title}</h2>
                 <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
                   {list.length}
                 </span>
@@ -69,7 +69,7 @@ export default function ReviewListModal({
 
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+            className="p-1.5 text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -98,7 +98,7 @@ export default function ReviewListModal({
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900 text-sm">{r.customerName}</span>
-                          <span className="font-mono text-slate-400 text-[11px]">{r.customerPhone}</span>
+                          <span className="font-mono text-slate-500 text-[11px]">{r.customerPhone}</span>
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sentimentColor}`}>
                             {r.sentiment}
                           </span>
@@ -145,7 +145,7 @@ export default function ReviewListModal({
                         href="/customers"
                         className="text-blue-600 font-bold hover:underline text-xs"
                       >
-                        Open Customer Profile &rarr;
+                        Open Customer Profile
                       </Link>
                     </div>
                   </div>

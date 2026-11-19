@@ -48,9 +48,9 @@ export default function OrderIdPrefixes() {
                 <span className="flex items-center gap-2">
                   <label className="sr-only" htmlFor={`prefix-${brand.code}`}>Order ID prefix for {brand.name}</label>
                   <input id={`prefix-${brand.code}`} value={draft} disabled={!canEdit} maxLength={3} onChange={(event) => setDrafts((existing) => ({ ...existing, [brand.code]: cleanPrefix(event.target.value).slice(0, 3) }))}
-                    className="w-16 rounded-lg border border-slate-300 px-2 py-1.5 text-center font-mono text-sm font-black uppercase tracking-wider outline-none focus:border-blue-500 disabled:bg-slate-50" />
+                    className="w-16 rounded-lg border border-slate-300 px-2 py-1.5 text-center font-mono text-sm font-black outline-none focus:border-blue-500 disabled:bg-slate-50" />
                   <span className="hidden font-mono text-slate-500 sm:inline">e.g. {formatDocumentId(cleanPrefix(draft) || '??', 421)}</span>
-                  {canEdit && <button type="button" disabled={!changed || !!saving} onClick={() => void save(brand.code)} className="rounded-lg bg-blue-600 px-3 py-1.5 font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400">{saving === brand.code ? 'Saving…' : 'Save'}</button>}
+                  {canEdit && <button type="button" disabled={!changed || !!saving} onClick={() => void save(brand.code)} className="rounded-lg bg-blue-600 px-3 py-1.5 font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-600">{saving === brand.code ? 'Saving…' : 'Save'}</button>}
                 </span>
               </li>
             );

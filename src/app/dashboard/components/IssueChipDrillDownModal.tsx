@@ -88,9 +88,9 @@ export default function IssueChipDrillDownModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">
                   Issue Drill-Down: {categoryName}
-                </h3>
+                </h2>
                 <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
                   {combinedEntries.length} logged
                 </span>
@@ -103,7 +103,7 @@ export default function IssueChipDrillDownModal({
 
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+            className="p-1.5 text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -115,10 +115,10 @@ export default function IssueChipDrillDownModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 3-Month Trend */}
             <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+              <h3 className="text-xs font-bold text-slate-500 flex items-center gap-1.5">
                 <TrendingUp className="w-4 h-4 text-blue-600" />
                 3-Month Incidence Trend
-              </h4>
+              </h3>
               <p className="text-[11px] text-slate-500">
                 Monthly volume of reports tagged with &ldquo;{categoryName}&rdquo;
               </p>
@@ -142,10 +142,10 @@ export default function IssueChipDrillDownModal({
 
             {/* Most Affected Products */}
             <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+              <h3 className="text-xs font-bold text-slate-500 flex items-center gap-1.5">
                 <Package className="w-4 h-4 text-purple-600" />
                 Most Affected SKUs
-              </h4>
+              </h3>
               <div className="space-y-2 pt-1">
                 {productsList.slice(0, 3).map((p) => (
                   <div key={p.name} className="flex items-center justify-between text-xs">
@@ -163,14 +163,14 @@ export default function IssueChipDrillDownModal({
 
           {/* Table of Entries */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+            <h3 className="text-xs font-bold text-slate-600">
               All Logged Incidents
-            </h4>
+            </h3>
 
             {combinedEntries.length === 0 ? (
               <EmptyState type="generic" customMessage={`No complaints or returns have been tagged with "${categoryName}".`} />
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -192,7 +192,7 @@ export default function IssueChipDrillDownModal({
                         </td>
                         <td className="p-2.5 whitespace-nowrap">
                           <span className="font-bold text-slate-900">{e.customer}</span>
-                          <div className="text-[10px] text-slate-400 font-mono">{e.phone}</div>
+                          <div className="text-[10px] text-slate-500 font-mono">{e.phone}</div>
                         </td>
                         <td className="p-2.5 whitespace-nowrap">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800">

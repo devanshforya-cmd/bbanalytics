@@ -427,7 +427,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-blue-600" />
               <h2 className="text-sm font-bold text-slate-900">Paste WhatsApp Messages</h2>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-slate-500">
                 (Paste 1 chat or separate multiple orders with &quot;---&quot;)
               </span>
             </div>
@@ -470,12 +470,12 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
             rows={6}
             value={chatText}
             onChange={(e) => setChatText(e.target.value)}
-            placeholder="Paste WhatsApp chat message(s) here. E.g.:&#10;[11:32 AM] Sita: I want 2 bottles of the selected product. Phone 9847890123...&#10;---&#10;Next order..."
+            placeholder="Paste WhatsApp chat message(s) here. E.g.:&#10;[11:32 AM] Sita: I want 2 bottles of the selected product. Phone 9847890123...&#10;---&#10;Next order…"
             className="w-full rounded-xl border border-slate-200 p-4 font-mono text-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
           />
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-500">
               Matches against {activeCatalogProducts.length} active products &amp; {activeCatalogCombos.length} combos in database.
             </span>
 
@@ -581,7 +581,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           }}
                           className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
                         />
-                        <span className="text-xs font-bold text-slate-400">#{ordIdx + 1}</span>
+                        <span className="text-xs font-bold text-slate-500">#{ordIdx + 1}</span>
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${colors.bg} ${colors.text} ${colors.border}`}>
                           {ord.brandCode.value}
                         </span>
@@ -596,7 +596,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         {renderConfidenceBadge(ord.customerName.confidence)}
                         <button
                           onClick={() => handleDiscardOrder(ord.id)}
-                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                          className="p-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                           title="Discard order"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -694,7 +694,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           <span>Customer Name</span>
                           {!ord.customerName.value && <span className="text-rose-600 font-bold text-[10px]">Required</span>}
                         </label>
-                        <input
+                        <input aria-label="Customer Name"
                           type="text"
                           value={ord.customerName.value}
                           onChange={(e) => handleUpdateOrderField(ord.id, 'customerName', e.target.value)}
@@ -707,11 +707,11 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
 
                       {/* Phone */}
                       <div>
-                        <label className="font-semibold text-slate-500 mb-1 block flex items-center justify-between">
+                        <label htmlFor="extractor-phone-number" className="font-semibold text-slate-500 mb-1 block flex items-center justify-between">
                           <span>Phone Number</span>
                           {!ord.customerPhone.value && <span className="text-rose-600 font-bold text-[10px]">Required</span>}
                         </label>
-                        <input
+                        <input id="extractor-phone-number"
                           type="text"
                           value={ord.customerPhone.value}
                           onChange={(e) => handleUpdateOrderField(ord.id, 'customerPhone', e.target.value)}
@@ -756,7 +756,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           placeholder="Exact address from message"
                         />
                         {ord.rawAddress && (
-                          <div className="text-[10px] text-slate-400 mt-1 truncate" title={ord.rawAddress}>
+                          <div className="text-[10px] text-slate-500 mt-1 truncate" title={ord.rawAddress}>
                             Exact text: <span className="font-mono text-slate-600 font-semibold">{ord.rawAddress}</span>
                           </div>
                         )}
@@ -780,7 +780,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                             }}
                             className="bg-white border border-slate-200 rounded px-2 py-0.5 text-xs font-normal"
                           >
-                            <option value="">+ Add from catalog...</option>
+                            <option value="">+ Add from catalog…</option>
                             <optgroup label="Products">{activeCatalogProducts.map(product => <option key={product.id} value={`product:${product.id}`}>{product.name} (NPR {product.mrp})</option>)}</optgroup>
                             <optgroup label="Combos">{activeCatalogCombos.map(combo => <option key={combo.id} value={`combo:${combo.id}`}>{combo.name} (NPR {combo.comboPrice || combo.comboMrp})</option>)}</optgroup>
                           </select>
@@ -801,7 +801,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                                 </span>
                               )}
                               <span className="font-semibold text-slate-900">{item.name}</span>
-                              <span className="text-slate-400">Catalogue NPR {item.unitPrice.toLocaleString()}</span>
+                              <span className="text-slate-500">Catalogue NPR {item.unitPrice.toLocaleString()}</span>
                               <label className="text-slate-600">Selling price per unit (NPR)<input aria-label={`Selling price per unit for ${item.name}`} type="number" min="0" max={item.unitPrice} step="0.01" value={item.saleUnitPrice ?? ''} placeholder={String(item.unitPrice)} onChange={event => handleUpdateItemPrice(ord.id, itIdx, event.target.value)} className="ml-2 w-24 rounded-lg border border-slate-200 p-1" /></label>
                             </div>
 
@@ -827,7 +827,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
 
                               <span className="w-24 text-right">
                                 <span className="block font-bold text-slate-900">NPR {(ord.trail?.lines[itIdx]?.total ?? item.totalPrice).toLocaleString()}</span>
-                                {ord.trail && ord.trail.lines[itIdx] && ord.trail.lines[itIdx].total < item.unitPrice * item.quantity && <span className="block text-[11px] text-slate-400 line-through">NPR {(item.unitPrice * item.quantity).toLocaleString()}</span>}
+                                {ord.trail && ord.trail.lines[itIdx] && ord.trail.lines[itIdx].total < item.unitPrice * item.quantity && <span className="block text-[11px] text-slate-500 line-through">NPR {(item.unitPrice * item.quantity).toLocaleString()}</span>}
                               </span>
 
                               <button
@@ -848,7 +848,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                     <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                       <div className="flex items-center gap-4 flex-wrap">
                         <div>
-                          <span className="text-slate-400">Catalogue total: </span>
+                          <span className="text-slate-500">Catalogue total: </span>
                           <span className="font-bold text-slate-900">NPR {ord.products.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0).toLocaleString()}</span>
                         </div>
                         <div>
@@ -856,7 +856,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           <input id={`amount_${ord.id}`} type="number" min="0" step="0.01" value={ord.statedPrice.provided ? ord.statedPrice.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, statedPrice: { ...order.statedPrice, provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-28 rounded-lg border border-slate-200 p-1" placeholder="Optional" />
                         </div>
                         {ord.entryKind !== 'EXCHANGE' && <div><label className="text-slate-500" htmlFor={`discount_${ord.id}`}>Order discount (%)</label><input id={`discount_${ord.id}`} type="number" min="0" max="100" step="0.01" value={ord.discountPercent?.provided ? ord.discountPercent.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, discountPercent: { confidence: 'HIGH', provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-20 rounded-lg border border-slate-200 p-1" placeholder="Optional" /></div>}
-                        <div><span className="text-slate-400">{ord.entryKind === 'EXCHANGE' ? 'To collect: ' : 'Order total: '}</span><span className="font-bold text-slate-900">NPR {ord.totalAmount.value.toLocaleString()}</span>
+                        <div><span className="text-slate-500">{ord.entryKind === 'EXCHANGE' ? 'To collect: ' : 'Order total: '}</span><span className="font-bold text-slate-900">NPR {ord.totalAmount.value.toLocaleString()}</span>
                           {ord.entryKind !== 'EXCHANGE' && extractedDiscount(ord).amount > 0 && <span className="ml-1.5 text-emerald-700">− NPR {extractedDiscount(ord).amount.toLocaleString()} ({extractedDiscount(ord).percent}% off)</span>}
                           {ord.entryKind !== 'EXCHANGE' && ord.trail && (ord.trail.offerDiscount > 0 || ord.trail.customerDiscount > 0) && (
                             <span className="block text-[11px] text-slate-500">MRP {ord.trail.mrpTotal.toLocaleString()}{ord.trail.offerDiscount > 0 ? ` · offers −${ord.trail.offerDiscount.toLocaleString()}` : ''}{ord.trail.customerDiscount > 0 ? ` · customer discount −${ord.trail.customerDiscount.toLocaleString()}` : ''}</span>
@@ -937,7 +937,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
               href="/orderflow/daily-orders"
               className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition"
             >
-              View Daily Orders →
+              View daily orders
             </Link>
           </div>
         )}
@@ -956,7 +956,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                   setHistory([]);
                   localStorage.removeItem(historyKey);
                 }}
-                className="text-[11px] text-slate-400 hover:text-rose-600 font-semibold"
+                className="text-[11px] text-slate-500 hover:text-rose-600 font-semibold"
               >
                 Clear History
               </button>
@@ -964,11 +964,11 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
           </div>
 
           {history.length === 0 ? (
-            <div className="py-8 text-center text-xs text-slate-400">
+            <div className="py-8 text-center text-xs text-slate-500">
               No recent extractions yet. Paste customer WhatsApp/social media chats above to extract orders.
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full text-left text-xs text-slate-600">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
                   <tr>
@@ -984,10 +984,10 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {history.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/50">
-                      <td className="py-2.5 px-3 text-slate-400">{item.timestamp}</td>
+                      <td className="py-2.5 px-3 text-slate-500">{item.timestamp}</td>
                       <td className="py-2.5 px-3 font-semibold text-slate-800">
                         {item.customerName}
-                        <span className="block text-[10px] text-slate-400 font-normal">{item.customerPhone}</span>
+                        <span className="block text-[10px] text-slate-500 font-normal">{item.customerPhone}</span>
                       </td>
                       <td className="py-2.5 px-3">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
@@ -1024,7 +1024,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
             <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-900">Confirm Batch Push</h3>
-                <button onClick={() => setShowConfirmModal(false)} className="text-slate-400 hover:text-slate-600">
+                <button onClick={() => setShowConfirmModal(false)} className="text-slate-500 hover:text-slate-600">
                   <X className="w-5 h-5" />
                 </button>
               </div>

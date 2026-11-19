@@ -155,7 +155,7 @@ export default function FieldSalesSettings() {
               onChange={handleTogglePhotoRequired}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition peer-checked:bg-blue-600" />
           </label>
         </div>
       </div>
@@ -184,7 +184,7 @@ export default function FieldSalesSettings() {
             type="text"
             value={newDocTypeName}
             onChange={(e) => setNewDocTypeName(e.target.value)}
-            placeholder="e.g. Distributor Tax Clearance Certificate, Credit Note..."
+            placeholder="e.g. Distributor Tax Clearance Certificate, Credit Note…"
             className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
@@ -207,7 +207,7 @@ export default function FieldSalesSettings() {
             >
               <div className="min-w-0">
                 <span className="text-xs font-bold text-slate-900 block truncate">{dt.name}</span>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[10px] text-slate-500">
                   {dt.isActive ? 'Active in mobile app' : 'Deactivated'}
                 </span>
               </div>
@@ -251,7 +251,7 @@ export default function FieldSalesSettings() {
             type="text"
             value={newCategoryName}
             onChange={(e) => setNewCategoryName(e.target.value)}
-            placeholder="e.g. Category A (Weekly), Category B (Bi-Weekly), Cosmetic Store..."
+            placeholder="e.g. Category A (Weekly), Category B (Bi-Weekly), Cosmetic Store…"
             className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
@@ -274,7 +274,7 @@ export default function FieldSalesSettings() {
             >
               <div className="min-w-0">
                 <span className="text-xs font-bold text-slate-900 block truncate">{cat.name}</span>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[10px] text-slate-500">
                   {cat.isActive ? 'Active on store forms' : 'Archived'}
                 </span>
               </div>
@@ -333,9 +333,9 @@ export default function FieldSalesSettings() {
 
         {/* Schedules Table */}
         <div className="border border-slate-200 rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0}>
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase tracking-wider text-[10px]">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[10px]">
                 <tr>
                   <th className="p-3">Field Sales Officer</th>
                   <th className="p-3">Weekday</th>
@@ -386,7 +386,7 @@ export default function FieldSalesSettings() {
               <h3 className="font-bold text-slate-900 text-base">Add One-Time Beat Override</h3>
               <button
                 onClick={() => setShowOverrideModal(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -394,8 +394,8 @@ export default function FieldSalesSettings() {
 
             <form onSubmit={handleSaveOverride} className="space-y-3 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Sales Officer</label>
-                <select
+                <label htmlFor="fieldsalessettings-sales-officer" className="block font-bold text-slate-700 mb-1">Sales Officer</label>
+                <select id="fieldsalessettings-sales-officer"
                   value={overrideOfficerId}
                   onChange={(e) => setOverrideOfficerId(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
@@ -410,7 +410,7 @@ export default function FieldSalesSettings() {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Target Store</label>
-                <select
+                <select aria-label="Target Store"
                   value={overrideStoreId}
                   onChange={(e) => setOverrideStoreId(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
@@ -426,7 +426,7 @@ export default function FieldSalesSettings() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Visit Date</label>
-                  <input
+                  <input aria-label="Visit Date"
                     type="date"
                     value={overrideDate}
                     onChange={(e) => setOverrideDate(e.target.value)}
@@ -435,7 +435,7 @@ export default function FieldSalesSettings() {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Priority</label>
-                  <select
+                  <select aria-label="Priority"
                     value={overridePriority}
                     onChange={(e) => setOverridePriority(e.target.value as any)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
@@ -449,9 +449,9 @@ export default function FieldSalesSettings() {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Manager Note / Directive</label>
-                <input
+                <input aria-label="Manager Note / Directive"
                   type="text"
-                  placeholder="e.g. Urgent stock delivery, collect pending payment..."
+                  placeholder="e.g. Urgent stock delivery, collect pending payment…"
                   value={overrideNote}
                   onChange={(e) => setOverrideNote(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
@@ -486,7 +486,7 @@ export default function FieldSalesSettings() {
               <h3 className="font-bold text-slate-900 text-base">Officer Leave &amp; Route Coverage</h3>
               <button
                 onClick={() => setShowLeaveModal(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -494,8 +494,8 @@ export default function FieldSalesSettings() {
 
             <form onSubmit={handleSaveLeave} className="space-y-3 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Officer Going on Leave</label>
-                <select
+                <label htmlFor="fieldsalessettings-officer-going-on-leave" className="block font-bold text-slate-700 mb-1">Officer Going on Leave</label>
+                <select id="fieldsalessettings-officer-going-on-leave"
                   value={leaveOfficerId}
                   onChange={(e) => setLeaveOfficerId(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
@@ -510,7 +510,7 @@ export default function FieldSalesSettings() {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Covering Officer</label>
-                <select
+                <select aria-label="Covering Officer"
                   value={leaveCoveringId}
                   onChange={(e) => setLeaveCoveringId(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
@@ -528,7 +528,7 @@ export default function FieldSalesSettings() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Leave Start Date</label>
-                  <input
+                  <input aria-label="Leave Start Date"
                     type="date"
                     value={leaveStartDate}
                     onChange={(e) => setLeaveStartDate(e.target.value)}
@@ -537,7 +537,7 @@ export default function FieldSalesSettings() {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Leave End Date</label>
-                  <input
+                  <input aria-label="Leave End Date"
                     type="date"
                     value={leaveEndDate}
                     onChange={(e) => setLeaveEndDate(e.target.value)}

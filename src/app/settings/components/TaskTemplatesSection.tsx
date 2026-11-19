@@ -103,7 +103,7 @@ export default function TaskTemplatesSection() {
         {templates.map((tmpl) => (
           <div
             key={tmpl.id}
-            className={`rounded-2xl border p-5 space-y-4 transition-all bg-white shadow-xs ${
+            className={`rounded-2xl border p-5 space-y-4 transition bg-white shadow-xs ${
               tmpl.active ? 'border-slate-200' : 'border-slate-200 bg-slate-50/60 opacity-60'
             }`}
           >
@@ -141,7 +141,7 @@ export default function TaskTemplatesSection() {
                   <div className="flex-1">
                     <div className="font-semibold text-slate-800 flex items-center justify-between">
                       <span>{step.title}</span>
-                      <span className="text-[10px] font-mono text-slate-400">
+                      <span className="text-[10px] font-mono text-slate-500">
                         Due: +{step.dueDaysOffset}d
                       </span>
                     </div>
@@ -167,7 +167,7 @@ export default function TaskTemplatesSection() {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-500 hover:text-slate-600"
               >
                 ✕
               </button>
@@ -175,8 +175,8 @@ export default function TaskTemplatesSection() {
 
             <form onSubmit={handleCreate} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Template Name *</label>
-                <input
+                <label htmlFor="tasktemplatessection-template-name" className="block font-semibold text-slate-700 mb-1">Template Name *</label>
+                <input id="tasktemplatessection-template-name"
                   type="text"
                   required
                   placeholder="e.g. VIP Retailer Seasonal Pitch"
@@ -187,10 +187,10 @@ export default function TaskTemplatesSection() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Description</label>
-                <textarea
+                <label htmlFor="tasktemplatessection-description" className="block font-semibold text-slate-700 mb-1">Description</label>
+                <textarea id="tasktemplatessection-description"
                   rows={2}
-                  placeholder="Describe when field officers or operations staff should trigger this template..."
+                  placeholder="Describe when field officers or operations staff should trigger this template…"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -222,7 +222,7 @@ export default function TaskTemplatesSection() {
                         <button
                           type="button"
                           onClick={() => handleRemoveStep(idx)}
-                          className="text-slate-400 hover:text-rose-600"
+                          className="text-slate-500 hover:text-rose-600"
                         >
                           ✕
                         </button>

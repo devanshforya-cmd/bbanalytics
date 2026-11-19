@@ -132,9 +132,9 @@ export default function StoreNetworkOverviewSection() {
             <div className="p-1.5 rounded-lg bg-blue-50 text-blue-700">
               <Store className="w-4 h-4" />
             </div>
-            <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+            <h2 className="text-sm font-bold text-slate-900 tracking-tight">
               Store Network Overview &amp; Portfolio Health
-            </h3>
+            </h2>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
             Automated health scores (0–100) &amp; geographic distribution across Kathmandu Valley
@@ -142,8 +142,8 @@ export default function StoreNetworkOverviewSection() {
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs font-semibold text-slate-600">Area:</label>
-          <select
+          <label htmlFor="storenetworkoverviewsection-area" className="text-xs font-semibold text-slate-600">Area:</label>
+          <select id="storenetworkoverviewsection-area"
             value={filterArea}
             onChange={(e) => setFilterArea(e.target.value)}
             className="text-xs py-1.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -161,14 +161,14 @@ export default function StoreNetworkOverviewSection() {
       {/* 4 Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-1 shadow-xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Active Stores</span>
+          <span className="text-[11px] font-bold text-slate-500">Total Active Stores</span>
           <div className="text-2xl font-black text-slate-900">{totalStores}</div>
           <p className="text-[11px] text-slate-500">Across GT &amp; Modern Trade</p>
         </div>
 
         <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/40 space-y-1 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Tier 1 Stores</span>
+            <span className="text-[11px] font-bold text-emerald-800">Tier 1 Stores</span>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">Top 20%</span>
           </div>
           <div className="text-2xl font-black text-emerald-900">{tier1Count}</div>
@@ -176,14 +176,14 @@ export default function StoreNetworkOverviewSection() {
         </div>
 
         <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50/40 space-y-1 shadow-xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">Avg Health Score</span>
+          <span className="text-[11px] font-bold text-blue-800">Avg Health Score</span>
           <div className="text-2xl font-black text-blue-900">{avgHealth} / 100</div>
           <p className="text-[11px] text-blue-700">Healthy portfolio baseline</p>
         </div>
 
         <div className="p-4 rounded-2xl border border-rose-200 bg-rose-50/40 space-y-1 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-800">Needs Attention</span>
+            <span className="text-[11px] font-bold text-rose-800">Needs Attention</span>
             <ShieldAlert className="w-4 h-4 text-rose-600" />
           </div>
           <div className="text-2xl font-black text-rose-900">{attentionCount}</div>
@@ -193,7 +193,7 @@ export default function StoreNetworkOverviewSection() {
 
       {/* Comparison Table with frozen first column and horizontal scrolling (Fix 29a) */}
       <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full min-w-[760px] text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-600 font-bold">
@@ -255,13 +255,13 @@ export default function StoreNetworkOverviewSection() {
                     <td className="sticky left-0 bg-white py-3.5 px-4 font-semibold text-slate-900 z-10 shadow-r">
                       <div className="flex flex-col">
                         <span className="truncate max-w-[200px]">{store.name}</span>
-                        <span className="text-[10px] text-slate-400 font-normal">
+                        <span className="text-[10px] text-slate-500 font-normal">
                           {isBranch ? (store as any).distributorName : (store as any).city || 'Kathmandu'}
                         </span>
                       </div>
                     </td>
                     <td className="py-3.5 px-3 font-medium">
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold uppercase">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold ">
                         {isBranch ? 'Branch (MT)' : (store as any).type || 'Retailer (GT)'}
                       </span>
                     </td>
@@ -280,7 +280,7 @@ export default function StoreNetworkOverviewSection() {
                     </td>
                     <td className="py-3.5 px-3 text-slate-600">
                       {!store.hasPaymentHistory ? (
-                        <span className="text-slate-400">No payment history</span>
+                        <span className="text-slate-500">No payment history</span>
                       ) : store.score.paymentDiscipline >= 20 ? (
                         <span className="text-emerald-700 font-medium">✓ 100% On-Time</span>
                       ) : store.score.paymentDiscipline >= 10 ? (
@@ -319,7 +319,7 @@ export default function StoreNetworkOverviewSection() {
               <Layers className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900">Geographic Brand Coverage Matrix</h4>
+              <h3 className="text-sm font-bold text-slate-900">Geographic Brand Coverage Matrix</h3>
               <p className="text-[11px] text-slate-500">Identify brand distribution gaps across commercial zones</p>
             </div>
           </div>
@@ -337,7 +337,7 @@ export default function StoreNetworkOverviewSection() {
             No stores or areas registered yet. Add stores in the Store Directory to view coverage.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0}>
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500 font-semibold">
@@ -361,7 +361,7 @@ export default function StoreNetworkOverviewSection() {
                         {bc.count > 0 ? (
                           <span className="text-emerald-600 font-bold">✓ Covered ({bc.count})</span>
                         ) : (
-                          <span className="text-rose-500">No presence (0)</span>
+                          <span className="text-rose-600">No presence (0)</span>
                         )}
                       </td>
                     ))}

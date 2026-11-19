@@ -117,7 +117,7 @@ export default function ContentPieceForm({ influencer, content, sendId, onClose,
       <div className="space-y-5 p-5 text-xs">
         <section>
           <div className="mb-1.5 flex items-center justify-between">
-            <span className="font-bold text-slate-700">Platform links <span className="text-rose-500">*</span></span>
+            <span className="font-bold text-slate-700">Platform links <span className="text-rose-600">*</span></span>
             <button type="button" onClick={() => setLinks((rows) => [...rows, { platformId: [], url: '', ownDate: false, dateAd: '', dateBs: '' }])} className="inline-flex items-center gap-1 font-bold text-blue-700 hover:underline"><Plus className="h-3 w-3" /> Add another platform</button>
           </div>
           <div className="space-y-2">
@@ -131,7 +131,7 @@ export default function ContentPieceForm({ influencer, content, sendId, onClose,
                     <label htmlFor={`content-url-${index}`} className="mb-1 block font-bold text-slate-700">Link</label>
                     <input id={`content-url-${index}`} type="url" inputMode="url" value={row.url} onChange={(event) => onUrl(index, event.target.value)} placeholder="https://www.instagram.com/reel/…" className={`${field} font-mono`} />
                   </div>
-                  <button type="button" aria-label="Remove this link" disabled={links.length === 1} onClick={() => setLinks((rows) => rows.filter((_, i) => i !== index))} className="mb-0.5 rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-30"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button type="button" aria-label="Remove this link" disabled={links.length === 1} onClick={() => setLinks((rows) => rows.filter((_, i) => i !== index))} className="mb-0.5 rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-30"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
                 <label className="mt-2 flex cursor-pointer items-center gap-2 text-[11px] text-slate-600">
                   <input type="checkbox" checked={row.ownDate} onChange={(event) => updateLink(index, { ownDate: event.target.checked, ...(event.target.checked && !row.dateAd ? { dateAd: postedAd, dateBs: postedBs } : {}) })} className="h-3.5 w-3.5 rounded border-slate-300" />

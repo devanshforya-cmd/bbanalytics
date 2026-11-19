@@ -99,7 +99,7 @@ export default function OrderStatusControl({ order, compact = false, onChanged }
       {order.status === 'FAILED' && <p className="text-[11px] text-slate-500">Delivered after a failed attempt? Mark it delivered and the open delivery failure closes with it.</p>}
       {cancelling && (
         <div className="space-y-2 rounded-xl border border-rose-200 bg-rose-50/60 p-3">
-          <label htmlFor={`cancel-${order.id}`} className="block text-xs font-bold text-rose-900">Why is this order cancelled? <span className="text-rose-500">*</span></label>
+          <label htmlFor={`cancel-${order.id}`} className="block text-xs font-bold text-rose-900">Why is this order cancelled? <span className="text-rose-600">*</span></label>
           <input id={`cancel-${order.id}`} autoFocus value={reason} maxLength={200} onChange={(event) => setReason(event.target.value)} placeholder="For example: customer changed mind before dispatch"
             className="w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs outline-none focus:border-rose-400" />
           <div className="flex justify-end gap-2">

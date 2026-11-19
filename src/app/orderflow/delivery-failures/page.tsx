@@ -392,7 +392,7 @@ export default function DeliveryFailuresPage() {
               <div
                 key={item.reason}
                 onClick={() => setSelectedReasonFilter(isSelected ? null : item.reason)}
-                className={`group cursor-pointer rounded-xl border p-3.5 transition-all ${
+                className={`group cursor-pointer rounded-xl border p-3.5 transition ${
                   isSelected
                     ? `${item.border} ring-2 ring-blue-500 bg-blue-50/20`
                     : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
@@ -405,7 +405,7 @@ export default function DeliveryFailuresPage() {
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-bold text-slate-900">{item.count}</span>
-                    <span className="text-slate-400 font-medium">({item.pct}%)</span>
+                    <span className="text-slate-500 font-medium">({item.pct}%)</span>
                   </div>
                 </div>
 
@@ -413,7 +413,7 @@ export default function DeliveryFailuresPage() {
                 <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
                   <div
                     style={{ width: `${item.pct}%` }}
-                    className={`h-full rounded-full ${item.bg} transition-all duration-500`}
+                    className={`h-full rounded-full ${item.bg} transition duration-500`}
                   />
                 </div>
               </div>
@@ -427,7 +427,7 @@ export default function DeliveryFailuresPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Card 1: Monday & Tuesday Spike */}
           <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/60 to-white p-4 shadow-sm space-y-2">
-            <div className="flex items-center gap-2 text-amber-800 text-xs font-bold uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-amber-800 text-xs font-bold ">
               <Sparkles className="h-4 w-4 text-amber-600" />
               Day-of-Week Pattern
             </div>
@@ -441,7 +441,7 @@ export default function DeliveryFailuresPage() {
 
           {/* Card 2: Outside Valley Disparity */}
           <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50/60 to-white p-4 shadow-sm space-y-2">
-            <div className="flex items-center gap-2 text-indigo-800 text-xs font-bold uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-indigo-800 text-xs font-bold ">
               <Compass className="h-4 w-4 text-indigo-600" />
               Territory Disparity
             </div>
@@ -455,7 +455,7 @@ export default function DeliveryFailuresPage() {
 
           {/* Card 3: Pathao vs Standard Courier */}
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/60 to-white p-4 shadow-sm space-y-2">
-            <div className="flex items-center gap-2 text-emerald-800 text-xs font-bold uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-emerald-800 text-xs font-bold ">
               <TruckIcon className="h-4 w-4 text-emerald-600" />
               Courier Channel Reliability
             </div>
@@ -560,7 +560,7 @@ export default function DeliveryFailuresPage() {
                     fill={isHovered ? '#059669' : '#ffffff'}
                     stroke="#10b981"
                     strokeWidth="2.5"
-                    className="transition-all"
+                    className="transition"
                   />
                   {/* X Axis Label */}
                   <text
@@ -598,7 +598,7 @@ export default function DeliveryFailuresPage() {
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Search order #, customer, phone, product, remarks..."
+              placeholder="Search order #, customer, phone, product, remarks…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full rounded-lg border border-slate-200 pl-8 pr-3 py-1.5 text-xs outline-none focus:border-blue-500"
@@ -607,7 +607,7 @@ export default function DeliveryFailuresPage() {
 
           {/* Brand Filter */}
           <div>
-            <select
+            <select aria-label="Brand"
               value={selectedBrand}
               onChange={(e) => setSelectedBrand(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
@@ -623,7 +623,7 @@ export default function DeliveryFailuresPage() {
 
           {/* Valley Filter */}
           <div>
-            <select
+            <select aria-label="Inside or outside valley"
               value={selectedValley}
               onChange={(e) => setSelectedValley(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
@@ -636,7 +636,7 @@ export default function DeliveryFailuresPage() {
 
           {/* Delivery Method */}
           <div>
-            <select
+            <select aria-label="Delivery method"
               value={selectedMethod}
               onChange={(e) => setSelectedMethod(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
@@ -656,7 +656,7 @@ export default function DeliveryFailuresPage() {
                 <button
                   key={st}
                   onClick={() => setSelectedStatus(st)}
-                  className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase transition-all ${
+                  className={`rounded-lg px-2.5 py-1 text-[10px] font-bold  transition ${
                     selectedStatus === st
                       ? 'bg-slate-900 text-white shadow-sm'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -676,9 +676,9 @@ export default function DeliveryFailuresPage() {
 
       {/* 6a. Full Data Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full text-left text-xs min-w-[1100px]">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold ">
               <tr>
                 <th className="py-3 px-3">Date</th>
                 <th className="py-3 px-3">Order #</th>
@@ -698,7 +698,7 @@ export default function DeliveryFailuresPage() {
             <tbody className="divide-y divide-slate-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="py-8 text-center text-slate-400">
+                  <td colSpan={13} className="py-8 text-center text-slate-500">
                     No delivery failures match current filters.
                   </td>
                 </tr>
@@ -748,7 +748,7 @@ export default function DeliveryFailuresPage() {
                                 setShowUploadPodModal(df);
                                 setPodRecipient(df.customerName);
                               }}
-                              className="mt-1 flex items-center gap-1 text-[10px] text-slate-400 hover:text-blue-600 transition cursor-pointer"
+                              className="mt-1 flex items-center gap-1 text-[10px] text-slate-500 hover:text-blue-600 transition cursor-pointer"
                             >
                               <Camera className="w-2.5 h-2.5" />
                               <span>Attach POD</span>
@@ -839,7 +839,7 @@ export default function DeliveryFailuresPage() {
                       {/* Status */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide uppercase ${
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold   ${
                             status === 'DELIVERED'
                               ? 'bg-emerald-100 text-emerald-800'
                               : status === 'REATTEMPT_SCHEDULED'
@@ -938,7 +938,7 @@ export default function DeliveryFailuresPage() {
               </div>
               <button
                 onClick={() => setReattemptModalItem(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -954,8 +954,8 @@ export default function DeliveryFailuresPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Reattempt Date (AD) *</label>
-                <input
+                <label htmlFor="delivery-failures-reattempt-date-ad" className="block font-bold text-slate-700 mb-1">Reattempt Date (AD) *</label>
+                <input id="delivery-failures-reattempt-date-ad"
                   type="date"
                   value={reattemptDate}
                   onChange={(e) => setReattemptDate(e.target.value)}
@@ -964,8 +964,8 @@ export default function DeliveryFailuresPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Assign Courier / Rider *</label>
-                <select
+                <label htmlFor="delivery-failures-assign-courier-rider" className="block font-bold text-slate-700 mb-1">Assign Courier / Rider *</label>
+                <select id="delivery-failures-assign-courier-rider"
                   value={reattemptAssignee}
                   onChange={(e) => setReattemptAssignee(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500 font-medium"
@@ -980,10 +980,10 @@ export default function DeliveryFailuresPage() {
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">
+              <label htmlFor="delivery-failures-rider-instructions-landmark-" className="block font-bold text-slate-700 mb-1">
                 Rider Instructions / Landmark Clarification
               </label>
-              <textarea
+              <textarea id="delivery-failures-rider-instructions-landmark-"
                 rows={2}
                 placeholder="e.g. Call alternate number +977-9800000000; customer home after 5:30 PM."
                 value={reattemptNotes}
@@ -1027,7 +1027,7 @@ export default function DeliveryFailuresPage() {
               <button
                 type="button"
                 onClick={() => setSelectedPodProof(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                className="p-1 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1055,11 +1055,11 @@ export default function DeliveryFailuresPage() {
 
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Courier / Rider</span>
+                <span className="text-[10px] font-bold text-slate-500 block">Courier / Rider</span>
                 <span className="font-semibold text-slate-800">{selectedPodProof.proof.deliveredBy}</span>
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Delivery Date</span>
+                <span className="text-[10px] font-bold text-slate-500 block">Delivery Date</span>
                 <span className="font-semibold text-slate-800 font-mono">
                   {selectedPodProof.proof.deliveryDateAd}
                 </span>
@@ -1091,7 +1091,7 @@ export default function DeliveryFailuresPage() {
               <button
                 type="button"
                 onClick={() => setShowUploadPodModal(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                className="p-1 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1104,8 +1104,8 @@ export default function DeliveryFailuresPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Delivered By (Rider / Courier) *</label>
-                <input
+                <label htmlFor="delivery-failures-delivered-by-rider-courier" className="block font-bold text-slate-700 mb-1">Delivered By (Rider / Courier) *</label>
+                <input id="delivery-failures-delivered-by-rider-courier"
                   type="text"
                   required
                   value={podDeliveredBy}
@@ -1115,8 +1115,8 @@ export default function DeliveryFailuresPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Recipient Name *</label>
-                <input
+                <label htmlFor="delivery-failures-recipient-name" className="block font-bold text-slate-700 mb-1">Recipient Name *</label>
+                <input id="delivery-failures-recipient-name"
                   type="text"
                   required
                   value={podRecipient}

@@ -68,25 +68,25 @@ export default function ComplaintsDrillDown({
         {/* Metric Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Total Complaints
             </div>
             <div className="text-xl font-black text-slate-900 mt-1">{complaints.length}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Unresolved Tickets
             </div>
             <div className="text-xl font-black text-rose-600 mt-1">{unresolved}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               High / Urgent
             </div>
             <div className="text-xl font-black text-amber-600 mt-1">{urgentCount}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Avg Resolution SLA
             </div>
             <div className="text-xl font-black text-emerald-600 mt-1">{avgResolution}</div>
@@ -164,7 +164,7 @@ function ComplaintsListTab({
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -199,7 +199,7 @@ function ComplaintsListTab({
                     >
                       {c.customerName}
                     </Link>
-                    <div className="text-[10px] text-slate-400 font-mono">{c.customerPhone}</div>
+                    <div className="text-[10px] text-slate-500 font-mono">{c.customerPhone}</div>
                   </td>
                   <td className="p-2.5 whitespace-nowrap">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getBrandColor(c.brandCode)}`}>
@@ -256,7 +256,7 @@ function ComplaintsListTab({
                         Yes
                       </span>
                     ) : (
-                      <span className="text-slate-400 text-[10px]">No</span>
+                      <span className="text-slate-500 text-[10px]">No</span>
                     )}
                   </td>
                 </tr>
@@ -295,7 +295,7 @@ function ComplaintsCategoryTab({
   return (
     <div className="space-y-6">
       <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        <h4 className="text-xs font-bold text-slate-500">
           Complaints by Dynamic Issue Category
         </h4>
         <div className="space-y-2.5">
@@ -335,17 +335,17 @@ function ComplaintsResolutionMetricsTab({
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
-          <div className="text-[11px] font-bold uppercase text-slate-500">Avg Resolution Time</div>
+          <div className="text-[11px] font-bold text-slate-500">Avg Resolution Time</div>
           <div className="text-2xl font-black text-slate-900 mt-1">{avgResolution}</div>
           <div className="text-[10px] text-slate-500 mt-0.5">{resolutionDays.length ? `Over ${resolutionDays.length} resolved complaint${resolutionDays.length === 1 ? '' : 's'} · target under 2 days` : 'No resolved complaints yet'}</div>
         </div>
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
-          <div className="text-[11px] font-bold uppercase text-slate-500">Resolution Rate</div>
+          <div className="text-[11px] font-bold text-slate-500">Resolution Rate</div>
           <div className="text-2xl font-black text-blue-600 mt-1">{resolutionRate}{resolutionRate === '—' ? '' : '%'}</div>
           <div className="text-[10px] text-slate-500 mt-0.5">{resolved} of {complaints.length} closed</div>
         </div>
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
-          <div className="text-[11px] font-bold uppercase text-slate-500">Complaints per Order</div>
+          <div className="text-[11px] font-bold text-slate-500">Complaints per Order</div>
           <div className="text-2xl font-black text-rose-600 mt-1">
             {orders.length > 0 ? ((complaints.length / orders.length) * 100).toFixed(1) : 0}%
           </div>
@@ -353,7 +353,7 @@ function ComplaintsResolutionMetricsTab({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">

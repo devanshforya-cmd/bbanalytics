@@ -17,7 +17,7 @@ export default function StickyMobileActionBar({
 }: StickyMobileActionBarProps) {
   return (
     <div
-      className={`fixed bottom-16 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-xl sm:static sm:bg-transparent sm:border-0 sm:p-0 sm:shadow-none sm:z-auto transition-all ${className}`}
+      className={`fixed bottom-16 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-xl sm:static sm:bg-transparent sm:border-0 sm:p-0 sm:shadow-none sm:z-auto transition ${className}`}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
         {(summaryText || summarySubtext) && (

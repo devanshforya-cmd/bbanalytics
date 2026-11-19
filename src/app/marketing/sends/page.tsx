@@ -118,9 +118,9 @@ export default function MarketingSendsPage() {
         ) : (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
             <p className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-[11px] font-semibold text-slate-500">{filtered.length} send{filtered.length === 1 ? '' : 's'}{filtering ? ` of ${sends.length}` : ''}</p>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full text-left text-xs">
-                <thead className="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                <thead className="border-b border-slate-200 text-[11px] font-bold text-slate-500">
                   <tr><th className="px-4 py-2.5">Send</th><th className="px-3 py-2.5">Sent</th><th className="px-3 py-2.5">Influencer</th><th className="px-3 py-2.5">Brands</th><th className="px-3 py-2.5">Products</th><th className="px-3 py-2.5">Responsible</th><th className="px-3 py-2.5">Content due</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5" /></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">

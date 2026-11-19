@@ -65,12 +65,12 @@ export default function InfluencerForm({ influencer, onClose, onSaved }: Influen
             <h2 id="influencer-form-title" className="text-base font-bold text-slate-900">{influencer ? 'Edit influencer' : 'Add influencer'}</h2>
             <p className="text-xs text-slate-500">Only the name is required. Add the rest when you have it.</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button>
         </div>
 
         <div className="space-y-4 overflow-y-auto px-5 py-4 text-xs">
           <div>
-            <label htmlFor="inf-name" className="mb-1 block font-bold text-slate-700">Name <span className="text-rose-500">*</span></label>
+            <label htmlFor="inf-name" className="mb-1 block font-bold text-slate-700">Name <span className="text-rose-600">*</span></label>
             <input id="inf-name" autoFocus value={name} maxLength={120} onChange={(event) => { setName(event.target.value); setNameError(''); }} placeholder="e.g. Aashika Shrestha"
               className={`${field} ${nameError ? 'border-rose-400 bg-rose-50/30' : ''}`} />
             {nameError && <p className="mt-1 text-[11px] font-medium text-rose-600">{nameError}</p>}
@@ -113,7 +113,7 @@ export default function InfluencerForm({ influencer, onClose, onSaved }: Influen
                   </select>
                   <input aria-label="Handle" value={row.handle} maxLength={80} placeholder="@handle" onChange={(event) => setPlatforms((rows) => rows.map((entry, i) => i === index ? { ...entry, handle: event.target.value } : entry))} className={`${field} font-mono`} />
                   <input aria-label="Followers" type="number" min={0} value={row.followers} placeholder="Followers" onChange={(event) => setPlatforms((rows) => rows.map((entry, i) => i === index ? { ...entry, followers: event.target.value } : entry))} className={field} />
-                  <button type="button" aria-label="Remove platform" onClick={() => setPlatforms((rows) => rows.filter((_, i) => i !== index))} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button type="button" aria-label="Remove platform" onClick={() => setPlatforms((rows) => rows.filter((_, i) => i !== index))} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               ))}
             </div>

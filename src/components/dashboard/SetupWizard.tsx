@@ -227,7 +227,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                   Step {step} of 5
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Set up your brand portfolio, catalog, and field distribution in minutes.
               </p>
             </div>
@@ -236,7 +236,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
           {onDismiss && (
             <button
               onClick={onDismiss}
-              className="rounded-xl p-2 text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              className="rounded-xl p-2 text-slate-500 hover:text-white hover:bg-slate-800 transition cursor-pointer"
               title="Skip setup"
             >
               <X className="h-5 w-5" />
@@ -292,8 +292,8 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Brand Name *</label>
-                    <input
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Brand Name *</label>
+                    <input aria-label="Brand Name"
                       type="text"
                       value={newBrandName}
                       onChange={(e) => {
@@ -305,17 +305,17 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Brand Code *</label>
-                    <input
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Brand Code *</label>
+                    <input aria-label="Brand Code"
                       type="text"
                       value={newBrandCode}
                       onChange={(e) => setNewBrandCode(e.target.value.toUpperCase())}
                       placeholder="BRAND_CODE"
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 uppercase font-mono"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Theme Color</label>
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Theme Color</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -340,7 +340,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-slate-700">Configured Brands ({configuredBrands.length}):</h4>
                 {configuredBrands.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-xs text-slate-500 italic p-3 rounded-xl bg-slate-50 border border-slate-200">
                     No brands added yet. Type a brand name above and click &quot;Add&quot;.
                   </p>
                 ) : (
@@ -363,7 +363,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                         <button
                           type="button"
                           onClick={() => handleRemoveBrand(b.code)}
-                          className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition"
+                          className="p-1 text-slate-500 hover:text-rose-600 rounded-lg transition"
                           title="Remove"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -390,8 +390,8 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Product Name</label>
-                    <input
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Product Name</label>
+                    <input aria-label="Product Name"
                       type="text"
                       value={newProdName}
                       onChange={(e) => setNewProdName(e.target.value)}
@@ -400,8 +400,8 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Brand</label>
-                    <select
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Brand</label>
+                    <select aria-label="Brand"
                       value={newProdBrand}
                       onChange={(e) => setNewProdBrand(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-900"
@@ -414,7 +414,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">MRP (Rs)</label>
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">MRP (Rs)</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="number"
@@ -438,7 +438,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-slate-700">Initial Products ({productsToAdd.length}):</h4>
                 {productsToAdd.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-xs text-slate-500 italic p-3 rounded-xl bg-slate-50 border border-slate-200">
                     No initial products added. You can skip this step and add products via Excel / catalog later.
                   </p>
                 ) : (
@@ -503,7 +503,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                     <button
                       type="button"
                       onClick={() => setStoresToAdd(storesToAdd.filter((_, i) => i !== idx))}
-                      className="text-slate-400 hover:text-rose-600"
+                      className="text-slate-500 hover:text-rose-600"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -563,12 +563,12 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                   >
                     <div>
                       <span>{staff.name}</span>
-                      <span className="text-slate-400 ml-2 font-mono">{staff.phone}</span>
+                      <span className="text-slate-500 ml-2 font-mono">{staff.phone}</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setStaffToAdd(staffToAdd.filter((_, i) => i !== idx))}
-                      className="text-slate-400 hover:text-rose-600"
+                      className="text-slate-500 hover:text-rose-600"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -590,21 +590,21 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
 
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Brands</span>
+                  <span className="text-[10px] font-bold text-slate-500 ">Brands</span>
                   <div className="font-bold text-slate-800 mt-0.5">
                     {configuredBrands.map((b) => b.name).join(', ') || 'None'}
                   </div>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Initial Products</span>
+                  <span className="text-[10px] font-bold text-slate-500 ">Initial Products</span>
                   <div className="font-bold text-slate-800 mt-0.5">{productsToAdd.length} SKUs</div>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Stores</span>
+                  <span className="text-[10px] font-bold text-slate-500 ">Stores</span>
                   <div className="font-bold text-slate-800 mt-0.5">{storesToAdd.length} Stores</div>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Field Officers</span>
+                  <span className="text-[10px] font-bold text-slate-500 ">Field Officers</span>
                   <div className="font-bold text-slate-800 mt-0.5">{staffToAdd.length} Officers</div>
                 </div>
               </div>

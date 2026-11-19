@@ -86,10 +86,10 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
       <div className="border-b border-slate-100 pb-3">
-        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+        <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-blue-600" />
           30-Day Trends & Longitudinal Intelligence
-        </h3>
+        </h2>
         <p className="text-xs text-slate-500 mt-0.5">
           2×2 operational radar tracking daily order intake, weekly failure reductions, complaint resolution, and rep compliance
         </p>
@@ -101,7 +101,7 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
         <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-xs font-bold text-slate-900">1. Orders Per Day (30 Days)</h4>
+              <h3 className="text-xs font-bold text-slate-900">1. Orders Per Day (30 Days)</h3>
               <p className="text-[11px] text-slate-500">Daily intake velocity with interactive point tooltips</p>
             </div>
             {hoveredOrderDay && (
@@ -112,7 +112,7 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
           </div>
 
           <div className="h-44 relative flex items-end pt-6 pb-2">
-            <svg viewBox="0 0 300 120" className="w-full h-full overflow-visible">
+            <svg role="img" aria-label="Daily trend for the last 30 days" viewBox="0 0 300 120" className="w-full h-full overflow-visible">
               {/* Grid lines */}
               <line x1="0" y1="30" x2="300" y2="30" stroke="#e2e8f0" strokeDasharray="3 3" />
               <line x1="0" y1="60" x2="300" y2="60" stroke="#e2e8f0" strokeDasharray="3 3" />
@@ -163,7 +163,7 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
                           fill="#ffffff"
                           stroke="#2563eb"
                           strokeWidth="2"
-                          className="cursor-pointer hover:r-5 transition-all"
+                          className="cursor-pointer hover:r-5 transition"
                           onMouseEnter={() => setHoveredOrderDay(d)}
                         />
                       );
@@ -185,7 +185,7 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
               </span>
             </div>
           )}
-          <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+          <div className="flex justify-between text-[10px] text-slate-500 font-mono">
             <span>{ordersPerDay[0]?.date || 'Day 1'}</span>
             <span>{ordersPerDay[14]?.date || 'Day 15'}</span>
             <span>{ordersPerDay[29]?.date || 'Today'}</span>
@@ -196,7 +196,7 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
         <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-xs font-bold text-slate-900">2. Delivery Failure Rate / Week</h4>
+              <h3 className="text-xs font-bold text-slate-900">2. Delivery Failure Rate / Week</h3>
               <p className="text-[11px] text-slate-500">Weekly rate calculated from real dispatch logs</p>
             </div>
             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800">
@@ -205,7 +205,7 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
           </div>
 
           <div className="h-44 relative flex items-end pt-6 pb-2">
-            <svg viewBox="0 0 280 120" className="w-full h-full overflow-visible">
+            <svg role="img" aria-label="Daily trend for the last 30 days" viewBox="0 0 280 120" className="w-full h-full overflow-visible">
               <line x1="0" y1="30" x2="280" y2="30" stroke="#e2e8f0" strokeDasharray="3 3" />
               <line x1="0" y1="60" x2="280" y2="60" stroke="#e2e8f0" strokeDasharray="3 3" />
               <line x1="0" y1="90" x2="280" y2="90" stroke="#e2e8f0" strokeDasharray="3 3" />
@@ -241,7 +241,7 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
               })()}
             </svg>
           </div>
-          <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+          <div className="flex justify-between text-[10px] text-slate-500 font-mono">
             <span>Week 1</span>
             <span>Week 4</span>
             <span>Week 8 (Current)</span>
@@ -252,7 +252,7 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
         <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-xs font-bold text-slate-900">3. Complaint Volume / Week</h4>
+              <h3 className="text-xs font-bold text-slate-900">3. Complaint Volume / Week</h3>
               <p className="text-[11px] text-slate-500">Weekly ticket volume from packaging & courier defects</p>
             </div>
             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
@@ -270,7 +270,7 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
                   </span>
                   <div className="w-full h-28 bg-slate-200/60 rounded-t flex items-end overflow-hidden">
                     <div
-                      className="w-full bg-amber-500 group-hover:bg-amber-600 rounded-t transition-all"
+                      className="w-full bg-amber-500 group-hover:bg-amber-600 rounded-t transition"
                       style={{ height: `${heightPct}%` }}
                     />
                   </div>
@@ -285,20 +285,20 @@ export default function ThirtyDayTrendCharts({ comparisonMode = 'OFF' }: ThirtyD
         <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-200 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-xs font-bold text-slate-900">4. Beat Compliance / Week (Per Officer)</h4>
+              <h3 className="text-xs font-bold text-slate-900">4. Beat Compliance / Week (Per Officer)</h3>
               <p className="text-[11px] text-slate-500">Longitudinal GPS beat adherence from field reports</p>
             </div>
           </div>
 
           {scorecards.length === 0 ? (
-            <div className="h-44 flex flex-col items-center justify-center text-xs text-slate-400 bg-white/60 rounded-xl border border-dashed border-slate-200">
+            <div className="h-44 flex flex-col items-center justify-center text-xs text-slate-500 bg-white/60 rounded-xl border border-dashed border-slate-200">
               <Users className="w-6 h-6 mb-1 text-slate-300" />
               <span>No officer scorecards logged yet</span>
             </div>
           ) : (
             <>
               <div className="h-44 relative flex items-end pt-6 pb-2">
-                <svg viewBox="0 0 280 120" className="w-full h-full overflow-visible">
+                <svg role="img" aria-label="Daily trend for the last 30 days" viewBox="0 0 280 120" className="w-full h-full overflow-visible">
                   <line x1="0" y1="30" x2="280" y2="30" stroke="#e2e8f0" strokeDasharray="3 3" />
                   <line x1="0" y1="60" x2="280" y2="60" stroke="#e2e8f0" strokeDasharray="3 3" />
                   <line x1="0" y1="90" x2="280" y2="90" stroke="#e2e8f0" strokeDasharray="3 3" />

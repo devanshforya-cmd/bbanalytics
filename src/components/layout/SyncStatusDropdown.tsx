@@ -95,7 +95,7 @@ export default function SyncStatusDropdown() {
           syncState === 'SYNCED'
             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
             : syncState === 'PENDING'
-            ? 'bg-amber-50 text-amber-800 border border-amber-300 ring-2 ring-amber-400/30 animate-pulse'
+            ? 'bg-amber-50 text-amber-800 border border-amber-300 ring-2 ring-amber-400/30'
             : 'bg-rose-50 text-rose-700 border border-rose-200'
         }`}
         aria-label="Offline sync status"
@@ -227,7 +227,7 @@ export default function SyncStatusDropdown() {
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-full bg-blue-600 rounded-full transition-all"
+                  className="h-full bg-blue-600 rounded-full transition"
                   style={{ width: `${storageInfo.percent}%` }}
                 />
               </div>
@@ -244,7 +244,7 @@ export default function SyncStatusDropdown() {
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-2 px-3 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50 transition"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? 'Synchronizing...' : justSynced ? 'Queue Synchronized ✓' : 'Force Sync'}
+                {isSyncing ? 'Synchronizing…' : justSynced ? 'Queue Synchronized ✓' : 'Force Sync'}
               </button>
               {pendingCount > 0 && (
                 <button type="button" onClick={downloadPending} className="rounded-xl border border-slate-200 py-2 px-3 font-semibold text-slate-700">

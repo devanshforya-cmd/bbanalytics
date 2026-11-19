@@ -50,7 +50,7 @@ export default function SegmentMovement({ segmentMovements }: SegmentMovementPro
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 font-black text-xs text-slate-900">
                 <span>{move.from}</span>
-                <span className="text-slate-400">→</span>
+                <span className="text-slate-500">→</span>
                 <span
                   className={
                     move.type === 'PROMOTED'

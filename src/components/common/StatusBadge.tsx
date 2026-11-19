@@ -57,7 +57,7 @@ export default function StatusBadge({
   return (
     <span
       className={`
-        inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border transition-all duration-200
+        inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border transition duration-200
         ${c.bg} ${c.text} ${c.border}
         ${isTransitioning ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}
         ${className}

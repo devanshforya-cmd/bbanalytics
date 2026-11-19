@@ -156,10 +156,10 @@ export default function ProductPerformanceTable({
       {/* Title & Brand Filter Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div>
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Package className="w-4 h-4 text-blue-600" />
             Product Performance — All Brands
-          </h3>
+          </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Cross-brand SKU level velocity, defect rates, and delivery success metrics
           </p>
@@ -195,7 +195,7 @@ export default function ProductPerformanceTable({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Search by product name, SKU, or category..."
+            placeholder="Search by product name, SKU, or category…"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -210,7 +210,7 @@ export default function ProductPerformanceTable({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold select-none">
@@ -316,7 +316,7 @@ export default function ProductPerformanceTable({
                 >
                   <td className="p-2.5 font-bold text-slate-900 whitespace-nowrap">
                     {p.name}
-                    <div className="text-[10px] text-slate-400 font-mono">{p.sku}</div>
+                    <div className="text-[10px] text-slate-500 font-mono">{p.sku}</div>
                   </td>
                   <td className="p-2.5 whitespace-nowrap">
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800">

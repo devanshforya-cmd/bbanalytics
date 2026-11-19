@@ -64,7 +64,7 @@ export default function BeatRouteList({
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 transition shadow-2xs self-start sm:self-auto disabled:opacity-50"
           >
             <Sparkles className="w-4 h-4 text-blue-600" />
-            <span>{isOptimizing ? 'Optimizing Route...' : 'Optimize Route Sequence'}</span>
+            <span>{isOptimizing ? 'Optimizing Route…' : 'Optimize Route Sequence'}</span>
           </button>
         </div>
 
@@ -76,7 +76,7 @@ export default function BeatRouteList({
           </div>
           <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
             <div
-              className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+              className="bg-emerald-500 h-full rounded-full transition duration-500"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -133,7 +133,7 @@ export default function BeatRouteList({
                       <span className="text-emerald-700 bg-white border border-emerald-200 px-2 py-0.5 rounded-md">
                         Order ✓
                       </span>
-                      <span className="text-slate-400">
+                      <span className="text-slate-500">
                         {item.address || 'Kathmandu Route'}
                       </span>
                     </div>
@@ -196,7 +196,7 @@ export default function BeatRouteList({
                         ★ Added by Admin
                       </span>
                     )}
-                    <span className="text-[10px] text-slate-400 font-mono">
+                    <span className="text-[10px] text-slate-500 font-mono">
                       {item.entityType}
                     </span>
                   </div>

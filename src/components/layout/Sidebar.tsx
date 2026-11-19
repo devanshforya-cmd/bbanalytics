@@ -186,7 +186,7 @@ export default function Sidebar() {
                       </div>
                       {item.badge && (
                         <span
-                          className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold tracking-wider ${
+                          className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold  ${
                             isActive
                               ? 'bg-blue-100/80 text-blue-700 border border-blue-200/60'
                               : 'bg-slate-100 text-slate-500 border border-slate-200/50'

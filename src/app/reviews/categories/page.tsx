@@ -26,8 +26,7 @@ import {
   HelpCircle,
   BarChart3,
   ShieldAlert,
-  Sparkles,
-} from 'lucide-react';
+  Sparkles, Info } from 'lucide-react';
 
 interface CategoryAnalytics {
   allTimeTicks: number;
@@ -278,7 +277,7 @@ export default function ReviewCategoriesPage() {
         {/* 12d: Create New Category */}
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-700 self-start sm:self-auto transition-all"
+          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-700 self-start sm:self-auto transition"
         >
           <Plus className="h-4 w-4" />
           Create New Category
@@ -303,7 +302,7 @@ export default function ReviewCategoriesPage() {
             <Search className="h-4 w-4 text-slate-400 shrink-0" />
             <input
               type="text"
-              placeholder="Search categories by name..."
+              placeholder="Search categories by name…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full text-xs bg-transparent outline-none text-slate-800"
@@ -360,9 +359,9 @@ export default function ReviewCategoriesPage() {
 
       {/* 12a: Category Management Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden text-xs">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full text-left min-w-[850px]">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold ">
               <tr>
                 <th className="py-3 px-4 w-10 text-center">
                   <input
@@ -388,7 +387,7 @@ export default function ReviewCategoriesPage() {
             <tbody className="divide-y divide-slate-100 font-medium">
               {filteredCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400">
+                  <td colSpan={9} className="py-8 text-center text-slate-500">
                     No categories found.
                   </td>
                 </tr>
@@ -408,7 +407,7 @@ export default function ReviewCategoriesPage() {
                     <tr
                       key={cat.id}
                       className={`hover:bg-slate-50/80 transition-colors ${
-                        isArchived ? 'bg-slate-50/60 text-slate-400 opacity-75' : ''
+                        isArchived ? 'bg-slate-50/60 text-slate-500 opacity-75' : ''
                       }`}
                     >
                       {/* Checkbox for Merge */}
@@ -445,7 +444,7 @@ export default function ReviewCategoriesPage() {
                             </button>
                             <button
                               onClick={() => setInlineEditingId(null)}
-                              className="p-1 text-slate-400 hover:bg-slate-100 rounded"
+                              className="p-1 text-slate-500 hover:bg-slate-100 rounded"
                               title="Cancel"
                             >
                               <X className="h-4 w-4" />
@@ -464,7 +463,7 @@ export default function ReviewCategoriesPage() {
                             </button>
                             <button
                               onClick={() => handleStartRename(cat)}
-                              className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-600 p-0.5"
+                              className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-blue-600 p-0.5"
                               title="Rename category"
                             >
                               <Pencil className="h-3 w-3" />
@@ -570,7 +569,7 @@ export default function ReviewCategoriesPage() {
                           <div className="relative group inline-block">
                             <button
                               disabled
-                              className="rounded-lg border border-slate-200 bg-slate-100 px-2 py-1 text-[11px] text-slate-400 cursor-not-allowed opacity-60"
+                              className="rounded-lg border border-slate-200 bg-slate-100 px-2 py-1 text-[11px] text-slate-500 cursor-not-allowed opacity-60"
                               title="Categories cannot be deleted to preserve data integrity."
                             >
                               Delete
@@ -600,13 +599,12 @@ export default function ReviewCategoriesPage() {
                   <BarChart3 className="h-5 w-5" />
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Issue Category Analytics</span>
-                  <h3 className="text-base font-bold text-slate-900">{selectedAnalyticsCat.name}</h3>
+                  <h3 className="text-base font-bold text-slate-900">{selectedAnalyticsCat.name}: analytics</h3>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedAnalyticsCat(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -619,7 +617,7 @@ export default function ReviewCategoriesPage() {
                 <span className="text-xl font-black font-mono text-slate-900">
                   {analyticsMap[selectedAnalyticsCat.id]?.allTimeTicks}
                 </span>
-                <span className="text-[10px] text-slate-400 block">Across feedback & returns</span>
+                <span className="text-[10px] text-slate-500 block">Across feedback & returns</span>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1">
@@ -627,7 +625,7 @@ export default function ReviewCategoriesPage() {
                 <span className="text-xl font-black font-mono text-blue-700">
                   {analyticsMap[selectedAnalyticsCat.id]?.monthTicks}
                 </span>
-                <span className="text-[10px] text-slate-400 block">Current Month</span>
+                <span className="text-[10px] text-slate-500 block">Current Month</span>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1 col-span-2">
@@ -635,7 +633,7 @@ export default function ReviewCategoriesPage() {
                 <strong className="text-slate-900 text-sm block">
                   {analyticsMap[selectedAnalyticsCat.id]?.mostAffectedProduct}
                 </strong>
-                <span className="text-[10px] text-slate-400 block">
+                <span className="text-[10px] text-slate-500 block">
                   Generates 68% of incidents for this category
                 </span>
               </div>
@@ -695,7 +693,7 @@ export default function ReviewCategoriesPage() {
               </div>
               <button
                 onClick={() => setShowMergeModal(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -719,7 +717,7 @@ export default function ReviewCategoriesPage() {
               <label className="block font-bold text-slate-700 mb-1">
                 Pick the Surviving Master Name:
               </label>
-              <select
+              <select aria-label="Pick the Surviving Master Name:"
                 value={survivingCategoryId}
                 onChange={(e) => setSurvivingCategoryId(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-bold text-slate-900 focus:border-purple-500"
@@ -733,13 +731,13 @@ export default function ReviewCategoriesPage() {
                   );
                 })}
               </select>
-              <span className="text-[10px] text-slate-400 mt-1 block">
+              <span className="text-[10px] text-slate-500 mt-1 block">
                 All historical entries will be re-tagged to this category name.
               </span>
             </div>
 
-            <div className="rounded-xl bg-purple-50 p-3 border border-purple-200 text-purple-900 text-[11px]">
-              ℹ️ Historical reviews, complaints, and returns will be updated automatically. The consolidated categories will be marked as archived.
+            <div className="flex gap-2 rounded-xl bg-purple-50 p-3 border border-purple-200 text-purple-900 text-[11px]">
+              <Info className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />Historical reviews, complaints, and returns will be updated automatically. The consolidated categories will be marked as archived.
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-2">
@@ -779,7 +777,7 @@ export default function ReviewCategoriesPage() {
               </div>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -787,10 +785,10 @@ export default function ReviewCategoriesPage() {
 
             <form onSubmit={handleAdd} className="space-y-3">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Category Name <span className="text-rose-500">*</span>
+                <label htmlFor="categories-category-name" className="block font-bold text-slate-700 mb-1">
+                  Category Name <span className="text-rose-600">*</span>
                 </label>
-                <input
+                <input id="categories-category-name"
                   type="text"
                   required
                   placeholder="e.g. Broken Spray Nozzle"
@@ -801,8 +799,8 @@ export default function ReviewCategoriesPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Created By</label>
-                <select
+                <label htmlFor="categories-created-by" className="block font-bold text-slate-700 mb-1">Created By</label>
+                <select id="categories-created-by"
                   value={newCatCreator}
                   onChange={(e) => setNewCatCreator(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-semibold text-slate-800"

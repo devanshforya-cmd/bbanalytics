@@ -87,7 +87,7 @@ function Sales() {
   };
 
   return (
-    <main className="mx-auto max-w-6xl space-y-5 p-4 md:p-6">
+    <div className="mx-auto max-w-6xl space-y-5 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="flex items-center gap-1.5 text-2xl font-bold text-slate-900">Sales &amp; Offers<InfoTip label="About sales and offers">A sale has dates, brands and channels, and holds any number of offers. While it is live, the WhatsApp extractor prices orders with its offers and records what each one took off. Offers can stack, let the best one win, or apply alone.</InfoTip></h1>
         {canManage && <button type="button" onClick={() => setEditing('new')} className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Plus className="h-4 w-4" /> New sale</button>}
@@ -125,7 +125,7 @@ function Sales() {
                 </div>
                 <ul className="mt-2 space-y-0.5 text-xs">
                   {campaign.offers.map((offer) => <li key={offer.id} className={offer.enabled ? 'text-slate-700' : 'text-slate-400 line-through'}><span className="font-semibold">{offer.name}</span> · {describeReward(offer.reward, giftName)}</li>)}
-                  {!campaign.offers.length && <li className="text-slate-400">No offers yet</li>}
+                  {!campaign.offers.length && <li className="text-slate-500">No offers yet</li>}
                 </ul>
                 <div className="mt-3 flex items-center gap-2">
                   <Link href={`/orderflow/sales/${campaign.id}`} className="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50">{campaign.isTemplate || state === 'Draft' ? 'Open' : 'Results'}</Link>
@@ -152,7 +152,7 @@ function Sales() {
       ))}
 
       {editing && <CampaignEditor campaign={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => setRevision((value) => value + 1)} />}
-    </main>
+    </div>
   );
 }
 

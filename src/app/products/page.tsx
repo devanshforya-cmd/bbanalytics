@@ -482,7 +482,7 @@ export default function ProductsPage() {
 
         <div className="bg-white rounded-2xl border border-purple-200 bg-purple-50/20 p-4 shadow-xs">
           <div className="text-xs font-semibold text-purple-700">D2C &amp; Social Combos</div>
-          <div className="text-2xl font-black text-purple-700 mt-1">{combos.filter(combo => isSellableCombo(combo, products)).length}</div>
+          <div className="text-2xl font-black text-slate-900 mt-1">{combos.filter(combo => isSellableCombo(combo, products)).length}</div>
           <div className="text-[11px] text-purple-600 mt-1">Instagram, TikTok &amp; Web (Not B2B)</div>
         </div>
 
@@ -577,7 +577,7 @@ export default function ProductsPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search SKU code, name, category..."
+                placeholder="Search SKU code, name, category…"
                 className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
@@ -586,7 +586,7 @@ export default function ProductsPage() {
 
         {/* Brand Filter Pills (Dynamic from Database) */}
         <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5 text-xs font-medium">
-          <span className="text-slate-400 text-[11px] font-semibold uppercase tracking-wider mr-1 shrink-0">
+          <span className="text-slate-500 text-[11px] font-semibold mr-1 shrink-0">
             Brand:
           </span>
           {[
@@ -639,7 +639,7 @@ export default function ProductsPage() {
                           {brandName(p.brandCode)}
                         </span>
                       </div>
-                      <h3 className="font-bold text-slate-900 text-sm mt-1">{p.name} {p.active === false && <span className="text-xs text-amber-700">Archived</span>}</h3>
+                      <h2 className="font-bold text-slate-900 text-sm mt-1">{p.name} {p.active === false && <span className="text-xs text-amber-700">Archived</span>}</h2>
                       <p className="text-xs text-slate-500">
                         {p.category} &bull; Case of {p.caseSize || 24}N
                       </p>
@@ -662,7 +662,7 @@ export default function ProductsPage() {
                   {/* Operational Telemetry Grid */}
                   <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl text-center text-xs border border-slate-100">
                     <div>
-                      <div className="text-[10px] text-slate-400 uppercase font-semibold">
+                      <div className="text-[10px] text-slate-500 font-semibold">
                         MRP (Catalog)
                       </div>
                       <div className="font-black text-emerald-700 mt-0.5 font-mono">
@@ -670,7 +670,7 @@ export default function ProductsPage() {
                       </div>
                     </div>
                     <div className="border-x border-slate-200">
-                      <div className="text-[10px] text-brand-700 uppercase font-semibold">
+                      <div className="text-[10px] text-brand-700 font-semibold">
                         Units Sold
                       </div>
                       <div className="font-black text-slate-900 mt-0.5 font-mono">
@@ -678,7 +678,7 @@ export default function ProductsPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-blue-700 uppercase font-semibold">
+                      <div className="text-[10px] text-blue-700 font-semibold">
                         Store Penetration
                       </div>
                       <div className="font-black text-blue-700 mt-0.5 font-mono">
@@ -723,7 +723,7 @@ export default function ProductsPage() {
           <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold ">
                   <th className="p-3.5">SKU &amp; Product Name</th>
                   <th className="p-3.5">Brand</th>
                   <th className="p-3.5">Category</th>
@@ -747,7 +747,7 @@ export default function ProductsPage() {
                         >
                           {p.name} {p.active === false && <span className="text-xs text-amber-700">Archived</span>}
                         </button>
-                        <div className="text-[11px] font-mono text-slate-400 mt-0.5">{p.sku}</div>
+                        <div className="text-[11px] font-mono text-slate-500 mt-0.5">{p.sku}</div>
                       </td>
                       <td className="p-3.5">
                         <span
@@ -847,13 +847,13 @@ export default function ProductsPage() {
                     </span>
                   </div>
 
-                  <h3 className="font-bold text-slate-900 text-base mt-2">{c.name}</h3>
+                  <h2 className="font-bold text-slate-900 text-base mt-2">{c.name}</h2>
                   <p className="text-xs text-slate-500 mt-1 line-clamp-2">{c.description}</p>
                   {!isSellableCombo(c, products) && <p className="mt-2 text-xs font-semibold text-amber-700">Unavailable for new orders: a component is missing or archived.</p>}
 
                   {/* Items included in Kit */}
                   <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span className="text-[11px] font-bold text-slate-500 ">
                       Kit Contents ({c.items.length} Products):
                     </span>
                     <div className="space-y-1.5">
@@ -865,7 +865,7 @@ export default function ProductsPage() {
                           <span className="font-medium text-slate-800 truncate max-w-[200px]">
                             {item.quantity}x {item.productName}
                           </span>
-                          <span className="text-slate-400 font-mono">MRP {products.find(product => product.id === item.productId)?.mrp ?? item.mrp}</span>
+                          <span className="text-slate-500 font-mono">MRP {products.find(product => product.id === item.productId)?.mrp ?? item.mrp}</span>
                         </div>
                       ))}
                     </div>
@@ -875,7 +875,7 @@ export default function ProductsPage() {
                   {((c.extractorKeywords && c.extractorKeywords.length > 0) || c.priceDetectionEnabled) && (
                     <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                        <span className="font-bold text-slate-500 text-[10px]">
                           Extractor Auto-Match:
                         </span>
                         {c.priceDetectionEnabled && (
@@ -902,19 +902,19 @@ export default function ProductsPage() {
                   {/* Combo Performance Telemetry Strip */}
                   <div className="mt-3 p-2.5 rounded-xl bg-purple-50/60 border border-purple-100 grid grid-cols-3 gap-2 text-center text-[11px]">
                     <div>
-                      <span className="text-slate-400 text-[10px] uppercase font-semibold">
+                      <span className="text-slate-500 text-[10px] font-semibold">
                         Stock Kits
                       </span>
                       <div className="font-bold text-slate-800 mt-0.5 font-mono">{kitsStock === undefined ? 'Not recorded' : `${kitsStock} kits`}</div>
                     </div>
                     <div className="border-x border-purple-200/60">
-                      <span className="text-slate-400 text-[10px] uppercase font-semibold">
+                      <span className="text-slate-500 text-[10px] font-semibold">
                         Delivered kits
                       </span>
                       <div className="font-bold text-purple-700 mt-0.5 font-mono">{kitsSold}</div>
                     </div>
                     <div>
-                      <span className="text-slate-400 text-[10px] uppercase font-semibold">
+                      <span className="text-slate-500 text-[10px] font-semibold">
                         Discount
                       </span>
                       <div className="font-bold text-emerald-700 mt-0.5 font-mono">
@@ -927,7 +927,7 @@ export default function ProductsPage() {
                 {/* Price & Channel Pill */}
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-slate-400 line-through mr-2 font-mono">
+                    <span className="text-[10px] text-slate-500 line-through mr-2 font-mono">
                       NPR {currentMrp.toFixed(2)}
                     </span>
                     <span className="text-lg font-black text-purple-700 font-mono">
@@ -938,7 +938,7 @@ export default function ProductsPage() {
                     <span className="inline-block text-[11px] text-purple-800 font-bold bg-purple-100 px-2.5 py-0.5 rounded-md border border-purple-200">
                       D2C / Online (Not B2B)
                     </span>
-                    <div className="text-[10px] text-slate-400">Instagram, TikTok &amp; Web</div>
+                    <div className="text-[10px] text-slate-500">Instagram, TikTok &amp; Web</div>
                   </div>
                 </div>
                 <CatalogEditor item={c} kind="combos" products={products} onChanged={loadCatalog} />
@@ -981,7 +981,7 @@ export default function ProductsPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedPerfProduct(null)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-200 transition"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition"
                   aria-label="Close"
                 >
                   <X className="w-5 h-5" />
@@ -1007,7 +1007,7 @@ export default function ProductsPage() {
                       {/* 4 Performance KPI Cards */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="p-3.5 rounded-2xl bg-brand-50 border border-brand-200 space-y-1">
-                          <span className="text-[10px] font-bold uppercase text-brand-700">
+                          <span className="text-[10px] font-bold text-brand-700">
                             MTD Sales Volume
                           </span>
                           <div className="text-2xl font-black text-brand-950 font-mono">
@@ -1020,7 +1020,7 @@ export default function ProductsPage() {
                         </div>
 
                         <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 space-y-1">
-                          <span className="text-[10px] font-bold uppercase text-blue-700">
+                          <span className="text-[10px] font-bold text-blue-700">
                             Store Penetration
                           </span>
                           <div className="text-2xl font-black text-blue-950 font-mono">
@@ -1032,7 +1032,7 @@ export default function ProductsPage() {
                         </div>
 
                         <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 space-y-1">
-                          <span className="text-[10px] font-bold uppercase text-amber-700">
+                          <span className="text-[10px] font-bold text-amber-700">
                             Warehouse Stock
                           </span>
                           <div className="text-2xl font-black text-amber-950 font-mono">
@@ -1046,7 +1046,7 @@ export default function ProductsPage() {
                         </div>
 
                         <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1">
-                          <span className="text-[10px] font-bold uppercase text-emerald-700">
+                          <span className="text-[10px] font-bold text-emerald-700">
                             Quality Return Rate
                           </span>
                           <div className="text-2xl font-black text-emerald-950 font-mono">
@@ -1060,7 +1060,7 @@ export default function ProductsPage() {
 
                       {/* Channel Sales Velocity Split */}
                       <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-3">
-                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                        <span className="text-xs font-bold text-slate-800 ">
                           Sales Channel Velocity
                         </span>
                         {m.totalUnitsSold === 0 ? (
@@ -1104,11 +1104,11 @@ export default function ProductsPage() {
 
                       {/* Recent Secondary Store Bookings */}
                       <div className="space-y-2">
-                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                        <span className="text-xs font-bold text-slate-800 ">
                           Recent Secondary Orders Booked:
                         </span>
                         {matchingOrders.length === 0 ? (
-                          <div className="p-4 text-center text-slate-400 bg-slate-50 rounded-xl">
+                          <div className="p-4 text-center text-slate-500 bg-slate-50 rounded-xl">
                             No secondary store bookings logged yet.
                           </div>
                         ) : (
@@ -1166,10 +1166,10 @@ export default function ProductsPage() {
       >
         <form onSubmit={handleCreateProduct} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            <label htmlFor="products-product-full-name" className="block text-xs font-bold text-slate-700 mb-1">
               Product Full Name *
             </label>
-            <input
+            <input id="products-product-full-name"
               type="text"
               value={newProd.name}
               onChange={(e) => setNewProd({ ...newProd, name: e.target.value })}
@@ -1181,10 +1181,10 @@ export default function ProductsPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label htmlFor="products-sku-code" className="block text-xs font-bold text-slate-700 mb-1">
                 SKU Code *
               </label>
-              <input
+              <input id="products-sku-code"
                 type="text"
                 value={newProd.sku}
                 onChange={(e) => setNewProd({ ...newProd, sku: e.target.value })}
@@ -1194,10 +1194,10 @@ export default function ProductsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label htmlFor="products-brand" className="block text-xs font-bold text-slate-700 mb-1">
                 Brand *
               </label>
-              <select
+              <select id="products-brand"
                 value={newProd.brandCode}
                 onChange={(e) =>
                   setNewProd({ ...newProd, brandCode: e.target.value as BrandCode })
@@ -1219,10 +1219,10 @@ export default function ProductsPage() {
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Category
               </label>
-              <input
+              <input aria-label="Category"
                 type="text"
                 value={newProd.category}
                 onChange={(e) => setNewProd({ ...newProd, category: e.target.value })}
@@ -1232,10 +1232,10 @@ export default function ProductsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Case Box Units (Pcs)
               </label>
-              <input
+              <input aria-label="Case Box Units (Pcs)"
                 type="number"
                 value={newProd.caseSize}
                 onChange={(e) => setNewProd({ ...newProd, caseSize: Number(e.target.value) })}
@@ -1247,7 +1247,7 @@ export default function ProductsPage() {
 
           {/* Order Unit Mode (Cases, Pieces, or Both) */}
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-slate-700 ">
               Order Taking Unit (Offline Sales)
             </label>
             <p className="text-[11px] text-slate-500">
@@ -1289,10 +1289,10 @@ export default function ProductsPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label htmlFor="products-mrp-catalog-price" className="block text-xs font-bold text-slate-700 mb-1">
                 MRP (Catalog Price) *
               </label>
-              <input
+              <input id="products-mrp-catalog-price"
                 type="number"
                 value={newProd.mrp}
                 onChange={(e) => setNewProd({ ...newProd, mrp: Number(e.target.value) })}
@@ -1301,10 +1301,10 @@ export default function ProductsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label htmlFor="products-threshold-alert-qty" className="block text-xs font-bold text-slate-700 mb-1">
                 Threshold Alert Qty
               </label>
-              <input
+              <input id="products-threshold-alert-qty"
                 type="number"
                 value={newProd.thresholdQty}
                 onChange={(e) =>
@@ -1319,7 +1319,7 @@ export default function ProductsPage() {
           <div className="p-3.5 bg-blue-50/60 border border-blue-200 rounded-xl space-y-2.5">
             <div className="flex items-center justify-between">
               <div>
-                <label className="block text-xs font-bold text-blue-950 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-blue-950 ">
                   Extractor Keywords (WhatsApp Matching)
                 </label>
                 <p className="text-[10px] text-blue-700">
@@ -1376,7 +1376,7 @@ export default function ProductsPage() {
               <input
                 type="text"
                 id="manual-prod-kw-input"
-                placeholder="Type keyword and hit enter (e.g. 'peach rollon')..."
+                placeholder="Type keyword and hit enter (e.g. 'peach rollon')…"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -1433,10 +1433,10 @@ export default function ProductsPage() {
       >
         <form onSubmit={handleCreateCombo} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            <label htmlFor="products-combo-bundle-name" className="block text-xs font-bold text-slate-700 mb-1">
               Combo Bundle Name *
             </label>
-            <input
+            <input id="products-combo-bundle-name"
               type="text"
               value={newCombo.name}
               onChange={(e) => setNewCombo({ ...newCombo, name: e.target.value })}
@@ -1448,10 +1448,10 @@ export default function ProductsPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label htmlFor="products-combo-sku" className="block text-xs font-bold text-slate-700 mb-1">
                 Combo SKU *
               </label>
-              <input
+              <input id="products-combo-sku"
                 type="text"
                 value={newCombo.sku}
                 onChange={(e) => setNewCombo({ ...newCombo, sku: e.target.value })}
@@ -1461,10 +1461,10 @@ export default function ProductsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label htmlFor="products-brand-2" className="block text-xs font-bold text-slate-700 mb-1">
                 Brand *
               </label>
-              <select
+              <select id="products-brand-2"
                 value={newCombo.brandCode}
                 onChange={(e) =>
                   setNewCombo({ ...newCombo, brandCode: e.target.value as BrandCode })
@@ -1486,7 +1486,7 @@ export default function ProductsPage() {
 
           {/* Primary Item 1 */}
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-            <span className="text-[11px] font-bold text-slate-700 uppercase">Item #1 (Required):</span>
+            <span className="text-[11px] font-bold text-slate-700 ">Item #1 (Required):</span>
             <div className="grid grid-cols-3 gap-2">
               <select
                 value={newCombo.selectedProd1Id}
@@ -1515,7 +1515,7 @@ export default function ProductsPage() {
 
           {/* Item 2 */}
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-            <span className="text-[11px] font-bold text-slate-700 uppercase">Item #2 (Optional):</span>
+            <span className="text-[11px] font-bold text-slate-700 ">Item #2 (Optional):</span>
             <div className="grid grid-cols-3 gap-2">
               <select
                 value={newCombo.selectedProd2Id}
@@ -1542,7 +1542,7 @@ export default function ProductsPage() {
 
           {/* Item 3 */}
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-            <span className="text-[11px] font-bold text-slate-700 uppercase">Item #3 (Optional):</span>
+            <span className="text-[11px] font-bold text-slate-700 ">Item #3 (Optional):</span>
             <div className="grid grid-cols-3 gap-2">
               <select
                 value={newCombo.selectedProd3Id}
@@ -1583,10 +1583,10 @@ export default function ProductsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               Final Bundled Combo Price (NPR) *
             </label>
-            <input
+            <input aria-label="Final Bundled Combo Price (NPR)"
               type="number"
               value={newCombo.comboPrice}
               onChange={(e) => setNewCombo({ ...newCombo, comboPrice: Number(e.target.value) })}
@@ -1599,7 +1599,7 @@ export default function ProductsPage() {
           <div className="p-3.5 bg-purple-50/60 border border-purple-200 rounded-xl space-y-2.5">
             <div className="flex items-center justify-between">
               <div>
-                <label className="block text-xs font-bold text-purple-950 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-purple-950 ">
                   Combo Extractor Keywords
                 </label>
                 <p className="text-[10px] text-purple-700">
@@ -1656,7 +1656,7 @@ export default function ProductsPage() {
               <input
                 type="text"
                 id="manual-combo-kw-input"
-                placeholder="Type combo keyword and hit enter (e.g. 'rescue kit', 'festive pack')..."
+                placeholder="Type combo keyword and hit enter (e.g. 'rescue kit', 'festive pack')…"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -1711,10 +1711,10 @@ export default function ProductsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            <label htmlFor="products-bundle-description" className="block text-xs font-bold text-slate-700 mb-1">
               Bundle Description
             </label>
-            <textarea
+            <textarea id="products-bundle-description"
               rows={2}
               value={newCombo.description}
               onChange={(e) => setNewCombo({ ...newCombo, description: e.target.value })}

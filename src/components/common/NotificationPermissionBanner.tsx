@@ -47,7 +47,7 @@ export default function NotificationPermissionBanner() {
   if (!show) return null;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 sm:bottom-6 sm:right-6 sm:left-auto sm:max-w-md z-50 animate-bounce-in">
+    <div className="fixed bottom-20 left-4 right-4 sm:bottom-6 sm:right-6 sm:left-auto sm:max-w-md z-50">
       <div className="rounded-2xl border border-blue-200 bg-white p-4 shadow-xl shadow-blue-500/10 flex items-start gap-3.5">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shrink-0 shadow-md shadow-blue-500/20">
           <Bell className="h-5 w-5" />
@@ -58,7 +58,7 @@ export default function NotificationPermissionBanner() {
             <h4 className="font-bold text-slate-900 text-sm">Stay Updated with Smart Alerts</h4>
             <button
               onClick={handleDismiss}
-              className="text-slate-400 hover:text-slate-600 p-0.5 rounded"
+              className="text-slate-500 hover:text-slate-600 p-0.5 rounded"
             >
               <X className="w-4 h-4" />
             </button>

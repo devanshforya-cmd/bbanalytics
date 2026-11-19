@@ -186,7 +186,7 @@ export default function MobileNavDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 transition"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 transition"
               aria-label="Close navigation drawer"
             >
               <X className="w-5 h-5" />
@@ -199,7 +199,7 @@ export default function MobileNavDrawer({
               <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search menu..."
+                placeholder="Search menu…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -210,13 +210,13 @@ export default function MobileNavDrawer({
           {/* Navigation Items List */}
           <div className="flex-1 overflow-y-auto p-3 space-y-5">
             {filteredSections.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-400">
+              <div className="py-8 text-center text-xs text-slate-500">
                 No matching navigation items found.
               </div>
             ) : (
               filteredSections.map((section) => (
                 <div key={section.title} className="space-y-1">
-                  <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="px-3 text-[10px] font-bold text-slate-500">
                     {section.title}
                   </div>
                   <div className="space-y-0.5">
@@ -244,7 +244,7 @@ export default function MobileNavDrawer({
                           </div>
                           {item.badge && (
                             <span
-                              className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                              className={`rounded px-1.5 py-0.5 text-[9px] font-bold   ${
                                 isActive
                                   ? 'bg-blue-100 text-blue-700'
                                   : 'bg-slate-100 text-slate-500'
@@ -283,7 +283,7 @@ export default function MobileNavDrawer({
                   {isSuperAdmin(currentUser) ? 'Super Admin' : 'Authorized User'} • {currentUser.phone}
                 </div>
               </div>
-              <span className="text-xs text-blue-600 font-bold">Profile &rarr;</span>
+              <span className="text-xs text-blue-600 font-bold">Profile</span>
             </button>
           </div>
         </div>

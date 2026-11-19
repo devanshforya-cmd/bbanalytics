@@ -75,8 +75,8 @@ export default function HolidayCalendarSection() {
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold text-slate-600">BS Year:</label>
-            <select
+            <label htmlFor="holidaycalendarsection-bs-year" className="text-xs font-semibold text-slate-600">BS Year:</label>
+            <select id="holidaycalendarsection-bs-year"
               value={yearBs}
               onChange={(e) => setYearBs(Number(e.target.value))}
               className="text-xs font-bold py-1.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -111,7 +111,7 @@ export default function HolidayCalendarSection() {
                 setSelectedMonth(idx);
                 setDateBs(`${yearBs}-${monthNumber}-15`);
               }}
-              className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+              className={`p-3 rounded-2xl border transition cursor-pointer ${
                 selectedMonth === idx
                   ? 'border-blue-500 bg-blue-50/50 shadow-xs'
                   : 'border-slate-200 bg-white hover:border-slate-300'
@@ -119,7 +119,7 @@ export default function HolidayCalendarSection() {
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-900">{mObj.en}</span>
-                <span className="text-[10px] text-slate-400 font-mono">#{idx + 1}</span>
+                <span className="text-[10px] text-slate-500 font-mono">#{idx + 1}</span>
               </div>
 
               <div className="mt-2 flex items-center gap-1">
@@ -134,7 +134,7 @@ export default function HolidayCalendarSection() {
                     />
                   ))
                 ) : (
-                  <span className="text-[10px] text-slate-400 font-medium">0 holidays</span>
+                  <span className="text-[10px] text-slate-500 font-medium">0 holidays</span>
                 )}
               </div>
 
@@ -170,7 +170,7 @@ export default function HolidayCalendarSection() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 text-slate-500 font-semibold bg-slate-50">
@@ -190,7 +190,7 @@ export default function HolidayCalendarSection() {
                   <td className="py-3 px-3 font-semibold text-slate-800">{h.name}</td>
                   <td className="py-3 px-3">
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold  ${
                         h.type === 'PUBLIC'
                           ? 'bg-rose-50 text-rose-700 border border-rose-200'
                           : h.type === 'COMPANY'
@@ -206,7 +206,7 @@ export default function HolidayCalendarSection() {
                     <button
                       type="button"
                       onClick={() => handleDelete(h.id)}
-                      className="p-1 rounded text-slate-400 hover:text-rose-600 transition-colors"
+                      className="p-1 rounded text-slate-500 hover:text-rose-600 transition-colors"
                       title="Delete holiday"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -228,7 +228,7 @@ export default function HolidayCalendarSection() {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-500 hover:text-slate-600"
               >
                 ✕
               </button>
@@ -236,8 +236,8 @@ export default function HolidayCalendarSection() {
 
             <form onSubmit={handleAdd} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Holiday Name *</label>
-                <input
+                <label htmlFor="holidaycalendarsection-holiday-name" className="block font-semibold text-slate-700 mb-1">Holiday Name *</label>
+                <input id="holidaycalendarsection-holiday-name"
                   type="text"
                   required
                   placeholder="e.g. Dashain Tika / Election Day"
@@ -249,8 +249,8 @@ export default function HolidayCalendarSection() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Date (BS) *</label>
-                  <input
+                  <label htmlFor="holidaycalendarsection-date-bs" className="block font-semibold text-slate-700 mb-1">Date (BS) *</label>
+                  <input id="holidaycalendarsection-date-bs"
                     type="text"
                     required
                     placeholder="YYYY-MM-DD"
@@ -260,8 +260,8 @@ export default function HolidayCalendarSection() {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Date (AD) *</label>
-                  <input
+                  <label htmlFor="holidaycalendarsection-date-ad" className="block font-semibold text-slate-700 mb-1">Date (AD) *</label>
+                  <input id="holidaycalendarsection-date-ad"
                     type="date"
                     required
                     value={dateAd}
@@ -272,8 +272,8 @@ export default function HolidayCalendarSection() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Holiday Type</label>
-                <select
+                <label htmlFor="holidaycalendarsection-holiday-type" className="block font-semibold text-slate-700 mb-1">Holiday Type</label>
+                <select id="holidaycalendarsection-holiday-type"
                   value={type}
                   onChange={(e) => setType(e.target.value as HolidayType)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -285,8 +285,8 @@ export default function HolidayCalendarSection() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Notes / Instructions</label>
-                <textarea
+                <label htmlFor="holidaycalendarsection-notes-instructions" className="block font-semibold text-slate-700 mb-1">Notes / Instructions</label>
+                <textarea id="holidaycalendarsection-notes-instructions"
                   rows={2}
                   placeholder="e.g. Couriers operate on half day, no field visits"
                   value={notes}

@@ -283,7 +283,7 @@ export default function TasksPage() {
         <Search className="h-4 w-4 text-slate-400" />
         <input
           type="text"
-          placeholder="Search tasks..."
+          placeholder="Search tasks…"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full text-xs outline-none"
@@ -348,18 +348,18 @@ export default function TasksPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`font-bold text-sm ${
-                      isDone ? 'line-through text-slate-400' : 'text-slate-900'
+                      isDone ? 'line-through text-slate-500' : 'text-slate-900'
                     }`}
                   >
                     {task.title}
                   </span>
                   {task.autoCreated && (
-                    <span className="rounded bg-blue-50 border border-blue-200 text-blue-700 px-2 py-0.2 text-[9px] font-bold uppercase">
+                    <span className="rounded bg-blue-50 border border-blue-200 text-blue-700 px-2 py-0.2 text-[9px] font-bold ">
                       Auto-Created
                     </span>
                   )}
                   <span
-                    className={`rounded-full px-2 py-0.2 text-[9px] font-bold uppercase ${
+                    className={`rounded-full px-2 py-0.2 text-[9px] font-bold  ${
                       task.priority === 'HIGH' || task.priority === 'URGENT'
                         ? 'bg-rose-100 text-rose-800'
                         : 'bg-slate-100 text-slate-700'
@@ -373,7 +373,7 @@ export default function TasksPage() {
                   <p className="text-slate-600 text-[11px] leading-relaxed">{task.description}</p>
                 )}
 
-                <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400 pt-1">
+                <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-500 pt-1">
                   <span>
                     Assigned to: <strong className="text-slate-700">{task.assignedToName}</strong>
                   </span>
@@ -409,7 +409,7 @@ export default function TasksPage() {
               </div>
               <button
                 onClick={() => setShowTemplateModal(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -417,8 +417,8 @@ export default function TasksPage() {
 
             <form onSubmit={handleInstantiateTemplate} className="space-y-4">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Select SOP Template *</label>
-                <select
+                <label htmlFor="tasks-select-sop-template" className="block font-bold text-slate-700 mb-1">Select SOP Template *</label>
+                <select id="tasks-select-sop-template"
                   value={selectedTemplateId}
                   onChange={(e) => setSelectedTemplateId(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 p-2.5 outline-none font-medium bg-white"
@@ -434,7 +434,7 @@ export default function TasksPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Assignee (Officer) *</label>
-                  <select
+                  <select aria-label="Assignee (Officer)"
                     value={templateAssignee}
                     onChange={(e) => setTemplateAssignee(e.target.value)}
                     className="w-full rounded-lg border border-slate-200 p-2.5 outline-none font-medium bg-white"
@@ -449,7 +449,7 @@ export default function TasksPage() {
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Target Store / Entity Name</label>
-                  <input
+                  <input aria-label="Target Store / Entity Name"
                     type="text"
                     placeholder="e.g. Salesberry Jhamsikhel"
                     value={templateStoreName}
@@ -521,15 +521,15 @@ export default function TasksPage() {
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-3 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-slate-900 text-base">Create New Task</h3>
-              <button onClick={() => setShowAddModal(false)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
+              <button onClick={() => setShowAddModal(false)} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreateTask} className="space-y-3">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Task Title *</label>
-                <input
+                <label htmlFor="tasks-task-title" className="block font-bold text-slate-700 mb-1">Task Title *</label>
+                <input id="tasks-task-title"
                   type="text"
                   required
                   placeholder="e.g. Follow up on cheque deposit with Bhatbhateni"
@@ -550,10 +550,10 @@ export default function TasksPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Description</label>
-                <textarea
+                <label htmlFor="tasks-description" className="block font-bold text-slate-700 mb-1">Description</label>
+                <textarea id="tasks-description"
                   rows={2}
-                  placeholder="Details of the action required..."
+                  placeholder="Details of the action required…"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 p-2.5 outline-none"
@@ -562,8 +562,8 @@ export default function TasksPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Assigned To</label>
-                  <select
+                  <label htmlFor="tasks-assigned-to" className="block font-bold text-slate-700 mb-1">Assigned To</label>
+                  <select id="tasks-assigned-to"
                     value={assignedTo}
                     onChange={(e) => setAssignedTo(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
@@ -577,7 +577,7 @@ export default function TasksPage() {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Priority</label>
-                  <select
+                  <select aria-label="Priority"
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as Priority)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none font-semibold"
@@ -593,7 +593,7 @@ export default function TasksPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Related To</label>
-                  <select
+                  <select aria-label="Related To"
                     value={relatedTo}
                     onChange={(e) => setRelatedTo(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
@@ -607,8 +607,8 @@ export default function TasksPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Due Date *</label>
-                  <input
+                  <label htmlFor="tasks-due-date" className="block font-bold text-slate-700 mb-1">Due Date *</label>
+                  <input id="tasks-due-date"
                     type="date"
                     value={dueDateAd}
                     onChange={(e) => {
@@ -664,7 +664,7 @@ export default function TasksPage() {
               <button
                 type="button"
                 onClick={() => setShowLeaveModal(false)}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -672,8 +672,8 @@ export default function TasksPage() {
 
             <form onSubmit={handleConfirmLeaveReassign} className="p-5 space-y-4 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Staff Member Taking Leave</label>
-                <select
+                <label htmlFor="tasks-staff-member-taking-leave" className="block font-bold text-slate-700 mb-1">Staff Member Taking Leave</label>
+                <select id="tasks-staff-member-taking-leave"
                   value={leaveFromOfficerId}
                   onChange={(e) => setLeaveFromOfficerId(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-blue-500"
@@ -689,7 +689,7 @@ export default function TasksPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Leave Start Date</label>
-                  <input
+                  <input aria-label="Leave Start Date"
                     type="date"
                     value={leaveStartDate}
                     onChange={(e) => setLeaveStartDate(e.target.value)}
@@ -699,7 +699,7 @@ export default function TasksPage() {
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Leave End Date</label>
-                  <input
+                  <input aria-label="Leave End Date"
                     type="date"
                     value={leaveEndDate}
                     onChange={(e) => setLeaveEndDate(e.target.value)}
@@ -710,7 +710,7 @@ export default function TasksPage() {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Reason for Leave</label>
-                <select
+                <select aria-label="Reason for Leave"
                   value={leaveReason}
                   onChange={(e) => setLeaveReason(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
@@ -725,10 +725,10 @@ export default function TasksPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">
+                <label htmlFor="tasks-select-covering-reliever-sal" className="block font-bold text-slate-700 mb-1">
                   Select Covering / Reliever Sales Staff
                 </label>
-                <select
+                <select id="tasks-select-covering-reliever-sal"
                   value={leaveToOfficerId}
                   onChange={(e) => setLeaveToOfficerId(e.target.value)}
                   className="w-full p-2.5 bg-amber-50/50 border border-amber-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-amber-500"
@@ -803,7 +803,7 @@ export default function TasksPage() {
             }}
             className="rounded-lg bg-slate-800 border border-slate-700 text-white text-xs px-2.5 py-1.5 outline-none font-medium cursor-pointer"
           >
-            <option value="" disabled>Select Officer...</option>
+            <option value="" disabled>Select Officer…</option>
             {db.getUsers().map((u) => (
               <option key={u.id} value={u.id}>
                 {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
@@ -835,7 +835,7 @@ export default function TasksPage() {
             }}
             className="rounded-lg bg-slate-800 border border-slate-700 text-white text-xs px-2.5 py-1.5 outline-none font-medium cursor-pointer"
           >
-            <option value="" disabled>Set Priority...</option>
+            <option value="" disabled>Set Priority…</option>
             <option value="LOW">Low</option>
             <option value="MEDIUM">Medium</option>
             <option value="HIGH">High</option>

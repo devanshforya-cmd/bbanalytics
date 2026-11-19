@@ -117,13 +117,13 @@ export default function PromotionsSection() {
           return (
             <div
               key={promo.id}
-              className={`bg-white rounded-xl border p-5 shadow-sm flex flex-col justify-between transition-all ${
+              className={`bg-white rounded-xl border p-5 shadow-sm flex flex-col justify-between transition ${
                 promo.active ? 'border-gray-200 hover:border-brand-blue/50' : 'border-gray-200 opacity-60 bg-gray-50/50'
               }`}
             >
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${typeBadgeColor}`}>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border   ${typeBadgeColor}`}>
                     {promo.offerType.replace(/_/g, ' ')}
                   </span>
                   <button
@@ -164,13 +164,13 @@ export default function PromotionsSection() {
               <div className="pt-4 flex items-center justify-between">
                 <span
                   className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
-                    promo.active ? 'text-emerald-700' : 'text-gray-400'
+                    promo.active ? 'text-emerald-700' : 'text-gray-500'
                   }`}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   {promo.active ? 'Active on Field App' : 'Paused'}
                 </span>
-                <span className="text-[10px] text-gray-400">Dashain / Tihar Festive</span>
+                <span className="text-[10px] text-gray-500">Dashain / Tihar Festive</span>
               </div>
             </div>
           );
@@ -188,7 +188,7 @@ export default function PromotionsSection() {
               </h3>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                className="text-gray-500 hover:text-gray-600 text-lg leading-none"
               >
                 &times;
               </button>
@@ -196,8 +196,8 @@ export default function PromotionsSection() {
 
             <form onSubmit={handleCreatePromo} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Promotion Title *</label>
-                <input
+                <label htmlFor="promotionssection-promotion-title" className="block text-xs font-semibold text-gray-700 mb-1">Promotion Title *</label>
+                <input id="promotionssection-promotion-title"
                   type="text"
                   required
                   placeholder="e.g. Dashain Bumper: Buy 10 Get 1 Free"
@@ -209,8 +209,8 @@ export default function PromotionsSection() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Brand Portfolio</label>
-                  <select
+                  <label htmlFor="promotionssection-brand-portfolio" className="block text-xs font-semibold text-gray-700 mb-1">Brand Portfolio</label>
+                  <select id="promotionssection-brand-portfolio"
                     value={brandCode}
                     onChange={(e) => setBrandCode(e.target.value as BrandCode)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-brand-blue"
@@ -220,8 +220,8 @@ export default function PromotionsSection() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Offer Type</label>
-                  <select
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Offer Type</label>
+                  <select aria-label="Offer Type"
                     value={offerType}
                     onChange={(e) => setOfferType(e.target.value as any)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-brand-blue"
@@ -236,10 +236,10 @@ export default function PromotionsSection() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
                   Applicable Products (Comma separated)
                 </label>
-                <input
+                <input aria-label="Applicable Products (Comma separated)"
                   type="text"
                   placeholder="e.g. Cica Soothing Cleanser, Matte Lip Gloss"
                   value={productNames}
@@ -250,8 +250,8 @@ export default function PromotionsSection() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Valid From (BS)</label>
-                  <input
+                  <label htmlFor="promotionssection-valid-from-bs" className="block text-xs font-semibold text-gray-700 mb-1">Valid From (BS)</label>
+                  <input id="promotionssection-valid-from-bs"
                     type="text"
                     value={validFromBs}
                     onChange={(e) => setValidFromBs(e.target.value)}
@@ -259,8 +259,8 @@ export default function PromotionsSection() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Valid To (BS)</label>
-                  <input
+                  <label htmlFor="promotionssection-valid-to-bs" className="block text-xs font-semibold text-gray-700 mb-1">Valid To (BS)</label>
+                  <input id="promotionssection-valid-to-bs"
                     type="text"
                     value={validToBs}
                     onChange={(e) => setValidToBs(e.target.value)}
@@ -270,8 +270,8 @@ export default function PromotionsSection() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Target Channel</label>
-                <select
+                <label htmlFor="promotionssection-target-channel" className="block text-xs font-semibold text-gray-700 mb-1">Target Channel</label>
+                <select id="promotionssection-target-channel"
                   value={applicableStoreTypes}
                   onChange={(e) => setApplicableStoreTypes(e.target.value as any)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-white"
@@ -283,8 +283,8 @@ export default function PromotionsSection() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Scheme Details / Notes</label>
-                <textarea
+                <label htmlFor="promotionssection-scheme-details-notes" className="block text-xs font-semibold text-gray-700 mb-1">Scheme Details / Notes</label>
+                <textarea id="promotionssection-scheme-details-notes"
                   rows={2}
                   placeholder="e.g. Buy 12 units get 1 tester free + 5% extra retailer cash margin."
                   value={description}

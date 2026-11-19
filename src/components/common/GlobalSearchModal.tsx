@@ -364,13 +364,13 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                 setSelectedIndex(0);
                 inputRef.current?.focus();
               }}
-              className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 transition"
+              className="p-1 text-slate-500 hover:text-slate-600 rounded-md hover:bg-slate-100 transition"
               aria-label="Clear search input"
             >
               <X className="w-4 h-4" />
             </button>
           )}
-          <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-[11px] font-semibold text-slate-400 bg-slate-100 border border-slate-200 rounded">
+          <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-[11px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 rounded">
             ESC
           </kbd>
         </div>
@@ -389,7 +389,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
               {/* Quick Jump Shortcuts */}
               <div className="mt-6 pt-5 border-t border-slate-100 text-left">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">
+                <div className="text-[11px] font-bold text-slate-500 mb-2 px-1">
                   Quick Directory Navigation
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -456,10 +456,10 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
               </div>
             </div>
           ) : categorizedResults.totalCount === 0 ? (
-            <div className="p-10 text-center text-slate-400">
+            <div className="p-10 text-center text-slate-500">
               <Search className="w-8 h-8 mx-auto text-slate-300 mb-2" />
               <p className="text-sm font-semibold text-slate-700">No matching records found</p>
-              <p className="text-xs text-slate-400 mt-1">No accessible records matched &ldquo;{query}&rdquo;.</p>
+              <p className="text-xs text-slate-500 mt-1">No accessible records matched &ldquo;{query}&rdquo;.</p>
             </div>
           ) : (
             <div className="py-2">
@@ -639,7 +639,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
             </span>
           </div>
 
-          <div className="flex items-center gap-1 text-slate-400">
+          <div className="flex items-center gap-1 text-slate-500">
             <span>Esc to close</span>
           </div>
         </div>
@@ -665,13 +665,13 @@ function CategorySection({
   return (
     <div className="mb-2">
       <div className="flex items-center justify-between px-4 py-1.5 bg-slate-50/80 border-y border-slate-100">
-        <span className="text-[11px] font-bold tracking-wider text-slate-500 uppercase">
+        <span className="text-[11px] font-bold text-slate-500 ">
           {title} ({count})
         </span>
       </div>
       <div>
         {count === 0 ? (
-          <div className="px-5 py-2 text-xs text-slate-400 italic font-medium">
+          <div className="px-5 py-2 text-xs text-slate-500 italic font-medium">
             {emptyText}
           </div>
         ) : (
@@ -724,7 +724,7 @@ function SearchResultRow({
             </span>
             {badgeText && (
               <span
-                className={`text-[10px] font-bold px-1.5 py-0.2 rounded border uppercase tracking-wider shrink-0 ${
+                className={`text-[10px] font-bold px-1.5 py-0.2 rounded border   shrink-0 ${
                   badgeColor || 'bg-slate-100 text-slate-600 border-slate-200'
                 }`}
               >
@@ -744,7 +744,7 @@ function SearchResultRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-1 text-slate-400 group-hover:text-blue-600 shrink-0 ml-2">
+      <div className="flex items-center gap-1 text-slate-500 group-hover:text-blue-600 shrink-0 ml-2">
         <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition" />
       </div>
     </div>

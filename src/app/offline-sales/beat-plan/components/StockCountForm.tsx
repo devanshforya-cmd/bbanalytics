@@ -50,7 +50,7 @@ export default function StockCountForm({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+            className="p-1.5 text-slate-500 hover:text-slate-600 rounded-lg"
           >
             <X className="w-5 h-5" />
           </button>

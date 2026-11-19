@@ -61,10 +61,10 @@ export default function NotificationRules() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label htmlFor="notificationrules-cheque-overdue-alert-thresho" className="block font-semibold text-slate-700 mb-1">
                   Cheque Overdue Alert Threshold (Days)
                 </label>
-                <input
+                <input id="notificationrules-cheque-overdue-alert-thresho"
                   type="number"
                   min="1"
                   max="15"
@@ -75,10 +75,10 @@ export default function NotificationRules() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label htmlFor="notificationrules-field-cheque-handover-gap-al" className="block font-semibold text-slate-700 mb-1">
                   Field Cheque Handover Gap Alert (Days)
                 </label>
-                <input
+                <input id="notificationrules-field-cheque-handover-gap-al"
                   type="number"
                   min="1"
                   max="7"
@@ -89,10 +89,10 @@ export default function NotificationRules() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label htmlFor="notificationrules-store-unvisited-alert-thresh" className="block font-semibold text-slate-700 mb-1">
                   Store Unvisited Alert Threshold (Days)
                 </label>
-                <input
+                <input id="notificationrules-store-unvisited-alert-thresh"
                   type="number"
                   min="5"
                   max="30"
@@ -103,10 +103,10 @@ export default function NotificationRules() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label htmlFor="notificationrules-weekly-delivery-failure-rate" className="block font-semibold text-slate-700 mb-1">
                   Weekly Delivery Failure Rate Trigger (%)
                 </label>
-                <input
+                <input id="notificationrules-weekly-delivery-failure-rate"
                   type="number"
                   min="5"
                   max="50"

@@ -58,7 +58,7 @@ export default function DrillDownShell({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-2 text-slate-500 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
             title="Close Panel"
           >
             <X className="w-5 h-5" />
@@ -71,7 +71,7 @@ export default function DrillDownShell({
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-blue-600 text-blue-600 bg-white shadow-xs font-semibold'
                   : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'

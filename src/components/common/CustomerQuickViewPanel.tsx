@@ -98,7 +98,7 @@ export default function CustomerQuickViewPanel({
           </div>
 
           <div className="text-right">
-            <span className="text-[10px] uppercase font-bold text-white/50 block">Segment</span>
+            <span className="text-[10px] font-bold text-white/50 block">Segment</span>
             <span className="text-sm font-bold text-blue-400">{customer.segment}</span>
           </div>
         </div>
@@ -110,10 +110,10 @@ export default function CustomerQuickViewPanel({
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className={`pb-2.5 px-3 font-bold text-xs uppercase tracking-wider transition border-b-2 -mb-px ${
+              className={`pb-2.5 px-3 font-bold text-xs   transition border-b-2 -mb-px ${
                 activeTab === tab
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-400 hover:text-slate-700'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
               {tab}
@@ -126,22 +126,22 @@ export default function CustomerQuickViewPanel({
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-2.5">
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Orders</span>
+                <span className="text-[10px] font-bold text-slate-500 block">Total Orders</span>
                 <span className="text-lg font-black text-slate-900">{customer.totalOrders}</span>
               </div>
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Spend</span>
+                <span className="text-[10px] font-bold text-slate-500 block">Total Spend</span>
                 <span className="text-lg font-black text-emerald-700">₹{totalSpend.toLocaleString()}</span>
               </div>
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Returns</span>
+                <span className="text-[10px] font-bold text-slate-500 block">Returns</span>
                 <span className="text-lg font-black text-rose-700">{customer.totalReturns}</span>
               </div>
             </div>
 
             {customer.activeFlags && customer.activeFlags.length > 0 && (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl">
-                <p className="text-[11px] font-bold text-rose-900 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <p className="text-[11px] font-bold text-rose-900 mb-1 flex items-center gap-1">
                   <AlertTriangle className="w-3.5 h-3.5" />
                   Active Flags
                 </p>
@@ -161,7 +161,7 @@ export default function CustomerQuickViewPanel({
         {activeTab === 'orders' && (
           <div className="space-y-2">
             {orders.length === 0 ? (
-              <p className="text-slate-400 text-center py-6">No orders found for this customer.</p>
+              <p className="text-slate-500 text-center py-6">No orders found for this customer.</p>
             ) : (
               orders.map((o) => (
                 <div key={o.id} className="p-3 rounded-xl border border-slate-200 bg-white flex items-center justify-between">
@@ -185,7 +185,7 @@ export default function CustomerQuickViewPanel({
         {activeTab === 'interactions' && (
           <div className="space-y-2">
             {feedback.length === 0 && returns.length === 0 ? (
-              <p className="text-slate-400 text-center py-6">No logged feedback or return incidents.</p>
+              <p className="text-slate-500 text-center py-6">No logged feedback or return incidents.</p>
             ) : (
               <>
                 {feedback.map((f) => (
@@ -194,7 +194,7 @@ export default function CustomerQuickViewPanel({
                       <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">
                         {f.type}
                       </span>
-                      <span className="text-[10px] text-slate-400">{f.dateReceivedBs}</span>
+                      <span className="text-[10px] text-slate-500">{f.dateReceivedBs}</span>
                     </div>
                     <p className="text-slate-700 text-xs leading-relaxed">&ldquo;{f.fullText}&rdquo;</p>
                   </div>

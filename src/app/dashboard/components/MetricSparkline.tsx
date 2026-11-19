@@ -40,6 +40,7 @@ export default function MetricSparkline({
   return (
     <div className={`w-full overflow-hidden ${className}`}>
       <svg
+        aria-hidden="true"
         viewBox={`0 0 ${width} ${height}`}
         className="w-full h-auto overflow-visible"
         style={{ maxHeight: `${height}px` }}

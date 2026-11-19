@@ -591,8 +591,8 @@ export default function CustomerInsightsPage() {
       {/* KPI Top Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Customer Base</span>
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-[11px] font-semibold text-slate-500">Customer Base</span>
             <Users className="h-4 w-4 text-blue-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-slate-900">{customers.length}</div>
@@ -606,7 +606,7 @@ export default function CustomerInsightsPage() {
 
         <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-4 shadow-xs">
           <div className="flex items-center justify-between text-rose-400">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-800">Churn Risk (60d+)</span>
+            <span className="text-[11px] font-semibold text-rose-800">Churn Risk (60d+)</span>
             <TrendingDown className="h-4 w-4 text-rose-600" />
           </div>
           <div className="mt-2 text-2xl font-black text-rose-900">{churnAnalysis.length}</div>
@@ -615,7 +615,7 @@ export default function CustomerInsightsPage() {
 
         <div className="rounded-2xl border border-blue-200 bg-blue-50/40 p-4 shadow-xs">
           <div className="flex items-center justify-between text-blue-400">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-blue-800">Top 10% Revenue</span>
+            <span className="text-[11px] font-semibold text-blue-800">Top 10% Revenue</span>
             <Flame className="h-4 w-4 text-amber-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-blue-950">{revenueConcentration.concentrationPct}%</div>
@@ -624,18 +624,18 @@ export default function CustomerInsightsPage() {
 
         <div className="rounded-2xl border border-purple-200 bg-purple-50/40 p-4 shadow-xs">
           <div className="flex items-center justify-between text-purple-400">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-purple-800">Cross-Brand</span>
+            <span className="text-[11px] font-semibold text-purple-800">Cross-Brand</span>
             <Layers className="h-4 w-4 text-purple-600" />
           </div>
-          <div className="mt-2 text-2xl font-black text-purple-950">
+          <div className="mt-2 text-2xl font-black text-slate-900">
             {crossBrandMap.multiBrand}
           </div>
           <div className="mt-1 text-[11px] text-purple-700">Multi-brand household buyers</div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Average LTV</span>
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-[11px] font-semibold text-slate-500">Average LTV</span>
             <DollarSign className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-slate-900">

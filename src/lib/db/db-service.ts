@@ -107,6 +107,10 @@ export interface OrderRealtimeEvent {
   old?: { id: string };
 }
 
+/** Older or imported customer records may miss their lists; screens read them directly. */
+const withCustomerLists = (customer: Customer): Customer => Array.isArray(customer.activeFlags) && Array.isArray(customer.brandsPurchased) ? customer
+  : { ...customer, activeFlags: Array.isArray(customer.activeFlags) ? customer.activeFlags : [], brandsPurchased: Array.isArray(customer.brandsPurchased) ? customer.brandsPurchased : [] };
+
 export class DatabaseService {
   private users: User[] = [];
   private currentUser: User = ANONYMOUS_USER;
@@ -260,6 +264,7 @@ export class DatabaseService {
       }
       else (this as any)[collection] = JSON.parse(JSON.stringify(snapshot[collection] || []));
     }
+    this.customers = this.customers.map(withCustomerLists);
     if (user) this.currentUser = user;
     this.versions = JSON.parse(JSON.stringify(versions)); this.pending.clear();
     this.baseline = this.exportSnapshot();
@@ -419,7 +424,8 @@ export class DatabaseService {
         if (parsed.cheques) this.cheques = parsed.cheques;
         if (parsed.beatItems) this.beatItems = parsed.beatItems;
         if (parsed.orders) this.orders = parsed.orders;
-        if (parsed.customers) this.customers = parsed.customers;
+        // Older or imported customer records may miss their lists; screens read them directly.
+        if (parsed.customers) this.customers = parsed.customers.map(withCustomerLists);
         if (parsed.deliveryFailures) this.deliveryFailures = parsed.deliveryFailures;
         if (parsed.returns) this.returns = parsed.returns;
         if (parsed.feedbackEntries) this.feedbackEntries = parsed.feedbackEntries;

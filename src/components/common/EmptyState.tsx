@@ -214,8 +214,8 @@ export default function EmptyState({
 
   const renderActionButton = (btn: EmptyStateAction, isPrimary = true) => {
     const cls = isPrimary
-      ? 'inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all active:scale-[0.98]'
-      : 'inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-all';
+      ? 'inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition active:scale-[0.98]'
+      : 'inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition';
 
     if (btn.href) {
       return (
@@ -244,15 +244,15 @@ export default function EmptyState({
       <div
         className={`p-4 rounded-2xl shadow-xs border mb-3.5 transition-transform duration-300 hover:scale-105 ${
           isCelebrate
-            ? 'bg-emerald-100/80 border-emerald-200 text-emerald-700 animate-bounce-slow'
+            ? 'bg-emerald-100/80 border-emerald-200 text-emerald-700'
             : 'bg-white border-slate-200/80 text-slate-500'
         }`}
       >
         <FinalIcon className="w-8 h-8" />
       </div>
-      <h4 className={`text-base font-bold ${isCelebrate ? 'text-emerald-950' : 'text-slate-900'}`}>
+      <h2 className={`text-base font-bold ${isCelebrate ? 'text-emerald-950' : 'text-slate-900'}`}>
         {finalTitle}
-      </h4>
+      </h2>
       <p className={`text-xs max-w-md mt-1.5 leading-relaxed ${isCelebrate ? 'text-emerald-800 font-medium' : 'text-slate-500'}`}>
         {finalDescription}
       </p>

@@ -301,7 +301,7 @@ export default function AdvancedFilterBar({
               onClick={() => updateCriteria({ calendarMode: 'BS' })}
               className={`rounded-lg px-2.5 py-1 transition ${
                 calendarMode === 'BS'
-                  ? 'bg-amber-500 text-white shadow-2xs'
+                  ? 'bg-amber-600 text-white shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -326,7 +326,7 @@ export default function AdvancedFilterBar({
           {/* Territory Direct Dropdown */}
           {!hidePlaces && (
             <div className="relative">
-              <select
+              <select aria-label="Inside or outside valley"
                 value={criteria.valley || 'ALL'}
                 onChange={(e) =>
                   updateCriteria({
@@ -350,7 +350,7 @@ export default function AdvancedFilterBar({
           {/* Officer Direct Dropdown */}
           {!hideOfficer && (
             <div className="relative hidden sm:block">
-              <select
+              <select aria-label="Field officer"
                 value={criteria.officerId || ''}
                 onChange={(e) => updateCriteria({ officerId: e.target.value || undefined })}
                 className={`rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer appearance-none pr-7 ${
@@ -395,7 +395,7 @@ export default function AdvancedFilterBar({
               type="button"
               onClick={clearAllFilters}
               title="Reset all filters"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
             >
               <RotateCcw className="h-4 w-4" />
             </button>
@@ -408,7 +408,7 @@ export default function AdvancedFilterBar({
       {/* ========================================================================= */}
       {activeFilterCount > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap px-1 text-xs">
-          <span className="text-[11px] font-semibold text-slate-400">Active:</span>
+          <span className="text-[11px] font-semibold text-slate-500">Active:</span>
 
           {criteria.valley && criteria.valley !== 'ALL' && (
             <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 border border-blue-200 px-2 py-0.5 text-[11px] font-bold text-blue-800">
@@ -528,7 +528,7 @@ export default function AdvancedFilterBar({
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
+                className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
                 aria-label="Close filter drawer"
               >
                 <X className="w-5 h-5" />
@@ -540,7 +540,7 @@ export default function AdvancedFilterBar({
               {/* SECTION 1: DATE & CALENDAR DIMENSION */}
               <div className="space-y-3.5">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-blue-600" />
                     Date, Day &amp; Calendar Dimension
                   </span>
@@ -585,7 +585,7 @@ export default function AdvancedFilterBar({
                                 dateExact: undefined,
                               })
                             }
-                            className={`px-1.5 py-1.5 rounded-lg text-xs font-semibold border transition-all text-center ${
+                            className={`px-1.5 py-1.5 rounded-lg text-xs font-semibold border transition text-center ${
                               isSelected
                                 ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                                 : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -594,7 +594,7 @@ export default function AdvancedFilterBar({
                             <div className="leading-tight text-[11px] font-bold">{d.short}</div>
                             <div
                               className={`text-[9px] font-normal ${
-                                isSelected ? 'text-blue-100' : 'text-slate-400'
+                                isSelected ? 'text-blue-100' : 'text-slate-500'
                               }`}
                             >
                               {d.np}
@@ -612,7 +612,7 @@ export default function AdvancedFilterBar({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Month ({calendarMode}):
                     </label>
-                    <select
+                    <select aria-label="Month ():"
                       value={criteria.month || ''}
                       onChange={(e) => updateCriteria({ month: e.target.value || undefined })}
                       className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -649,7 +649,7 @@ export default function AdvancedFilterBar({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Year ({calendarMode}):
                     </label>
-                    <select
+                    <select aria-label="Year ():"
                       value={criteria.year || ''}
                       onChange={(e) => updateCriteria({ year: e.target.value || undefined })}
                       className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -670,7 +670,7 @@ export default function AdvancedFilterBar({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Custom Range (From):
                     </label>
-                    <input
+                    <input aria-label="Custom Range (From):"
                       type="date"
                       value={criteria.dateFrom || ''}
                       onChange={(e) =>
@@ -687,7 +687,7 @@ export default function AdvancedFilterBar({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Custom Range (To):
                     </label>
-                    <input
+                    <input aria-label="Custom Range (To):"
                       type="date"
                       value={criteria.dateTo || ''}
                       onChange={(e) =>
@@ -705,7 +705,7 @@ export default function AdvancedFilterBar({
               {/* SECTION 2: TERRITORY & GEOGRAPHY DIMENSION */}
               {!hidePlaces && (
                 <div className="space-y-3.5 border-t border-slate-100 pt-4">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-blue-600" />
                     Territory, Province &amp; City Dimension
                   </span>
@@ -714,7 +714,7 @@ export default function AdvancedFilterBar({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Valley Scope:
                     </label>
-                    <select
+                    <select aria-label="Valley Scope:"
                       value={criteria.valley || 'ALL'}
                       onChange={(e) =>
                         updateCriteria({
@@ -734,7 +734,7 @@ export default function AdvancedFilterBar({
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
                         Province:
                       </label>
-                      <select
+                      <select aria-label="Province:"
                         value={criteria.province || ''}
                         onChange={(e) =>
                           updateCriteria({ province: e.target.value || undefined })
@@ -754,7 +754,7 @@ export default function AdvancedFilterBar({
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
                         City / Hub:
                       </label>
-                      <select
+                      <select aria-label="City / Hub:"
                         value={criteria.city || ''}
                         onChange={(e) =>
                           updateCriteria({ city: e.target.value || undefined })
@@ -775,7 +775,7 @@ export default function AdvancedFilterBar({
 
               {/* SECTION 3: OUTLET & ASSIGNED SALES PERSONNEL */}
               <div className="space-y-3.5 border-t border-slate-100 pt-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-blue-600" />
                   Outlet Type &amp; Field Force Dimension
                 </span>
@@ -785,7 +785,7 @@ export default function AdvancedFilterBar({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Outlet Classification:
                     </label>
-                    <select
+                    <select aria-label="Outlet Classification:"
                       value={criteria.outletType || ''}
                       onChange={(e) =>
                         updateCriteria({ outletType: e.target.value || undefined })
@@ -807,7 +807,7 @@ export default function AdvancedFilterBar({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Assigned Field Sales Officer:
                     </label>
-                    <select
+                    <select aria-label="Assigned Field Sales Officer:"
                       value={criteria.officerId || ''}
                       onChange={(e) =>
                         updateCriteria({ officerId: e.target.value || undefined })

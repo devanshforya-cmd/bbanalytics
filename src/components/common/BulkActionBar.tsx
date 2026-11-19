@@ -60,7 +60,7 @@ export default function BulkActionBar({
         <button
           type="button"
           onClick={onClearSelection}
-          className="rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 transition ml-1 shrink-0"
+          className="rounded-lg p-1.5 text-slate-500 hover:text-white hover:bg-slate-800 transition ml-1 shrink-0"
           title="Dismiss selection"
         >
           <X className="w-4 h-4" />

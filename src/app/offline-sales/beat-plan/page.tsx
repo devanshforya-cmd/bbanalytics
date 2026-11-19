@@ -556,7 +556,7 @@ export default function BeatPlanPage() {
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-base sm:text-lg font-black text-slate-900">
+              <h1 className="text-base sm:text-lg font-black text-slate-900">
                 Namaste,{' '}
                 {hasAccess(currentUser, 'staff_scorecards') ? <Link
                   href={`/offline-sales/scorecard?officer=${encodeURIComponent(
@@ -567,7 +567,7 @@ export default function BeatPlanPage() {
                   {currentUser.fullName}
                 </Link> : <span>{currentUser.fullName}</span>}
                 !
-              </span>
+              </h1>
               <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-700">
                 {currentUser.territory || 'Kathmandu Central Beat'}
               </span>
@@ -692,9 +692,9 @@ export default function BeatPlanPage() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-slate-900">
+                  <h2 className="text-sm font-bold text-slate-900">
                     Today&apos;s Assigned Directives &amp; To-Do List
-                  </h3>
+                  </h2>
                   {pendingTasksCount > 0 && (
                     <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
                       {pendingTasksCount} Pending
@@ -710,10 +710,10 @@ export default function BeatPlanPage() {
 
           <div className="space-y-2">
             {assignedTasks.length === 0 ? (
-              <div className="py-6 text-center text-slate-400 text-xs bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+              <div className="py-6 text-center text-slate-500 text-xs bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
                 <CheckSquare className="w-5 h-5 mx-auto mb-1 text-slate-300" />
                 <p className="font-medium text-slate-600">No directives assigned for today.</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">Tasks assigned to your account will appear here.</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">Tasks assigned to your account will appear here.</p>
               </div>
             ) : (
               assignedTasks.map((task) => {
@@ -724,7 +724,7 @@ export default function BeatPlanPage() {
                     onClick={() => handleToggleTask(task)}
                     className={`flex items-start justify-between gap-3 p-3 rounded-xl border transition cursor-pointer ${
                       isDone
-                        ? 'bg-slate-50/70 border-slate-200 text-slate-400'
+                        ? 'bg-slate-50/70 border-slate-200 text-slate-500'
                         : 'bg-white border-slate-200 hover:border-slate-300'
                     }`}
                   >
@@ -737,7 +737,7 @@ export default function BeatPlanPage() {
                         onClick={(e) => e.stopPropagation()}
                       />
                       <div className="min-w-0">
-                        <p className={`text-xs font-semibold ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                        <p className={`text-xs font-semibold ${isDone ? 'line-through text-slate-500' : 'text-slate-800'}`}>
                           {task.title}
                         </p>
                         {task.description && (
@@ -822,14 +822,14 @@ export default function BeatPlanPage() {
                     <CreditCard className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900">Collect Physical Cheque</h3>
+                    <h2 className="text-base font-bold text-slate-900">Collect Physical Cheque</h2>
                     <p className="text-xs text-slate-500">{targetBeat.storeName}</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setActiveActionModal('NONE')}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+                  className="p-1.5 text-slate-500 hover:text-slate-600 rounded-lg"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -838,8 +838,8 @@ export default function BeatPlanPage() {
               <div className="p-5 space-y-4 text-xs overflow-y-auto">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Cheque Number *</label>
-                    <input
+                    <label htmlFor="beat-plan-cheque-number" className="block font-semibold text-slate-700 mb-1">Cheque Number *</label>
+                    <input id="beat-plan-cheque-number"
                       type="text"
                       placeholder="e.g. 0049281"
                       value={chequeNumber}
@@ -849,8 +849,8 @@ export default function BeatPlanPage() {
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Cheque Amount (NPR) *</label>
-                    <input
+                    <label htmlFor="beat-plan-cheque-amount-npr" className="block font-semibold text-slate-700 mb-1">Cheque Amount (NPR) *</label>
+                    <input id="beat-plan-cheque-amount-npr"
                       type="number"
                       placeholder="25000"
                       value={chequeAmount}
@@ -863,8 +863,8 @@ export default function BeatPlanPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Bank Name *</label>
-                    <select
+                    <label htmlFor="beat-plan-bank-name" className="block font-semibold text-slate-700 mb-1">Bank Name *</label>
+                    <select id="beat-plan-bank-name"
                       value={chequeBank}
                       onChange={(e) => setChequeBank(e.target.value)}
                       className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -879,8 +879,8 @@ export default function BeatPlanPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Deposit Date *</label>
-                    <input
+                    <label htmlFor="beat-plan-deposit-date" className="block font-semibold text-slate-700 mb-1">Deposit Date *</label>
+                    <input id="beat-plan-deposit-date"
                       type="date"
                       value={chequeCashDate}
                       onChange={(e) => setChequeCashDate(e.target.value)}
@@ -906,7 +906,7 @@ export default function BeatPlanPage() {
                       <button
                         type="button"
                         onClick={() => setChequePhotoUrl('')}
-                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg"
+                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -936,8 +936,8 @@ export default function BeatPlanPage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Notes / Remarks</label>
-                  <input
+                  <label htmlFor="beat-plan-notes-remarks" className="block font-semibold text-slate-700 mb-1">Notes / Remarks</label>
+                  <input id="beat-plan-notes-remarks"
                     type="text"
                     placeholder="e.g. Against Invoice #9022"
                     value={chequeNotes}
@@ -977,14 +977,14 @@ export default function BeatPlanPage() {
                     <Camera className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900">Capture Shelf Photos</h3>
+                    <h2 className="text-base font-bold text-slate-900">Capture Shelf Photos</h2>
                     <p className="text-xs text-slate-500">{targetBeat.storeName}</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setActiveActionModal('NONE')}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+                  className="p-1.5 text-slate-500 hover:text-slate-600 rounded-lg"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -992,8 +992,8 @@ export default function BeatPlanPage() {
 
               <div className="p-5 space-y-4 text-xs overflow-y-auto">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Rack / Gondola Section</label>
-                  <input
+                  <label htmlFor="beat-plan-rack-gondola-section" className="block font-semibold text-slate-700 mb-1">Rack / Gondola Section</label>
+                  <input id="beat-plan-rack-gondola-section"
                     type="text"
                     value={shelfRackSection}
                     onChange={(e) => setShelfRackSection(e.target.value)}
@@ -1112,11 +1112,11 @@ export default function BeatPlanPage() {
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-blue-600" />
-                  <h3 className="font-bold text-slate-900 text-base">Add One-Time Beat Stop</h3>
+                  <h2 className="font-bold text-slate-900 text-base">Add One-Time Beat Stop</h2>
                 </div>
                 <button
                   onClick={() => setShowOverrideModal(false)}
-                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                  className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -1124,8 +1124,8 @@ export default function BeatPlanPage() {
 
               <form onSubmit={handleSaveOverride} className="space-y-3.5 text-xs">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Assign to Officer</label>
-                  <select
+                  <label htmlFor="beat-plan-assign-to-officer" className="block font-bold text-slate-700 mb-1">Assign to Officer</label>
+                  <select id="beat-plan-assign-to-officer"
                     value={overrideOfficerId}
                     onChange={(e) => setOverrideOfficerId(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
@@ -1140,7 +1140,7 @@ export default function BeatPlanPage() {
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Target Store</label>
-                  <select
+                  <select aria-label="Target Store"
                     value={overrideStoreId}
                     onChange={(e) => setOverrideStoreId(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
@@ -1155,7 +1155,7 @@ export default function BeatPlanPage() {
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Stop Priority</label>
-                  <select
+                  <select aria-label="Stop Priority"
                     value={overridePriority}
                     onChange={(e) => setOverridePriority(e.target.value as any)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
@@ -1168,11 +1168,11 @@ export default function BeatPlanPage() {
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Manager Note / Instructions</label>
-                  <input
+                  <input aria-label="Manager Note / Instructions"
                     type="text"
                     value={overrideNote}
                     onChange={(e) => setOverrideNote(e.target.value)}
-                    placeholder="e.g. New Hair Serum launch pitch, collect overdue cheque..."
+                    placeholder="e.g. New Hair Serum launch pitch, collect overdue cheque…"
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                   />
                 </div>
@@ -1207,14 +1207,14 @@ export default function BeatPlanPage() {
                     <Navigation className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-base">Create &amp; Assign Beat Route</h3>
+                    <h2 className="font-bold text-slate-900 text-base">Create &amp; Assign Beat Route</h2>
                     <p className="text-xs text-slate-500">Assign targeted store visits and priorities to sales officers</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowAssignRouteModal(false)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+                  className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -1223,8 +1223,8 @@ export default function BeatPlanPage() {
               <form onSubmit={handleAssignBeatRoute} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Assign to Sales Staff</label>
-                    <select
+                    <label htmlFor="beat-plan-assign-to-sales-staff" className="block font-bold text-slate-700 mb-1">Assign to Sales Staff</label>
+                    <select id="beat-plan-assign-to-sales-staff"
                       value={routeOfficerId}
                       onChange={(e) => setRouteOfficerId(e.target.value)}
                       className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-blue-500"
@@ -1239,7 +1239,7 @@ export default function BeatPlanPage() {
 
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Beat Route Date</label>
-                    <input
+                    <input aria-label="Beat Route Date"
                       type="date"
                       value={routeDate}
                       onChange={(e) => setRouteDate(e.target.value)}
@@ -1251,7 +1251,7 @@ export default function BeatPlanPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Route Priority</label>
-                    <select
+                    <select aria-label="Route Priority"
                       value={routePriority}
                       onChange={(e) => setRoutePriority(e.target.value as any)}
                       className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
@@ -1263,12 +1263,12 @@ export default function BeatPlanPage() {
                   </div>
 
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Manager Directives / Note (Optional)</label>
-                    <input
+                    <label htmlFor="beat-plan-manager-directives-note-opti" className="block font-bold text-slate-700 mb-1">Manager Directives / Note (Optional)</label>
+                    <input id="beat-plan-manager-directives-note-opti"
                       type="text"
                       value={routeNotes}
                       onChange={(e) => setRouteNotes(e.target.value)}
-                      placeholder="e.g. Focus on stocking new summer SKUs..."
+                      placeholder="e.g. Focus on stocking new summer SKUs…"
                       className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                     />
                   </div>
@@ -1310,7 +1310,7 @@ export default function BeatPlanPage() {
                         type="text"
                         value={storeSearchTerm}
                         onChange={(e) => setStoreSearchTerm(e.target.value)}
-                        placeholder="Search outlet by name or street..."
+                        placeholder="Search outlet by name or street…"
                         className="w-full pl-8 pr-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
                       />
                     </div>
@@ -1332,7 +1332,7 @@ export default function BeatPlanPage() {
 
                   <div className="border border-slate-200 rounded-xl max-h-52 overflow-y-auto divide-y divide-slate-100 bg-white">
                     {filteredStoresForRoute.length === 0 ? (
-                      <div className="p-6 text-center text-slate-400">
+                      <div className="p-6 text-center text-slate-500">
                         No stores found matching your search.
                       </div>
                     ) : (
@@ -1365,7 +1365,7 @@ export default function BeatPlanPage() {
                                 {store.address} {store.area ? `• ${store.area}` : ''}
                               </p>
                             </div>
-                            <span className="text-[10px] font-semibold text-slate-400 px-1.5 py-0.5 bg-slate-100 rounded-md">
+                            <span className="text-[10px] font-semibold text-slate-500 px-1.5 py-0.5 bg-slate-100 rounded-md">
                               {store.storeType || store.category || 'STORE'}
                             </span>
                           </label>
@@ -1411,14 +1411,14 @@ export default function BeatPlanPage() {
                     <UserCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-base">Staff Leave &amp; Relief Coverage</h3>
+                    <h2 className="font-bold text-slate-900 text-base">Staff Leave &amp; Relief Coverage</h2>
                     <p className="text-xs text-slate-500">Reassign pending beat stops &amp; tasks to covering sales staff</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowLeaveModal(false)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+                  className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -1426,8 +1426,8 @@ export default function BeatPlanPage() {
 
               <form onSubmit={handleConfirmLeaveReassign} className="p-5 space-y-4 text-xs">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Staff Officer Taking Leave</label>
-                  <select
+                  <label htmlFor="beat-plan-staff-officer-taking-leave" className="block font-bold text-slate-700 mb-1">Staff Officer Taking Leave</label>
+                  <select id="beat-plan-staff-officer-taking-leave"
                     value={leaveFromOfficerId}
                     onChange={(e) => setLeaveFromOfficerId(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-blue-500"
@@ -1443,7 +1443,7 @@ export default function BeatPlanPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Leave Start Date</label>
-                    <input
+                    <input aria-label="Leave Start Date"
                       type="date"
                       value={leaveStartDate}
                       onChange={(e) => setLeaveStartDate(e.target.value)}
@@ -1453,7 +1453,7 @@ export default function BeatPlanPage() {
 
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Leave End Date</label>
-                    <input
+                    <input aria-label="Leave End Date"
                       type="date"
                       value={leaveEndDate}
                       onChange={(e) => setLeaveEndDate(e.target.value)}
@@ -1464,7 +1464,7 @@ export default function BeatPlanPage() {
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Reason for Leave</label>
-                  <select
+                  <select aria-label="Reason for Leave"
                     value={leaveReason}
                     onChange={(e) => setLeaveReason(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
@@ -1479,10 +1479,10 @@ export default function BeatPlanPage() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
+                  <label htmlFor="beat-plan-select-covering-reliever-sal" className="block font-bold text-slate-700 mb-1">
                     Select Covering / Reliever Sales Staff
                   </label>
-                  <select
+                  <select id="beat-plan-select-covering-reliever-sal"
                     value={leaveToOfficerId}
                     onChange={(e) => setLeaveToOfficerId(e.target.value)}
                     className="w-full p-2.5 bg-amber-50/50 border border-amber-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-amber-500"

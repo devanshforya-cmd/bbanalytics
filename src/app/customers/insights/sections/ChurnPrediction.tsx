@@ -38,12 +38,12 @@ export default function ChurnPrediction({ churnAnalysis }: ChurnPredictionProps)
             Identifies buyers whose order gap exceeds 60 days, evaluated by previous order velocity and last recorded interaction.
           </p>
         </div>
-        <span className="text-[11px] font-bold text-slate-400">Sorted by Karma (High Value Risk First)</span>
+        <span className="text-[11px] font-bold text-slate-500">Sorted by Karma (High Value Risk First)</span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200">
+      <div className="overflow-x-auto rounded-xl border border-slate-200" tabIndex={0}>
         <table className="w-full text-left text-xs text-slate-700">
-          <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+          <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
             <tr>
               <th className="py-3 px-3">Customer</th>
               <th className="py-3 px-3">Last Order Date</th>
@@ -58,7 +58,7 @@ export default function ChurnPrediction({ churnAnalysis }: ChurnPredictionProps)
           <tbody className="divide-y divide-slate-100">
             {churnAnalysis.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-slate-400">
+                <td colSpan={8} className="py-8 text-center text-slate-500">
                   No customers currently exceeding 60-day inactivity limit.
                 </td>
               </tr>
@@ -73,7 +73,7 @@ export default function ChurnPrediction({ churnAnalysis }: ChurnPredictionProps)
                       <span>{item.customer.name}</span>
                       <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition text-blue-600" />
                     </Link>
-                    <div className="text-[10px] text-slate-400">{item.customer.phone}</div>
+                    <div className="text-[10px] text-slate-500">{item.customer.phone}</div>
                   </td>
                   <td className="py-3 px-3 text-slate-600 font-medium">
                     {item.customer.lastOrderDate || '2026-06-12'}

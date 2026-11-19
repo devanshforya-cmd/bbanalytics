@@ -66,17 +66,17 @@ export default function CheckOutSummary({
         <div className="p-6 space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl">
             <div>
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Arrival Time</div>
+              <div className="text-[10px] text-slate-500 font-bold ">Arrival Time</div>
               <div className="text-slate-900 font-bold mt-0.5">{checkInTime || '9:45 AM'}</div>
             </div>
             <div>
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Time on Site</div>
+              <div className="text-[10px] text-slate-500 font-bold ">Time on Site</div>
               <div className="text-slate-900 font-bold mt-0.5">{durationLabel}</div>
             </div>
           </div>
 
           <div>
-            <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] mb-2">
+            <h4 className="font-bold text-slate-900 text-[11px] mb-2">
               Completed Actions
             </h4>
             <div className="space-y-1.5">
@@ -86,7 +86,7 @@ export default function CheckOutSummary({
                   <div
                     key={key}
                     className={`flex items-center gap-2.5 p-2 rounded-lg ${
-                      isCompleted ? 'bg-emerald-50/60 text-emerald-900' : 'bg-slate-50 text-slate-400'
+                      isCompleted ? 'bg-emerald-50/60 text-emerald-900' : 'bg-slate-50 text-slate-500'
                     }`}
                   >
                     <CheckCircle2

@@ -133,7 +133,7 @@ export default function AllOrdersPage() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
               <input type="search" autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Order ID (0421, FOR-0421), phone, customer, product or address"
                 className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-9 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-              {query && <button type="button" aria-label="Clear search" onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-700"><X className="h-4 w-4" /></button>}
+              {query && <button type="button" aria-label="Clear search" onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 hover:text-slate-700"><X className="h-4 w-4" /></button>}
             </label>
             <div className="flex gap-2">
               <select aria-label="Date range" value={range} disabled={!!term} onChange={(event) => setRange(event.target.value as typeof range)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 disabled:bg-slate-50 disabled:text-slate-400" title={term ? 'Search looks at every date' : undefined}>
@@ -161,9 +161,9 @@ export default function AllOrdersPage() {
           <EmptyState title={term ? `No order matches “${term}”` : 'No orders here'} description={term ? 'Check the number, or try the customer name or a product.' : status === 'OPEN' ? 'Everything in this period is delivered or closed.' : 'Try another status or a longer date range.'} />
         ) : (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full min-w-[860px] text-left text-xs">
-                <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+                <thead className="bg-slate-50 text-[10px] text-slate-500">
                   <tr>
                     {canWork && <th className="w-8 px-3 py-2.5"><input type="checkbox" aria-label="Select all shown" checked={shown.length > 0 && shown.every((order) => selected.includes(order.id))} onChange={(event) => setSelected(event.target.checked ? shown.map((order) => order.id) : [])} /></th>}
                     <th className="px-3 py-2.5 font-bold">Order</th>
@@ -185,7 +185,7 @@ export default function AllOrdersPage() {
                         <td className="px-3 py-3 align-top">
                           <Link href={`/orderflow/orders/${order.id}`} className="font-mono text-[13px] font-bold text-slate-900 hover:text-blue-700 hover:underline">{displayDocumentId(order.orderNumber)}</Link>
                           <span className="block text-[11px] text-slate-500">{formatDate(order.orderDateAd, order.orderDateBs)}{brands.length > 1 ? ` · ${brandName(order.brandCode)}` : ''}</span>
-                          {isExchangeOrder(order) && <span className="mt-0.5 inline-block rounded-full bg-purple-100 px-1.5 text-[9px] font-bold uppercase text-purple-800">{exchangeAwaitingReturn(order) ? 'Exchange · return not logged' : 'Exchange'}</span>}
+                          {isExchangeOrder(order) && <span className="mt-0.5 inline-block rounded-full bg-purple-100 px-1.5 text-[9px] font-bold text-purple-800">{exchangeAwaitingReturn(order) ? 'Exchange · return not logged' : 'Exchange'}</span>}
                         </td>
                         <td className="px-3 py-3 align-top">
                           <span className="block max-w-[180px] truncate font-semibold text-slate-900">{order.customerName}</span>
@@ -196,7 +196,7 @@ export default function AllOrdersPage() {
                         </td>
                         <td className="px-3 py-3 align-top text-[11px] text-slate-600">
                           <span className="block">{order.deliveryMethod}</span>
-                          <span className="block max-w-[160px] truncate text-slate-400">{order.district || order.address}</span>
+                          <span className="block max-w-[160px] truncate text-slate-500">{order.district || order.address}</span>
                         </td>
                         <td className="px-3 py-3 align-top">
                           <OrderStatusControl order={order} compact />

@@ -20,7 +20,7 @@ import { displayDocumentId } from '@/lib/document-ids';
 interface CatalogueEntry { id: string; name: string; sku: string; brandCode: string; isCombo: boolean; contents: string }
 
 function ComboBadge() {
-  return <span className="ml-1.5 inline-block rounded-full bg-amber-100 px-1.5 py-px align-middle text-[9px] font-bold uppercase tracking-wide text-amber-800">Combo</span>;
+  return <span className="ml-1.5 inline-block rounded-full bg-amber-100 px-1.5 py-px align-middle text-[9px] font-bold text-amber-800">Combo</span>;
 }
 
 interface SendProductsFormProps {
@@ -147,7 +147,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
       {step === 'CONFIRM' ? (
         <div className="space-y-4 p-5 text-xs">
           <div className="rounded-2xl border border-purple-200 bg-purple-50/60 p-4">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-purple-700">Sending to</p>
+            <p className="text-[11px] font-bold text-purple-700">Sending to</p>
             <p className="mt-0.5 text-base font-black text-slate-900">{influencer.name}</p>
             <p className="text-slate-600">{[channel, address.trim(), phone.trim()].filter(Boolean).join(' · ')}</p>
           </div>
@@ -174,7 +174,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
       ) : (
         <div className="space-y-5 p-5 text-xs">
           <section>
-            <span className="mb-1.5 block font-bold text-slate-700">1. Brands <span className="text-rose-500">*</span></span>
+            <span className="mb-1.5 block font-bold text-slate-700">1. Brands <span className="text-rose-600">*</span></span>
             {!brands.length ? <p className="rounded-xl border border-dashed border-slate-200 p-3 text-slate-500">No active brand is assigned to your account.</p> : (
               <div className="flex flex-wrap gap-1.5" role="group" aria-label="Brands">
                 {brands.map((brand) => { const on = brandCodes.includes(brand.code); return (
@@ -194,7 +194,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
               onCreate={(text) => { const made = db.addMarketingOption('REACH_OUT', text); refresh((n) => n + 1); return { id: made.id, name: made.name }; }}
               placeholder="Where did we contact them?" helper="For example Instagram DM, WhatsApp or an agency." />
             <div>
-              <label htmlFor="send-responsible" className="mb-1 block font-bold text-slate-700">3. Responsible person <span className="text-rose-500">*</span></label>
+              <label htmlFor="send-responsible" className="mb-1 block font-bold text-slate-700">3. Responsible person <span className="text-rose-600">*</span></label>
               <select id="send-responsible" value={responsibleId} onChange={(event) => setResponsibleId(event.target.value)} className={field}>
                 {staff.map((entry) => <option key={entry.id} value={entry.id}>{entry.fullName}{entry.id === user.id ? ' (you)' : ''}</option>)}
               </select>
@@ -211,7 +211,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
           </div>
 
           <section>
-            <span className="mb-1.5 block font-bold text-slate-700">6. Products and combos <span className="text-rose-500">*</span></span>
+            <span className="mb-1.5 block font-bold text-slate-700">6. Products and combos <span className="text-rose-600">*</span></span>
             {items.length > 0 && (
               <ul className="mb-2 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
                 {items.map((row) => { const product = productOf(row.productId); return (
@@ -221,7 +221,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
                       <button type="button" aria-label={`One fewer ${product?.name}`} onClick={() => setQuantity(row.productId, row.quantity - 1)} disabled={row.quantity <= 1} className="rounded-lg border border-slate-200 p-1 text-slate-600 hover:bg-slate-50 disabled:opacity-40"><Minus className="h-3 w-3" /></button>
                       <input aria-label={`Quantity of ${product?.name}`} type="number" min={1} max={999} value={row.quantity} onChange={(event) => setQuantity(row.productId, Number(event.target.value))} className="w-12 rounded-lg border border-slate-200 py-1 text-center font-bold" />
                       <button type="button" aria-label={`One more ${product?.name}`} onClick={() => setQuantity(row.productId, row.quantity + 1)} className="rounded-lg border border-slate-200 p-1 text-slate-600 hover:bg-slate-50"><Plus className="h-3 w-3" /></button>
-                      <button type="button" aria-label={`Remove ${product?.name}`} onClick={() => setItems((rows) => rows.filter((entry) => entry.productId !== row.productId))} className="ml-1 rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <button type="button" aria-label={`Remove ${product?.name}`} onClick={() => setItems((rows) => rows.filter((entry) => entry.productId !== row.productId))} className="ml-1 rounded-lg p-1 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
                     </span>
                   </li>
                 ); })}
@@ -236,7 +236,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
                 <ul className="max-h-52 overflow-y-auto">
                   {brandCodes.map((code) => { const list = available.filter((product) => product.brandCode === code); if (!list.length) return null; return (
                     <li key={code}>
-                      <p className="sticky top-0 bg-slate-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">{brandName(code)}</p>
+                      <p className="sticky top-0 bg-slate-50 px-3 py-1 text-[10px] font-bold text-slate-500">{brandName(code)}</p>
                       <ul>
                         {list.map((product) => { const added = items.some((row) => row.productId === product.id); return (
                           <li key={product.id}>

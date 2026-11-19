@@ -67,7 +67,7 @@ export default function ConfirmModal({
               {message && <p className="text-xs text-slate-500 mt-1 leading-relaxed">{message}</p>}
             </div>
           </div>
-          <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 transition shrink-0">
+          <button type="button" onClick={onCancel} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 transition shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -87,11 +87,11 @@ export default function ConfirmModal({
         {/* Consequences */}
         {consequences && consequences.length > 0 && (
           <div className="mx-5 mb-4">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">This will:</p>
+            <p className="text-[11px] font-semibold text-slate-500 mb-2">This will:</p>
             <ul className="space-y-1.5">
               {consequences.map((c, i) => (
                 <li key={i} className="flex items-start gap-2 text-xs text-slate-600">
-                  <span className="text-slate-400 mt-0.5">•</span>
+                  <span className="text-slate-500 mt-0.5">•</span>
                   <span>{c}</span>
                 </li>
               ))}

@@ -16,7 +16,7 @@ export interface SubmitButtonProps {
 export default function SubmitButton({
   onClick,
   label,
-  loadingLabel = 'Saving...',
+  loadingLabel = 'Saving…',
   className = '',
   variant = 'primary',
   disabled = false,
@@ -43,7 +43,7 @@ export default function SubmitButton({
   };
 
   const baseStyles =
-    'relative inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 select-none cursor-pointer';
+    'relative inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition duration-200 select-none cursor-pointer';
   const widthStyle = fullWidth ? 'w-full' : '';
 
   const variantStyles = {
@@ -69,6 +69,7 @@ export default function SubmitButton({
     >
       {isSubmitting && (
         <svg
+          aria-hidden="true"
           className="animate-spin -ml-1 mr-2 h-4 w-4 text-current"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"

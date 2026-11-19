@@ -322,7 +322,7 @@ function ScorecardContent() {
                 }`}
               >
                 <span>{preset.label}</span>
-                <span className={`text-[10px] ${isActive ? 'text-blue-600 font-black' : 'text-slate-400'}`}>
+                <span className={`text-[10px] ${isActive ? 'text-blue-600 font-black' : 'text-slate-500'}`}>
                   ({preset.sub})
                 </span>
               </button>
@@ -342,7 +342,7 @@ function ScorecardContent() {
               </div>
               <button
                 onClick={() => setShowCustomModal(false)}
-                className="text-slate-400 hover:text-slate-700"
+                className="text-slate-500 hover:text-slate-700"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -350,8 +350,8 @@ function ScorecardContent() {
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Start Date (Gregorian / AD):</label>
-                <input
+                <label htmlFor="scorecard-start-date-gregorian-ad" className="font-bold text-slate-700 block mb-1">Start Date (Gregorian / AD):</label>
+                <input id="scorecard-start-date-gregorian-ad"
                   type="date"
                   value={customRange.start}
                   onChange={(e) => setCustomRange((p) => ({ ...p, start: e.target.value }))}
@@ -359,8 +359,8 @@ function ScorecardContent() {
                 />
               </div>
               <div>
-                <label className="font-bold text-slate-700 block mb-1">End Date (Gregorian / AD):</label>
-                <input
+                <label htmlFor="scorecard-end-date-gregorian-ad" className="font-bold text-slate-700 block mb-1">End Date (Gregorian / AD):</label>
+                <input id="scorecard-end-date-gregorian-ad"
                   type="date"
                   value={customRange.end}
                   onChange={(e) => setCustomRange((p) => ({ ...p, end: e.target.value }))}
@@ -398,7 +398,7 @@ function ScorecardContent() {
       {/* ========================================================================= */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <div className="text-xs font-bold text-slate-500 ">
             Officer Field Cards (Click any card to open 360° Activity Ledger)
           </div>
           <span className="text-[11px] text-blue-600 font-bold hidden sm:inline">
@@ -452,7 +452,7 @@ function ScorecardContent() {
                   <div className="flex flex-col items-end gap-1.5">
                     {!isOfficer && (
                       <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-black   ${
                           rank === 0
                             ? 'bg-amber-100 text-amber-900 border border-amber-200'
                             : rank === 1
@@ -494,7 +494,7 @@ function ScorecardContent() {
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
                     <div
-                      className="h-full bg-blue-600 rounded-full transition-all duration-500"
+                      className="h-full bg-blue-600 rounded-full transition duration-500"
                       style={{ width: `${sc.beatCompliancePct}%` }}
                     />
                   </div>
@@ -508,7 +508,7 @@ function ScorecardContent() {
                 {/* 3e. Skip Reasons Breakdown & Clickable Link */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <div className="text-[10px] font-bold text-slate-500">
                       Missed Stores Breakdown:
                     </div>
                     <button
@@ -520,7 +520,7 @@ function ScorecardContent() {
                       }}
                       className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
                     >
-                      View all skipped stores →
+                      View all skipped stores
                     </button>
                   </div>
 
@@ -539,7 +539,7 @@ function ScorecardContent() {
 
                 {/* Calling & Conversion */}
                 <div className="space-y-2 border-t border-slate-100 pt-3">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="text-[10px] font-bold text-slate-500">
                     Calls &amp; Order Conversion
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
@@ -560,7 +560,7 @@ function ScorecardContent() {
 
                 {/* Cheques & Collection Speed */}
                 <div className="space-y-2 border-t border-slate-100 pt-3">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="text-[10px] font-bold text-slate-500">
                     Cheque Custody &amp; Collection Discipline
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
@@ -637,7 +637,7 @@ function ScorecardContent() {
                             {latestSummary.chequesCollected} (NPR {latestSummary.chequeTotalAmount.toLocaleString()})
                           </span>
                         </div>
-                        <div className="flex justify-between text-[10px] text-slate-400">
+                        <div className="flex justify-between text-[10px] text-slate-500">
                           <span>Field Time:</span>
                           <span>{latestSummary.startTime} – {latestSummary.endTime} ({latestSummary.durationFormatted})</span>
                         </div>
@@ -690,9 +690,9 @@ function ScorecardContent() {
             />
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="overflow-x-auto rounded-xl border border-slate-200" tabIndex={0}>
             <table className="w-full text-left text-xs text-slate-700">
-              <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4 font-bold text-slate-900">Operational Metric</th>
                   {displayScorecards.map((sc) => (
@@ -864,7 +864,7 @@ function ScorecardContent() {
                     ))}
                   </svg>
 
-                  <div className="flex justify-between text-[10px] text-slate-400 font-bold mt-2 pt-1 border-t border-slate-100">
+                  <div className="flex justify-between text-[10px] text-slate-500 font-bold mt-2 pt-1 border-t border-slate-100">
                     <span>W1 ({trend.start}%)</span>
                     <span>W4</span>
                     <span>W8 ({trend.current}%)</span>
@@ -901,7 +901,7 @@ function ScorecardContent() {
 
               <button
                 onClick={() => setDrilldownOfficerId(null)}
-                className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition"
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -956,7 +956,7 @@ function ScorecardContent() {
                             {st.name}
                             <ArrowUpRight className="h-3 w-3 text-slate-400" />
                           </Link>
-                          <div className="text-[11px] text-slate-400">{st.type} • {st.address}</div>
+                          <div className="text-[11px] text-slate-500">{st.type} • {st.address}</div>
                         </div>
                         <div className="flex items-center gap-2">
                           <span
@@ -986,7 +986,7 @@ function ScorecardContent() {
                   </div>
                   <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
                     {officerCheques.length === 0 ? (
-                      <div className="p-6 text-center text-slate-400">No active cheques found for this period.</div>
+                      <div className="p-6 text-center text-slate-500">No active cheques found for this period.</div>
                     ) : (
                       officerCheques.map((ch) => (
                         <div key={ch.id} className="p-3 flex items-center justify-between hover:bg-slate-50">
@@ -998,7 +998,7 @@ function ScorecardContent() {
                               Cheque #{ch.chequeNumber} — {ch.bankName}
                               <ArrowUpRight className="h-3 w-3 text-slate-400" />
                             </Link>
-                            <div className="text-[11px] text-slate-400">
+                            <div className="text-[11px] text-slate-500">
                               <Link
                                 href={`/offline-sales/stores/${ch.entityId || encodeURIComponent(ch.storeName)}`}
                                 className="hover:text-blue-600 hover:underline font-medium text-slate-700"
@@ -1034,7 +1034,7 @@ function ScorecardContent() {
                         <div className="space-y-1">
                           <div className="font-bold text-slate-900">{t.title}</div>
                           <p className="text-[11px] text-slate-500">{t.description}</p>
-                          <div className="text-[10px] text-slate-400">Due: {t.dueDateBs} ({t.dueDateAd})</div>
+                          <div className="text-[10px] text-slate-500">Due: {t.dueDateBs} ({t.dueDateAd})</div>
                         </div>
                         <span
                           className={`rounded px-2 py-0.5 text-[10px] font-bold shrink-0 ${
@@ -1060,13 +1060,13 @@ function ScorecardContent() {
                   </div>
                   <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
                     {officerCalls.length === 0 ? (
-                      <div className="p-6 text-center text-slate-400">No field calls logged in this period.</div>
+                      <div className="p-6 text-center text-slate-500">No field calls logged in this period.</div>
                     ) : (
                       officerCalls.map((c) => (
                         <div key={c.id} className="p-3 flex items-center justify-between hover:bg-slate-50">
                           <div>
                             <div className="font-bold text-slate-900">{c.storeName} ({c.contactName})</div>
-                            <div className="text-[11px] text-slate-400">{c.label} • Duration: {Math.round(c.durationSeconds / 60)}m</div>
+                            <div className="text-[11px] text-slate-500">{c.label} • Duration: {Math.round(c.durationSeconds / 60)}m</div>
                           </div>
                           <span
                             className={`rounded px-2 py-0.5 text-[10px] font-bold ${
@@ -1093,7 +1093,7 @@ function ScorecardContent() {
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {officerPhotos.length === 0 ? (
-                      <div className="col-span-3 p-6 text-center text-slate-400">No shelf photos submitted yet.</div>
+                      <div className="col-span-3 p-6 text-center text-slate-500">No shelf photos submitted yet.</div>
                     ) : (
                       officerPhotos.map((p) => {
                         const img = (p.afterPhotoUrls && p.afterPhotoUrls[0]) || (p.beforePhotoUrls && p.beforePhotoUrls[0]);
@@ -1106,13 +1106,13 @@ function ScorecardContent() {
                                 className="h-32 w-full object-cover"
                               />
                             ) : (
-                              <div className="h-32 w-full flex items-center justify-center bg-slate-100 text-slate-400">
+                              <div className="h-32 w-full flex items-center justify-center bg-slate-100 text-slate-500">
                                 <Camera className="w-6 h-6" />
                               </div>
                             )}
                             <div className="p-2.5 space-y-0.5">
                               <div className="font-bold text-slate-900 truncate">{p.storeName}</div>
-                              <div className="text-[10px] text-slate-400">{p.dateBs}</div>
+                              <div className="text-[10px] text-slate-500">{p.dateBs}</div>
                             </div>
                           </div>
                         );
@@ -1131,13 +1131,13 @@ function ScorecardContent() {
                   </div>
                   <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
                     {officerDocs.length === 0 ? (
-                      <div className="p-6 text-center text-slate-400">No handover documents recorded.</div>
+                      <div className="p-6 text-center text-slate-500">No handover documents recorded.</div>
                     ) : (
                       officerDocs.map((doc) => (
                         <div key={doc.id} className="p-3 flex items-center justify-between hover:bg-slate-50">
                           <div>
                             <div className="font-bold text-slate-900">{doc.documentType}</div>
-                            <div className="text-[11px] text-slate-400">{doc.storeName} • Ref: {doc.referenceNumber || 'N/A'}</div>
+                            <div className="text-[11px] text-slate-500">{doc.storeName} • Ref: {doc.referenceNumber || 'N/A'}</div>
                           </div>
                           <span className="rounded bg-blue-100 text-blue-800 font-bold px-2 py-0.5 text-[10px]">
                             {doc.status}
@@ -1182,7 +1182,7 @@ function ScorecardContent() {
 
               <button
                 onClick={() => setShowSkipModal(false)}
-                className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition"
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1213,9 +1213,9 @@ function ScorecardContent() {
 
             {/* Modal Table */}
             <div className="p-5 overflow-y-auto flex-1">
-              <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <div className="overflow-x-auto rounded-xl border border-slate-200" tabIndex={0}>
                 <table className="w-full text-left text-xs text-slate-700">
-                  <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                  <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
                     <tr>
                       <th className="py-2.5 px-3">Date (BS/AD)</th>
                       <th className="py-2.5 px-3">Store Name &amp; Area</th>
@@ -1227,7 +1227,7 @@ function ScorecardContent() {
                   <tbody className="divide-y divide-slate-100">
                     {filteredSkippedStores.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-slate-400">
+                        <td colSpan={5} className="py-8 text-center text-slate-500">
                           No skipped stores logged for this filter.
                         </td>
                       </tr>
@@ -1236,11 +1236,11 @@ function ScorecardContent() {
                         <tr key={item.id} className="hover:bg-slate-50 transition">
                           <td className="py-3 px-3">
                             <div className="font-bold text-slate-900">{item.dateBs}</div>
-                            <div className="text-[10px] text-slate-400">{item.dateAd}</div>
+                            <div className="text-[10px] text-slate-500">{item.dateAd}</div>
                           </td>
                           <td className="py-3 px-3">
                             <div className="font-bold text-slate-900">{item.storeName}</div>
-                            <div className="text-[10px] text-slate-400">{item.area}</div>
+                            <div className="text-[10px] text-slate-500">{item.area}</div>
                           </td>
                           <td className="py-3 px-3 font-semibold text-slate-700">{item.officerName}</td>
                           <td className="py-3 px-3">
@@ -1279,7 +1279,7 @@ export default function ScorecardPage() {
       <Suspense
         fallback={
           <div className="p-8 text-center text-slate-500 font-medium">
-            Loading Scorecard and Officer Metrics...
+            Loading Scorecard and Officer Metrics…
           </div>
         }
       >

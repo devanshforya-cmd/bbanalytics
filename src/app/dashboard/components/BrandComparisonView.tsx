@@ -186,9 +186,9 @@ export default function BrandComparisonView({
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
           <Layers className="h-6 w-6" />
         </div>
-        <h3 className="text-sm font-bold text-slate-900">No Brands Configured Yet</h3>
+        <h2 className="text-sm font-bold text-slate-900">No Brands Configured Yet</h2>
         <p className="text-xs text-slate-500 max-w-sm mx-auto">
-          Add your principal brand portfolios in Settings to unlock the multi-brand performance matrix, logistics friction analysis, and outlet penetration radar.
+          Add your brands in Settings to compare their sales, delivery problems and store reach here.
         </p>
         <Link
           href="/settings?tab=brands"
@@ -205,10 +205,10 @@ export default function BrandComparisonView({
       {/* Header with View Toggle & Search */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
         <div>
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Layers className="w-4 h-4 text-blue-600" />
             Multi-Brand Portfolio Radar &amp; Performance Matrix
-          </h3>
+          </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Scalable distributor intelligence comparing volume, logistics friction, and retailer penetration across {allBrands.length} principal brands.
           </p>
@@ -254,20 +254,20 @@ export default function BrandComparisonView({
               <Search className="absolute left-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Filter brands by name or category..."
+                placeholder="Filter brands by name or category…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-lg bg-slate-50 pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 border border-slate-200 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] text-slate-500">
               Showing {filteredMetrics.length} of {allBrands.length} Principal Brands
             </span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="overflow-x-auto rounded-xl border border-slate-200" tabIndex={0}>
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+              <thead className="bg-slate-50 text-slate-600 font-bold text-[10px] border-b border-slate-200">
                 <tr>
                   <th className="py-2.5 px-3">Principal Brand</th>
                   <th className="py-2.5 px-3 text-right">Orders</th>
@@ -307,7 +307,7 @@ export default function BrandComparisonView({
                                 </span>
                               )}
                             </div>
-                            <div className="text-[10px] text-slate-400">
+                            <div className="text-[10px] text-slate-500">
                               {b.category} • {b.principalCompany || 'Brand Bucket'}
                             </div>
                           </div>
@@ -527,12 +527,12 @@ export default function BrandComparisonView({
                     </div>
 
                     <div className="p-2 rounded-lg bg-white border border-slate-100 space-y-0.5">
-                      <div className="text-[10px] text-slate-400 uppercase font-bold">Top Selling SKU</div>
+                      <div className="text-[10px] text-slate-500 font-bold">Top Selling SKU</div>
                       <div className="font-bold text-emerald-700 truncate">{b.topSelling}</div>
                     </div>
 
                     <div className="p-2 rounded-lg bg-white border border-slate-100 space-y-0.5">
-                      <div className="text-[10px] text-slate-400 uppercase font-bold">Highest Return SKU</div>
+                      <div className="text-[10px] text-slate-500 font-bold">Highest Return SKU</div>
                       <div className="font-bold text-rose-700 truncate">{b.worstProduct}</div>
                     </div>
                   </div>

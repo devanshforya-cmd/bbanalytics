@@ -38,9 +38,9 @@ export default function GeographicIntel({ geographicIntel }: GeographicIntelProp
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200">
+      <div className="overflow-x-auto rounded-xl border border-slate-200" tabIndex={0}>
         <table className="w-full text-left text-xs text-slate-700">
-          <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+          <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
             <tr>
               <th className="py-3 px-3">City / Center</th>
               <th className="py-3 px-3">Province</th>
@@ -60,7 +60,7 @@ export default function GeographicIntel({ geographicIntel }: GeographicIntelProp
                     <MapPin className="h-3.5 w-3.5 text-emerald-600" />
                     <span>{row.city}</span>
                   </div>
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-[10px] text-slate-500">
                     {row.isOutsideValley ? 'Outside Valley Hub' : 'Kathmandu Valley'}
                   </span>
                 </td>

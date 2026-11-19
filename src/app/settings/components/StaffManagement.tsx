@@ -56,11 +56,13 @@ export default function StaffManagement() {
   const [permissionsState, setPermissionsState] = useState<UserCustomPermissions>(FIELD_SALES_OFFICER_TEMPLATE);
 
   const refreshUsers = async () => {
-    const supaUsers = await fetchUsersFromSupabase();
-    if (supaUsers && supaUsers.length > 0) {
-      setUsers([...supaUsers]);
-    } else {
+    try {
+      const supaUsers = await fetchUsersFromSupabase();
+      setUsers(supaUsers && supaUsers.length > 0 ? [...supaUsers] : [...db.getUsers()]);
+    } catch (error) {
+      // Offline or the server is unreachable: show the staff saved on this device and say so.
       setUsers([...db.getUsers()]);
+      toast.error('Staff list not refreshed', error instanceof Error ? `${error.message} Showing the list saved on this device.` : 'Showing the list saved on this device.');
     }
   };
 
@@ -394,7 +396,7 @@ export default function StaffManagement() {
               </div>
               <button
                 onClick={() => setShowAddStaffModal(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+                className="p-1.5 text-slate-500 hover:text-slate-600 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -404,13 +406,13 @@ export default function StaffManagement() {
             <form onSubmit={handleSaveStaff} className="flex-1 overflow-y-auto py-4 space-y-6 pr-1">
               {/* SECTION: BASIC INFO */}
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                <div className="text-[11px] font-bold text-slate-500 mb-2">
                   Basic Information
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Full Name *</label>
-                    <input
+                    <label htmlFor="staffmanagement-full-name" className="block font-bold text-slate-700 mb-1">Full Name *</label>
+                    <input id="staffmanagement-full-name"
                       type="text"
                       required
                       value={staffName}
@@ -420,8 +422,8 @@ export default function StaffManagement() {
                     />
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Mobile Number *</label>
-                    <input
+                    <label htmlFor="staffmanagement-mobile-number" className="block font-bold text-slate-700 mb-1">Mobile Number *</label>
+                    <input id="staffmanagement-mobile-number"
                       type="tel"
                       required
                       value={staffPhone}
@@ -431,8 +433,8 @@ export default function StaffManagement() {
                     />
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Email Address *</label>
-                    <input
+                    <label htmlFor="staffmanagement-email-address" className="block font-bold text-slate-700 mb-1">Email Address *</label>
+                    <input id="staffmanagement-email-address"
                       type="email"
                       required
                       value={staffEmail}
@@ -458,7 +460,7 @@ export default function StaffManagement() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-600 transition"
                         aria-label="Toggle password visibility"
                       >
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -471,8 +473,8 @@ export default function StaffManagement() {
                     )}
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Reports To (Manager)</label>
-                    <select
+                    <label htmlFor="staffmanagement-reports-to-manager" className="block font-bold text-slate-700 mb-1">Reports To (Manager)</label>
+                    <select id="staffmanagement-reports-to-manager"
                       value={reportsToId}
                       onChange={(e) => setReportsToId(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -489,7 +491,7 @@ export default function StaffManagement() {
                   </div>
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Territory / Area</label>
-                    <input
+                    <input aria-label="Territory / Area"
                       type="text"
                       value={assignedTerritory}
                       onChange={(e) => setAssignedTerritory(e.target.value)}
@@ -502,7 +504,7 @@ export default function StaffManagement() {
 
               {/* SECTION: QUICK TEMPLATES */}
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                <div className="text-[11px] font-bold text-slate-500 mb-2">
                   Quick Templates (Starting Point)
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -540,7 +542,7 @@ export default function StaffManagement() {
 
               {/* SECTION: FEATURE PERMISSIONS MATRIX */}
               <div className="space-y-4">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <div className="text-[11px] font-bold text-slate-500">
                   Feature Permissions Matrix
                 </div>
 
@@ -560,7 +562,7 @@ export default function StaffManagement() {
                         <div key={key} className="p-3 grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center text-xs">
                           <div className="md:col-span-5">
                             <span className="font-bold text-slate-800">{meta.label}</span>
-                            <p className="text-[11px] text-slate-400">{meta.description}</p>
+                            <p className="text-[11px] text-slate-500">{meta.description}</p>
                           </div>
 
                           {/* Access Column */}
@@ -584,7 +586,7 @@ export default function StaffManagement() {
                               value={perm.scope || 'OWN'}
                               onChange={(e) => handleScopeChange(key, e.target.value as DataScope)}
                               className={`w-full px-2 py-1.5 rounded-lg border border-slate-200 font-medium ${
-                                isHidden ? 'bg-slate-100 text-slate-400 border-dashed cursor-not-allowed' : ''
+                                isHidden ? 'bg-slate-100 text-slate-500 border-dashed cursor-not-allowed' : ''
                               }`}
                             >
                               <option value="OWN">Own Only</option>
@@ -610,7 +612,7 @@ export default function StaffManagement() {
                               }
                               onChange={(e) => handleActionsChange(key, e.target.value as any)}
                               className={`w-full px-2 py-1.5 rounded-lg border border-slate-200 font-medium ${
-                                isHidden || isViewOnly ? 'bg-slate-100 text-slate-400 border-dashed cursor-not-allowed' : ''
+                                isHidden || isViewOnly ? 'bg-slate-100 text-slate-500 border-dashed cursor-not-allowed' : ''
                               }`}
                             >
                               <option value="VIEW">View Only</option>
@@ -641,7 +643,7 @@ export default function StaffManagement() {
                         <div key={key} className="p-3 grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center text-xs">
                           <div className="md:col-span-5">
                             <span className="font-bold text-slate-800">{meta.label}</span>
-                            <p className="text-[11px] text-slate-400">{meta.description}</p>
+                            <p className="text-[11px] text-slate-500">{meta.description}</p>
                           </div>
 
                           {/* Access Column */}
@@ -665,7 +667,7 @@ export default function StaffManagement() {
                               value={perm.scope || 'ALL'}
                               onChange={(e) => handleScopeChange(key, e.target.value as DataScope)}
                               className={`w-full px-2 py-1.5 rounded-lg border border-slate-200 font-medium ${
-                                isHidden ? 'bg-slate-100 text-slate-400 border-dashed cursor-not-allowed' : ''
+                                isHidden ? 'bg-slate-100 text-slate-500 border-dashed cursor-not-allowed' : ''
                               }`}
                             >
                               <option value="ALL">All Data</option>
@@ -691,7 +693,7 @@ export default function StaffManagement() {
                               }
                               onChange={(e) => handleActionsChange(key, e.target.value as any)}
                               className={`w-full px-2 py-1.5 rounded-lg border border-slate-200 font-medium ${
-                                isHidden || isViewOnly ? 'bg-slate-100 text-slate-400 border-dashed cursor-not-allowed' : ''
+                                isHidden || isViewOnly ? 'bg-slate-100 text-slate-500 border-dashed cursor-not-allowed' : ''
                               }`}
                             >
                               <option value="VIEW">View Only</option>

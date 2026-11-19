@@ -71,7 +71,7 @@ export default function BrandSettings() {
   const handleNameChange = (val: string) => {
     setBrandName(val);
     if (!codeManuallyEdited && !editingBrand) {
-      // Auto-generate code: a brand name to a stable uppercase code
+      // Auto-generate code: a brand name to a stable  code
       const generated = val
         .trim()
         .toUpperCase()
@@ -259,8 +259,8 @@ export default function BrandSettings() {
 
       {/* Brands List / Empty State */}
       {loading ? (
-        <div className="p-12 text-center text-xs text-slate-400 bg-white rounded-2xl border border-slate-200">
-          Loading configured brands...
+        <div className="p-12 text-center text-xs text-slate-500 bg-white rounded-2xl border border-slate-200">
+          Loading configured brands…
         </div>
       ) : brands.length === 0 ? (
         <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-slate-300 space-y-4">
@@ -411,7 +411,7 @@ export default function BrandSettings() {
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer"
+                className="text-slate-500 hover:text-slate-600 p-1 rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -419,8 +419,8 @@ export default function BrandSettings() {
 
             <div className="space-y-4 pt-4 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Brand Name *</label>
-                <input
+                <label htmlFor="brandsettings-brand-name" className="block font-bold text-slate-700 mb-1">Brand Name *</label>
+                <input id="brandsettings-brand-name"
                   type="text"
                   required
                   value={brandName}
@@ -431,10 +431,10 @@ export default function BrandSettings() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Brand Code * <span className="text-slate-400 font-normal">(Auto-generated)</span>
+                <label htmlFor="brandsettings-brand-code-auto-generated" className="block font-bold text-slate-700 mb-1">
+                  Brand Code * <span className="text-slate-500 font-normal">(Auto-generated)</span>
                 </label>
-                <input
+                <input id="brandsettings-brand-code-auto-generated"
                   type="text"
                   required
                   value={brandCode}
@@ -443,13 +443,13 @@ export default function BrandSettings() {
                     setBrandCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''));
                   }}
                   placeholder="BRAND_CODE"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 uppercase font-mono text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Brand Color <span className="text-slate-400 font-normal">(Hex color for badges &amp; charts)</span>
+                  Brand Color <span className="text-slate-500 font-normal">(Hex color for badges &amp; charts)</span>
                 </label>
                 <div className="flex items-center gap-3">
                   <input
@@ -462,7 +462,7 @@ export default function BrandSettings() {
                     type="text"
                     value={brandColor}
                     onChange={(e) => setBrandColor(e.target.value)}
-                    className="w-28 px-3 py-2 rounded-xl border border-slate-200 font-mono text-xs font-semibold uppercase text-slate-800"
+                    className="w-28 px-3 py-2 rounded-xl border border-slate-200 font-mono text-xs font-semibold text-slate-800"
                   />
                   <div
                     className="flex-1 px-3 py-2 rounded-xl text-center font-bold text-white text-xs shadow-2xs"
@@ -474,8 +474,8 @@ export default function BrandSettings() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Category (Optional)</label>
-                <select
+                <label htmlFor="brandsettings-category-optional" className="block font-bold text-slate-700 mb-1">Category (Optional)</label>
+                <select id="brandsettings-category-optional"
                   value={brandCategory}
                   onChange={(e) => setBrandCategory(e.target.value as BrandCategory)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 bg-white"
@@ -499,7 +499,7 @@ export default function BrandSettings() {
                 <SubmitButton
                   onClick={handleSaveBrand}
                   label={editingBrand ? 'Save Changes' : 'Save Brand'}
-                  loadingLabel="Saving..."
+                  loadingLabel="Saving…"
                   variant="primary"
                 />
               </div>
@@ -589,15 +589,15 @@ export default function BrandSettings() {
             </p>
 
             <div className="space-y-1.5 pt-1">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <label htmlFor="brandsettings-type-ldquo-delete-rdquo-to-c" className="block text-[11px] font-bold text-slate-500">
                 Type &ldquo;DELETE&rdquo; to confirm:
               </label>
-              <input
+              <input id="brandsettings-type-ldquo-delete-rdquo-to-c"
                 type="text"
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                 placeholder="DELETE"
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500 uppercase"
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500 "
               />
             </div>
 
@@ -615,7 +615,7 @@ export default function BrandSettings() {
               <SubmitButton
                 onClick={handlePermanentDelete}
                 label="Delete Forever"
-                loadingLabel="Deleting..."
+                loadingLabel="Deleting…"
                 variant="danger"
                 disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
               />

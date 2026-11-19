@@ -47,7 +47,7 @@ export default function SmartDropdown({
   items,
   value,
   onChange,
-  placeholder = 'Select product or item...',
+  placeholder = 'Select product or item…',
   label,
   required = false,
   className = '',
@@ -95,7 +95,7 @@ export default function SmartDropdown({
     <div ref={dropdownRef} className={`relative space-y-1 ${className}`}>
       {label && (
         <label className="block text-xs font-semibold text-slate-700">
-          {label} {required && <span className="text-rose-500">*</span>}
+          {label} {required && <span className="text-rose-600">*</span>}
         </label>
       )}
 
@@ -103,7 +103,7 @@ export default function SmartDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white hover:border-blue-400 text-left transition-all shadow-2xs focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+        className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white hover:border-blue-400 text-left transition shadow-2xs focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
       >
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           {selectedItem ? (
@@ -136,7 +136,7 @@ export default function SmartDropdown({
               )}
             </>
           ) : (
-            <span className="text-xs text-slate-400">{placeholder}</span>
+            <span className="text-xs text-slate-500">{placeholder}</span>
           )}
         </div>
         <ChevronDown
@@ -158,8 +158,8 @@ export default function SmartDropdown({
                 autoFocus
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Type to filter..."
-                className="w-full text-xs text-slate-800 bg-transparent outline-none placeholder:text-slate-400"
+                placeholder="Type to filter…"
+                className="w-full text-xs text-slate-800 bg-transparent outline-none placeholder:text-slate-500"
               />
             </div>
           </div>
@@ -167,12 +167,12 @@ export default function SmartDropdown({
           {/* List */}
           <div className="max-h-60 overflow-y-auto divide-y divide-slate-50">
             {Object.keys(grouped).length === 0 ? (
-              <div className="p-4 text-center text-xs text-slate-400">No items match &ldquo;{search}&rdquo;</div>
+              <div className="p-4 text-center text-xs text-slate-500">No items match &ldquo;{search}&rdquo;</div>
             ) : (
               Object.entries(grouped).map(([group, groupItems]) => (
                 <div key={group}>
                   <div
-                    className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                    className={`px-3 py-1 text-[10px] font-bold   ${
                       getBrandStyle(group).bg
                     } ${getBrandStyle(group).text}`}
                   >
@@ -206,7 +206,7 @@ export default function SmartDropdown({
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold text-slate-800 truncate">{item.name}</p>
                             {item.context && (
-                              <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                              <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
                                 <Sparkles className="w-3 h-3 text-amber-500" />
                                 <span>{item.context}</span>
                               </p>

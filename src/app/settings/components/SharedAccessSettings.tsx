@@ -192,7 +192,7 @@ export default function SharedAccessSettings() {
       {/* Links table */}
       <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-          <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+          <div className="text-xs font-bold text-slate-800 ">
             Active &amp; Historical Shared Access Links ({links.length})
           </div>
         </div>
@@ -202,7 +202,7 @@ export default function SharedAccessSettings() {
             No shared access links created yet. Click above to create a secure link for your external partners.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0}>
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-600 font-bold">
@@ -229,7 +229,7 @@ export default function SharedAccessSettings() {
                           <Link2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                           <span>{link.name}</span>
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
+                        <div className="text-[10px] text-slate-500 mt-0.5">
                           Created {new Date(link.createdAt).toLocaleDateString()} by {link.createdBy || link.createdById || 'Admin'}
                         </div>
                       </td>
@@ -277,7 +277,7 @@ export default function SharedAccessSettings() {
                             Required
                           </span>
                         ) : (
-                          <span className="text-slate-400 text-[11px]">Direct Link</span>
+                          <span className="text-slate-500 text-[11px]">Direct Link</span>
                         )}
                       </td>
 
@@ -423,7 +423,7 @@ export default function SharedAccessSettings() {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                    className="text-slate-500 hover:text-slate-600 text-sm font-bold"
                   >
                     ✕
                   </button>
@@ -431,10 +431,10 @@ export default function SharedAccessSettings() {
 
                 {/* Link Name */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Link Name / Recipient <span className="text-rose-500">*</span>
+                  <label htmlFor="sharedaccesssettings-link-name-recipient" className="block text-xs font-bold text-slate-700 mb-1">
+                    Link Name / Recipient <span className="text-rose-600">*</span>
                   </label>
-                  <input
+                  <input id="sharedaccesssettings-link-name-recipient"
                     type="text"
                     required
                     placeholder="e.g., Digital Agency — Q3 Meta Ads Campaign"
@@ -516,7 +516,7 @@ export default function SharedAccessSettings() {
                         <span className="block text-[11px] text-blue-800">The viewer picks the brand and month, within the brands chosen above.</span></span>
                     </label>
                   )}
-                  <div className="text-[11px] text-slate-400 mt-1.5 italic">
+                  <div className="text-[11px] text-slate-500 mt-1.5 italic">
                     Note: Customer 360, offline beat plans, cheques, and settings are always restricted.
                   </div>
                 </div>
@@ -533,8 +533,8 @@ export default function SharedAccessSettings() {
                 {/* Expiration & Passcode */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Expiration Period</label>
-                    <select
+                    <label htmlFor="sharedaccesssettings-expiration-period" className="block text-xs font-bold text-slate-700 mb-1">Expiration Period</label>
+                    <select id="sharedaccesssettings-expiration-period"
                       value={expiresInDays}
                       onChange={(e) =>
                         setExpiresInDays(e.target.value === 'never' ? 'never' : Number(e.target.value))
@@ -549,10 +549,10 @@ export default function SharedAccessSettings() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Access Passcode <span className="text-slate-400 font-normal">(optional)</span>
+                    <label htmlFor="sharedaccesssettings-access-passcode-optional" className="block text-xs font-bold text-slate-700 mb-1">
+                      Access Passcode <span className="text-slate-500 font-normal">(optional)</span>
                     </label>
-                    <input
+                    <input id="sharedaccesssettings-access-passcode-optional"
                       type="text"
                       placeholder="e.g. 8492 (leave empty for none)"
                       value={passcode}

@@ -54,13 +54,13 @@ export default function ChequesDrillDown({
         {/* Metric Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Total Cheques
             </div>
             <div className="text-xl font-black text-slate-900 mt-1">{cheques.length}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Total Value
             </div>
             <div className="text-xl font-black text-blue-600 mt-1">
@@ -68,13 +68,13 @@ export default function ChequesDrillDown({
             </div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Held in Field
             </div>
             <div className="text-xl font-black text-amber-600 mt-1">{inFieldCount}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Overdue / Delayed
             </div>
             <div className="text-xl font-black text-rose-600 mt-1">{overdueCount}</div>
@@ -113,7 +113,7 @@ function ChequesRegisterTab({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
       <table className="w-full text-left text-xs">
         <thead>
           <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -232,7 +232,7 @@ function ChequesStatusSummaryTab({ cheques }: { cheques: Cheque[] }) {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -266,7 +266,7 @@ function ChequesByOfficerTab({
   scorecards: OfficerScorecard[];
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
       <table className="w-full text-left text-xs">
         <thead>
           <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">

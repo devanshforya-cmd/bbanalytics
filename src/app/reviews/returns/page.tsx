@@ -202,7 +202,7 @@ export default function ReturnsPage() {
         ].map((tile) => {
           const body = (
             <>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{tile.label}</p>
+              <p className="text-[10px] font-bold text-slate-500">{tile.label}</p>
               <p className={`mt-1 text-2xl font-black tabular-nums ${tile.tone || 'text-slate-900'}`}>{tile.value}</p>
               <p className="mt-0.5 truncate text-[11px] text-slate-500">{tile.hint}</p>
             </>
@@ -232,7 +232,7 @@ export default function ReturnsPage() {
             </div>
             <button
               onClick={() => setSaveSuccess(null)}
-              className="text-slate-400 hover:text-slate-600 p-1"
+              className="text-slate-500 hover:text-slate-600 p-1"
             >
               <X className="h-4 w-4" />
             </button>
@@ -274,7 +274,7 @@ export default function ReturnsPage() {
             <Search className="h-4 w-4 text-slate-400 shrink-0" />
             <input
               type="text"
-              placeholder="Search product, customer name, phone, or reason..."
+              placeholder="Search product, customer name, phone, or reason…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full text-xs bg-transparent outline-none text-slate-800"
@@ -282,7 +282,7 @@ export default function ReturnsPage() {
           </div>
 
           <div>
-            <select
+            <select aria-label="Brand"
               value={brandFilter}
               onChange={(e) => setBrandFilter(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none"
@@ -297,7 +297,7 @@ export default function ReturnsPage() {
           </div>
 
           <div>
-            <select
+            <select aria-label="Return reason"
               value={reasonFilter}
               onChange={(e) => setReasonFilter(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none"
@@ -315,12 +315,14 @@ export default function ReturnsPage() {
 
       {/* Data Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden text-xs">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full text-left min-w-[850px]">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold ">
               <tr>
                 <th className="py-3 px-4 w-10">
+                  <span className="sr-only">Select</span>
                   <input
+                    aria-label="Select all returns"
                     type="checkbox"
                     checked={filtered.length > 0 && selectedIds.length === filtered.length}
                     onChange={handleSelectAll}
@@ -340,7 +342,7 @@ export default function ReturnsPage() {
             <tbody className="divide-y divide-slate-100 font-medium">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400">
+                  <td colSpan={9} className="py-8 text-center text-slate-500">
                     No matching return entries found.
                   </td>
                 </tr>
@@ -369,6 +371,7 @@ export default function ReturnsPage() {
                     >
                       <td className="py-3.5 px-4 w-10">
                         <input
+                          aria-label="Select this return"
                           type="checkbox"
                           checked={isSelected}
                           onClick={(e) => handleToggleSelect(ret.id, e)}
@@ -385,7 +388,7 @@ export default function ReturnsPage() {
                           {ret.productName} ↗
                         </Link>
                         {ret.comboName && <div className="max-w-[200px] truncate text-[11px] text-slate-500">from {ret.comboName}</div>}
-                        <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                        <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5">
                           <span className="font-semibold text-slate-600">{ret.brandCode}</span>
                           <span>•</span>
                           <span>Qty: <strong>{ret.quantity}</strong></span>
@@ -400,7 +403,7 @@ export default function ReturnsPage() {
                         >
                           {ret.customerName}
                         </Link>
-                        <span className="text-[11px] font-mono text-slate-400 block">
+                        <span className="text-[11px] font-mono text-slate-500 block">
                           {ret.customerPhone}
                         </span>
                       </td>
@@ -443,13 +446,13 @@ export default function ReturnsPage() {
                       {/* Timeline */}
                       <td className="py-3.5 px-4 text-[11px]">
                         <div className="font-semibold text-slate-800">{ret.dateAd}</div>
-                        <div className="text-slate-400">{daysToReturn === null ? 'Order date unknown' : daysToReturn === 0 ? 'Same day as order' : `${daysToReturn} day${daysToReturn === 1 ? '' : 's'} after order`}</div>
+                        <div className="text-slate-500">{daysToReturn === null ? 'Order date unknown' : daysToReturn === 0 ? 'Same day as order' : `${daysToReturn} day${daysToReturn === 1 ? '' : 's'} after order`}</div>
                       </td>
 
                       {/* Territory & Platform */}
                       <td className="py-3.5 px-4 text-[11px]">
                         <div className="font-semibold text-slate-800">{ret.platform}</div>
-                        <div className="text-slate-400">{ret.valley === 'Inside' ? 'Inside valley' : 'Outside valley'}</div>
+                        <div className="text-slate-500">{ret.valley === 'Inside' ? 'Inside valley' : 'Outside valley'}</div>
                       </td>
 
                       {/* Evidence Photo Lightbox */}
@@ -536,7 +539,7 @@ export default function ReturnsPage() {
       >
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-slate-300 font-medium">Set Resolution:</span>
-          <select
+          <select aria-label="Set resolution for selected returns"
             defaultValue=""
             onChange={(e) => {
               if (e.target.value) {
@@ -548,7 +551,7 @@ export default function ReturnsPage() {
             }}
             className="rounded-lg bg-slate-800 border border-slate-700 text-white text-xs px-2.5 py-1.5 outline-none font-medium cursor-pointer"
           >
-            <option value="" disabled>Resolution...</option>
+            <option value="" disabled>Resolution…</option>
             {RESOLUTION_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}

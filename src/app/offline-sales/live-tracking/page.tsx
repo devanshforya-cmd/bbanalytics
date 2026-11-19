@@ -25,8 +25,7 @@ import {
   Coffee,
   CalendarDays,
   TrendingUp,
-  UserCheck,
-} from 'lucide-react';
+  UserCheck, Clock } from 'lucide-react';
 
 const DUTY_BADGES: Record<
   DutyStatus,
@@ -320,7 +319,7 @@ export default function LiveStaffTrackingPage() {
             <div
               key={loc.officerId}
               onClick={() => setSelectedStaffId(loc.officerId)}
-              className={`bg-white rounded-xl p-5 border transition-all cursor-pointer shadow-xs ${
+              className={`bg-white rounded-xl p-5 border transition cursor-pointer shadow-xs ${
                 isSelected
                   ? 'border-blue-600 ring-2 ring-blue-500/20 shadow-md'
                   : isOffline
@@ -388,8 +387,8 @@ export default function LiveStaffTrackingPage() {
                       <MapPin className="w-3.5 h-3.5" />
                       {loc.currentStoreName || 'Retail Outlet'}
                     </span>
-                    <span className="text-slate-500 font-normal">
-                      ⏱ {loc.timeAtCurrentStoreMinutes ? `${loc.timeAtCurrentStoreMinutes}m dwell` : 'Just arrived'}
+                    <span className="inline-flex items-center gap-1 text-slate-500 font-normal">
+                      <Clock className="h-3 w-3" aria-hidden="true" />{loc.timeAtCurrentStoreMinutes ? `${loc.timeAtCurrentStoreMinutes}m dwell` : 'Just arrived'}
                     </span>
                   </div>
                 ) : (

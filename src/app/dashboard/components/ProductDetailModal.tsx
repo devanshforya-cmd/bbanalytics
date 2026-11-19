@@ -92,7 +92,7 @@ export default function ProductDetailModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-bold text-slate-900">{product.name}</h3>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">{product.name}</h2>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-800">
                   {product.brandCode}
                 </span>
@@ -117,7 +117,7 @@ export default function ProductDetailModal({
 
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+            className="p-1.5 text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -126,11 +126,11 @@ export default function ProductDetailModal({
         {/* Quick KPI Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-white border-b border-slate-100 text-xs">
           <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-            <div className="text-[10px] uppercase font-bold text-slate-500">Orders Logged</div>
+            <div className="text-[10px] font-bold text-slate-500">Orders Logged</div>
             <div className="text-lg font-black text-slate-900 mt-0.5">{productOrders.length}</div>
           </div>
           <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-            <div className="text-[10px] uppercase font-bold text-slate-500">Return Rate</div>
+            <div className="text-[10px] font-bold text-slate-500">Return Rate</div>
             <div
               className={`text-lg font-black mt-0.5 ${
                 Number(returnRate) > 10 ? 'text-rose-600' : 'text-slate-900'
@@ -140,13 +140,13 @@ export default function ProductDetailModal({
             </div>
           </div>
           <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-            <div className="text-[10px] uppercase font-bold text-slate-500">Complaints</div>
+            <div className="text-[10px] font-bold text-slate-500">Complaints</div>
             <div className="text-lg font-black text-amber-600 mt-0.5">
               {productComplaints.length}
             </div>
           </div>
           <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-            <div className="text-[10px] uppercase font-bold text-slate-500">Unique Buyers</div>
+            <div className="text-[10px] font-bold text-slate-500">Unique Buyers</div>
             <div className="text-lg font-black text-blue-600 mt-0.5">
               {uniqueCustomers.length}
             </div>
@@ -280,9 +280,9 @@ export default function ProductDetailModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Channels */}
               <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <h3 className="text-xs font-bold text-slate-500">
                   Sales Channels Breakdown
-                </h4>
+                </h3>
                 <div className="space-y-2">
                   {Object.entries(channelCounts).map(([ch, count]) => (
                     <div key={ch} className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
@@ -291,16 +291,16 @@ export default function ProductDetailModal({
                     </div>
                   ))}
                   {Object.keys(channelCounts).length === 0 && (
-                    <div className="text-xs text-slate-400">No channel data.</div>
+                    <div className="text-xs text-slate-500">No channel data.</div>
                   )}
                 </div>
               </div>
 
               {/* Regions */}
               <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <h3 className="text-xs font-bold text-slate-500">
                   Regional Orders Breakdown
-                </h4>
+                </h3>
                 <div className="space-y-2">
                   {Object.entries(regionCounts).map(([reg, count]) => (
                     <div key={reg} className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
@@ -309,7 +309,7 @@ export default function ProductDetailModal({
                     </div>
                   ))}
                   {Object.keys(regionCounts).length === 0 && (
-                    <div className="text-xs text-slate-400">No regional data.</div>
+                    <div className="text-xs text-slate-500">No regional data.</div>
                   )}
                 </div>
               </div>
@@ -321,7 +321,7 @@ export default function ProductDetailModal({
               {uniqueCustomers.length === 0 ? (
                 <EmptyState type="orders" />
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">

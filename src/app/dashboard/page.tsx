@@ -237,13 +237,13 @@ export default function DashboardPage() {
 
         {/* Fix 1d: Prompt when brands table is empty */}
         {canSee('settings') && db.getBrands('ACTIVE').length === 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-blue-50 border border-blue-200 shadow-xs">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Add your first brand in Settings to get started</h3>
+                <h2 className="text-sm font-bold text-slate-900">Add your first brand in Settings to get started</h2>
                 <p className="text-xs text-slate-600 mt-0.5">
                   Configure your brand portfolio in Settings. Once added, brands appear dynamically across all dropdowns, header tabs, and product forms.
                 </p>
@@ -306,7 +306,7 @@ export default function DashboardPage() {
                   key={mode}
                   type="button"
                   onClick={() => setComparisonMode(mode)}
-                  className={`px-3 py-1 rounded-lg transition-all ${
+                  className={`px-3 py-1 rounded-lg transition ${
                     comparisonMode === mode
                       ? 'bg-white text-blue-700 font-bold shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -337,11 +337,11 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('orderflow')}>
             <div
               onClick={() => setActiveDrillDown('ORDERS')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-600">Online D2C Orders</span>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span className="font-bold text-[10px] text-slate-600">Online D2C Orders</span>
                   <ShoppingBag className="h-4 w-4 text-blue-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2">{totalOrders}</div>
@@ -362,7 +362,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={ordersSparkline} color="#2563eb" fillColor="#3b82f6" height={22} />
                 <div className="text-[9px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -372,7 +372,7 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('orderflow')}>
             <div
               onClick={() => setActiveDrillDown('DELIVERY_FAILURES')}
-              className={`rounded-2xl border p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between ${
+              className={`rounded-2xl border p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between ${
                 Number(deliveryFailureRate) > 15
                   ? 'border-rose-200 bg-rose-50/50'
                   : Number(deliveryFailureRate) > 5
@@ -382,7 +382,7 @@ export default function DashboardPage() {
             >
               <div>
                 <div className="flex items-center justify-between text-rose-800">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-rose-900">Courier Delivery Failures</span>
+                  <span className="font-bold text-[10px] text-rose-900">Courier Delivery Failures</span>
                   <TruckIcon className="h-4 w-4 text-rose-600" />
                 </div>
                 <div className="text-2xl font-black text-rose-900 mt-2">{deliveryFailureRate}%</div>
@@ -400,7 +400,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={failuresSparkline} color="#e11d48" fillColor="#f43f5e" height={22} />
                 <div className="text-[9px] text-rose-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -410,7 +410,7 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('reviews')}>
             <div
               onClick={() => setActiveDrillDown('RETURNS')}
-              className={`rounded-2xl border p-4 shadow-sm hover:border-amber-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between ${
+              className={`rounded-2xl border p-4 shadow-sm hover:border-amber-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between ${
                 Number(returnRate) > 10
                   ? 'border-rose-200 bg-rose-50/50'
                   : Number(returnRate) > 5
@@ -420,7 +420,7 @@ export default function DashboardPage() {
             >
               <div>
                 <div className="flex items-center justify-between text-amber-800">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-amber-900">Customer Return Rate</span>
+                  <span className="font-bold text-[10px] text-amber-900">Customer Return Rate</span>
                   <RotateCcw className="h-4 w-4 text-amber-600" />
                 </div>
                 <div className="text-2xl font-black text-amber-900 mt-2">{returnRate}%</div>
@@ -438,7 +438,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={returnsSparkline} color="#d97706" fillColor="#f59e0b" height={22} />
                 <div className="text-[9px] text-amber-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -448,13 +448,13 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('reviews')}>
             <div
               onClick={() => setActiveDrillDown('COMPLAINTS')}
-              className={`rounded-2xl border p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between ${
+              className={`rounded-2xl border p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between ${
                 unresolvedComplaintsCount > 0 ? 'border-rose-200 bg-rose-50/30' : 'border-slate-200 bg-white'
               }`}
             >
               <div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-600">Online Complaints</span>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span className="font-bold text-[10px] text-slate-600">Online Complaints</span>
                   <MessageSquareWarning className="h-4 w-4 text-rose-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2">{complaintCount}</div>
@@ -474,7 +474,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={complaintsSparkline} color="#dc2626" fillColor="#ef4444" height={22} />
                 <div className="text-[9px] text-rose-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -489,11 +489,11 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('orderflow')}>
             <div
               onClick={() => setActiveDrillDown('ORDERS')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-600">Secondary Orders Booked</span>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span className="font-bold text-[10px] text-slate-600">Secondary Orders Booked</span>
                   <ShoppingBag className="h-4 w-4 text-blue-600" />
                 </div>
                 <div className="text-2xl font-black text-blue-700 mt-2">
@@ -506,7 +506,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={ordersSparkline} color="#2563eb" fillColor="#3b82f6" height={22} />
                 <div className="text-[9px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -516,11 +516,11 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('beat_plans')}>
             <div
               onClick={() => setActiveDrillDown('STORES_VISITED')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-emerald-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-emerald-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-600">Beat Visits &amp; Compliance</span>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span className="font-bold text-[10px] text-slate-600">Beat Visits &amp; Compliance</span>
                   <Compass className="h-4 w-4 text-emerald-600" />
                 </div>
                 <div className="text-2xl font-black text-emerald-700 mt-2">
@@ -533,7 +533,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={visitsSparkline} color="#059669" fillColor="#10b981" height={22} />
                 <div className="text-[9px] text-emerald-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -543,14 +543,14 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('cheque_tracker')}>
             <div
               onClick={() => setActiveDrillDown('CHEQUES')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-purple-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-purple-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-600">Cheques in Field</span>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span className="font-bold text-[10px] text-slate-600">Cheques in Field</span>
                   <CreditCard className="h-4 w-4 text-purple-600" />
                 </div>
-                <div className="text-2xl font-black text-purple-700 mt-2">
+                <div className="text-2xl font-black text-slate-900 mt-2">
                   Rs. {pendingChequesAmount.toLocaleString()}
                 </div>
                 <div className="text-[10px] text-purple-700 font-semibold mt-0.5">
@@ -560,7 +560,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={chequesSparkline} color="#7c3aed" fillColor="#8b5cf6" height={22} />
                 <div className="text-[9px] text-purple-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -570,14 +570,14 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('stores')}>
             <div
               onClick={() => setActiveDrillDown('STORES_VISITED')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-indigo-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-600">Active Outlets Stocked</span>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span className="font-bold text-[10px] text-slate-600">Active Outlets Stocked</span>
                   <Store className="h-4 w-4 text-indigo-600" />
                 </div>
-                <div className="text-2xl font-black text-indigo-700 mt-2">
+                <div className="text-2xl font-black text-slate-900 mt-2">
                   {activeStoresStockedCount}
                 </div>
                 <div className="text-[10px] text-slate-500 mt-0.5">
@@ -587,7 +587,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={visitsSparkline} color="#4f46e5" fillColor="#6366f1" height={22} />
                 <div className="text-[9px] text-indigo-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  View store network &rarr;
+                  View store network
                 </div>
               </div>
             </div>
@@ -602,11 +602,11 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('orderflow')}>
             <div
               onClick={() => setActiveDrillDown('ORDERS')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-600">Orders</span>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span className="font-bold text-[10px] text-slate-600">Orders</span>
                   <ShoppingBag className="h-4 w-4 text-blue-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2">{totalOrders}</div>
@@ -615,7 +615,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={ordersSparkline} color="#2563eb" fillColor="#3b82f6" height={22} />
                 <div className="text-[9px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -625,11 +625,11 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('orderflow')}>
             <div
               onClick={() => setActiveDrillDown('DELIVERY_FAILURES')}
-              className="rounded-2xl border border-rose-200 bg-white p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
+              className="rounded-2xl border border-rose-200 bg-white p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between text-rose-800">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-rose-900">Delivery Failures</span>
+                  <span className="font-bold text-[10px] text-rose-900">Delivery Failures</span>
                   <TruckIcon className="h-4 w-4 text-rose-600" />
                 </div>
                 <div className="text-2xl font-black text-rose-900 mt-2">{deliveryFailureRate}%</div>
@@ -638,7 +638,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={failuresSparkline} color="#e11d48" fillColor="#f43f5e" height={22} />
                 <div className="text-[9px] text-rose-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -648,11 +648,11 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('reviews')}>
             <div
               onClick={() => setActiveDrillDown('RETURNS')}
-              className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm hover:border-amber-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
+              className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm hover:border-amber-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between text-amber-800">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-amber-900">Actual Returns</span>
+                  <span className="font-bold text-[10px] text-amber-900">Actual Returns</span>
                   <RotateCcw className="h-4 w-4 text-amber-600" />
                 </div>
                 <div className="text-2xl font-black text-amber-900 mt-2">{returnRate}%</div>
@@ -661,7 +661,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={returnsSparkline} color="#d97706" fillColor="#f59e0b" height={22} />
                 <div className="text-[9px] text-amber-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -671,11 +671,11 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('reviews')}>
             <div
               onClick={() => setActiveDrillDown('COMPLAINTS')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-600">Complaints</span>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span className="font-bold text-[10px] text-slate-600">Complaints</span>
                   <MessageSquareWarning className="h-4 w-4 text-rose-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2">{complaintCount}</div>
@@ -686,7 +686,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={complaintsSparkline} color="#dc2626" fillColor="#ef4444" height={22} />
                 <div className="text-[9px] text-rose-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -696,11 +696,11 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('beat_plans')}>
             <div
               onClick={() => setActiveDrillDown('STORES_VISITED')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-emerald-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-emerald-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-600">Stores Visited</span>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span className="font-bold text-[10px] text-slate-600">Stores Visited</span>
                   <Compass className="h-4 w-4 text-emerald-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2">{visitedStoresToday}</div>
@@ -711,7 +711,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={visitsSparkline} color="#059669" fillColor="#10b981" height={22} />
                 <div className="text-[9px] text-emerald-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -721,11 +721,11 @@ export default function DashboardPage() {
             <DashboardFeature allowed={canSee('cheque_tracker')}>
             <div
               onClick={() => setActiveDrillDown('CHEQUES')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-purple-400 hover:shadow-md cursor-pointer transition-all group flex flex-col justify-between"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-purple-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-600">Cheques Pending</span>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span className="font-bold text-[10px] text-slate-600">Cheques Pending</span>
                   <CreditCard className="h-4 w-4 text-purple-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2">{pendingCheques.length}</div>
@@ -736,7 +736,7 @@ export default function DashboardPage() {
               <div className="mt-3">
                 <MetricSparkline data={chequesSparkline} color="#7c3aed" fillColor="#8b5cf6" height={22} />
                 <div className="text-[9px] text-purple-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down &rarr;
+                  Click to drill down
                 </div>
               </div>
             </div>
@@ -837,7 +837,7 @@ export default function DashboardPage() {
                 onClick={() => setActiveDrillDown('DELIVERY_FAILURES')}
                 className="rounded-xl border border-rose-200 bg-rose-50/50 p-3 cursor-pointer hover:bg-rose-50 hover:border-rose-300 transition-colors"
               >
-                <div className="font-bold text-rose-900 text-[11px] uppercase">Delivery Failures</div>
+                <div className="font-bold text-rose-900 text-[11px] ">Delivery Failures</div>
                 <div className="text-lg font-black text-rose-900 mt-1">{deliveryFailureCount}</div>
                 <div className="text-[10px] text-rose-700">Call not received & address issues</div>
               </div>
@@ -845,7 +845,7 @@ export default function DashboardPage() {
                 onClick={() => setActiveDrillDown('RETURNS')}
                 className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition-colors"
               >
-                <div className="font-bold text-amber-900 text-[11px] uppercase">Actual Product Returns</div>
+                <div className="font-bold text-amber-900 text-[11px] ">Actual Product Returns</div>
                 <div className="text-lg font-black text-amber-900 mt-1">{returnCount}</div>
                 <div className="text-[10px] text-amber-700">Damages & shade mismatch</div>
               </div>
@@ -904,7 +904,7 @@ export default function DashboardPage() {
 
           {/* Latest 3 Reviews Preview Cards */}
           <div className="space-y-2 pt-1">
-            <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+            <div className="text-[11px] font-bold text-slate-600 ">
               Latest Reviews (Click to Inspect)
             </div>
             <div className="space-y-2">
@@ -912,7 +912,7 @@ export default function DashboardPage() {
                 <div
                   key={rev.id}
                   onClick={() => setSelectedReview(rev)}
-                  className="p-2.5 rounded-xl border border-slate-200/80 bg-slate-50/60 hover:bg-white hover:shadow-xs cursor-pointer transition-all"
+                  className="p-2.5 rounded-xl border border-slate-200/80 bg-slate-50/60 hover:bg-white hover:shadow-xs cursor-pointer transition"
                 >
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-slate-900">{rev.customerName}</span>
@@ -981,7 +981,7 @@ export default function DashboardPage() {
                 <Link
                   key={sc.officerId}
                   href="/offline-sales/scorecard"
-                  className="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50/50 hover:bg-white hover:border-blue-300 hover:shadow-md transition-all cursor-pointer block group"
+                  className="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50/50 hover:bg-white hover:border-blue-300 hover:shadow-md transition cursor-pointer block group"
                 >
                   <div className="flex items-start justify-between">
                     <div>

@@ -48,25 +48,25 @@ export default function StoreVisitsDrillDown({
         {/* Metric Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Stores Visited
             </div>
             <div className="text-xl font-black text-emerald-600 mt-1">{visitedCount}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Beat Compliance
             </div>
             <div className="text-xl font-black text-blue-600 mt-1">{compliancePct}%</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Stores Skipped
             </div>
             <div className="text-xl font-black text-amber-600 mt-1">{skippedCount}</div>
           </div>
           <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-slate-500 ">
               Scheduled Route
             </div>
             <div className="text-xl font-black text-slate-900 mt-1">{scheduledCount}</div>
@@ -185,7 +185,7 @@ function StoresBeatComplianceTrendTab({
   return (
     <div className="space-y-6">
       <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        <h4 className="text-xs font-bold text-slate-500">
           2-Month Beat Compliance Trend per Officer
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
@@ -201,7 +201,7 @@ function StoresBeatComplianceTrendTab({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -265,14 +265,14 @@ function StoresVisitHistoryTab({ beatItems }: { beatItems: BeatItem[] }) {
         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
         <input
           type="text"
-          placeholder="Search stores or assigned officer..."
+          placeholder="Search stores or assigned officer…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs" tabIndex={0}>
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">

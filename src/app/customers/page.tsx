@@ -138,7 +138,7 @@ export default function CustomersPage() {
       case 'VIP':
         return <span className="rounded-full bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 text-[10px]">VIP</span>;
       case 'LOYAL':
-        return <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 text-[10px]">⭐ Loyal</span>;
+        return <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 text-[10px]">Loyal</span>;
       case 'REGULAR':
         return <span className="rounded-full bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 text-[10px]">Regular</span>;
       case 'AT_RISK':
@@ -184,7 +184,7 @@ export default function CustomersPage() {
             href="/customers/insights"
             className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm min-h-[40px]"
           >
-            View Cohort Insights →
+            View cohort insights
           </Link>
         </div>
       </div>
@@ -195,7 +195,7 @@ export default function CustomersPage() {
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by name, phone, or city..."
+            placeholder="Search by name, phone, or city…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full rounded-lg border border-slate-200 pl-9 pr-4 py-2 text-xs outline-none focus:border-blue-500"
@@ -204,7 +204,7 @@ export default function CustomersPage() {
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <span className="text-xs text-slate-500 whitespace-nowrap">Segment:</span>
-          <select
+          <select aria-label="Customer segment"
             value={segmentFilter}
             onChange={(e) => setSegmentFilter(e.target.value)}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs bg-white outline-none"
@@ -221,7 +221,7 @@ export default function CustomersPage() {
 
         {/* Brand Filter Pills (Dynamic from Database) */}
         <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-100 text-xs font-semibold w-full">
-          <span className="text-slate-400 mr-1 text-[11px] font-bold uppercase tracking-wider">Brand Scope:</span>
+          <span className="text-slate-500 mr-1 text-[11px] font-bold ">Brand Scope:</span>
           {[
             { id: 'ALL', label: 'All Customers' },
             ...getBrands('ACTIVE').map((b) => ({ id: b.code, label: b.name })),
@@ -244,9 +244,9 @@ export default function CustomersPage() {
 
       {/* Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden text-xs">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full text-left min-w-[700px]">
-          <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
+          <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold ">
             <tr>
               <th className="py-3 px-4">Customer Name</th>
               <th className="py-3 px-4">Phone (Unique ID)</th>
@@ -287,7 +287,7 @@ export default function CustomersPage() {
                   <td className="py-3 px-4 font-medium text-slate-800">{c.totalOrders} Orders</td>
                   <td className="py-3 px-4">
                     {c.activeFlags.length === 0 ? (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-slate-500">—</span>
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {c.activeFlags.map((fl, i) => (
@@ -342,7 +342,7 @@ export default function CustomersPage() {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                className="p-1 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -350,8 +350,8 @@ export default function CustomersPage() {
 
             <form onSubmit={handleCreateCustomer} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
-                <input
+                <label htmlFor="customers-full-name" className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
+                <input id="customers-full-name"
                   type="text"
                   required
                   value={addName}
@@ -362,10 +362,10 @@ export default function CustomersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label htmlFor="customers-phone-number-nepal-mobile" className="block text-xs font-bold text-slate-700 mb-1">
                   Phone Number (Nepal Mobile) *
                 </label>
-                <input
+                <input id="customers-phone-number-nepal-mobile"
                   type="text"
                   required
                   value={addPhone}
@@ -377,8 +377,8 @@ export default function CustomersPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">City / District</label>
-                  <input
+                  <label htmlFor="customers-city-district" className="block text-xs font-bold text-slate-700 mb-1">City / District</label>
+                  <input id="customers-city-district"
                     type="text"
                     value={addCity}
                     onChange={(e) => setAddCity(e.target.value)}
@@ -387,8 +387,8 @@ export default function CustomersPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Province</label>
-                  <select
+                  <label htmlFor="customers-province" className="block text-xs font-bold text-slate-700 mb-1">Province</label>
+                  <select id="customers-province"
                     value={addProvince}
                     onChange={(e) => setAddProvince(e.target.value)}
                     className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white"
@@ -405,8 +405,8 @@ export default function CustomersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Initial Segment Tier</label>
-                <select
+                <label htmlFor="customers-initial-segment-tier" className="block text-xs font-bold text-slate-700 mb-1">Initial Segment Tier</label>
+                <select id="customers-initial-segment-tier"
                   value={addSegment}
                   onChange={(e) => setAddSegment(e.target.value as CustomerSegment)}
                   className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white font-semibold"
@@ -452,7 +452,7 @@ export default function CustomersPage() {
               <button
                 type="button"
                 onClick={() => setEditingCustomer(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                className="p-1 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -460,8 +460,8 @@ export default function CustomersPage() {
 
             <form onSubmit={handleUpdateCustomer} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
-                <input
+                <label htmlFor="customers-full-name-2" className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
+                <input id="customers-full-name-2"
                   type="text"
                   required
                   value={editName}
@@ -471,8 +471,8 @@ export default function CustomersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number *</label>
-                <input
+                <label htmlFor="customers-phone-number" className="block text-xs font-bold text-slate-700 mb-1">Phone Number *</label>
+                <input id="customers-phone-number"
                   type="text"
                   required
                   value={editPhone}
@@ -483,8 +483,8 @@ export default function CustomersPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">City / District</label>
-                  <input
+                  <label htmlFor="customers-city-district-2" className="block text-xs font-bold text-slate-700 mb-1">City / District</label>
+                  <input id="customers-city-district-2"
                     type="text"
                     value={editCity}
                     onChange={(e) => setEditCity(e.target.value)}
@@ -492,8 +492,8 @@ export default function CustomersPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Province</label>
-                  <input
+                  <label htmlFor="customers-province-2" className="block text-xs font-bold text-slate-700 mb-1">Province</label>
+                  <input id="customers-province-2"
                     type="text"
                     value={editProvince}
                     onChange={(e) => setEditProvince(e.target.value)}
@@ -504,8 +504,8 @@ export default function CustomersPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Customer Segment</label>
-                  <select
+                  <label htmlFor="customers-customer-segment" className="block text-xs font-bold text-slate-700 mb-1">Customer Segment</label>
+                  <select id="customers-customer-segment"
                     value={editSegment}
                     onChange={(e) => setEditSegment(e.target.value as CustomerSegment)}
                     className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white"
@@ -518,8 +518,8 @@ export default function CustomersPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Karma Score (0-100)</label>
-                  <input
+                  <label htmlFor="customers-karma-score-0-100" className="block text-xs font-bold text-slate-700 mb-1">Karma Score (0-100)</label>
+                  <input id="customers-karma-score-0-100"
                     type="number"
                     min="0"
                     max="100"
