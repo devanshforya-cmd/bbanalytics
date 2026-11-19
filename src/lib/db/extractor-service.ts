@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { DatabaseService } from './db-service';
 import type { Order, OrderItem } from '../types';
 import { canAccessBrand, canPerform, isSuperAdmin } from '../permissions';
-import { applyAddOn, findAddOnTarget, itemSummary } from '../order-merge';
+import { applyAddOn, findAddOnTarget, findChangeTarget, itemSummary } from '../order-merge';
 import { priceTrail } from '../order-pricing';
 import { offerUsageFrom } from '../offers';
 
@@ -37,11 +37,11 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
   type NewOrder = Omit<Order, 'id' | 'createdAt'> & { id: string };
   const created: NewOrder[] = [];
   // Per message: the order it saved into (new, existing, or already saved earlier).
-  const results: { orderId: string; orderNumber: string; alreadySaved: boolean; addedTo?: string }[] = [];
+  const results: { orderId: string; orderNumber: string; alreadySaved: boolean; addedTo?: string; changed?: string }[] = [];
   const now = new Date().toISOString();
   for (const [index, row] of (input.orders as any[]).entries()) {
     const label = `Order ${index + 1}`;
-    const kind: 'ORDER' | 'ADD_ON' | 'EXCHANGE' = row?.entryKind === 'ADD_ON' || row?.entryKind === 'EXCHANGE' ? row.entryKind : 'ORDER';
+    const kind: 'ORDER' | 'ADD_ON' | 'EXCHANGE' | 'CHANGE' = ['ADD_ON', 'EXCHANGE', 'CHANGE'].includes(row?.entryKind) ? row.entryKind : 'ORDER';
     const clientId = required(row?.clientId, `${label} identifier`, 100);
     if (!/^ext_[a-z0-9_-]{8,90}$/i.test(clientId) || seen.has(clientId)) throw new ExtractorInputError(`${label} has an invalid or duplicate identifier.`);
     seen.add(clientId);
@@ -58,6 +58,12 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     if (mergedInto) {
       if (!mergedInto.extractorAddOns!.some(entry => entry.clientId === clientId && entry.hash === requestHash)) throw new ExtractorInputError(`${label} was already added to ${mergedInto.orderNumber} with different details.`, 409);
       results.push({ orderId: mergedInto.id, orderNumber: mergedInto.orderNumber, alreadySaved: true, addedTo: mergedInto.orderNumber }); continue;
+    }
+    // An "order changed" message saved before is recorded on the order it changed.
+    const changedBefore = [...db.getOrders(), ...created].find(order => order.extractorChanges?.some(entry => entry.clientId === clientId));
+    if (changedBefore) {
+      if (!changedBefore.extractorChanges!.some(entry => entry.clientId === clientId && entry.hash === requestHash)) throw new ExtractorInputError(`${label} already changed ${changedBefore.orderNumber} with different details.`, 409);
+      results.push({ orderId: changedBefore.id, orderNumber: changedBefore.orderNumber, alreadySaved: true, changed: changedBefore.orderNumber }); continue;
     }
     const customerName = required(row.customerName, `${label} customer name`);
     const customerPhone = normalizePhoneNumber(required(row.customerPhone, `${label} phone`));
@@ -101,11 +107,18 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     const orderTime = typeof row.orderTime === 'string' && /^\d{2}:\d{2}$/.test(row.orderTime) ? row.orderTime : undefined;
     const disabledOfferIds = Array.isArray(row.disabledOfferIds) ? row.disabledOfferIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, 50) : [];
     const messageText = typeof row.messageText === 'string' ? row.messageText.slice(0, 5000) : '';
-    const everyOrder = [...(workspace.allOrders?.() || db.getOrders('ALL')), ...created.map(order => ({ ...order, createdAt: now } as Order))];
+    // "Order changed": the order it replaces is found first, so it never counts as this customer's earlier order for offers.
+    let changeTarget: Order | undefined;
+    if (kind === 'CHANGE') {
+      const found = findChangeTarget([...created.map(order => ({ ...order, createdAt: now } as Order)), ...db.getOrders()], { phone: customerPhone, dateAd: orderDateAd, brandCode });
+      if (!found.order) throw new ExtractorInputError(`${label}: ${found.problem}`, 409);
+      changeTarget = found.order;
+    }
+    const everyOrder = [...(workspace.allOrders?.() || db.getOrders('ALL')), ...created.map(order => ({ ...order, createdAt: now } as Order))].filter(order => order.id !== changeTarget?.id);
     const ownOrders = everyOrder.filter(order => normalizePhoneNumber(order.customerPhone) === customerPhone && order.status !== 'CANCELLED' && !order.exchangeRequested && !order.exchangeReturnId);
     const catalogue = { name: (id: string) => products.find(entry => entry.id === id)?.name || combos.find(entry => entry.id === id)?.name,
       price: (id: string) => { const product = products.find(entry => entry.id === id && entry.active !== false && entry.brandCode === brandCode); return product ? product.mrp : undefined; } };
-    const trail = priceTrail({ kind, stated, percent: discount,
+    const trail = priceTrail({ kind: kind === 'CHANGE' ? 'ORDER' : kind, stated, percent: discount,
       lines: items.map(item => ({ itemId: item.productId, name: item.productName, quantity: item.quantity, mrp: item.catalogUnitPrice, isCombo: combos.some(entry => entry.id === item.productId),
         category: products.find(entry => entry.id === item.productId)?.category, ...(item.written ? { writtenUnitPrice: item.unitPrice } : {}) })),
       offers: { brandCode, channel: platform, dateAd: orderDateAd, time: orderTime, customerPhone, isFirstOrder: !ownOrders.length, text: messageText,
@@ -131,6 +144,31 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     const reason = typeof row.customerDiscountReason === 'string' ? row.customerDiscountReason.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 120) : '';
     const priceFields = { ...(orderTime ? { orderTime } : {}), ...(applied.length ? { appliedOffers: applied, campaignIds: trail.pricing!.campaignIds } : {}),
       ...(trail.customerDiscount > 0 ? { customerDiscount: trail.customerDiscount, ...(reason ? { customerDiscountReason: reason } : {}) } : {}) };
+
+    if (kind === 'CHANGE') {
+      // The customer changed the order: the new message replaces its items, price and delivery details.
+      // The order keeps its ID, date, status and who it is assigned to.
+      const target = created.find(order => order.id === changeTarget!.id) || db.getOrderById(changeTarget!.id)!;
+      if (!created.includes(target as NewOrder) && !isSuperAdmin(actor) && !canPerform(actor, 'orderflow', 'EDIT') && !canPerform(actor, 'order_desk', 'EDIT'))
+        throw new ExtractorInputError(`${label}: changing ${target.orderNumber} needs edit access to orders. Ask an admin, or save it as a new order.`, 403);
+      const before = `${itemSummary(target.items)} (NPR ${target.totalAmount.toLocaleString()})`;
+      const note = `Order changed ${orderDateAd}${orderTime ? ` ${orderTime}` : ''}: was ${before}, now ${itemSummary(adjusted)} (NPR ${total.toLocaleString()}).`;
+      const patch: Partial<Order> = {
+        customerName, ...(alternatePhone ? { alternatePhone } : {}), province, district, address, deliveryMethod, platform, paymentTerms: row.paymentTerms,
+        items: adjusted, totalAmount: total, statedPrice: stated !== null ? stated : undefined, discountPercent: discount !== null ? discount : undefined,
+        appliedOffers: applied.length ? applied : undefined, campaignIds: applied.length ? trail.pricing!.campaignIds : undefined,
+        customerDiscount: trail.customerDiscount > 0 ? trail.customerDiscount : undefined, customerDiscountReason: trail.customerDiscount > 0 && reason ? reason : undefined,
+        ...(orderTime ? { orderTime } : {}),
+        extractorChanges: [...(target.extractorChanges || []), { clientId, hash: requestHash, changedAt: now, previousTotal: target.totalAmount, previousItems: itemSummary(target.items) }],
+        notes: [target.notes, note].filter(Boolean).join(' '),
+      };
+      if (created.includes(target as NewOrder)) {
+        Object.assign(target, patch);
+        for (const key of Object.keys(patch) as (keyof Order)[]) if (patch[key] === undefined) delete (target as Partial<Order>)[key];
+      } else db.updateOrder(target.id, patch, undefined, note);
+      results.push({ orderId: target.id, orderNumber: target.orderNumber, alreadySaved: false, changed: target.orderNumber });
+      continue;
+    }
 
     if (kind === 'ADD_ON') {
       // The customer added to today's order: the items join that order instead of making a new one.
@@ -165,12 +203,13 @@ export async function saveExtractedOrders(input: any, workspace: { db: DatabaseS
     results.push({ orderId: order.id, orderNumber, alreadySaved: false });
   }
   for (const order of created) db.addOrder(order);
-  const changed = created.length > 0 || results.some(entry => entry.addedTo && !entry.alreadySaved);
+  const changed = created.length > 0 || results.some(entry => (entry.addedTo || entry.changed) && !entry.alreadySaved);
   const assigned = changed ? await workspace.commit() || {} : {};
   const numberOf = (entry: typeof results[number]) => assigned[entry.orderId] || entry.orderNumber;
   return {
     orderNumbers: results.map(numberOf),
     addedTo: results.map(entry => entry.addedTo ? numberOf(entry) : null),
+    changedOrders: results.map(entry => entry.changed ? numberOf(entry) : null),
     alreadySaved: results.filter(entry => entry.alreadySaved).length,
   };
 }
