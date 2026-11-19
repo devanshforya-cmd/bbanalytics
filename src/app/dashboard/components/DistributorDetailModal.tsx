@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { X, Building2, MapPin, Phone, CreditCard, FileText, Store, History } from 'lucide-react';
@@ -157,7 +158,7 @@ export default function DistributorDetailModal({
                           </td>
                           <td className="p-2.5 text-right">
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                              Active (NPR {b.outstandingBalance?.toLocaleString() || 0})
+                              Active (<Money>{b.outstandingBalance?.toLocaleString() || 0}</Money>)
                             </span>
                           </td>
                         </tr>
@@ -225,7 +226,7 @@ export default function DistributorDetailModal({
                         <tr key={c.id} className="hover:bg-slate-50">
                           <td className="p-2.5 font-mono font-bold text-slate-900">{c.chequeNumber}</td>
                           <td className="p-2.5 font-semibold text-slate-800">{c.storeName}</td>
-                          <td className="p-2.5 text-right font-black">NPR {c.amount.toLocaleString()}</td>
+                          <td className="p-2.5 text-right font-black"><Money>{c.amount.toLocaleString()}</Money></td>
                           <td className="p-2.5 text-slate-600">{c.bankName}</td>
                           <td className="p-2.5">
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">

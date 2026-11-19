@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import { useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import MobileBottomSheet from '@/components/common/MobileBottomSheet';
@@ -78,13 +79,13 @@ export default function CatalogEditor({ item, kind, products, onChanged }: { ite
             {parts.map((part, index) => <div key={index} className="flex items-end gap-2">
               <label className="min-w-0 flex-1 text-xs font-semibold">Product<select className={inputClass} value={part.productId} onChange={e => setParts(parts.map((entry, i) => i === index ? { ...entry, productId: e.target.value } : entry))}>
                 <option value="">Select product</option>{!available.some(product => product.id === part.productId) && <option value={part.productId} disabled>Unavailable product — choose another</option>}
-                {available.map(product => <option key={product.id} value={product.id}>{product.name} — NPR {product.mrp}</option>)}
+                {available.map(product => <option key={product.id} value={product.id}>{product.name} — <Money>{product.mrp}</Money></option>)}
               </select></label>
               <label className="w-20 text-xs font-semibold">Quantity<input className={inputClass} type="number" min="1" step="1" value={part.quantity} onChange={e => setParts(parts.map((entry, i) => i === index ? { ...entry, quantity: Number(e.target.value) } : entry))} /></label>
               <button type="button" aria-label={`Remove product ${index + 1}`} className="min-h-[44px] text-rose-700" onClick={() => setParts(parts.filter((_, i) => i !== index))}><Trash2 className="h-4 w-4" /></button>
             </div>)}
             <button type="button" className="text-sm font-semibold text-blue-700" onClick={() => setParts([...parts, { productId: '', quantity: 1 }])}>+ Add product</button>
-            <p className="text-sm text-slate-600">Current component MRP: NPR {total.toFixed(2)}</p>
+            <p className="text-sm text-slate-600">Current component MRP: <Money>{total.toFixed(2)}</Money></p>
             {field('Combo selling price (NPR)', comboPrice, setComboPrice, 'number', { min: '0.01', step: '0.01' })}
             <div className="flex items-end gap-2"><div className="flex-1">{field('Discount percentage', discount, setDiscount, 'number', { min: '0', max: '99.99', step: '0.01' })}</div><button type="button" className="min-h-[40px] rounded-lg border border-blue-300 px-3 text-sm font-semibold text-blue-700" onClick={() => { const pct = Number(discount); if (discount === '' || !Number.isFinite(pct) || pct < 0 || pct >= 100 || total <= 0) { setError('Enter a discount from 0 to less than 100% and select valid products.'); return; } setComboPrice(String(Math.round(total * (1 - pct / 100) * 100) / 100)); setError(''); }}>Apply %</button></div>
             <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={priceDetection} onChange={e => setPriceDetection(e.target.checked)} />Suggest this combo when its components and exact price match</label>

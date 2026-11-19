@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import React from 'react';
 import Link from 'next/link';
 import { Customer } from '@/lib/types';
@@ -100,13 +101,13 @@ export default function RevenueConcentration({
                     <div className="text-[10px] text-slate-500">{item.customer.phone}</div>
                   </td>
                   <td className="py-3 px-3 text-right font-black text-slate-900">
-                    NPR {item.spend.toLocaleString()}
+                    <Money>{item.spend.toLocaleString()}</Money>
                   </td>
                   <td className="py-3 px-3 text-center font-bold text-slate-700">
                     {item.customer.totalOrders}
                   </td>
                   <td className="py-3 px-3 text-right font-bold text-slate-600">
-                    NPR {item.aov.toLocaleString()}
+                    <Money>{item.aov.toLocaleString()}</Money>
                   </td>
                   <td className="py-3 px-3 text-center">
                     <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[11px]">
@@ -151,7 +152,7 @@ export default function RevenueConcentration({
           <div className="text-right">
             <span className="text-[10px] font-bold text-slate-500">Mean Platform LTV</span>
             <div className="text-lg font-black text-slate-900">
-              NPR {ltvDistribution.avgLtv.toLocaleString()}
+              <Money>{ltvDistribution.avgLtv.toLocaleString()}</Money>
             </div>
           </div>
         </div>

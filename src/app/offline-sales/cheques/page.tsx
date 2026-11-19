@@ -1,5 +1,6 @@
 'use client';
 
+import Money, { nprText } from '@/components/common/Money';
 import { confirmAction } from '@/components/common/confirm';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
@@ -309,7 +310,7 @@ function ChequesContent() {
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-[11px] font-bold text-slate-500">Total Pipeline</div>
           <div className="text-lg sm:text-xl font-bold text-slate-900 mt-1">
-            NPR {totalAmount.toLocaleString()}
+            <Money>{totalAmount.toLocaleString()}</Money>
           </div>
           <div className="text-xs text-slate-500 mt-0.5">{cheques.length} cheques logged</div>
         </div>
@@ -344,7 +345,7 @@ function ChequesContent() {
           <div className="space-y-1">
             <strong className="font-bold">Physical Cheque Handover Alert:</strong>
             <p>
-              {pendingHandover[0].officerName} has <strong>NPR {pendingHandover[0].amount.toLocaleString()}</strong> ({pendingHandover[0].storeName}) marked &quot;Collected in Field&quot; for more than 2 days. Physical custody must be transferred to the office person to prevent lost cheques.
+              {pendingHandover[0].officerName} has <strong><Money>{pendingHandover[0].amount.toLocaleString()}</Money></strong> ({pendingHandover[0].storeName}) marked &quot;Collected in Field&quot; for more than 2 days. Physical custody must be transferred to the office person to prevent lost cheques.
             </p>
           </div>
         </div>
@@ -462,7 +463,7 @@ function ChequesContent() {
                 <div className="flex justify-between">
                   <span className="text-slate-500">Amount:</span>
                   <strong className="font-bold text-slate-900 text-sm">
-                    NPR {chq.amount.toLocaleString()}
+                    <Money>{chq.amount.toLocaleString()}</Money>
                   </strong>
                 </div>
                 <div className="flex justify-between text-[11px]">
@@ -536,7 +537,7 @@ function ChequesContent() {
                 <div className="rounded-xl bg-slate-50 p-3 space-y-1">
                   <div className="text-[10px] font-bold text-slate-500">Amount & Bank</div>
                   <div className="text-base font-bold text-slate-900">
-                    NPR {selectedCheque.amount.toLocaleString()}
+                    <Money>{selectedCheque.amount.toLocaleString()}</Money>
                   </div>
                   <div className="text-slate-600 font-medium">{selectedCheque.bankName}</div>
                 </div>
@@ -908,7 +909,7 @@ function ChequesContent() {
         details={selectedCheque ? [
           { label: 'Cheque #', value: selectedCheque.chequeNumber },
           { label: 'Vendor', value: selectedCheque.storeName },
-          { label: 'Amount', value: `NPR ${selectedCheque.amount.toLocaleString()}` },
+          { label: 'Amount', value: `${nprText(selectedCheque.amount.toLocaleString())}` },
           { label: 'Bank', value: selectedCheque.bankName },
           { label: 'Collected', value: `${selectedCheque.receivedDateBs} by ${selectedCheque.officerName}` },
           { label: 'Cash Date', value: `${selectedCheque.cashDateBs} (Clearing date)` },

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { redactRecord } from '@/lib/sensitive-data';
 import { requireFeatureAccess } from '@/lib/auth-guard';
 import { canAccessBrand, hasAccess, type FeatureKey } from '@/lib/permissions';
 import { openServerWorkspace } from '@/lib/db/server-workspace';
@@ -27,6 +28,8 @@ export async function GET(request: Request) {
       case 'returns': data = db.getReturns().filter(entry => canAccessBrand(auth.user, entry.brandCode) && (ids === null || ownsRecord(entry, ids) || !!entry.orderId && scopedOrderIds.has(entry.orderId))); break;
       default: data = db.getStockCounts().filter(count => ownsRecord(count, ids)).map(count => ({ ...count, items: count.items.filter(item => canAccessBrand(auth.user, item.brandCode)) })).filter(count => count.items.length > 0);
     }
+    const collection: Record<string, string> = { orders: 'orders', cheques: 'cheques', feedback: 'feedbackEntries', customers: 'customers', returns: 'returns' };
+    if (collection[type]) data = data.map((row) => redactRecord(collection[type], row as Record<string, any>, auth.user));
     return NextResponse.json({ success: true, type, timestamp: new Date().toISOString(), totalRows: data.length, data });
   } catch (error) { return apiFailure(error, 'Failed to export data.'); }
 }

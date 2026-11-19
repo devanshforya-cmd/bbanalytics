@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     response.cookies.set(GOOGLE_STATE_COOKIE, '', { path: '/api/integrations/google', maxAge: 0 });
     return response;
   };
-  const auth = await requireFeatureAccess(request, 'settings', 'EDIT');
+  const auth = await requireFeatureAccess(request, 'p.settings_google', 'EDIT');
   if (auth.response || !isSuperAdmin(auth.user)) return finish('session_required');
   const state = request.nextUrl.searchParams.get('state') || '';
   const cookie = request.cookies.get(GOOGLE_STATE_COOKIE)?.value || '';

@@ -1,5 +1,7 @@
 'use client';
 
+import { roleLabel } from '@/lib/roles';
+import Money from '@/components/common/Money';
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db/db-service';
 import { User, DutyStatus, BrandCode } from '@/lib/types';
@@ -191,7 +193,7 @@ export default function UserProfileDrawer({
                   <div className="mt-1 flex items-center gap-2">
                     <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-100">
                       <Shield className="h-3 w-3" />
-                      {isSuperAdmin(currentUser) ? 'Super Admin' : (currentUser.role ? currentUser.role.replace('_', ' ') : 'Staff')}
+                      {roleLabel(currentUser)}
                     </span>
                   </div>
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-600 font-mono">
@@ -336,7 +338,7 @@ export default function UserProfileDrawer({
                     <div className="text-[10px] font-semibold text-slate-500">Stores Visited</div>
                   </div>
                   <div className="rounded-lg bg-white p-2.5 border border-slate-200/80 shadow-xs">
-                    <div className="text-base font-black text-emerald-600">Rs {todayOrderAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                    <div className="text-base font-black text-emerald-600"><Money prefix="Rs ">{todayOrderAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Money></div>
                     <div className="text-[10px] font-semibold text-slate-500">Orders Booked</div>
                   </div>
                   <div className="rounded-lg bg-white p-2.5 border border-slate-200/80 shadow-xs">

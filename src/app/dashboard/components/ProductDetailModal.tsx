@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { X, Package, ArrowUpRight, TrendingDown, Users, Globe, ShoppingBag } from 'lucide-react';
@@ -103,7 +104,7 @@ export default function ProductDetailModal({
               <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
                 <span>Category: <strong className="text-slate-700">{product.category}</strong></span>
                 <span>•</span>
-                <span>MRP: <strong className="text-slate-700">NPR {product.mrp}</strong></span>
+                <span>MRP: <strong className="text-slate-700"><Money>{product.mrp}</Money></strong></span>
                 <span>•</span>
                 <Link
                   href={`/products/${product.id}`}

@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import React from 'react';
 import { MapPin } from 'lucide-react';
 
@@ -68,7 +69,7 @@ export default function GeographicIntel({ geographicIntel }: GeographicIntelProp
                 <td className="py-3 px-3 text-center font-bold text-slate-700">{row.customers}</td>
                 <td className="py-3 px-3 text-center font-semibold text-slate-700">{row.orders}</td>
                 <td className="py-3 px-3 text-right font-black text-slate-900">
-                  NPR {row.revenue.toLocaleString()}
+                  <Money>{row.revenue.toLocaleString()}</Money>
                 </td>
                 <td className="py-3 px-3 text-center">
                   <span className="rounded bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[10px]">

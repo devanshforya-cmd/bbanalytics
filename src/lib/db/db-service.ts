@@ -416,6 +416,9 @@ export class DatabaseService {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed.deletedProductIds)) parsed.deletedProductIds.filter((id: unknown): id is string => typeof id === 'string').forEach((id: string) => this.deletedProductIds.add(id));
         if (parsed.users && parsed.users.length > 0) this.users = parsed.users;
+        // The signed-in person's own record comes from the session, never from this older copy.
+        const sessionUser = this.readSessionUser();
+        if (sessionUser) { this.users = [...this.users.filter((entry: User) => entry.id !== sessionUser.id), sessionUser]; this.currentUser = sessionUser; }
         if (Array.isArray(parsed.deletedStoreIds)) parsed.deletedStoreIds.filter((id: unknown): id is string => typeof id === 'string').forEach((id: string) => this.deletedStoreIds.add(id));
         if (parsed.products) this.products = parsed.products.filter((product: Product) => !this.deletedProductIds.has(product.id));
         if (parsed.combos) this.combos = parsed.combos.filter((combo: Combo) => !this.deletedProductIds.has(combo.id));

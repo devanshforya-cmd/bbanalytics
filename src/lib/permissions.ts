@@ -1,4 +1,5 @@
-// Brand Bucket Command Center — Granular Custom Permission System (Section 1)
+// Brand Bucket Command Center — access checks. Page-level roles live in roles.ts and access-catalog.ts.
+import { PAGES, isPageKey, isSensitiveKey, pageDefinition, pageForPath, type PageKey, type SensitiveKey } from './access-catalog';
 
 export type FeatureKey =
   | 'beat_plans'
@@ -263,58 +264,89 @@ export function d2cAssignees<T extends UserWithPermissions & { active?: boolean;
   return users.filter(user => (all || ids.has(user.id)) && canAssignD2C(user, brandCode));
 }
 
+const DENIED: FeaturePermission = { access: 'HIDDEN', scope: null, actions: [] };
+
+function readPermission(value: any): FeaturePermission | undefined {
+  if (!value || typeof value !== 'object' || !value.access) return undefined;
+  return { access: value.access as FeatureAccess, scope: (value.scope ?? null) as DataScope | null, actions: (Array.isArray(value.actions) ? value.actions : []) as ActionPermission[] };
+}
+
+/**
+ * In the browser, the page or Settings tab on screen. Older checks name a feature ("orderflow");
+ * on a page that answers for that feature, the page's own setting decides, so View on
+ * "All orders" never inherits Edit from "Manual entry".
+ */
+let explicitPage: { key: string; path: string } | null = null;
+export function setActivePage(key: string | null): void {
+  explicitPage = key && typeof window !== 'undefined' ? { key, path: window.location.pathname } : null;
+}
+export function activePageKey(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  if (explicitPage && explicitPage.path === window.location.pathname) return explicitPage.key;
+  return pageForPath(window.location.pathname)?.key;
+}
+
+function accessMap(user: UserWithPermissions): Record<string, any> | undefined {
+  const custom = user.customPermissions || user.custom_permissions;
+  return custom && typeof custom === 'object' ? custom : undefined;
+}
+
+/** True once a person has been given a role or page-level access. */
+export function usesPageAccess(user: UserWithPermissions | null | undefined): boolean {
+  return !!user && accessMap(user)?._v === 2;
+}
+
+/**
+ * The permission that applies. Nothing is granted unless it is written on the person:
+ * there is no fallback to a template or a job title.
+ */
 export function getEffectivePermission(
   user: UserWithPermissions | null | undefined,
   feature: string
 ): FeaturePermission | undefined {
   if (!user) return undefined;
+  const custom = accessMap(user);
 
-  // 1. Check customPermissions first (where granular permissions are stored)
-  const custom = user.customPermissions || user.custom_permissions;
-  if (custom && custom[feature]) {
-    const p = custom[feature];
-    if (p && typeof p === 'object' && p.access) {
-      return {
-        access: p.access as FeatureAccess,
-        scope: (p.scope ?? null) as DataScope | null,
-        actions: (p.actions ?? []) as ActionPermission[],
-      };
+  if (custom?._v === 2) {
+    if (!isPageKey(feature) && !isSensitiveKey(feature)) {
+      const active = activePageKey();
+      const def = active ? pageDefinition(active) : undefined;
+      if (def && def.answers.includes(feature as FeatureKey)) {
+        const page = readPermission(custom[def.key]);
+        if (!page) return DENIED;
+        return page.access !== 'HIDDEN' && !page.scope ? { ...page, scope: 'ALL' } : page;
+      }
     }
+    return readPermission(custom[feature]);
   }
 
-  // 2. Check permissions if structured as FeaturePermission
-  const perms = user.permissions;
-  if (perms && perms[feature]) {
-    const p = perms[feature];
-    if (p && typeof p === 'object' && p.access) {
-      return {
-        access: p.access as FeatureAccess,
-        scope: (p.scope ?? null) as DataScope | null,
-        actions: (p.actions ?? []) as ActionPermission[],
-      };
-    }
-  }
+  // Accounts saved before page-level access: pages follow their feature; sensitive details stay visible.
+  if (isPageKey(feature)) return getEffectivePermission(user, pageDefinition(feature)!.feature);
+  if (isSensitiveKey(feature)) return { access: 'VIEW_ONLY', scope: null, actions: ['VIEW'] };
+  return readPermission(custom?.[feature]) || readPermission(user.permissions?.[feature]);
+}
 
-  // 3. Fallback to pre-defined role templates based on user.role
-  const role = (user.role || '').toUpperCase();
-  let template: UserCustomPermissions | undefined;
-  if (role === 'SUPER_ADMIN') {
-    template = SUPER_ADMIN_TEMPLATE;
-  } else if (role === 'SALES_OFFICER') {
-    template = FIELD_SALES_OFFICER_TEMPLATE;
-  } else if (role === 'DATA_ENTRY' || role === 'OFFICE_STAFF') {
-    template = OFFICE_STAFF_TEMPLATE;
-  } else if (role === 'ADMIN' || role === 'MANAGER' || role === 'BRAND_MANAGER') {
-    template = MANAGER_TEMPLATE;
-  } else if (role === 'VIEWER') {
-    template = VIEWER_TEMPLATE;
-  }
+/** Can this person see money, customer or influencer details? */
+export function canSeeSensitive(user: UserWithPermissions | null | undefined, key: SensitiveKey): boolean {
+  if (!user) return false;
+  if (isSuperAdmin(user)) return true;
+  const perm = getEffectivePermission(user, key);
+  return !!perm && perm.access !== 'HIDDEN';
+}
 
-  if (template && template[feature]) {
-    return template[feature];
-  }
+/** Can this person open a page (by page key)? */
+export function canOpenPage(user: UserWithPermissions | null | undefined, key: PageKey | string): boolean {
+  return hasAccess(user, key);
+}
 
-  return undefined;
+/** The first page this person may open, for landing after sign-in or a refused page. */
+export function firstAllowedPath(user: UserWithPermissions | null | undefined): string {
+  if (!user) return '/login';
+  if (isSuperAdmin(user)) return '/dashboard';
+  const def = PAGES.find((entry) => entry.href && hasAccess(user, entry.key));
+  if (def?.href) return def.href;
+  if (PAGES.some((entry) => entry.settingsTab && hasAccess(user, entry.key))) return '/settings';
+  return '/no-access';
 }
 
 /**
@@ -365,7 +397,9 @@ export function getScope(user: UserWithPermissions | null | undefined, feature: 
   if (!user) return 'OWN';
   if (isSuperAdmin(user)) return 'ALL';
   const perm = getEffectivePermission(user, feature);
-  return (perm?.scope as 'OWN' | 'TEAM' | 'ALL') || 'OWN';
+  if (perm?.scope) return perm.scope as 'OWN' | 'TEAM' | 'ALL';
+  // Pages with no "whose records" choice (Settings tabs, catalogue lists) cover everything once granted.
+  return perm && perm.access !== 'HIDDEN' && isPageKey(feature) ? 'ALL' : 'OWN';
 }
 
 export const getDataScope = getScope;
@@ -428,7 +462,9 @@ export function canWorkOrders(user: UserWithPermissions, action: ActionPermissio
   return canPerform(user, 'orderflow', action) || canPerform(user, 'order_desk', action);
 }
 
-/** Creating and changing online sales and offers: Settings or Marketing edit access. */
+/** Creating and changing online sales and offers: Edit on the Sales & offers page. */
 export function canManageSales(user: UserWithPermissions): boolean {
-  return isSuperAdmin(user) || canPerform(user, 'settings', 'EDIT') || canPerform(user, 'marketing', 'EDIT');
+  if (isSuperAdmin(user)) return true;
+  if (usesPageAccess(user)) return canPerform(user, 'p.sales_offers', 'EDIT');
+  return canPerform(user, 'settings', 'EDIT') || canPerform(user, 'marketing', 'EDIT');
 }

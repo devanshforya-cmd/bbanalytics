@@ -10,7 +10,10 @@ import { ToastContainer } from '@/components/common/Toast';
 import { ConfirmHost } from '@/components/common/confirm';
 import OfflineBar from '@/components/common/OfflineBar';
 import FieldGpsTracker from '@/components/common/FieldGpsTracker';
-import { getSessionUser } from '@/lib/auth';
+import { confirmSessionWithServer, getSessionUser, logout } from '@/lib/auth';
+import { firstAllowedPath, hasAccess, isSuperAdmin, setActivePage } from '@/lib/permissions';
+import { OPEN_PATHS, PAGES, pageForPath } from '@/lib/access-catalog';
+import type { User } from '@/lib/types';
 import { db } from '@/lib/db/db-service';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -19,30 +22,47 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isLoginPage = pathname === '/login';
   const isSharedPage = pathname.startsWith('/shared/');
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+  /** True once the server has confirmed who is signed in and what they may open (or we are offline). */
+  const [confirmed, setConfirmed] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    if (isLoginPage || isSharedPage) {
-      setAuthorized(true);
-      return;
-    }
-
-    const checkSession = () => {
+    if (isLoginPage || isSharedPage) { setAuthorized(true); return; }
     const sessionUser = getSessionUser();
-    if (!sessionUser) {
-      setAuthorized(false);
-      router.replace('/login');
-    } else {
-      // Sync db current user with authenticated session
-      if (db.getCurrentUser().id !== sessionUser.id) {
-        db.setCurrentUser(sessionUser.id);
-      }
-      setAuthorized(true);
-    }
+    if (!sessionUser) { setAuthorized(false); router.replace('/login'); return; }
+    if (db.getCurrentUser().id !== sessionUser.id) db.setCurrentUser(sessionUser.id);
+    setUser(sessionUser);
+    setAuthorized(true);
+    let cancelled = false;
+    void confirmSessionWithServer().then(({ user: fresh }) => {
+      if (cancelled) return;
+      if (!fresh) { logout(); return; }
+      setUser(fresh);
+      setConfirmed(true);
+    });
+    const onUpdate = () => {
+      const latest = getSessionUser();
+      if (!latest) { setAuthorized(false); router.replace('/login'); return; }
+      setUser(latest);
     };
-    checkSession();
-    window.addEventListener('bb-db-updated', checkSession);
-    return () => window.removeEventListener('bb-db-updated', checkSession);
-  }, [pathname, isLoginPage, isSharedPage, router]);
+    window.addEventListener('bb-db-updated', onUpdate);
+    return () => { cancelled = true; window.removeEventListener('bb-db-updated', onUpdate); };
+    // Only an account change needs a new server check; page changes reuse it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoginPage, isSharedPage]);
+
+  // Every page is checked here, so a page someone was not given never shows, even for a moment.
+  const page = pageForPath(pathname);
+  const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
+  const pageAllowed = !user ? false
+    : isSuperAdmin(user) || OPEN_PATHS.includes(pathname) ? true
+    : isSettings ? PAGES.some((entry) => entry.settingsTab && hasAccess(user, entry.key))
+    : page ? hasAccess(user, page.key) : true;
+
+  useEffect(() => {
+    setActivePage(null);
+    if (confirmed && user && !pageAllowed && !isLoginPage && !isSharedPage) router.replace(firstAllowedPath(user));
+  }, [confirmed, user, pageAllowed, pathname, router, isLoginPage, isSharedPage]);
 
   useEffect(() => {
     if (isLoginPage || isSharedPage) return;
@@ -95,14 +115,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-slate-50 pt-[env(safe-area-inset-top)] text-slate-900 antialiased">
       <a href="#main-content" className="skip-link">Skip to main content</a>
-      <Sidebar />
+      <Sidebar pending={!confirmed} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
         <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto focus:outline-none p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-8">
           <FieldGpsTracker />
-          {children}
+          {confirmed && pageAllowed ? children : (
+            <div role="status" aria-live="polite" className="flex h-64 items-center justify-center">
+              <span className="bb-spinner h-6 w-6 text-blue-600" aria-hidden="true" />
+              <span className="sr-only">{confirmed ? 'Opening your page…' : 'Checking your access…'}</span>
+            </div>
+          )}
         </main>
-        <MobileNav />
+        <MobileNav pending={!confirmed} />
       </div>
       <PWAInstallBanner />
       <OfflineBar />

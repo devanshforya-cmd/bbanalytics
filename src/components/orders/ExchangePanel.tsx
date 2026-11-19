@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import React, { useMemo, useState } from 'react';
 import { Link2, Minus, PackagePlus, Plus, Repeat, Search, Trash2 } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -176,7 +177,7 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
                     <button type="button" role="radio" aria-checked={linkId === order.id} onClick={() => setLinkId(order.id)}
                       className={`w-full rounded-xl border px-3 py-2 text-left ${linkId === order.id ? 'border-purple-400 bg-purple-50 ring-2 ring-purple-100' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
                       <span className="flex items-center justify-between gap-2"><span className="font-mono font-bold text-slate-900">{displayDocumentId(order.orderNumber)}{order.exchangeRequested && !order.exchangeReturnId && <span className="ml-1.5 rounded-full bg-purple-100 px-1.5 font-sans text-[9px] font-bold text-purple-800">Exchange from WhatsApp</span>}</span><OrderStatusBadge status={order.status} /></span>
-                      <span className="block truncate text-[11px] text-slate-500">{formatDate(order.orderDateAd, order.orderDateBs)} · {order.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')} · NPR {order.totalAmount.toLocaleString()}</span>
+                      <span className="block truncate text-[11px] text-slate-500">{formatDate(order.orderDateAd, order.orderDateBs)} · {order.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')} · <Money>{order.totalAmount.toLocaleString()}</Money></span>
                     </button>
                   </li>
                 ))}

@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
@@ -634,7 +635,7 @@ function ScorecardContent() {
                         <div className="flex justify-between">
                           <span>Cheques Collected:</span>
                           <span className="font-semibold text-emerald-700 font-mono">
-                            {latestSummary.chequesCollected} (NPR {latestSummary.chequeTotalAmount.toLocaleString()})
+                            {latestSummary.chequesCollected} (<Money>{latestSummary.chequeTotalAmount.toLocaleString()}</Money>)
                           </span>
                         </div>
                         <div className="flex justify-between text-[10px] text-slate-500">
@@ -982,7 +983,7 @@ function ScorecardContent() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center text-slate-500 text-[11px]">
                     <span>Cheques in custody / deposited by {selectedOfficerSc.officerName}</span>
-                    <span className="font-bold">Total: NPR {officerCheques.reduce((s, c) => s + c.amount, 0).toLocaleString()}</span>
+                    <span className="font-bold">Total: <Money>{officerCheques.reduce((s, c) => s + c.amount, 0).toLocaleString()}</Money></span>
                   </div>
                   <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
                     {officerCheques.length === 0 ? (
@@ -1009,7 +1010,7 @@ function ScorecardContent() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="font-black text-slate-900 text-xs">NPR {ch.amount.toLocaleString()}</div>
+                            <div className="font-black text-slate-900 text-xs"><Money>{ch.amount.toLocaleString()}</Money></div>
                             <span className="rounded bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 text-[9px]">
                               {ch.status}
                             </span>

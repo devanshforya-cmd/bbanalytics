@@ -1,7 +1,8 @@
+import { hidesAnything, redactRecord, restoreRedacted } from '../sensitive-data';
 import { isOtherReason, REASON_DETAIL_MAX } from '../failure-reason';
 import { STORE_COLLECTIONS, storeDeletionPlan } from '../store-deletion';
 import { readWorkspaceResetState } from './workspace-reset-server';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { after } from 'next/server';
 import { deliverPushNotification } from '../push-server';
 import { validateAlertRules } from '../alert-rules';
@@ -12,7 +13,7 @@ import { canManageSales, canPerform, getAssignedBrandCodes, getScope, hasAccess,
 import { validateCampaign } from '../offers';
 import type { Order } from '../types';
 import type { Brand, User, SharedAccessLink } from '../types';
-import { WORKSPACE_COLLECTIONS, isWorkspaceCollection, isLookupCollection, type WorkspaceMutation, type WorkspaceSnapshot, type WorkspaceVersions } from './workspace-types';
+import { WORKSPACE_COLLECTIONS, isWorkspaceCollection, isLookupCollection, type WorkspaceMutation, type WorkspaceSnapshot, type WorkspaceVersions, type WorkspaceRecord } from './workspace-types';
 import { RESERVED_PREFIXES, brandPrefix, isShortDocumentId, isPendingDocumentId, validateBrandPrefix } from '../document-ids';
 import { nextDocumentId, documentIdTaken } from './document-counter';
 import { editNeedsReason, historyEntries } from '../order-history';
@@ -166,7 +167,10 @@ export function visibleWorkspace(user: User, context: WorkspaceContext) {
   const assigned = getAssignedBrandCodes(user);
   const mayReadBrands = ['settings', 'products', 'beat_plans', 'stores', 'distributors', 'dispatches', 'cheque_tracker', 'orderflow', 'order_desk', 'reviews', 'marketing', 'dashboard', 'export'].some((feature) => hasAccess(user, feature));
   const brands = mayReadBrands ? context.brands.filter((brand) => assigned.includes('ALL') || assigned.includes(brand.code.toUpperCase())) : [];
-  return { data: { ...snapshot, users: safeUsers, brands }, snapshot, versions };
+  // What leaves the server has money, customer and influencer details removed when the role lacks them.
+  const outgoing: WorkspaceSnapshot = {};
+  for (const collection of WORKSPACE_COLLECTIONS) outgoing[collection] = hidesAnything(collection, user) ? snapshot[collection]!.map((row) => redactRecord(collection, row, user)) : snapshot[collection];
+  return { data: { ...outgoing, users: safeUsers, brands }, snapshot, versions };
 }
 
 export function validateWorkspaceMutation(value: unknown): asserts value is WorkspaceMutation {
@@ -243,6 +247,15 @@ export function validateWorkspaceMutation(value: unknown): asserts value is Work
   }
 }
 
+/** Record an access change (role saved, person's access changed) in the Activity trail. */
+export async function recordAccessChange(user: User, action: 'CREATE' | 'UPDATE' | 'DELETE', entityType: 'staffRoles' | 'users', entityId: string, details: Record<string, unknown>) {
+  const id = `act_access_${randomUUID()}`;
+  const { error } = await supabaseAdmin.from('workspace_records').insert({ collection: 'activityLogs', id, created_by: user.id,
+    data: { id, userId: user.id, userName: user.fullName, userRole: user.role, action, entityType, entityId, details, createdAt: new Date().toISOString() },
+    version: 1, last_mutation_id: id });
+  if (error) console.error('[Access] Activity record could not be saved:', error.code);
+}
+
 async function appendAudit(user: User, mutation: WorkspaceMutation, created: boolean) {
   const id = `act_${mutation.mutationId}`;
   const { error } = await supabaseAdmin.from('workspace_records').upsert({ collection: 'activityLogs', id, created_by: user.id,
@@ -255,14 +268,15 @@ async function appendAudit(user: User, mutation: WorkspaceMutation, created: boo
 
 export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior: StoredWorkspaceRecord | undefined | null, context: WorkspaceContext) {
   if (!mutation.data) return;
-  mutation.data = { ...mutation.data, createdById: prior?.created_by || user.id };
+  // Someone who could not see a detail cannot change it: put the stored value back first.
+  mutation.data = { ...restoreRedacted(mutation.collection, mutation.data, prior?.data, user), createdById: prior?.created_by || user.id };
   const data = mutation.data;
   if (mutation.collection === 'workspaceConfig' && prior?.data.orderOptions && data.orderOptions === undefined) throw new WorkspaceError(400, 'Keep the configured channel lists when saving workspace settings.');
   if (mutation.collection === 'workspaceConfig' && data.orderOptions !== undefined) {
     if (mutation.id !== 'workspace') throw new WorkspaceError(400, 'Channel options belong to workspace settings.');
     const before = prior?.data.orderOptions ? validateOrderOptions(prior.data.orderOptions) : defaultOrderOptions();
     const after = validateOrderOptions(data.orderOptions);
-    if (requiredOrderOptionActions(before, after).some(action => !canPerform(user, 'settings', action))) throw new WorkspaceError(403, 'Your settings permissions do not allow this channel or delivery change.');
+    if (requiredOrderOptionActions(before, after).some(action => !canPerform(user, 'p.settings_channels', action))) throw new WorkspaceError(403, 'Your access to Sales channels & delivery does not allow this change.');
     data.orderOptions = after;
   }
   if (mutation.collection === 'campaigns') {

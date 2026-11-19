@@ -1,5 +1,6 @@
 import { canPerform, getAssignedBrandCodes, getScope, hasAccess, isSuperAdmin, type FeatureKey } from '../permissions';
 import type { User } from '../types';
+import type { PageKey } from '../access-catalog';
 import { isLookupCollection, type WorkspaceCollection, type WorkspaceRecord } from './workspace-types';
 
 export interface StoredWorkspaceRecord {
@@ -11,7 +12,10 @@ export interface StoredWorkspaceRecord {
   last_mutation_id?: string;
 }
 
-const FEATURES: Record<WorkspaceCollection, FeatureKey[]> = {
+/** Older feature keys and page keys ("p.settings_holidays") both work: every person carries both. */
+type AccessKey = FeatureKey | PageKey;
+
+const FEATURES: Record<WorkspaceCollection, AccessKey[]> = {
   products: ['products'], combos: ['products'], secondaryOrders: ['beat_plans'],
   facingAudits: ['beat_plans'], distributors: ['distributors'], branches: ['stores', 'distributors'],
   retailers: ['stores'], beatItems: ['beat_plans'], visits: ['beat_plans'], dispatches: ['dispatches'],
@@ -20,14 +24,14 @@ const FEATURES: Record<WorkspaceCollection, FeatureKey[]> = {
   deliveryFailures: ['orderflow', 'order_desk'], returns: ['reviews', 'order_desk'], reviewCategories: ['reviews'],
   feedbackEntries: ['reviews'], customers: ['customers', 'orderflow', 'order_desk'], tasks: ['tasks'],
   notifications: [], activityLogs: ['activity'], staffLiveLocations: ['gps_tracking'],
-  holidays: ['settings'], seasonalPatterns: ['dashboard'], taskTemplates: ['settings'],
-  promotions: ['settings'], dailySummaries: ['beat_plans', 'staff_scorecards'], importHistory: ['settings'],
-  influencers: ['marketing'], influencerContent: ['marketing'], sharedAccessLinks: ['settings'],
-  documentTypes: ['settings'], storeCategories: ['settings'], recurringSchedules: ['beat_plans'],
-  workspaceConfig: ['settings'],
-  marketingSends: ['marketing'], influencerNiches: ['marketing', 'settings'], marketingOptions: ['marketing', 'settings'],
-  failureReasons: ['orderflow', 'order_desk', 'settings'], userPreferences: [],
-  campaigns: ['settings', 'marketing'],
+  holidays: ['p.settings_holidays'], seasonalPatterns: ['dashboard'], taskTemplates: ['p.settings_task_templates'],
+  promotions: ['p.settings_promotions'], dailySummaries: ['beat_plans', 'staff_scorecards'], importHistory: ['p.settings_import'],
+  influencers: ['marketing'], influencerContent: ['marketing'], sharedAccessLinks: ['p.settings_shared_links'],
+  documentTypes: ['p.settings_lists'], storeCategories: ['p.settings_lists'], recurringSchedules: ['beat_plans'],
+  workspaceConfig: ['p.settings_channels', 'p.settings_brands', 'p.settings_alerts', 'p.settings_beats'],
+  marketingSends: ['marketing'], influencerNiches: ['marketing', 'p.settings_lists'], marketingOptions: ['marketing', 'p.settings_lists'],
+  failureReasons: ['orderflow', 'order_desk', 'p.settings_lists'], userPreferences: [],
+  campaigns: ['p.sales_offers'],
 };
 
 const GLOBAL_CATALOG = new Set<WorkspaceCollection>([
@@ -36,13 +40,13 @@ const GLOBAL_CATALOG = new Set<WorkspaceCollection>([
   'influencerNiches', 'marketingOptions', 'failureReasons', 'campaigns',
 ]);
 
-export function collectionFeatures(collection: WorkspaceCollection, read = false): FeatureKey[] {
+export function collectionFeatures(collection: WorkspaceCollection, read = false): AccessKey[] {
   if (read && (collection === 'products' || collection === 'combos')) return ['products', 'beat_plans', 'orderflow', 'order_desk', 'dispatches'];
   if (read && collection === 'reviewCategories') return ['reviews', 'order_desk'];
   if (read && ['documentTypes', 'storeCategories', 'workspaceConfig', 'promotions'].includes(collection)) return ['settings', 'beat_plans', 'stores', 'document_handover', 'orderflow', 'order_desk'];
   if (read && collection === 'holidays') return ['settings', 'beat_plans', 'tasks'];
-  // Everyone who takes or reviews online orders sees the running sales; settings and marketing manage them.
-  if (read && collection === 'campaigns') return ['settings', 'marketing', 'orderflow', 'order_desk', 'dashboard'];
+  // Everyone who takes or reviews online orders sees the running sales; the Sales & offers page manages them.
+  if (read && collection === 'campaigns') return ['p.sales_offers', 'settings', 'marketing', 'orderflow', 'order_desk', 'dashboard'];
   if (read && collection === 'failureReasons') return ['orderflow', 'order_desk', 'settings', 'reviews', 'dashboard'];
   if (read && collection === 'stockCounts') return ['beat_plans', 'dispatches'];
   if (read && (collection === 'retailers' || collection === 'branches')) return ['stores', 'beat_plans', 'cheque_tracker', 'shelf_photos', 'call_tracker', 'document_handover', 'dispatches'];
@@ -124,7 +128,7 @@ export function canWriteWorkspaceRecord(user: User, row: StoredWorkspaceRecord, 
   if (row.collection === 'userPreferences') return row.id === user.id && action !== 'DELETE';
   if (isSuperAdmin(user)) return true;
   // Staff may add to a shared list while filling a form; renaming, merging and archiving are admin work.
-  if (isLookupCollection(row.collection) && action !== 'CREATE' && !canPerform(user, 'settings', 'EDIT')) return false;
+  if (isLookupCollection(row.collection) && action !== 'CREATE' && !canPerform(user, 'p.settings_lists', 'EDIT')) return false;
   if (isLookupCollection(row.collection) && action === 'DELETE') return false;
   if (['products', 'combos', 'retailers', 'branches', 'distributors'].includes(row.collection) && action === 'DELETE') return false;
   if (row.collection === 'sharedAccessLinks' || row.collection === 'importHistory') return false;

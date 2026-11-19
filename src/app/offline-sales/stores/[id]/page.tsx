@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -303,7 +304,7 @@ export default function StoreDetailPage() {
                   Credit Limit
                 </span>
                 <div className="font-bold text-slate-900 text-sm">
-                  NPR {(store.creditLimit || 0).toLocaleString()}
+                  <Money>{(store.creditLimit || 0).toLocaleString()}</Money>
                 </div>
                 <div className="text-[11px] text-slate-500">
                   Terms: {store.paymentTerms || '30 Days Net'}
@@ -316,7 +317,7 @@ export default function StoreDetailPage() {
                   Current Outstanding
                 </span>
                 <div className="font-bold text-amber-600 text-sm">
-                  NPR {(store.outstandingBalance || 0).toLocaleString()}
+                  <Money>{(store.outstandingBalance || 0).toLocaleString()}</Money>
                 </div>
                 <div className="text-[11px] text-slate-500">
                   {cheques.length} Cheque(s) in pipeline
@@ -642,7 +643,7 @@ export default function StoreDetailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
               <span className="text-slate-500 text-[11px] font-bold block">30-Day Order Volume</span>
-              <p className="text-xl font-black text-slate-900 mt-1">NPR {volume30Days.toLocaleString()}</p>
+              <p className="text-xl font-black text-slate-900 mt-1"><Money>{volume30Days.toLocaleString()}</Money></p>
               <span className="text-xs text-slate-500 font-semibold mt-0.5 inline-block">
                 {last30DaysOrders.length} orders booked in last 30 days
               </span>
@@ -650,7 +651,7 @@ export default function StoreDetailPage() {
 
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
               <span className="text-slate-500 text-[11px] font-bold block">Average Order Value (AOV)</span>
-              <p className="text-xl font-black text-purple-700 mt-1">NPR {aov.toLocaleString()}</p>
+              <p className="text-xl font-black text-purple-700 mt-1"><Money>{aov.toLocaleString()}</Money></p>
               <span className="text-xs text-slate-500 mt-0.5 inline-block">{secondaryOrders.length} total secondary orders</span>
             </div>
 
@@ -749,16 +750,16 @@ export default function StoreDetailPage() {
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <span className="text-[10px] font-bold text-slate-500 block">Total Credit Line</span>
-                <p className="text-base font-bold text-slate-900 mt-0.5">NPR {(store.creditLimit || 0).toLocaleString()}</p>
+                <p className="text-base font-bold text-slate-900 mt-0.5"><Money>{(store.creditLimit || 0).toLocaleString()}</Money></p>
               </div>
               <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
                 <span className="text-[10px] font-bold text-blue-600 block">Current Outstanding</span>
-                <p className="text-base font-bold text-blue-900 mt-0.5">NPR {(store.outstandingBalance || 0).toLocaleString()}</p>
+                <p className="text-base font-bold text-blue-900 mt-0.5"><Money>{(store.outstandingBalance || 0).toLocaleString()}</Money></p>
               </div>
               <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
                 <span className="text-[10px] font-bold text-emerald-600 block">Available Balance</span>
                 <p className="text-base font-bold text-emerald-900 mt-0.5">
-                  NPR {Math.max(0, (store.creditLimit || 0) - (store.outstandingBalance || 0)).toLocaleString()}
+                  <Money>{Math.max(0, (store.creditLimit || 0) - (store.outstandingBalance || 0)).toLocaleString()}</Money>
                 </p>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
@@ -929,7 +930,7 @@ export default function StoreDetailPage() {
                       </td>
                       <td className="p-2.5 text-slate-700">{c.bankName}</td>
                       <td className="p-2.5 text-right font-black text-slate-900">
-                        NPR {c.amount.toLocaleString()}
+                        <Money>{c.amount.toLocaleString()}</Money>
                       </td>
                       <td className="p-2.5 text-slate-600">{c.receivedDateBs}</td>
                       <td className="p-2.5 text-slate-600">{c.cashDateBs}</td>
@@ -1049,7 +1050,7 @@ export default function StoreDetailPage() {
                       <span className="text-slate-500 ml-1 text-[11px]">({ord.orderDateBs})</span>
                     </div>
                     <div className="font-black text-slate-900 text-sm">
-                      NPR {ord.totalAmount.toLocaleString()}
+                      <Money>{ord.totalAmount.toLocaleString()}</Money>
                     </div>
                   </div>
 
@@ -1064,7 +1065,7 @@ export default function StoreDetailPage() {
                           {it.productName} ↗
                         </Link>
                         <span className="text-slate-600">
-                          {it.totalUnits} units ({it.cases} cases) = <strong>NPR {it.totalAmount.toLocaleString()}</strong>
+                          {it.totalUnits} units ({it.cases} cases) = <strong><Money>{it.totalAmount.toLocaleString()}</Money></strong>
                         </span>
                       </div>
                     ))}

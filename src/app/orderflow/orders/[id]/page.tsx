@@ -1,5 +1,6 @@
 'use client';
 
+import { nprText } from '@/components/common/Money';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -31,7 +32,7 @@ import { AlertCircle, AlertTriangle, ArrowLeft, ArrowRight, Check, History, Laye
 
 const field = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500';
 const PAYMENT = ['COD', 'Prepaid', 'Advance', 'Credit 15 days', 'Credit 30 days'] as const;
-const money = (value: number) => `NPR ${Math.round(value * 100) / 100 === Math.round(value) ? Math.round(value).toLocaleString() : value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (value: number) => `${nprText(Math.round(value * 100) / 100 === Math.round(value) ? Math.round(value).toLocaleString() : value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}`;
 
 interface Draft {
   customer: CustomerLookupValue; alternatePhone: string; address: string; province: string; district: string; platform: string;

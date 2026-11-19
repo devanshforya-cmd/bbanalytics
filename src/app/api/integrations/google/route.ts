@@ -7,7 +7,7 @@ import { isSameOriginGoogleMutation } from '@/lib/google-workspace-security';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const auth = await requireFeatureAccess(request, 'settings');
+  const auth = await requireFeatureAccess(request, 'p.settings_google');
   if (auth.response) return auth.response;
   if (!isSuperAdmin(auth.user)) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   try { return NextResponse.json({ success: true, ...await getGoogleStatus() }, { headers: { 'Cache-Control': 'no-store' } }); }
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireFeatureAccess(request, 'settings', 'EDIT');
+  const auth = await requireFeatureAccess(request, 'p.settings_google', 'EDIT');
   if (auth.response) return auth.response;
   if (!isSuperAdmin(auth.user)) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   if (!isSameOriginGoogleMutation(request)) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 });
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const auth = await requireFeatureAccess(request, 'settings', 'EDIT');
+  const auth = await requireFeatureAccess(request, 'p.settings_google', 'EDIT');
   if (auth.response) return auth.response;
   if (!isSuperAdmin(auth.user)) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   if (!isSameOriginGoogleMutation(request)) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 });

@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -551,7 +552,7 @@ export default function DashboardPage() {
                   <CreditCard className="h-4 w-4 text-purple-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2">
-                  Rs. {pendingChequesAmount.toLocaleString()}
+                  <Money prefix="Rs. ">{pendingChequesAmount.toLocaleString()}</Money>
                 </div>
                 <div className="text-[10px] text-purple-700 font-semibold mt-0.5">
                   {pendingCheques.length} pending • {overdueCheques.length} overdue

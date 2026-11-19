@@ -1,5 +1,6 @@
 'use client';
 
+import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import { countsAsSale } from '@/lib/order-status';
 import React, { useState, useEffect } from 'react';
@@ -243,7 +244,7 @@ export default function Product360Page() {
                 Catalog Reference MRP
               </span>
               <div className="text-xl sm:text-2xl font-black text-emerald-700 font-mono mt-0.5">
-                NPR {product.mrp}
+                <Money>{product.mrp}</Money>
               </div>
             </div>
             <div className="border-l border-slate-200 pl-4 text-[10px] text-slate-500 font-medium">

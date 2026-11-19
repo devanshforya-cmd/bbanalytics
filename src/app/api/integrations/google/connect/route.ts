@@ -7,7 +7,7 @@ import { createGoogleOAuthClient, googleOAuthConfiguration, GOOGLE_SCOPES, logGo
 import { createGoogleState, GOOGLE_STATE_COOKIE, GOOGLE_STATE_TTL_SECONDS, isSameOriginGoogleMutation } from '@/lib/google-workspace-security';
 
 export async function POST(request: NextRequest) {
-  const auth = await requireFeatureAccess(request, 'settings', 'EDIT');
+  const auth = await requireFeatureAccess(request, 'p.settings_google', 'EDIT');
   if (auth.response) return auth.response;
   if (!isSuperAdmin(auth.user)) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   if (!isSameOriginGoogleMutation(request)) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 });

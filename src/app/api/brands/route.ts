@@ -129,7 +129,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireFeatureAccess(request, 'settings', 'CREATE');
+  const auth = await requireFeatureAccess(request, 'p.settings_brands', 'CREATE');
   if (auth.response) return auth.response;
   if (isLocalPreviewUser(auth.user)) return localPreviewOnly();
   if (!isConfigured()) return unavailable();
@@ -218,7 +218,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const auth = await requireFeatureAccess(request, 'settings', 'EDIT');
+  const auth = await requireFeatureAccess(request, 'p.settings_brands', 'EDIT');
   if (auth.response) return auth.response;
   if (isLocalPreviewUser(auth.user)) return localPreviewOnly();
   if (!isConfigured()) return unavailable();
@@ -272,7 +272,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const auth = await requireFeatureAccess(request, 'settings', 'DELETE');
+  const auth = await requireFeatureAccess(request, 'p.settings_brands', 'DELETE');
   if (auth.response) return auth.response;
   if (isLocalPreviewUser(auth.user)) return localPreviewOnly();
   if (!isConfigured()) return unavailable();
