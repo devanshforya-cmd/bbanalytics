@@ -91,35 +91,36 @@ export default function SyncStatusDropdown() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shadow-2xs transition cursor-pointer hover:opacity-95 ${
+        className={`relative flex h-10 w-10 items-center justify-center gap-1.5 rounded-full text-xs font-semibold transition cursor-pointer hover:bg-black/[0.05] sm:h-auto sm:w-auto sm:px-2.5 sm:py-1 sm:shadow-2xs sm:hover:bg-transparent sm:hover:opacity-95 ${
           syncState === 'SYNCED'
-            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+            ? 'sm:bg-emerald-50 text-emerald-700 sm:border sm:border-emerald-200'
             : syncState === 'PENDING'
-            ? 'bg-amber-50 text-amber-800 border border-amber-300 ring-2 ring-amber-400/30'
-            : 'bg-rose-50 text-rose-700 border border-rose-200'
+            ? 'sm:bg-amber-50 text-amber-800 sm:border sm:border-amber-300 sm:ring-2 sm:ring-amber-400/30'
+            : 'sm:bg-rose-50 text-rose-700 sm:border sm:border-rose-200'
         }`}
-        aria-label="Offline sync status"
+        aria-label={syncState === 'SYNCED' ? 'All changes synced' : syncState === 'PENDING' ? `${pendingCount} changes waiting to sync` : 'Offline'}
         aria-expanded={isOpen}
       >
-        {syncState === 'SYNCED' && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />}
-        {syncState === 'PENDING' && <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />}
-        {syncState === 'OFFLINE' && <WifiOff className="h-3.5 w-3.5 text-rose-600 shrink-0" />}
+        {syncState === 'SYNCED' && <CheckCircle2 className="h-[18px] w-[18px] sm:h-3.5 sm:w-3.5 text-emerald-600 shrink-0" />}
+        {syncState === 'PENDING' && <AlertCircle className="h-[18px] w-[18px] sm:h-3.5 sm:w-3.5 text-amber-600 shrink-0" />}
+        {syncState === 'OFFLINE' && <WifiOff className="h-[18px] w-[18px] sm:h-3.5 sm:w-3.5 text-rose-600 shrink-0" />}
+        {syncState === 'PENDING' && pendingCount > 0 && <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-600 px-1 text-[9px] font-bold text-white ring-2 ring-white sm:hidden">{pendingCount}</span>}
 
         {/* Dynamic Label */}
-        <span className="font-semibold text-[11px] sm:text-xs whitespace-nowrap">
+        <span className="hidden font-semibold text-xs whitespace-nowrap sm:inline">
           {syncState === 'SYNCED' && 'Synced'}
           {syncState === 'PENDING' && `${pendingCount} pending`}
           {syncState === 'OFFLINE' && 'Offline'}
         </span>
 
         <ChevronDown
-          className={`h-3 w-3 opacity-60 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          className={`hidden sm:block h-3 w-3 opacity-60 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
       {/* 15b. Click to Expand Dropdown Popover */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-88 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150 text-xs">
+        <div className="fixed inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top)+0.5rem)] sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 sm:w-88 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150 text-xs">
           {/* Popover Header */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>

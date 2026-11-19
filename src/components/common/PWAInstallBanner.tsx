@@ -2,18 +2,37 @@
 
 import React, { useState, useEffect } from 'react';
 import { syncManager } from '@/lib/offline-sync';
-import { Download, X, Smartphone, Sparkles } from 'lucide-react';
-import { toast } from '@/components/common/Toast';
+import { Download, X } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
 
+const DISMISS_KEY = 'bb_pwa_install_dismissed_at';
+const DISMISS_FOR_MS = 14 * 24 * 60 * 60 * 1000;
+
+function recentlyDismissed(): boolean {
+  try {
+    const at = Number(localStorage.getItem(DISMISS_KEY) || 0);
+    return Date.now() - at < DISMISS_FOR_MS;
+  } catch { return false; }
+}
+
+/** The iOS share glyph: a square with an arrow coming out of the top. */
+function ShareGlyph() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="inline h-4 w-4 -translate-y-px text-blue-600" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v12" /><path d="m8 7 4-4 4 4" /><path d="M7 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1" />
+    </svg>
+  );
+}
+
 export default function PWAInstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [platform, setPlatform] = useState<'ios' | 'ios-inapp' | 'other'>('other');
 
   useEffect(() => {
     // 1. Check if already installed in standalone mode
@@ -53,109 +72,84 @@ export default function PWAInstallBanner() {
 
     if (isRunningStandalone) return;
 
-    // 3. Listen for browser install prompt
+    const ua = navigator.userAgent;
+    // iPadOS reports itself as a Mac; touch support gives it away.
+    const ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    const inApp = /FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|TikTok/i.test(ua);
+    setPlatform(ios ? (inApp ? 'ios-inapp' : 'ios') : 'other');
+
+    // 3. Android and desktop Chrome hand us a real install prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      const dismissed = localStorage.getItem('bb_pwa_install_dismissed_v1');
-      if (!dismissed) {
-        setDeferredPrompt(e as BeforeInstallPromptEvent);
-        setShowBanner(true);
-      }
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      if (!recentlyDismissed()) setShowBanner(true);
     };
-
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    const handleInstalled = () => { setShowBanner(false); setIsStandalone(true); };
+    window.addEventListener('appinstalled', handleInstalled);
 
-    // 4. Fallback for mobile devices that don't trigger beforeinstallprompt on first load (e.g. iOS or Android)
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const dismissed = localStorage.getItem('bb_pwa_install_dismissed_v1');
-    if (isMobile && !dismissed && !isRunningStandalone) {
-      const timer = setTimeout(() => {
-        setShowBanner(true);
-      }, 3000);
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      };
-    }
+    // 4. iPhone and iPad never send that prompt, so we show the Safari steps ourselves
+    let timer: number | undefined;
+    if (ios && !recentlyDismissed()) timer = window.setTimeout(() => setShowBanner(true), 2500);
 
     return () => {
+      if (timer) window.clearTimeout(timer);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleInstalled);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      if (choice.outcome === 'accepted') {
-        setShowBanner(false);
-      }
-      setDeferredPrompt(null);
-    } else {
-      // Fallback instruction for iOS / browsers without beforeinstallprompt
-      toast.info('To install Brand Bucket on your home screen: Tap the browser Share/Menu icon and select "Add to Home Screen".');
-      setShowBanner(false);
-    }
+    if (!deferredPrompt) return;
+    await deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice.outcome === 'accepted') setShowBanner(false);
+    setDeferredPrompt(null);
   };
 
   const handleDismiss = () => {
     setShowBanner(false);
-    localStorage.setItem('bb_pwa_install_dismissed_v1', 'true');
+    try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch { /* private mode */ }
   };
 
   if (!showBanner || isStandalone) return null;
 
   return (
     <aside
-      aria-label="PWA Installation Notice"
-      className="fixed bottom-20 left-3 right-3 sm:left-auto sm:right-6 sm:bottom-6 z-50 max-w-md bg-white border border-slate-200 rounded-2xl p-4 shadow-2xl animate-in slide-in-from-bottom-5 duration-200"
+      aria-label="Install Brand Bucket"
+      className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-50 max-w-md rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl animate-in slide-in-from-bottom-5 duration-200 sm:left-auto sm:right-6 sm:bottom-6"
     >
       <div className="flex items-start gap-3">
-        {/* App Icon */}
-        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
-          BB
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <h2 className="text-xs font-bold text-slate-900">Install Brand Bucket</h2>
-            <span className="text-[9px] bg-blue-100 text-blue-700 font-semibold px-1.5 py-0.2 rounded-full">
-              PWA
-            </span>
-          </div>
-          <p className="text-xs text-slate-600 mt-0.5 leading-snug">
-            Install Brand Bucket on your home screen for quick access, offline mode &amp; fast field logging.
-          </p>
-
-          <div className="flex items-center gap-2 mt-3">
-            <button
-              type="button"
-              onClick={handleInstallClick}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition active:scale-98 cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Install</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleDismiss}
-              className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
-            >
-              Not now
+        <img src="/apple-touch-icon.png" alt="" className="h-11 w-11 shrink-0 rounded-xl ring-1 ring-black/5" />
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold text-slate-900">Add Brand Bucket to your home screen</h2>
+          {platform === 'ios' && (
+            <ol className="mt-1.5 space-y-1 text-[13px] leading-snug text-slate-600">
+              <li>1. Tap <ShareGlyph /> <span className="font-medium text-slate-800">Share</span> in the Safari toolbar.</li>
+              <li>2. Scroll down and tap <span className="font-medium text-slate-800">Add to Home Screen</span>.</li>
+              <li>3. Tap <span className="font-medium text-slate-800">Add</span>. Open it from your home screen to get notifications.</li>
+            </ol>
+          )}
+          {platform === 'ios-inapp' && (
+            <p className="mt-1 text-[13px] leading-snug text-slate-600">This page is open inside another app. Open it in Safari first, then tap <ShareGlyph /> Share and choose Add to Home Screen.</p>
+          )}
+          {platform === 'other' && (
+            <p className="mt-1 text-[13px] leading-snug text-slate-600">Opens like an app, works offline in the field, and can send you notifications.</p>
+          )}
+          <div className="mt-3 flex items-center gap-2">
+            {platform === 'other' && deferredPrompt && (
+              <button type="button" onClick={handleInstallClick} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700">
+                <Download className="h-3.5 w-3.5" />
+                Install
+              </button>
+            )}
+            <button type="button" onClick={handleDismiss} className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+              {platform === 'other' ? 'Not now' : 'Got it'}
             </button>
           </div>
         </div>
-
-        {/* Close */}
-        <button
-          type="button"
-          onClick={handleDismiss}
-          className="p-1 text-slate-500 hover:text-slate-600 rounded-lg transition shrink-0"
-          aria-label="Dismiss banner"
-        >
-          <X className="w-4 h-4" />
+        <button type="button" onClick={handleDismiss} className="shrink-0 rounded-lg p-1 text-slate-500 hover:text-slate-700" aria-label="Dismiss">
+          <X className="h-4 w-4" />
         </button>
       </div>
     </aside>

@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'Brand Bucket',
   description: 'Operational Intelligence & Field Sales Force Management for Brand Bucket Nepal',
   manifest: '/manifest.json',
+  icons: { icon: '/icon-192.png', apple: '/apple-touch-icon.png' },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
