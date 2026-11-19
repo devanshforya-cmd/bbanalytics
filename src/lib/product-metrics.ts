@@ -184,3 +184,140 @@ export function productMonthlyTrend(productId: string, input: ProductMetricsInpu
   }
   return [...points.values()];
 }
+
+// ---------------------------------------------------------------------------------------------
+// Combos. A combo is sold online only. A return, review or failure belongs to a combo when it
+// names the combo, names one of its products with the combo recorded (comboId), or comes from an
+// order that held the combo and names one of its products.
+// ---------------------------------------------------------------------------------------------
+
+export interface ComboMetrics {
+  kits: number;
+  giftKits: number;
+  orders: Order[];
+  revenue: number;
+  buyers: number;
+  repeatBuyers: number;
+  exchangeKitsSent: number;
+  returns: {
+    entries: ReturnEntry[];
+    /** Whole kits taken back (returned, exchanged, refunded or pending). */
+    wholeKits: number;
+    /** Single products from a kit taken back, by product. */
+    partUnits: { productId: string; productName: string; units: number }[];
+    returned: number; exchanged: number; refunded: number; pending: number; rejected: number;
+    ratePct: number;
+  };
+  feedback: { entries: FeedbackEntry[]; reviews: number; complaints: number; positive: number; negative: number; topIssue: string | null };
+  failures: { entries: DeliveryFailure[]; ratePct: number };
+  platforms: { name: string; kits: number }[];
+  provinces: { name: string; kits: number }[];
+  boughtWith: { productId: string; name: string; orders: number }[];
+  components: { productId: string; productName: string; perKit: number; unitsViaCombo: number; productUnitsOnline: number; sharePct: number }[];
+  avgKitPrice: number;
+}
+
+export function comboMetrics(comboId: string, input: ProductMetricsInput & { names?: Map<string, string> }): ComboMetrics {
+  const combo = input.combos.find((entry) => entry.id === comboId);
+  const parts = combo?.items || [];
+  const partIds = new Set(parts.map((part) => part.productId));
+
+  let kits = 0, giftKits = 0, revenue = 0, exchangeKitsSent = 0;
+  const saleOrders: Order[] = [];
+  const allOrderIds = new Set<string>();
+  const buyerCounts = new Map<string, number>();
+  const platforms = new Map<string, number>(), provinces = new Map<string, number>();
+  const withCounts = new Map<string, number>();
+  for (const order of input.orders) {
+    const lines = (order.items || []).filter((line) => line.productId === comboId);
+    if (!lines.length) continue;
+    allOrderIds.add(order.id);
+    const paid = lines.filter((line) => !line.isGift).reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
+    if (order.exchangeRequested || order.exchangeReturnId) { if (order.status !== 'CANCELLED') exchangeKitsSent += paid; continue; }
+    if (!countsAsSale(order)) continue;
+    giftKits += lines.filter((line) => line.isGift).reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
+    if (!paid) continue;
+    kits += paid;
+    revenue += lines.filter((line) => !line.isGift).reduce((sum, line) => sum + (Number(line.totalPrice) || (Number(line.unitPrice) || 0) * (Number(line.quantity) || 0)), 0);
+    saleOrders.push(order);
+    if (order.customerPhone) buyerCounts.set(order.customerPhone, (buyerCounts.get(order.customerPhone) || 0) + 1);
+    platforms.set(order.platform || 'Not recorded', (platforms.get(order.platform || 'Not recorded') || 0) + paid);
+    provinces.set(order.province || 'Not recorded', (provinces.get(order.province || 'Not recorded') || 0) + paid);
+    for (const id of new Set((order.items || []).filter((line) => line.productId !== comboId && !line.isGift).map((line) => line.productId))) withCounts.set(id, (withCounts.get(id) || 0) + 1);
+  }
+
+  const fromComboOrder = (entry: { orderId?: string; productId?: string }) => !!entry.orderId && allOrderIds.has(entry.orderId) && (!entry.productId || partIds.has(entry.productId));
+  const returnEntries = input.returns.filter((entry) => entry.productId === comboId || entry.comboId === comboId || (!entry.comboId && fromComboOrder(entry)));
+  let wholeKits = 0;
+  const partMap = new Map<string, { productId: string; productName: string; units: number }>();
+  const counts = { returned: 0, exchanged: 0, refunded: 0, pending: 0, rejected: 0 };
+  for (const entry of returnEntries) {
+    const quantity = Number(entry.quantity) || 1;
+    const key = ({ Returned: 'returned', Exchanged: 'exchanged', Refunded: 'refunded', Pending: 'pending', Rejected: 'rejected' } as const)[entry.orderStatus];
+    if (key) counts[key] += quantity;
+    if (entry.orderStatus === 'Rejected') continue;
+    if (entry.productId === comboId) wholeKits += quantity;
+    else {
+      const part = partMap.get(entry.productId) || { productId: entry.productId, productName: entry.productName, units: 0 };
+      part.units += quantity;
+      partMap.set(entry.productId, part);
+    }
+  }
+
+  const feedbackEntries = input.feedback.filter((entry) => entry.productId === comboId || fromComboOrder(entry));
+  const issues = new Map<string, number>();
+  for (const entry of [...feedbackEntries, ...returnEntries]) for (const issue of entry.issueCategories || []) issues.set(issue, (issues.get(issue) || 0) + 1);
+
+  const saleIds = new Set(saleOrders.map((order) => order.id));
+  const failureEntries = (input.deliveryFailures || []).filter((failure) => allOrderIds.has(failure.orderId));
+  const failedSales = failureEntries.filter((failure) => saleIds.has(failure.orderId)).length;
+
+  const sorted = (map: Map<string, number>) => [...map.entries()].sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, kits: value }));
+  const components = parts.map((part) => {
+    const product = productMetrics(part.productId, input);
+    const unitsViaCombo = kits * (part.quantity || 1);
+    return { productId: part.productId, productName: part.productName, perKit: part.quantity || 1, unitsViaCombo, productUnitsOnline: product.d2c.units,
+      sharePct: product.d2c.units > 0 ? Math.round((unitsViaCombo / product.d2c.units) * 100) : 0 };
+  });
+  const takenBack = wholeKits;
+
+  return {
+    kits, giftKits, orders: saleOrders, revenue,
+    buyers: buyerCounts.size, repeatBuyers: [...buyerCounts.values()].filter((count) => count > 1).length,
+    exchangeKitsSent,
+    returns: { entries: returnEntries, wholeKits, partUnits: [...partMap.values()].sort((a, b) => b.units - a.units), ...counts,
+      ratePct: kits > 0 ? Math.round((takenBack / kits) * 1000) / 10 : 0 },
+    feedback: { entries: feedbackEntries, reviews: feedbackEntries.filter((entry) => entry.type !== 'COMPLAINT').length, complaints: feedbackEntries.filter((entry) => entry.type === 'COMPLAINT').length,
+      positive: feedbackEntries.filter((entry) => entry.sentiment === 'POSITIVE').length, negative: feedbackEntries.filter((entry) => entry.sentiment === 'NEGATIVE').length,
+      topIssue: [...issues.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null },
+    failures: { entries: failureEntries, ratePct: saleOrders.length ? Math.round((failedSales / saleOrders.length) * 1000) / 10 : 0 },
+    platforms: sorted(platforms), provinces: sorted(provinces),
+    boughtWith: [...withCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([productId, orders]) => ({ productId, name: input.names?.get(productId) || productId, orders })),
+    components,
+    avgKitPrice: kits > 0 ? Math.round(revenue / kits) : 0,
+  };
+}
+
+/** Kits sold per month (BS or AD) and kits or parts taken back, oldest first. */
+export function comboMonthlyTrend(comboId: string, input: ProductMetricsInput, options: { mode: CalendarMode; todayAd: string; months?: number }): MonthPoint[] {
+  const months = lastMonths(options.todayAd, options.mode, options.months ?? 12);
+  const current = monthKey(options.todayAd, options.mode)?.key;
+  const points = new Map(months.map((month) => [month.key, { ...month, d2c: 0, b2b: 0, returned: 0, current: month.key === current }]));
+  const comboOrderIds = new Set<string>();
+  for (const order of input.orders) {
+    const lines = (order.items || []).filter((line) => line.productId === comboId);
+    if (!lines.length) continue;
+    comboOrderIds.add(order.id);
+    if (!countsAsSale(order)) continue;
+    const point = points.get(monthKey(order.orderDateAd, options.mode)?.key || '');
+    if (point) point.d2c += lines.filter((line) => !line.isGift).reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
+  }
+  const partIds = new Set(input.combos.find((entry) => entry.id === comboId)?.items.map((item) => item.productId) || []);
+  for (const entry of input.returns) {
+    const mine = entry.productId === comboId || entry.comboId === comboId || (!entry.comboId && !!entry.orderId && comboOrderIds.has(entry.orderId) && partIds.has(entry.productId));
+    if (!mine || entry.orderStatus === 'Rejected') continue;
+    const point = points.get(monthKey(entry.dateAd, options.mode)?.key || '');
+    if (point) point.returned += Number(entry.quantity) || 1;
+  }
+  return [...points.values()];
+}

@@ -112,3 +112,46 @@ test('comparison windows are the last 30 days and the same 30 days a month or ye
   assert.deepEqual(changeLabel(12, 10), { text: '+20%', direction: 'up' });
   assert.deepEqual(changeLabel(5, 0), { text: 'New', direction: 'up' });
 });
+
+test('combo figures: kits, buyers, linked returns, reviews and failures, share of each product', async () => {
+  const { comboMetrics, comboMonthlyTrend } = await import('../src/lib/product-metrics.ts');
+  const base = {
+    orders: [
+      order('c1', [{ productId: 'combo1', quantity: 2 }, { productId: 'other', quantity: 1 }], { customerPhone: 'A', platform: 'Instagram' } as Partial<Order>),
+      order('c2', [{ productId: 'combo1', quantity: 1 }], { customerPhone: 'A', platform: 'WhatsApp' } as Partial<Order>),
+      order('c3', [{ productId: 'combo1', quantity: 1 }], { customerPhone: 'B', status: 'CANCELLED' }),
+      order('c4', [{ productId: 'combo1', quantity: 1, isGift: true }, { productId: 'roll', quantity: 1 }], { customerPhone: 'C' }),
+      order('p1', [{ productId: 'roll', quantity: 4 }], { customerPhone: 'D' }),
+    ],
+    secondaryOrders: [], combos: [combo],
+    returns: [
+      ret({ productId: 'combo1', orderStatus: 'Exchanged' }),                  // whole kit
+      ret({ productId: 'wash', comboId: 'combo1', quantity: 1 }),              // one product from a kit
+      ret({ productId: 'roll', orderId: 'c1' }),                               // product from a combo order
+      ret({ productId: 'roll', orderId: 'p1' }),                               // plain product order: not the combo's
+    ],
+    feedback: [fb({ productId: 'combo1' }), fb({ productId: 'wash', orderId: 'c2', type: 'COMPLAINT' }), fb({ productId: 'roll' })],
+    deliveryFailures: [{ id: 'x', orderId: 'c2' }, { id: 'y', orderId: 'p1' }] as DeliveryFailure[],
+  };
+  const m = comboMetrics('combo1', base);
+  assert.equal(m.kits, 3);
+  assert.equal(m.giftKits, 1);
+  assert.equal(m.orders.length, 2);
+  assert.equal(m.buyers, 1);
+  assert.equal(m.repeatBuyers, 1);
+  assert.equal(m.returns.entries.length, 3);
+  assert.equal(m.returns.wholeKits, 1);
+  assert.deepEqual(m.returns.partUnits.map((p) => p.productId).sort(), ['roll', 'wash']);
+  assert.equal(m.feedback.entries.length, 2);
+  assert.equal(m.feedback.complaints, 1);
+  assert.deepEqual(m.failures.entries.map((f) => f.id), ['x']);
+  assert.deepEqual(m.platforms, [{ name: 'Instagram', kits: 2 }, { name: 'WhatsApp', kits: 1 }]);
+  assert.deepEqual(m.boughtWith.map((b) => b.productId), ['other']);
+  const roll = m.components.find((c) => c.productId === 'roll')!;
+  assert.equal(roll.unitsViaCombo, 6);          // 3 kits × 2
+  assert.equal(roll.productUnitsOnline, 11);   // 6 in kits + 1 + 4 on their own
+  assert.equal(roll.sharePct, 55);
+  const trend = comboMonthlyTrend('combo1', base, { mode: 'AD', todayAd: '2026-11-19' });
+  assert.equal(trend.find((p) => p.key === '2026-11')!.d2c, 3);
+  assert.equal(trend.find((p) => p.key === '2026-11')!.returned, 3);
+});
