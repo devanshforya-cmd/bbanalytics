@@ -100,8 +100,7 @@ button:disabled { cursor: not-allowed; }
 [aria-busy="true"] { cursor: progress; }
 /* A pressed button that is still saving shows a spinner, unless it already draws its own */
 button[data-auto-busy]:not(:has(.bb-spinner, .animate-spin))::before {
-  content: ""; display: inline-block; width: 0.95em; height: 0.95em; margin-right: 0.45em; vertical-align: -0.12em;
-  border-radius: 9999px; border: 2px solid currentColor; border-right-color: transparent; animation: bb-spin 0.7s linear infinite;
+  content: ""; display: inline-block; width: 0.95em; height: 0.95em; margin-right: 0.45em; vertical-align: -0.12em; border-radius: 9999px;
 }
 button[data-auto-busy] { pointer-events: none; opacity: 0.85; }
 
@@ -120,7 +119,18 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab
 
 /* Spinner used by buttons and the sync bar */
 @keyframes bb-spin { to { transform: rotate(360deg); } }
-.bb-spinner { width: 1em; height: 1em; border-radius: 9999px; border: 2px solid currentColor; border-right-color: transparent; animation: bb-spin 0.7s linear infinite; display: inline-block; vertical-align: -0.125em; flex: none; }
+/* Every small loading ring fills like a progress bar: it starts empty when the work starts and eases
+   towards 90% over a few seconds, then disappears when the work is done. Pure CSS (an animated
+   angle), so it costs nothing in JavaScript. Browsers without @property show a still quarter ring. */
+@property --bb-fill { syntax: '<percentage>'; inherits: false; initial-value: 6%; }
+@keyframes bb-fill { to { --bb-fill: 92%; } }
+.bb-spinner, button[data-auto-busy]:not(:has(.bb-spinner, .animate-spin))::before {
+  background: conic-gradient(currentColor var(--bb-fill, 25%), color-mix(in srgb, currentColor 22%, transparent) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  animation: bb-fill 3.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.bb-spinner { width: 1em; height: 1em; border-radius: 9999px; display: inline-block; vertical-align: -0.125em; flex: none; }
 @keyframes bb-progress { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
 .bb-progress-bar { animation: bb-progress 1.1s ease-in-out infinite; }
 
@@ -224,6 +234,15 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab
 @keyframes bbFadeIn { from { opacity: 0; } to { opacity: 1; } }
 .animate-fade-in { animation: bbFadeIn 0.18s ease-out both; }
 .animate-spin-slow { animation: bb-spin 12s linear infinite; }
+
+/* Progress ring: the browser animates the stroke; nothing runs per frame in JavaScript. */
+.bb-ring-progress { transition-property: stroke-dashoffset; transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes bbBreathe { 0%, 100% { transform: scale(0.92); opacity: 0.85; } 50% { transform: scale(1); opacity: 1; } }
+.bb-mark-breathe { animation: bbBreathe 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .bb-ring-progress { transition-duration: 0ms !important; }
+  .bb-mark-breathe { animation: none; }
+}
 
 /* Skip link: hidden until focused from the keyboard */
 .skip-link { position: fixed; left: 12px; top: -100px; z-index: 100; padding: 10px 16px; border-radius: 12px; background: var(--bb-accent); color: #fff; font-weight: 600; font-size: 14px; }

@@ -1,5 +1,6 @@
 'use client';
 
+import ProgressRing from '@/components/common/ProgressRing';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSessionUser, getRedirectPathForUser } from '@/lib/auth';
@@ -23,10 +24,7 @@ export default function RootPage() {
 
   return (
     <div className="flex h-full items-center justify-center">
-      <div className="flex items-center gap-3 text-slate-500">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent"></div>
-        <span className="text-sm font-medium">Loading…</span>
-      </div>
+      <ProgressRing estimateMs={1000} size={64} label="Opening Brand Bucket" />
     </div>
   );
 }

@@ -338,8 +338,12 @@ export class DatabaseService {
     if (this.syncPromise) return this.syncPromise;
     const owner = this.activeUserId;
     const run = (async () => { await syncManager.triggerSync(); return this.pullWorkspace(owner); })(); this.syncPromise = run;
-    try { return await run; } finally { if (this.activeUserId === owner) this.syncPromise = null; }
+    try { const result = await run; if (result.success) this.lastPulledAt = Date.now(); return result; } finally { if (this.activeUserId === owner) this.syncPromise = null; }
   }
+  /** When this device last had a full copy from the server (ms), or 0. */
+  public lastPulledAt = 0;
+  /** True when the data on this device came from the server within the last `ms`. */
+  public isFresh(ms: number): boolean { return this.lastPulledAt > 0 && Date.now() - this.lastPulledAt < ms; }
   private async pullWorkspace(owner: string): Promise<{ success: boolean; syncedCount: number; message: string }> {
     try {
       const response = await fetch('/api/sync', { cache: 'no-store', credentials: 'same-origin', headers: { 'X-Workspace-User': owner } });

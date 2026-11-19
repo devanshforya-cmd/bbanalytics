@@ -1,5 +1,6 @@
 'use client';
 
+import ProgressRing from '@/components/common/ProgressRing';
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Header from './Header';
@@ -94,11 +95,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex h-dvh w-full items-center justify-center bg-slate-50 text-slate-900">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/25 font-black text-white text-base">
-            BB
-          </div>
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-          <span className="text-xs font-semibold text-slate-500">Loading…</span>
+          <ProgressRing estimateMs={1200} size={64} label="Opening Brand Bucket" />
         </div>
       </div>
     );
@@ -122,8 +119,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <FieldGpsTracker />
           {confirmed && pageAllowed ? children : (
             <div role="status" aria-live="polite" className="flex h-64 items-center justify-center">
-              <span className="bb-spinner h-6 w-6 text-blue-600" aria-hidden="true" />
-              <span className="sr-only">{confirmed ? 'Opening your page…' : 'Checking your access…'}</span>
+              <ProgressRing estimateMs={confirmed ? 600 : 1200} size={52} label={confirmed ? 'Opening your page' : 'Checking your access'} />
             </div>
           )}
         </main>

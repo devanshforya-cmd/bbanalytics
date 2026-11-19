@@ -1,6 +1,7 @@
 'use client';
 
 import Money from '@/components/common/Money';
+import ProgressRing, { ButtonRing } from '@/components/common/ProgressRing';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -21,6 +22,7 @@ import {
   ExtractedOrderResult,
   ExtractedProductItem,
   Confidence,
+  extractSingleOrder,
 } from '@/lib/whatsapp-extractor';
 import { getTodayAd } from '@/lib/nepali-calendar';
 import type { BrandCode, Order } from '@/lib/types';
@@ -138,25 +140,33 @@ export default function ExtractorPage() {
     }
   };
 
-  // Main Dynamic Extraction Handler (Fix 67d)
+  /** Extraction progress: refreshing the catalogue (time-based), then one step per message (real). */
+  const [extractProgress, setExtractProgress] = useState<{ label: string; detail: string; value: number | null; done: boolean } | null>(null);
   const handleExtract = async () => {
-    if (!chatText.trim()) return;
-    if (chatText.length > 150000 || splitMessageBlocks(chatText).length > 50) { toast.error('Extract up to 50 messages or 150,000 characters at a time.'); return; }
-    const sync = await db.syncWithSupabase();
-    if (!sync.success) toast.info('Using the catalogue saved on this device. Reconnect before saving orders.');
-
-    const products = db.getProducts().filter((p) => p.active !== false);
-    const combos = db.getCombos().filter((c) => isSellableCombo(c, products));
-    const brands = db.getBrands('ACTIVE');
-
-    const results = extractOrdersDynamically(chatText, {
-      products,
-      combos,
-      brands,
-      channels,
-      deliveryMethods,
-      dateOverride: dateMode === 'OVERRIDE' ? overrideDateAd : undefined,
-    });
+    if (!chatText.trim() || extractProgress) return;
+    const blocks = splitMessageBlocks(chatText);
+    if (chatText.length > 150000 || blocks.length > 50) { toast.error('Extract up to 50 messages or 150,000 characters at a time.'); return; }
+    const results: ExtractedOrderResult[] = [];
+    try {
+      // Prices and offers must be current. A copy fetched in the last 90 seconds is current enough, so skip the wait.
+      if (!db.isFresh(90_000)) {
+        setExtractProgress({ label: 'Getting the latest prices', detail: 'Products, combos and offers', value: null, done: false });
+        const sync = await db.syncWithSupabase();
+        if (!sync.success) toast.info('Using the catalogue saved on this device. Reconnect before saving orders.');
+      }
+      const products = db.getProducts().filter((p) => p.active !== false);
+      const combos = db.getCombos().filter((c) => isSellableCombo(c, products));
+      const options = { products, combos, brands: db.getBrands('ACTIVE'), channels, deliveryMethods, dateOverride: dateMode === 'OVERRIDE' ? overrideDateAd : undefined };
+      for (const [index, block] of blocks.entries()) {
+        setExtractProgress({ label: 'Reading messages', detail: `${index + 1} of ${blocks.length}`, value: 0.3 + 0.7 * ((index + 1) / blocks.length), done: false });
+        results.push(extractSingleOrder(block, options));
+        // Let the ring paint between messages; a long paste never freezes the page.
+        await new Promise((resolve) => window.setTimeout(resolve, 0));
+      }
+    } finally {
+      setExtractProgress((current) => current ? { ...current, done: true } : current);
+      window.setTimeout(() => setExtractProgress(null), 350);
+    }
 
     for (const result of results) {
       if (result.salesChannel && !channels.includes(result.salesChannel)) { result.flags.push(`The detected ${result.salesChannel} channel is unavailable; choose an active channel.`); result.salesChannel = ''; }
@@ -317,6 +327,8 @@ export default function ExtractorPage() {
         saveHistory([...entries, ...history].slice(0, 20)); setPushedSummary({ count: numbers.length, orderNumbers: numbers });
         setExtractedOrders(previous => previous.filter(order => !ordersToPush.some(saved => saved.id === order.id)));
         setSelectedOrderIds(new Set()); setShowConfirmModal(false);
+        // The messages are now orders: empty the box for the next paste.
+        setChatText('');
         const sync = await db.syncWithSupabase();
         const merged = addedTo.filter(Boolean) as string[];
         const changedOrders = ((Array.isArray(result.changedOrders) ? result.changedOrders : []) as (string | null)[]).filter(Boolean) as string[];
@@ -480,6 +492,12 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
             className="w-full rounded-xl border border-slate-200 p-4 font-mono text-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
           />
 
+          {extractProgress && (
+            <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3" aria-live="polite">
+              <ProgressRing value={extractProgress.value} estimateMs={1500} cap={0.3} done={extractProgress.done} size={44} label={extractProgress.label} detail={extractProgress.detail} />
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
             <span className="text-xs text-slate-500">
               Matches against {activeCatalogProducts.length} active products &amp; {activeCatalogCombos.length} combos in database.
@@ -494,10 +512,11 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
               </button>
               <button
                 onClick={handleExtract}
-                className="px-5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition flex items-center gap-2 shadow-xs"
+                disabled={!!extractProgress || !chatText.trim()}
+                className="px-5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition flex items-center gap-2 shadow-xs disabled:opacity-70"
               >
-                <Sparkles className="w-4 h-4" />
-                Extract Order(s)
+                {extractProgress ? <ButtonRing value={extractProgress.value} estimateMs={1500} done={extractProgress.done} /> : <Sparkles className="w-4 h-4" />}
+                {extractProgress ? 'Extracting…' : 'Extract orders'}
               </button>
             </div>
           </div>
@@ -919,7 +938,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                             disabled={isSubmitting}
                             className="shrink-0 whitespace-nowrap px-4 py-1.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:bg-blue-300 transition flex items-center gap-1.5 shadow-xs"
                           >
-                            {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : <><Check className="w-3.5 h-3.5" />{ord.entryKind === 'ADD_ON' ? 'Add to order' : ord.entryKind === 'CHANGE' ? 'Update order' : ord.entryKind === 'EXCHANGE' ? 'Save exchange' : 'Push This Order'}</>}
+                            {isSubmitting ? <><ButtonRing estimateMs={2500} />Saving…</> : <><Check className="w-3.5 h-3.5" />{ord.entryKind === 'ADD_ON' ? 'Add to order' : ord.entryKind === 'CHANGE' ? 'Update order' : ord.entryKind === 'EXCHANGE' ? 'Save exchange' : 'Push This Order'}</>}
                           </button>
                         )}
                       </div>}
@@ -1070,7 +1089,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                   {isSubmitting && (
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
                   )}
-                  {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Pushing Orders…</> : 'Confirm & Push Orders'}
+                  {isSubmitting ? <><ButtonRing estimateMs={2500} />Saving orders…</> : 'Confirm & Push Orders'}
                 </button>
               </div>
             </div>
