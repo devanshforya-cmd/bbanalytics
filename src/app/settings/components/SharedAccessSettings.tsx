@@ -69,6 +69,22 @@ export default function SharedAccessSettings() {
     finally { setSaving(false); }
   };
 
+  const [passwordFor, setPasswordFor] = useState<SharedAccessLink | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const savePassword = async (remove = false) => {
+    if (!passwordFor) return;
+    const value = remove ? '' : newPassword.trim();
+    if (!remove && value.length < 4) { toast.error('Use at least 4 characters for the password.'); return; }
+    setSaving(true);
+    try {
+      db.setSharedAccessPasscode(passwordFor.id, value); reloadLinks();
+      await ensureSaved(passwordFor.id);
+      toast.success(remove ? 'Password removed. Anyone with the link can open it.' : 'Password saved. Share it separately from the link.');
+      setPasswordFor(null); setNewPassword('');
+    } catch (error) { toast.error('Password not saved', error instanceof Error ? error.message : undefined); }
+    finally { setSaving(false); }
+  };
+
   const handleDeactivate = async (id: string) => {
     if (!(await confirmAction({ title: 'Revoke this shared link?', consequences: ['Anyone using the link loses access straight away. You can create a new link later.'], confirmLabel: 'Revoke link', destructive: true }))) return;
     if (saving) return;
@@ -166,13 +182,10 @@ export default function SharedAccessSettings() {
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-slate-900">Custom Shared Access (External / Agency Links)</h2>
-            <span className="rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold px-2.5 py-0.5 border border-blue-200">
-              Fix 63
-            </span>
+            <h2 className="text-base font-bold text-slate-900">Shared links</h2>
           </div>
           <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-            Grant external marketing agencies and campaign partners secure, read-only operational views without creating user accounts.
+            Read-only pages for agencies and partners. They open the link, type a password if you set one, and never need an account.
             All customer PII (phone numbers, addresses) and internal financials are automatically masked.
           </p>
         </div>
@@ -272,12 +285,17 @@ export default function SharedAccessSettings() {
 
                       <td className="py-3 px-4">
                         {link.passcode ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                            <Lock className="w-3 h-3 text-amber-600" />
-                            Required
+                          <span className="inline-flex items-center gap-1 text-[11px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                            <Lock className="w-3 h-3 text-amber-700" />
+                            Password
                           </span>
                         ) : (
-                          <span className="text-slate-500 text-[11px]">Direct Link</span>
+                          <span className="text-slate-600 text-[11px]">Open link</span>
+                        )}
+                        {link.isActive && (
+                          <button type="button" onClick={() => { setPasswordFor(link); setNewPassword(link.passcode || ''); }} className="mt-1 block text-[11px] font-semibold text-blue-700 hover:underline">
+                            {link.passcode ? 'Change password' : 'Add password'}
+                          </button>
                         )}
                       </td>
 
@@ -582,6 +600,25 @@ export default function SharedAccessSettings() {
               </form>
             )}
           </div>
+        </div>
+      )}
+      {passwordFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="shared-password-title">
+          <form onSubmit={(event) => { event.preventDefault(); void savePassword(); }} className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-2xl">
+            <div>
+              <h3 id="shared-password-title" className="text-base font-semibold text-slate-900">Password for “{passwordFor.name}”</h3>
+              <p className="mt-1 text-sm text-slate-600">People open the link and type this password. No account or sign-in needed. The link stays the same.</p>
+            </div>
+            <label className="block text-sm">
+              <span className="font-medium text-slate-800">Password</span>
+              <input autoFocus value={newPassword} onChange={(event) => setNewPassword(event.target.value)} minLength={4} maxLength={64} placeholder="e.g. forya2083" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono" />
+            </label>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {passwordFor.passcode && <button type="button" onClick={() => void savePassword(true)} disabled={saving} className="mr-auto rounded-xl px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">Remove password</button>}
+              <button type="button" onClick={() => { setPasswordFor(null); setNewPassword(''); }} className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Cancel</button>
+              <button type="submit" disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? 'Saving…' : 'Save password'}</button>
+            </div>
+          </form>
         </div>
       )}
     </div>

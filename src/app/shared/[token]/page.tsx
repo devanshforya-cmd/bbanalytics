@@ -32,7 +32,8 @@ export default function SharedAccessPortalPage() {
       if (response.status === 401 && result.requiresPasscode) {
         setRequiresPasscode(true);
         setName(result.name || 'Shared Operational View');
-        setError(sharedPasscode ? 'Incorrect passcode. Please try again.' : '');
+        setError(sharedPasscode ? 'That password is not right. Check it and try again.' : '');
+        try { sessionStorage.removeItem(`shared-pass:${token}`); } catch { /* private mode */ }
         return;
       }
       if (!response.ok || !result.success) {
@@ -42,6 +43,8 @@ export default function SharedAccessPortalPage() {
       const sharedData = result.data as SharedPortalData;
       setData(sharedData);
       setRequiresPasscode(false);
+      // Remember the password for this browser tab, so a refresh or brand/month switch does not ask again.
+      try { if (sharedPasscode) sessionStorage.setItem(`shared-pass:${token}`, sharedPasscode); } catch { /* private mode */ }
       if (!query) setActiveTab(sharedData.link.allowedPages[0]);
     } catch (cause) {
       if (!signal?.aborted) setError(cause instanceof Error ? cause.message : 'Shared data could not be loaded.');
@@ -53,7 +56,10 @@ export default function SharedAccessPortalPage() {
     setData(null);
     setRequiresPasscode(false);
     setExpired(false);
-    if (token) void load('', controller.signal);
+    let saved = '';
+    try { saved = sessionStorage.getItem(`shared-pass:${token}`) || ''; } catch { /* private mode */ }
+    if (saved) setPasscode(saved);
+    if (token) void load(saved, controller.signal);
     else { setError('Access link not found.'); setLoading(false); }
     return () => controller.abort();
     // Token changes start a fresh public token authentication request.
@@ -67,11 +73,11 @@ export default function SharedAccessPortalPage() {
       <form onSubmit={event => { event.preventDefault(); void load(passcode); }} className="w-full max-w-md space-y-5 rounded-3xl border border-slate-700 bg-slate-950 p-8 text-white">
         <Lock className="h-8 w-8 text-blue-400" />
         <h1 className="text-xl font-bold">{name}</h1>
-        <p className="text-sm text-slate-500">Enter the passcode supplied by your Brand Bucket account manager.</p>
-        <label className="block text-sm" htmlFor="shared-passcode">Access passcode</label>
+        <p className="text-sm text-slate-300">Enter the password Brand Bucket gave you with this link. No account needed.</p>
+        <label className="block text-sm" htmlFor="shared-passcode">Password</label>
         <input id="shared-passcode" type="password" autoComplete="off" required value={passcode} onChange={event => setPasscode(event.target.value)} className="w-full rounded-xl border border-slate-600 bg-slate-900 p-3" />
         {error && <p role="alert" className="text-sm text-rose-400">{error}</p>}
-        <button disabled={loading} className="w-full rounded-xl bg-blue-600 p-3 font-bold disabled:opacity-50">{loading ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Verifying…</> : 'Unlock shared view'}</button>
+        <button disabled={loading} className="w-full rounded-xl bg-blue-600 p-3 font-bold disabled:opacity-50">{loading ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Verifying…</> : 'Open'}</button>
       </form>
     </main>
   );

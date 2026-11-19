@@ -131,7 +131,7 @@ export default function FieldSalesSettings() {
 
   return (
     <div className="space-y-6">
-      {/* 1. Mandatory Store Photo Check-In Switch (Section 10) */}
+      {/* 1. Mandatory Store Photo Check-In Switch */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -140,7 +140,7 @@ export default function FieldSalesSettings() {
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Mandatory Store Photo at Check-In (Section 10)
+                Mandatory Store Photo at Check-In
               </h3>
               <p className="text-xs text-slate-500">
                 Require field sales officers to snap a photo of the store front/counter before GPS check-in is confirmed.
@@ -160,7 +160,7 @@ export default function FieldSalesSettings() {
         </div>
       </div>
 
-      {/* 2. Document Types Management (Section 8) */}
+      {/* 2. Document Types Management */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -169,7 +169,7 @@ export default function FieldSalesSettings() {
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Document Types &amp; Handover Receipts (Section 8)
+                Document Types &amp; Handover Receipts
               </h3>
               <p className="text-xs text-slate-500">
                 Configure document categories collected in the field (e.g. Purchase Orders, Invoices, Agreements).
@@ -227,7 +227,7 @@ export default function FieldSalesSettings() {
         </div>
       </div>
 
-      {/* 3. Store Categories & Frequency (Section 11) */}
+      {/* 3. Store Categories & Frequency */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -236,7 +236,7 @@ export default function FieldSalesSettings() {
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Retail Store Classification Categories (Section 11)
+                Retail Store Classification Categories
               </h3>
               <p className="text-xs text-slate-500">
                 Classify retail accounts into tiers (e.g. Tier-A High Volume, Pharmacy, Supermarket) with target visit rhythms.
@@ -294,7 +294,7 @@ export default function FieldSalesSettings() {
         </div>
       </div>
 
-      {/* 4. Recurring Beat Schedules & Leave Management (Section 7) */}
+      {/* 4. Recurring Beat Schedules & Leave Management */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -303,7 +303,7 @@ export default function FieldSalesSettings() {
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Beat Management, Overrides &amp; Leave Coverage (Section 7)
+                Beat Management, Overrides &amp; Leave Coverage
               </h3>
               <p className="text-xs text-slate-500">
                 Configure weekly recurring route assignments, insert one-time store overrides, and reassign visits during officer leave.
@@ -378,7 +378,7 @@ export default function FieldSalesSettings() {
         </div>
       </div>
 
-      {/* One-Time Beat Override Modal (Section 7) */}
+      {/* One-Time Beat Override Modal */}
       {showOverrideModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
@@ -478,7 +478,7 @@ export default function FieldSalesSettings() {
         </div>
       )}
 
-      {/* Leave Coverage Modal (Section 7) */}
+      {/* Leave Coverage Modal */}
       {showLeaveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
