@@ -4,6 +4,8 @@ import Money from '@/components/common/Money';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
+import { compareWindows, inWindow, changeLabel, COMPARE_LABEL, type CompareMode, type DateWindow } from '@/lib/period-compare';
+import { countsAsSale } from '@/lib/order-status';
 import { FilterCriteria, BrandCode, FeedbackEntry, ComparisonMode, DashboardSalesMode } from '@/lib/types';
 import AdvancedFilterBar from '@/components/common/AdvancedFilterBar';
 import { getTodayAd, matchesDateCriteria } from '@/lib/nepali-calendar';
@@ -110,7 +112,7 @@ export default function DashboardPage() {
   const closeSetupWizard = () => { setShowSetupWizard(false); db.setMyPreferences({ setupGuideDismissedAt: new Date().toISOString() }); };
 
   // Apply Territorial, Channel, D2C/B2B & Marketing Filters
-  const orders = rawOrders.filter((o) => {
+  const keepOrder = (o: (typeof rawOrders)[number], checkDate = true) => {
     // Fix 62: Segment D2C vs B2B
     if (salesMode === 'D2C') {
       const d2cPlatforms = ['Instagram', 'Messenger', 'WhatsApp', 'Website', 'TikTok', 'Pathao Bazaar', 'YouTube', 'Facebook'];
@@ -128,25 +130,28 @@ export default function DashboardPage() {
       if (filterCriteria.valley === 'Inside' && !isInside) return false;
       if (filterCriteria.valley === 'Outside' && isInside) return false;
     }
-    if (!matchesDateCriteria(o.orderDateAd, o.orderDateBs, filterCriteria)) return false;
+    if (checkDate && !matchesDateCriteria(o.orderDateAd, o.orderDateBs, filterCriteria)) return false;
     return true;
-  });
+  };
+  const orders = rawOrders.filter((o) => keepOrder(o));
 
-  const deliveryFailures = rawDeliveryFailures.filter((df) => {
+  const keepFailure = (df: (typeof rawDeliveryFailures)[number], checkDate = true) => {
     if (salesMode === 'B2B') return false; // Courier failures are online/D2C specific
     if (filterCriteria.valley && filterCriteria.valley !== 'ALL' && df.valley !== filterCriteria.valley) return false;
-    if (!matchesDateCriteria(df.dateAd, df.dateBs, filterCriteria)) return false;
+    if (checkDate && !matchesDateCriteria(df.dateAd, df.dateBs, filterCriteria)) return false;
     return true;
-  });
+  };
+  const deliveryFailures = rawDeliveryFailures.filter((df) => keepFailure(df));
 
-  const returns = rawReturns.filter((r) => {
+  const keepReturn = (r: (typeof rawReturns)[number], checkDate = true) => {
     if (salesMode === 'D2C' && ['Field Order', 'Distributor'].includes(r.platform)) return false;
     if (salesMode === 'B2B' && !['Field Order', 'Distributor', 'Walk-in'].includes(r.platform)) return false;
     if (channelFilter && r.platform !== channelFilter) return false;
     if (filterCriteria.valley && filterCriteria.valley !== 'ALL' && r.valley !== filterCriteria.valley) return false;
-    if (!matchesDateCriteria(r.dateAd, r.dateBs, filterCriteria)) return false;
+    if (checkDate && !matchesDateCriteria(r.dateAd, r.dateBs, filterCriteria)) return false;
     return true;
-  });
+  };
+  const returns = rawReturns.filter((r) => keepReturn(r));
 
   const cheques = rawCheques.filter((c) => {
     if (filterCriteria.officerId && c.officerId !== filterCriteria.officerId) return false;
@@ -171,7 +176,8 @@ export default function DashboardPage() {
   );
   const overdueCheques = cheques.filter((c) => c.status === 'DELAYED' || c.status === 'BOUNCED');
 
-  const totalOrders = orders.length;
+  // Orders that count as sales: cancelled orders, exchanges and marketing sends are left out.
+  const totalOrders = orders.filter(countsAsSale).length;
   const deliveryFailureCount = deliveryFailures.length;
   const returnCount = returns.length;
   const complaintCount = feedback.filter((f) => f.type === 'COMPLAINT').length;
@@ -185,7 +191,42 @@ export default function DashboardPage() {
   const returnRate =
     totalOrders > 0 ? ((returnCount / totalOrders) * 100).toFixed(1) : '0.0';
 
+  // "Compare with": the last 30 days against the same 30 days a month or a year earlier.
+  const compareMode: CompareMode = comparisonMode === 'LAST_MONTH' || comparisonMode === 'SAME_MONTH_LAST_YEAR' ? comparisonMode : 'OFF';
+  const windows = compareWindows(compareMode, new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kathmandu' }));
+  const periodFigures = (window: DateWindow) => {
+    const periodOrders = rawOrders.filter((o) => keepOrder(o, false) && countsAsSale(o) && inWindow(o.orderDateAd, window)).length;
+    const periodFailures = rawDeliveryFailures.filter((df) => keepFailure(df, false) && inWindow(df.dateAd, window)).length;
+    const periodReturns = rawReturns.filter((r) => keepReturn(r, false) && inWindow(r.dateAd, window)).length;
+    const periodComplaints = rawFeedback.filter((f) => f.type === 'COMPLAINT' && inWindow(f.dateReceivedAd, window)).length;
+    return {
+      orders: periodOrders,
+      failureRate: periodOrders ? Math.round((periodFailures / periodOrders) * 1000) / 10 : 0,
+      returnRate: periodOrders ? Math.round((periodReturns / periodOrders) * 1000) / 10 : 0,
+      complaints: periodComplaints,
+    };
+  };
+  const nowFigures = windows ? periodFigures(windows.current) : null;
+  const beforeFigures = windows ? periodFigures(windows.previous) : null;
+  const compareLine = (key: 'orders' | 'failureRate' | 'returnRate' | 'complaints', lowerIsBetter: boolean) => {
+    if (!nowFigures || !beforeFigures || compareMode === 'OFF') return null;
+    const now = nowFigures[key], before = beforeFigures[key];
+    const isRate = key === 'failureRate' || key === 'returnRate';
+    const change = isRate
+      ? { text: now === before ? 'No change' : `${now > before ? '+' : ''}${(Math.round((now - before) * 10) / 10)} pts`, direction: now > before ? 'up' : now < before ? 'down' : 'flat' }
+      : changeLabel(now, before);
+    const good = change.direction === 'flat' ? null : (change.direction === 'down') === lowerIsBetter;
+    return (
+      <div className="mt-1 space-y-0.5">
+        <div className="text-[11px] text-slate-600 font-medium">Last 30 days: <strong>{isRate ? `${now}%` : now}</strong></div>
+        <div className="text-[11px] text-slate-500">{isRate ? `${before}%` : before} in {COMPARE_LABEL[compareMode]}</div>
+        <div className={`text-[11px] font-bold ${good === null ? 'text-slate-500' : good ? 'text-emerald-700' : 'text-rose-700'}`}>{change.text}</div>
+      </div>
+    );
+  };
+
   const secondaryOrders = rawSecondaryOrders.filter((so) => {
+    if (so.status === 'CANCELLED') return false;
     if (filterCriteria.officerId && so.officerId !== filterCriteria.officerId) return false;
     if (!matchesDateCriteria(so.orderDateAd, so.orderDateBs, filterCriteria)) return false;
     return true;
@@ -302,7 +343,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2.5">
             <span className="text-xs font-bold text-slate-700">Compare with:</span>
             <div className="inline-flex rounded-xl bg-slate-100 p-0.5 text-xs font-medium">
-              {(['OFF', 'LAST_MONTH', 'SAME_MONTH_LAST_YEAR', 'CUSTOM'] as const).map((mode) => (
+              {(['OFF', 'LAST_MONTH', 'SAME_MONTH_LAST_YEAR'] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -326,7 +367,7 @@ export default function DashboardPage() {
           </div>
           {comparisonMode !== 'OFF' && (
             <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
-              Comparing vs {comparisonMode === 'LAST_MONTH' ? 'Last Month' : comparisonMode.replace(/_/g, ' ')}
+              Last 30 days vs {compareMode === 'OFF' ? '' : COMPARE_LABEL[compareMode]}
             </span>
           )}
         </div>
@@ -346,17 +387,7 @@ export default function DashboardPage() {
                   <ShoppingBag className="h-4 w-4 text-blue-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2">{totalOrders}</div>
-                {comparisonMode !== 'OFF' ? (
-                  <div className="mt-1 space-y-0.5">
-                    <div className="text-[11px] text-slate-500 font-medium">
-                      {Math.max(20, Math.round(totalOrders * 0.83))} last month
-                    </div>
-                    <div className="text-[11px] font-bold text-emerald-600 flex items-center gap-0.5">
-                      <span>+{Math.round(totalOrders * 0.17)} (+20.3%)</span>
-                      <ArrowUp className="w-3 h-3" />
-                    </div>
-                  </div>
-                ) : (
+                {compareLine('orders', false) ?? (
                   <div className="text-[10px] text-slate-500 mt-0.5">Social (IG, WA, TikTok) &amp; Web</div>
                 )}
               </div>
@@ -387,14 +418,7 @@ export default function DashboardPage() {
                   <TruckIcon className="h-4 w-4 text-rose-600" />
                 </div>
                 <div className="text-2xl font-black text-rose-900 mt-2">{deliveryFailureRate}%</div>
-                {comparisonMode !== 'OFF' ? (
-                  <div className="mt-1 space-y-0.5">
-                    <div className="text-[11px] text-rose-700/80 font-medium">12.3% last month</div>
-                    <div className="text-[11px] font-bold text-emerald-700 flex items-center gap-0.5">
-                      <span>-3.1% ↓ (improving)</span>
-                    </div>
-                  </div>
-                ) : (
+                {compareLine('failureRate', true) ?? (
                   <div className="text-[10px] text-rose-700 mt-0.5">{deliveryFailureCount} failed deliveries</div>
                 )}
               </div>
@@ -425,14 +449,7 @@ export default function DashboardPage() {
                   <RotateCcw className="h-4 w-4 text-amber-600" />
                 </div>
                 <div className="text-2xl font-black text-amber-900 mt-2">{returnRate}%</div>
-                {comparisonMode !== 'OFF' ? (
-                  <div className="mt-1 space-y-0.5">
-                    <div className="text-[11px] text-amber-700/80 font-medium">4.5% last month</div>
-                    <div className="text-[11px] font-bold text-emerald-700 flex items-center gap-0.5">
-                      <span>-1.1% ↓</span>
-                    </div>
-                  </div>
-                ) : (
+                {compareLine('returnRate', true) ?? (
                   <div className="text-[10px] text-amber-700 mt-0.5">{returnCount} verified return requests</div>
                 )}
               </div>
@@ -459,14 +476,7 @@ export default function DashboardPage() {
                   <MessageSquareWarning className="h-4 w-4 text-rose-600" />
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2">{complaintCount}</div>
-                {comparisonMode !== 'OFF' ? (
-                  <div className="mt-1 space-y-0.5">
-                    <div className="text-[11px] text-slate-500 font-medium">7 last month</div>
-                    <div className="text-[11px] font-bold text-emerald-600 flex items-center gap-0.5">
-                      <span>-2 (-28%) ↓</span>
-                    </div>
-                  </div>
-                ) : (
+                {compareLine('complaints', true) ?? (
                   <div className="text-[10px] text-rose-700 font-semibold mt-0.5">
                     {unresolvedComplaintsCount} requiring resolution
                   </div>

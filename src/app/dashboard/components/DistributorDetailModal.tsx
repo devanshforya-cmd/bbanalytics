@@ -191,7 +191,7 @@ export default function DistributorDetailModal({
                   <div key={v.id} className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs flex items-center justify-between text-xs">
                     <div>
                       <div className="font-bold text-slate-900">{v.storeName || 'Branch Visit'}</div>
-                      <div className="text-slate-500 text-[11px]">Officer: {v.officerName || 'Field Officer'} • GPS Verified Check-in</div>
+                      <div className="text-slate-500 text-[11px]">Officer: {v.officerName || 'not recorded'}</div>
                     </div>
                     <div className="text-right">
                       <span className="font-bold text-slate-700">{v.dateBs || 'Recent'}</span>

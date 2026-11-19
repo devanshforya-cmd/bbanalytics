@@ -68,6 +68,10 @@ export default function ReturnsPage() {
   const router = useRouter();
   const [returnsList, setReturnsList] = useState<ReturnEntry[]>(db.getReturns());
   const [searchTerm, setSearchTerm] = useState('');
+  // Opened from a product page: start filtered to that product.
+  useEffect(() => {
+    try { const product = new URLSearchParams(window.location.search).get('product'); if (product) setSearchTerm(product); } catch { /* no query */ }
+  }, []);
   const [brandFilter, setBrandFilter] = useState<string>('ALL');
   const [reasonFilter, setReasonFilter] = useState<string>('ALL');
   const [showLogModal, setShowLogModal] = useState(false);

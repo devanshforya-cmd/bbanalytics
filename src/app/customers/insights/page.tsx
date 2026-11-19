@@ -3,6 +3,7 @@
 import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import { failureReasonLabel } from '@/lib/failure-reason';
+import { countsAsSale } from '@/lib/order-status';
 import React, { useState, useMemo, useEffect } from 'react';
 import { phoneDigits } from '@/lib/customer-lookup';
 import { cohortRetention, lifecycleMovements } from '@/lib/customer-cohorts';
@@ -151,7 +152,7 @@ export default function CustomerInsightsPage() {
   const revenueConcentration = useMemo(() => {
     const sorted = [...customers]
       .map((c) => {
-        const spend = customerSpendMap.get(norm(c.phone)) || (c.totalOrders * 1850);
+        const spend = customerSpendMap.get(norm(c.phone)) || 0;
         const aov = c.totalOrders > 0 ? Math.round(spend / c.totalOrders) : 0;
         return {
           customer: c,
@@ -360,7 +361,7 @@ export default function CustomerInsightsPage() {
       .map((c) => {
         const lastDate = c.lastOrderDate || '2026-06-01';
         const daysInactive = Math.round((TODAY_MS - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24));
-        const spend = customerSpendMap.get(norm(c.phone)) || c.totalOrders * 2100;
+        const spend = customerSpendMap.get(norm(c.phone)) || 0;
         const brand = c.brandsPurchased?.[0] || 'Not recorded';
 
         const suggestedOffer = 'Review purchase history and choose an active offer from Promotions.';
@@ -386,21 +387,34 @@ export default function CustomerInsightsPage() {
     > = {};
 
     customers.forEach((c) => {
-      const city = c.city || 'Kathmandu';
-      const prov = c.province || 'Bagmati Province';
+      const city = c.city || 'City not recorded';
+      const prov = c.province || 'Not recorded';
       if (!cityMap[city]) {
         cityMap[city] = { province: prov, count: 0, orders: 0, revenue: 0, brands: {}, karmaSum: 0 };
       }
       cityMap[city].count++;
       cityMap[city].orders += c.totalOrders;
       cityMap[city].karmaSum += c.karmaScore;
-      const spend = customerSpendMap.get(norm(c.phone)) || c.totalOrders * 1900;
+      const spend = customerSpendMap.get(norm(c.phone)) || 0;
       cityMap[city].revenue += spend;
 
       (c.brandsPurchased || []).forEach((b) => {
         cityMap[city].brands[b] = (cityMap[city].brands[b] || 0) + 1;
       });
     });
+
+    // Orders from each city, last 30 days against the 30 before.
+    const cityByPhone = new Map(customers.map((c) => [norm(c.phone), c.city || 'City not recorded']));
+    const recent: Record<string, { now: number; before: number }> = {};
+    for (const order of orders) {
+      if (!countsAsSale(order)) continue;
+      const city = cityByPhone.get(norm(order.customerPhone));
+      const time = Date.parse(`${(order.orderDateAd || '').slice(0, 10)}T00:00:00Z`);
+      if (!city || Number.isNaN(time)) continue;
+      const age = (TODAY_MS - time) / 86400000;
+      const bucket = (recent[city] ||= { now: 0, before: 0 });
+      if (age <= 30) bucket.now += 1; else if (age <= 60) bucket.before += 1;
+    }
 
     const rows = Object.entries(cityMap).map(([city, d]) => {
       let topBrand = 'Not recorded';
@@ -413,7 +427,10 @@ export default function CustomerInsightsPage() {
       });
 
       const avgKarma = Math.round(d.karmaSum / Math.max(1, d.count));
-      const growthPct = city === 'Pokhara' ? '+28%' : city === 'Biratnagar' ? '+34%' : city === 'Butwal' ? '+22%' : '+15%';
+      const span = recent[city];
+      const growth = !span || (span.now === 0 && span.before === 0) ? '—'
+        : span.before === 0 ? 'New'
+        : `${span.now >= span.before ? '+' : ''}${Math.round(((span.now - span.before) / span.before) * 100)}%`;
 
       return {
         city,
@@ -421,15 +438,15 @@ export default function CustomerInsightsPage() {
         customers: d.count,
         orders: d.orders,
         revenue: d.revenue,
-        growth: growthPct,
+        growth,
         topBrand,
         avgKarma,
-        isOutsideValley: !['Kathmandu', 'Lalitpur', 'Bhaktapur'].includes(city),
+        isOutsideValley: city !== 'City not recorded' && !['Kathmandu', 'Lalitpur', 'Bhaktapur'].includes(city),
       };
     });
 
     return rows.sort((a, b) => b.revenue - a.revenue);
-  }, [customers, customerSpendMap]);
+  }, [customers, customerSpendMap, orders, TODAY_MS]);
 
   // -------------------------------------------------------------
   // 2k. PRODUCT AFFINITY BY SEGMENT
@@ -506,7 +523,7 @@ export default function CustomerInsightsPage() {
     let totalSpendSum = 0;
 
     customers.forEach((c) => {
-      const spend = customerSpendMap.get(norm(c.phone)) || c.totalOrders * 1850;
+      const spend = customerSpendMap.get(norm(c.phone)) || 0;
       totalSpendSum += spend;
       if (spend < 1000) b1++;
       else if (spend <= 3000) b2++;

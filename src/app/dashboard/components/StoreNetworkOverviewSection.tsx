@@ -1,4 +1,5 @@
 'use client';
+import { orderCadenceDays } from '@/lib/store-records';
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
@@ -28,10 +29,10 @@ export default function StoreNetworkOverviewSection() {
   const storeListWithScores = useMemo(() => {
     return stores.map((s) => {
       const score = healthScores[s.id] || db.getStoreHealthScore(s.id);
-      const storeOrders = db.getSecondaryOrders().filter((o) => o.entityId === s.id);
+      const storeOrders = db.getSecondaryOrders().filter((o) => o.entityId === s.id && o.status !== 'CANCELLED');
       const storeCheques = db.getCheques().filter((cheque) => cheque.entityId === s.id);
       const realUnits = storeOrders.reduce((sum, o) => sum + (o.totalUnits || 0), 0);
-      const reorderDays = storeOrders.length > 1 ? Math.round(30 / storeOrders.length) : (s as any).reorderFrequencyDays || 0;
+      const reorderDays = orderCadenceDays(storeOrders.map((o) => o.orderDateAd || o.createdAt)) ?? ((s as any).reorderFrequencyDays || 0);
       return {
         ...s,
         score,
@@ -256,7 +257,7 @@ export default function StoreNetworkOverviewSection() {
                       <div className="flex flex-col">
                         <span className="truncate max-w-[200px]">{store.name}</span>
                         <span className="text-[10px] text-slate-500 font-normal">
-                          {isBranch ? (store as any).distributorName : (store as any).city || 'Kathmandu'}
+                          {isBranch ? (store as any).distributorName : (store as any).city || 'City not recorded'}
                         </span>
                       </div>
                     </td>

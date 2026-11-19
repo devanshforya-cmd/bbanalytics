@@ -3,6 +3,7 @@
 import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import { countsAsSale } from '@/lib/order-status';
+import { productMetrics } from '@/lib/product-metrics';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -178,56 +179,20 @@ export default function ProductsPage() {
 
   // Calculate Product Performance Metrics (Operational units and store counts only - Zero Tolerance)
   const getProductMetrics = (prod: Product) => {
-    // Secondary bookings for this SKU
-    let secondaryCases = 0;
-    let secondaryUnits = 0;
-    let gtUnits = 0;
-    let mtUnits = 0;
-    const storeIds = new Set<string>();
-
-    // Field orders have no delivery step in the app yet, so every order that was not cancelled counts.
-    secondaryOrders.filter(order => order.status !== 'CANCELLED').forEach((o) => {
-      const item = o.items.find(
-        (i) =>
-          i.productId === prod.id
-      );
-      if (item) {
-        secondaryCases += item.cases;
-        secondaryUnits += item.totalUnits;
-        storeIds.add(o.entityId || o.storeName);
-        const isMT = o.storeName?.toLowerCase().includes('bhatbhateni') ||
-          o.storeName?.toLowerCase().includes('bigmart') ||
-          o.storeName?.toLowerCase().includes('saleways');
-        if (isMT) {
-          mtUnits += item.totalUnits;
-        } else {
-          gtUnits += item.totalUnits;
-        }
-      }
-    });
-
-    // Direct / Online Orders
-    let onlineUnits = 0;
-    orders.filter(countsAsSale).forEach((o) => {
-      // Paid lines only: a free gift of this product is not a unit sold.
-      for (const item of o.items) if (item.productId === prod.id && !item.isGift) onlineUnits += item.quantity;
-    });
-
-    const totalUnitsSold = secondaryUnits + onlineUnits;
-
-    // Outlet coverage
-    const storeCount = storeIds.size;
+    // One set of rules for every product view: combos count, cancelled orders and exchanges do not.
+    const metrics = productMetrics(prod.id, { orders, secondaryOrders, combos, returns, feedback: [] });
+    const secondaryCases = secondaryOrders
+      .filter((order) => order.status !== 'CANCELLED')
+      .reduce((sum, order) => sum + order.items.filter((item) => item.productId === prod.id).reduce((acc, item) => acc + (item.cases || 0), 0), 0);
+    const { gtUnits, mtUnits } = metrics.b2b;
+    const secondaryUnits = metrics.b2b.units;
+    const onlineUnits = metrics.d2c.units;
+    const totalUnitsSold = metrics.totalUnits;
+    const storeCount = metrics.b2b.storeIds.size;
     const totalStoreCount = retailers.length + branches.length;
     const storePenetrationPct = totalStoreCount > 0 ? Math.min(100, Math.round((storeCount / totalStoreCount) * 100)) : 0;
-
-    // Quality defect / return rate
-    const prodReturns = returns.filter(
-      (r) =>
-        r.productId === prod.id
-    );
-    const returnUnits = prodReturns.reduce((acc, r) => acc + (r.quantity || 1), 0);
-    const returnRate =
-      totalUnitsSold > 0 ? Math.round((returnUnits / totalUnitsSold) * 1000) / 10 : 0;
+    // Returns are measured against online units, the only sales they can come from.
+    const returnRate = metrics.returns.ratePct;
 
     // Warehouse Stock Level
     const stock = prod.stockQty !== undefined ? prod.stockQty : 0;
@@ -993,15 +958,7 @@ export default function ProductsPage() {
               <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
                 {(() => {
                   const m = getProductMetrics(selectedPerfProduct);
-                  const matchingOrders = secondaryOrders.filter((o) =>
-                    o.items.some(
-                      (item) =>
-                        item.productId === selectedPerfProduct.id ||
-                        item.productName
-                          .toLowerCase()
-                          .includes(selectedPerfProduct.name.toLowerCase().slice(0, 8))
-                    )
-                  );
+                  const matchingOrders = secondaryOrders.filter((o) => o.status !== 'CANCELLED' && o.items.some((item) => item.productId === selectedPerfProduct.id));
 
                   return (
                     <>
@@ -1009,14 +966,14 @@ export default function ProductsPage() {
                       <div className="grid grid-cols-2 gap-3">
                         <div className="p-3.5 rounded-2xl bg-brand-50 border border-brand-200 space-y-1">
                           <span className="text-[10px] font-bold text-brand-700">
-                            MTD Sales Volume
+                            Units sold
                           </span>
                           <div className="text-2xl font-black text-brand-950 font-mono">
                             {m.totalUnitsSold.toLocaleString()}{' '}
                             <span className="text-xs font-normal text-brand-700">units</span>
                           </div>
                           <div className="text-[11px] text-slate-500 font-medium">
-                            Operational distribution volume
+                            {m.onlineUnits.toLocaleString()} online, {m.secondaryUnits.toLocaleString()} in stores
                           </div>
                         </div>
 

@@ -122,7 +122,7 @@ export default function UserProfileDrawer({
   const todayBeats = isOfficer ? db.getTodayBeat(currentUser.id).filter((beat) => beat.dateAd === today) : [];
   const todayOrderAmount = isOfficer
     ? db.getSecondaryOrders({ officerId: currentUser.id })
-        .filter((order) => order.orderDateAd === today)
+        .filter((order) => order.orderDateAd === today && order.status !== 'CANCELLED')
         .reduce((total, order) => total + order.totalAmount, 0)
     : 0;
   const todayChequeCount = isOfficer

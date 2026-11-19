@@ -245,9 +245,9 @@ function StoresVisitHistoryTab({ beatItems }: { beatItems: BeatItem[] }) {
   const allStoreEntities = db.getStoresUnified();
   const stores = allStoreEntities.map((s) => ({
     name: s.name,
-    branch: s.area || s.city || 'Kathmandu',
+    branch: s.area || s.city || 'Area not recorded',
     type: s.storeType || 'Store',
-    officer: (s as any).assignedOfficerName || s.assignedOfficerId || 'Field Officer',
+    officer: (s as any).assignedOfficerName || s.assignedOfficerId || 'Not assigned',
     lastVisited: (s as any).lastVisited || (s as any).lastVisitDate || 'Pending Visit',
     daysAgo: (s as any).daysSinceLastVisit || (s as any).lastVisitDaysAgo || 0,
     freq: (s as any).visitFrequency || 'Weekly',

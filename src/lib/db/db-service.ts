@@ -3885,9 +3885,13 @@ export class DatabaseService {
 
   // Store Health Score (Fix 34 & Fix 45b)
   public getStoreHealthScore(storeId: string): StoreHealthScore {
-    const storeOrders = this.secondaryOrders.filter((o) => o.entityId === storeId);
+    // Cancelled orders are not orders. Regularity looks at the last 90 days.
+    const since = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+    const storeOrders = this.secondaryOrders.filter((o) => o.entityId === storeId && o.status !== 'CANCELLED' && (o.orderDateAd || '') >= since);
     const storeCheques = this.cheques.filter((c) => c.entityId === storeId);
-    const storeStocks = this.stockCounts.filter((s) => s.entityId === storeId);
+    // Stock is judged on the latest count only: an old low count must not drag the score forever.
+    const storeStocks = this.stockCounts.filter((s) => s.entityId === storeId)
+      .sort((a, b) => (b.dateAd || b.createdAt).localeCompare(a.dateAd || a.createdAt)).slice(0, 1);
     const storeBeats = this.beatItems.filter((b) => b.entityId === storeId);
 
     // If completely empty store with no recorded field data, return pure 0
@@ -3964,8 +3968,9 @@ export class DatabaseService {
       stockMaintenance,
       visitCooperation,
       issueRate: 0,
-      trend: overall >= 65 ? 'UP' : overall < 40 ? 'DOWN' : 'STABLE',
-      previousScore: overall === 0 ? 0 : Math.max(0, overall - 4),
+      // No score history is kept yet, so there is no real trend to report.
+      trend: 'STABLE',
+      previousScore: overall,
       lastCalculatedAt: new Date().toISOString(),
       breakdown: {
         orderVelocityScore: regularity,

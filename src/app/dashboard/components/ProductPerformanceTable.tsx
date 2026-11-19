@@ -5,6 +5,9 @@ import { Product, Order, ReturnEntry, DeliveryFailure, FeedbackEntry, BrandCode,
 import { db } from '@/lib/db/db-service';
 import { Search, ArrowUpDown, ChevronDown, ChevronUp, Package, AlertTriangle } from 'lucide-react';
 import ProductDetailModal from './ProductDetailModal';
+import { productMetrics, comboParts, unitsInLines } from '@/lib/product-metrics';
+import { countsAsSale } from '@/lib/order-status';
+import { compareWindows, inWindow, changeLabel, type CompareMode } from '@/lib/period-compare';
 
 interface ProductPerformanceTableProps {
   products: Product[];
@@ -45,74 +48,49 @@ export default function ProductPerformanceTable({
   const pageSize = 25;
 
   // Compute performance metrics for all products
+  const compareMode: CompareMode = comparisonMode === 'LAST_MONTH' || comparisonMode === 'SAME_MONTH_LAST_YEAR' ? comparisonMode : 'OFF';
+  const windows = useMemo(() => compareWindows(compareMode, new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kathmandu' })), [compareMode]);
+  const allOrders = useMemo(() => (windows ? db.getOrders() : []), [windows]);
   const computedProducts = useMemo(() => {
+    const combos = db.getCombos();
+    const karmaByPhone = new Map(db.getCustomers().map((customer) => [customer.phone, customer.karmaScore]));
     return products.map((prod) => {
-      // Find orders matching this product
-      let totalOrders = 0;
-      let unitsSold = 0;
-      const customersWithKarma: number[] = [];
-
-      orders.forEach((o) => {
-        const item = o.items.find(
-          (i) => i.productId === prod.id || i.productName.toLowerCase().includes(prod.name.toLowerCase())
-        );
-        if (item) {
-          totalOrders += 1;
-          unitsSold += item.quantity;
-          customersWithKarma.push(70); // default baseline karma
+      const metrics = productMetrics(prod.id, { orders, secondaryOrders: [], combos, returns, feedback, deliveryFailures });
+      const parts = comboParts(combos);
+      // Karma of the customers who actually bought this product.
+      const buyers = new Set<string>();
+      for (const order of orders) {
+        if (!countsAsSale(order)) continue;
+        const units = unitsInLines(order.items || [], prod.id, parts);
+        if (units.direct + units.viaCombo > 0 && order.customerPhone) buyers.add(order.customerPhone);
+      }
+      const karmas = [...buyers].map((phone) => karmaByPhone.get(phone)).filter((value): value is number => typeof value === 'number');
+      const avgKarma = karmas.length ? Math.round(karmas.reduce((x, y) => x + y, 0) / karmas.length) : null;
+      // Units in the last 30 days against the comparison window, from all orders (not the page's date filter).
+      let unitsNow = 0, unitsBefore = 0;
+      if (windows) {
+        for (const order of allOrders) {
+          if (!countsAsSale(order)) continue;
+          const inNow = inWindow(order.orderDateAd, windows.current), inBefore = inWindow(order.orderDateAd, windows.previous);
+          if (!inNow && !inBefore) continue;
+          const units = unitsInLines(order.items || [], prod.id, parts);
+          if (inNow) unitsNow += units.direct + units.viaCombo; else unitsBefore += units.direct + units.viaCombo;
         }
-      });
-
-      // Returns matching this product
-      const matchingReturns = returns.filter(
-        (r) => r.productId === prod.id || r.productName.toLowerCase().includes(prod.name.toLowerCase())
-      );
-      const returnCount = matchingReturns.reduce((acc, r) => acc + r.quantity, 0);
-      const returnRate = totalOrders > 0 ? (returnCount / totalOrders) * 100 : 0;
-
-      // Failures matching this product
-      const matchingFailures = deliveryFailures.filter(
-        (f) => f.brandCode === prod.brandCode
-      );
-      const failureRate = totalOrders > 0 ? ((matchingFailures.length / orders.length) * 100) : 0;
-
-      // Complaints matching this product
-      const matchingComplaints = feedback.filter(
-        (f) =>
-          f.type === 'COMPLAINT' &&
-          (f.productId === prod.id || f.productName.toLowerCase().includes(prod.name.toLowerCase()))
-      );
-      const complaintCount = matchingComplaints.length;
-
-      // Top dynamic issue
-      const issueCounts: Record<string, number> = {};
-      matchingReturns.forEach((r) => {
-        r.issueCategories.forEach((c) => {
-          issueCounts[c] = (issueCounts[c] || 0) + 1;
-        });
-      });
-      matchingComplaints.forEach((c) => {
-        c.issueCategories.forEach((cat) => {
-          issueCounts[cat] = (issueCounts[cat] || 0) + 1;
-        });
-      });
-      const topIssue = Object.entries(issueCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None reported';
-
-      // Avg karma
-      const avgKarma = customersWithKarma.length > 0 ? 72 : 70;
-
+      }
       return {
         ...prod,
-        totalOrders,
-        unitsSold,
-        returnRate,
-        failureRate,
-        complaintCount,
-        topIssue,
+        totalOrders: metrics.d2c.orders,
+        unitsSold: metrics.d2c.units,
+        returnRate: metrics.returns.ratePct,
+        failureRate: metrics.failures.ratePct,
+        complaintCount: metrics.feedback.complaints,
+        topIssue: metrics.feedback.topIssue || 'None reported',
         avgKarma,
+        unitsNow,
+        unitsBefore,
       };
     });
-  }, [products, orders, returns, deliveryFailures, feedback]);
+  }, [products, orders, returns, deliveryFailures, feedback, windows, allOrders]);
 
   // Filtering
   const filtered = useMemo(() => {
@@ -129,8 +107,8 @@ export default function ProductPerformanceTable({
   // Sorting
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      let valA: any = a[sortField];
-      let valB: any = b[sortField];
+      let valA: any = a[sortField] ?? -1;
+      let valB: any = b[sortField] ?? -1;
       if (typeof valA === 'string') {
         return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
       }
@@ -261,7 +239,7 @@ export default function ProductPerformanceTable({
               </th>
               {comparisonMode !== 'OFF' && (
                 <th className="p-2.5 text-right whitespace-nowrap text-blue-700 bg-blue-50/60">
-                  <span>vs Last Month</span>
+                  <span title="Units sold in the last 30 days, against the comparison window">Last 30 days</span>
                 </th>
               )}
               <th
@@ -328,11 +306,11 @@ export default function ProductPerformanceTable({
                   <td className="p-2.5 text-right font-bold text-blue-600">{p.unitsSold}</td>
                   {comparisonMode !== 'OFF' && (
                     <td className="p-2.5 text-right whitespace-nowrap bg-blue-50/30 font-semibold text-[11px]">
-                      {p.totalOrders % 2 === 0 ? (
-                        <span className="text-emerald-700">+{Math.max(8, p.totalOrders * 3)}% ↑</span>
-                      ) : (
-                        <span className="text-slate-600">+{Math.max(2, p.totalOrders)}% →</span>
-                      )}
+                      {(() => { const change = changeLabel(p.unitsNow, p.unitsBefore); return (
+                        <span className={change.direction === 'up' ? 'text-emerald-700' : change.direction === 'down' ? 'text-rose-700' : 'text-slate-500'} title={`${p.unitsNow} units now, ${p.unitsBefore} before`}>
+                          {p.unitsNow} <span className="font-normal">({change.text})</span>
+                        </span>
+                      ); })()}
                     </td>
                   )}
                   <td className="p-2.5 text-right whitespace-nowrap">
@@ -358,7 +336,7 @@ export default function ProductPerformanceTable({
                     {p.topIssue}
                   </td>
                   <td className="p-2.5 text-right font-mono font-bold text-emerald-700">
-                    {p.avgKarma}
+                    {p.avgKarma ?? '—'}
                   </td>
                 </tr>
               );
