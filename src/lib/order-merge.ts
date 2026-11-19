@@ -4,20 +4,23 @@ const digits = (phone: string) => String(phone || '').replace(/\D/g, '').replace
 const money = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
 /** What kind of message the team wrote. Only the first line decides it. */
-export type ExtractedEntryKind = 'ORDER' | 'ADD_ON' | 'EXCHANGE';
+export type ExtractedEntryKind = 'ORDER' | 'ADD_ON' | 'EXCHANGE' | 'CHANGE';
 
 const ADD_ON_MARKER = /^\s*(?:order\s*add(?:ed)?|add(?:ed)?\s*(?:to\s*)?order|add[\s-]?on)\b\s*[:\-–—]?\s*/i;
 const EXCHANGE_MARKER = /^\s*exchange\b\s*[:\-–—]?\s*/i;
+// "order changed", "order change", "changed order", "order updated", "update order", "order edited", and common typos (chnaged, chaged).
+const CHANGE_WORD = '(?:ch(?:ange|nage|aneg|age|ang|nge)d?|updated?|edit(?:ed)?|modif(?:y|ied))';
+const CHANGE_MARKER = new RegExp(`^\\s*(?:order\\s*${CHANGE_WORD}|${CHANGE_WORD}\\s*(?:the\\s*)?order)\\b\\s*[:\\-–—]?\\s*`, 'i');
 
 /**
- * Read the marker on the first line ("order added:" or "exchange:") and return the message without it.
+ * Read the marker on the first line ("order added:", "order changed:" or "exchange:") and return the message without it.
  * Text after the marker on the same line (for example "exchange: Prashna") is kept.
  */
 export function readEntryMarker(body: string): { kind: ExtractedEntryKind; body: string } {
   const lines = body.split(/\r?\n/);
   const first = lines.findIndex((line) => line.trim());
   if (first < 0) return { kind: 'ORDER', body };
-  for (const [kind, marker] of [['ADD_ON', ADD_ON_MARKER], ['EXCHANGE', EXCHANGE_MARKER]] as const) {
+  for (const [kind, marker] of [['CHANGE', CHANGE_MARKER], ['ADD_ON', ADD_ON_MARKER], ['EXCHANGE', EXCHANGE_MARKER]] as const) {
     const match = marker.exec(lines[first]);
     if (!match) continue;
     const rest = lines[first].slice(match[0].length).trim();
@@ -79,6 +82,31 @@ export function applyAddOn(order: Pick<Order, 'items' | 'totalAmount' | 'statedP
     statedPrice: order.statedPrice !== undefined ? totalAmount : undefined,
     discountPercent,
   };
+}
+
+const DAY = 86400000;
+const CHANGE_WINDOW_DAYS = 7;
+
+/**
+ * The order an "order changed" message replaces: the same customer phone and brand, not yet dispatched,
+ * placed on the message's date or up to a week before. The most recent one wins.
+ */
+export function findChangeTarget(orders: Order[], input: { phone: string; dateAd: string; brandCode: string }): AddOnTarget {
+  const phone = digits(input.phone);
+  if (!/^9[678]\d{8}$/.test(phone)) return { problem: 'Enter the customer phone so the order to change can be found.' };
+  const day = Date.parse(`${input.dateAd}T00:00:00Z`);
+  const recent = orders.filter((order) => !order.isMarketing && !order.exchangeRequested && !order.exchangeReturnId && digits(order.customerPhone) === phone)
+    .filter((order) => { const placed = Date.parse(`${order.orderDateAd}T00:00:00Z`); return Number.isFinite(day) && placed <= day && day - placed <= CHANGE_WINDOW_DAYS * DAY; });
+  if (!recent.length) return { problem: `No order for ${phone} in the week up to ${input.dateAd} to change. Check the phone and date, or remove “order changed” to save it as a new order.` };
+  const sameBrand = recent.filter((order) => !input.brandCode || input.brandCode === 'ALL' || order.brandCode === input.brandCode);
+  if (!sameBrand.length) return { problem: `The order for ${phone} is for another brand. Save this as a separate order instead.` };
+  const newestFirst = (list: Order[]) => [...list].sort((a, b) => b.orderDateAd.localeCompare(a.orderDateAd) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  const open = newestFirst(sameBrand.filter((order) => order.status === 'PENDING'));
+  if (!open.length) {
+    const latest = newestFirst(sameBrand)[0];
+    return { problem: `Order ${latest.orderNumber} is already ${latest.status.toLowerCase()}, so it can no longer be changed. Change it from All orders, or remove “order changed” to save a new order.` };
+  }
+  return { order: open[0], others: open.length - 1 };
 }
 
 export function itemSummary(items: { productName?: string; name?: string; quantity: number }[]): string {

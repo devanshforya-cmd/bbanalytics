@@ -748,6 +748,8 @@ export interface Order {
   exchangeRequested?: boolean;
   /** WhatsApp "order added" messages merged into this order, so a repeated save never adds them twice. */
   extractorAddOns?: { clientId: string; hash: string; addedAt: string; total: number }[];
+  /** WhatsApp "order changed" messages that replaced this order's items and details, oldest first. */
+  extractorChanges?: { clientId: string; hash: string; changedAt: string; previousTotal: number; previousItems: string }[];
   /** Time of day the order was placed (HH:mm, Nepal time), when known. Offers with hours need it. */
   orderTime?: string;
   /** Sales and offers that priced this order. */

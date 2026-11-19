@@ -24,7 +24,7 @@ import {
 } from '@/lib/whatsapp-extractor';
 import { getTodayAd } from '@/lib/nepali-calendar';
 import type { BrandCode, Order } from '@/lib/types';
-import { findAddOnTarget, itemSummary, type ExtractedEntryKind } from '@/lib/order-merge';
+import { findAddOnTarget, findChangeTarget, itemSummary, type ExtractedEntryKind } from '@/lib/order-merge';
 import { priceTrail } from '@/lib/order-pricing';
 import { offerUsageFrom } from '@/lib/offers';
 import { phoneDigits } from '@/lib/customer-lookup';
@@ -187,12 +187,14 @@ export default function ExtractorPage() {
     const brandCode = order.brandCode.value;
     if (!order.products.length || order.products.some(item => !item.productId) || !brandCode || brandCode === 'ALL') return { ...order, trail: undefined };
     const catalogueProducts = db.getProducts('ALL'); const orders = db.getOrders('ALL'); const phone = phoneDigits(order.customerPhone.value);
-    const own = orders.filter(entry => phoneDigits(entry.customerPhone) === phone && entry.status !== 'CANCELLED' && !entry.exchangeRequested && !entry.exchangeReturnId);
+    // The order an "order changed" message replaces is not this customer's earlier order.
+    const replacing = order.entryKind === 'CHANGE' ? findChangeTarget(orders, { phone, dateAd: order.orderDateAd.value, brandCode }).order?.id : undefined;
+    const own = orders.filter(entry => entry.id !== replacing && phoneDigits(entry.customerPhone) === phone && entry.status !== 'CANCELLED' && !entry.exchangeRequested && !entry.exchangeReturnId);
     const trail = priceTrail({ kind: order.entryKind ?? 'ORDER', stated: order.statedPrice.provided ? order.statedPrice.value : null, percent: order.discountPercent?.provided ? order.discountPercent.value : null,
       lines: order.products.map(item => ({ itemId: item.productId!, name: item.name, quantity: item.quantity, mrp: item.unitPrice, isCombo: !!item.isCombo,
         category: catalogueProducts.find(product => product.id === item.productId)?.category, ...(item.saleUnitPrice !== undefined ? { writtenUnitPrice: item.saleUnitPrice } : {}) })),
       offers: { brandCode, channel: order.salesChannel ?? sourceChannel ?? '', dateAd: order.orderDateAd.value, time: order.orderTime, customerPhone: phone, isFirstOrder: !own.length,
-        text: order.rawText, campaigns: db.getCampaigns(), disabledOfferIds: order.disabledOfferIds, usage: offerUsageFrom(orders, phone),
+        text: order.rawText, campaigns: db.getCampaigns(), disabledOfferIds: order.disabledOfferIds, usage: offerUsageFrom(orders.filter(entry => entry.id !== replacing), phone),
         catalogue: { name: id => catalogueProducts.find(product => product.id === id)?.name, price: id => { const product = catalogueProducts.find(entry => entry.id === id && entry.active !== false && entry.brandCode === brandCode); return product ? product.mrp : undefined; } } } });
     return { ...order, trail };
   };
@@ -212,15 +214,16 @@ export default function ExtractorPage() {
       flags: order.flags.filter(flag => !flag.startsWith('Stated total NPR') && !flag.startsWith('No catalogue item recognized') && !(order.statedPrice.value > 0 && flag.startsWith('The message states a zero total'))) };
     return { ...updated, extractionErrors: validateExtractedOrder(updated) };
   };
-  /** Where an "order added" message will go: an order already saved, or a new order earlier in this batch. */
+  /** Where an "order added" or "order changed" message will go: an order already saved, or a new order earlier in this batch. */
   const addOnTarget = (ord: ExtractedOrderResult) => {
-    if (ord.entryKind !== 'ADD_ON') return null;
+    if (ord.entryKind !== 'ADD_ON' && ord.entryKind !== 'CHANGE') return null;
     const position = extractedOrders.findIndex(order => order.id === ord.id);
     const earlier = extractedOrders.slice(0, Math.max(0, position)).flatMap((order, index) => (order.entryKind ?? 'ORDER') === 'ORDER' ? [{
       id: order.id, orderNumber: `#${index + 1} above (not saved yet)`, customerPhone: order.customerPhone.value, orderDateAd: order.orderDateAd.value,
       brandCode: order.brandCode.value, status: 'PENDING', items: order.products.map(item => ({ productName: item.name, quantity: item.quantity })), totalAmount: order.totalAmount.value, createdAt: '9999',
     } as unknown as Order] : []);
-    return findAddOnTarget([...earlier, ...db.getOrders('ALL')], { phone: ord.customerPhone.value, dateAd: ord.orderDateAd.value, brandCode: ord.brandCode.value });
+    const input = { phone: ord.customerPhone.value, dateAd: ord.orderDateAd.value, brandCode: ord.brandCode.value };
+    return ord.entryKind === 'CHANGE' ? findChangeTarget([...earlier, ...db.getOrders('ALL')], input) : findAddOnTarget([...earlier, ...db.getOrders('ALL')], input);
   };
   const setEntryKind = (orderId: string, entryKind: ExtractedEntryKind) => setExtractedOrders(previous => previous.map(order => order.id !== orderId ? order
     : refreshOrder({ ...order, entryKind, ...(entryKind === 'EXCHANGE' ? { discountPercent: { value: 0, provided: false, confidence: 'REVIEW' as Confidence } } : {}) })));
@@ -316,8 +319,10 @@ export default function ExtractorPage() {
         setSelectedOrderIds(new Set()); setShowConfirmModal(false);
         const sync = await db.syncWithSupabase();
         const merged = addedTo.filter(Boolean) as string[];
-        const fresh = numbers.length - merged.length;
-        toast.success([fresh ? `${fresh} order${fresh === 1 ? '' : 's'} saved` : '', merged.length ? `items added to ${[...new Set(merged)].map(displayDocumentId).join(', ')}` : ''].filter(Boolean).join(' · '));
+        const changedOrders = ((Array.isArray(result.changedOrders) ? result.changedOrders : []) as (string | null)[]).filter(Boolean) as string[];
+        const fresh = numbers.length - merged.length - changedOrders.length;
+        toast.success([fresh ? `${fresh} order${fresh === 1 ? '' : 's'} saved` : '', merged.length ? `items added to ${[...new Set(merged)].map(displayDocumentId).join(', ')}` : '',
+          changedOrders.length ? `updated ${[...new Set(changedOrders)].map(displayDocumentId).join(', ')}` : ''].filter(Boolean).join(' · '));
         if (!sync.success) toast.info('Orders were saved. Refresh the app to see the latest data.');
       } catch (error) { toast.error(error instanceof Error ? error.message : 'Orders could not be saved.'); }
     });
@@ -612,7 +617,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       return (
                         <div className="mt-3 space-y-2">
                           <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-[11px] font-semibold" role="radiogroup" aria-label="Message type">
-                            {([['ORDER', 'New order'], ['ADD_ON', 'Add to today’s order'], ['EXCHANGE', 'Exchange']] as const).map(([value, title]) => (
+                            {([['ORDER', 'New order'], ['ADD_ON', 'Add to today’s order'], ['CHANGE', 'Change an order'], ['EXCHANGE', 'Exchange']] as const).map(([value, title]) => (
                               <button key={value} type="button" role="radio" aria-checked={kind === value} onClick={() => setEntryKind(ord.id, value)}
                                 className={`rounded-md px-2.5 py-1 transition ${kind === value ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}>{title}</button>
                             ))}
@@ -623,7 +628,13 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                               {!!target.others && <span className="block text-blue-700">This customer has {target.others + 1} open orders that day; the latest one is used.</span>}
                             </p>
                           )}
-                          {kind === 'ADD_ON' && target?.problem && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-800">{target.problem}</p>}
+                          {kind === 'CHANGE' && target?.order && (
+                            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                              Replaces <strong>{displayDocumentId(target.order.orderNumber)}</strong>: was {target.order.items.length ? itemSummary(target.order.items) : 'no items'}, <Money>{target.order.totalAmount.toLocaleString()}</Money>. Now <Money>{ord.totalAmount.value.toLocaleString()}</Money>. Name, address, delivery and payment are updated from this message too; the order ID, date and status stay.
+                              {!!target.others && <span className="block text-amber-800">This customer has {target.others + 1} open orders this week; the most recent one is changed.</span>}
+                            </p>
+                          )}
+                          {(kind === 'ADD_ON' || kind === 'CHANGE') && target?.problem && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-800">{target.problem}</p>}
                           {kind === 'EXCHANGE' && (
                             <p className="rounded-xl border border-purple-200 bg-purple-50 px-3 py-2 text-xs text-purple-900">
                               Saved as a replacement order with <strong><Money>{ord.totalAmount.value.toLocaleString()}</Money></strong> to collect{ord.statedPrice.provided ? '' : ' (write an amount in the message or below to collect a difference)'}. It is not counted as a sale. Link it to the return when the return is logged.
@@ -908,7 +919,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                             disabled={isSubmitting}
                             className="shrink-0 whitespace-nowrap px-4 py-1.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:bg-blue-300 transition flex items-center gap-1.5 shadow-xs"
                           >
-                            {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : <><Check className="w-3.5 h-3.5" />{ord.entryKind === 'ADD_ON' ? 'Add to order' : ord.entryKind === 'EXCHANGE' ? 'Save exchange' : 'Push This Order'}</>}
+                            {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : <><Check className="w-3.5 h-3.5" />{ord.entryKind === 'ADD_ON' ? 'Add to order' : ord.entryKind === 'CHANGE' ? 'Update order' : ord.entryKind === 'EXCHANGE' ? 'Save exchange' : 'Push This Order'}</>}
                           </button>
                         )}
                       </div>}

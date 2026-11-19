@@ -12,13 +12,13 @@ import { canSeeSensitive, type UserWithPermissions } from './permissions';
 export const MASK = '•';
 export const HIDDEN_TEXT = 'Hidden';
 
-type Rule = { key: SensitiveKey; numbers?: string[]; itemNumbers?: string[]; offerNumbers?: string[]; addOnNumbers?: string[]; phones?: string[]; texts?: string[] };
+type Rule = { key: SensitiveKey; numbers?: string[]; itemNumbers?: string[]; offerNumbers?: string[]; addOnNumbers?: string[]; changeNumbers?: string[]; phones?: string[]; texts?: string[] };
 
 const RULES: Record<string, Rule[]> = {
   orders: [
     { key: 's.money', numbers: ['totalAmount', 'statedPrice', 'discountPercent', 'customerDiscount'],
       itemNumbers: ['unitPrice', 'totalPrice', 'catalogUnitPrice', 'discountAmount', 'offerUnitPrice', 'offerDiscount', 'customerDiscount'],
-      offerNumbers: ['amount', 'giftValue'], addOnNumbers: ['total'] },
+      offerNumbers: ['amount', 'giftValue'], addOnNumbers: ['total'], changeNumbers: ['previousTotal'] },
     { key: 's.customers', phones: ['customerPhone', 'alternatePhone'], texts: ['address'] },
   ],
   secondaryOrders: [{ key: 's.money', numbers: ['totalAmount'], itemNumbers: ['unitPrice', 'totalAmount'] }],
@@ -67,6 +67,7 @@ export function redactRecord<T extends Record<string, any>>(collection: string, 
     if (rule.itemNumbers && Array.isArray(copy.items)) copy.items = copy.items.map((item: any) => { const next = { ...item }; zero(next, rule.itemNumbers); return next; });
     if (rule.offerNumbers && Array.isArray(copy.appliedOffers)) copy.appliedOffers = copy.appliedOffers.map((offer: any) => { const next = { ...offer }; zero(next, rule.offerNumbers); return next; });
     if (rule.addOnNumbers && Array.isArray(copy.extractorAddOns)) copy.extractorAddOns = copy.extractorAddOns.map((entry: any) => { const next = { ...entry }; zero(next, rule.addOnNumbers); return next; });
+    if (rule.changeNumbers && Array.isArray(copy.extractorChanges)) copy.extractorChanges = copy.extractorChanges.map((entry: any) => { const next = { ...entry }; zero(next, rule.changeNumbers); return next; });
     for (const field of rule.phones || []) if (copy[field]) copy[field] = maskPhone(copy[field]);
     for (const field of rule.texts || []) if (copy[field]) copy[field] = HIDDEN_TEXT;
   }
@@ -104,6 +105,7 @@ export function restoreRedacted<T extends Record<string, any>>(collection: strin
       });
     }
     if (rule.offerNumbers && 'appliedOffers' in prior) next.appliedOffers = prior.appliedOffers;
+    if (rule.changeNumbers && 'extractorChanges' in prior) next.extractorChanges = prior.extractorChanges;
     if (rule.addOnNumbers && 'extractorAddOns' in prior && Array.isArray(next.extractorAddOns)) {
       const totals = new Map((prior.extractorAddOns || []).map((entry: any) => [entry.clientId, entry.total]));
       next.extractorAddOns = next.extractorAddOns.map((entry: any) => totals.has(entry.clientId) ? { ...entry, total: totals.get(entry.clientId) } : entry);

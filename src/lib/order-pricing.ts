@@ -26,7 +26,7 @@ export interface PriceTrail {
 const c = (value: number) => Math.round((Number(value) || 0) * 100);
 const n = (value: number) => Math.round(value) / 100;
 
-export function priceTrail(input: { lines: TrailLine[]; kind?: 'ORDER' | 'ADD_ON' | 'EXCHANGE'; stated: number | null; percent: number | null;
+export function priceTrail(input: { lines: TrailLine[]; kind?: 'ORDER' | 'ADD_ON' | 'EXCHANGE' | 'CHANGE'; stated: number | null; percent: number | null;
   offers: Omit<PricingInput, 'lines'> | null }): PriceTrail {
   const mrp = input.lines.map((line) => c(line.mrp) * line.quantity);
   const mrpTotal = mrp.reduce((a, b) => a + b, 0);
