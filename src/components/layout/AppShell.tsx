@@ -21,7 +21,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isLoginPage = pathname === '/login';
-  const isSharedPage = pathname.startsWith('/shared/');
+  /** Shared links and the public about, privacy and terms pages open without signing in. */
+  const isSharedPage = pathname.startsWith('/shared/') || ['/about', '/privacy', '/terms'].includes(pathname);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   /** True once the server has confirmed who is signed in and what they may open (or we are offline). */
   const [confirmed, setConfirmed] = useState(false);
