@@ -81,3 +81,13 @@ test('a new store order pops up for the dispatch team with a link to it, and res
   assert.deepEqual(db2.records('notifications').map((r: any) => r.data).filter((n: any) => n.event === 'store_order_new').map((n: any) => n.userId), ['packer']);
   await saveRouting({});
 });
+
+test('phone notifications carry the whole message, cut only to fit the push size limit', async () => {
+  const { fitBytes } = await import('../src/lib/push-server.ts');
+  assert.equal(fitBytes('Short message', 3000), 'Short message');
+  const nepali = 'नमस्ते '.repeat(400);
+  const cut = fitBytes(nepali, 3000);
+  assert.ok(Buffer.byteLength(cut) <= 3000);
+  assert.ok(cut.endsWith('…'));
+  assert.ok(!cut.includes('�'));
+});

@@ -13,6 +13,14 @@ export function pushConfig() {
   return publicKey && privateKey && subject ? { publicKey, privateKey, subject } : null;
 }
 
+/** Cut text to a byte budget (Nepali script is 3 bytes a letter) without splitting a letter. */
+export function fitBytes(text: string, max: number) {
+  if (Buffer.byteLength(text) <= max) return text;
+  let out = '';
+  for (const char of text) { if (Buffer.byteLength(out + char) > max - 3) break; out += char; }
+  return `${out}…`;
+}
+
 export function pushSubscriptionId(endpoint: string) { return createHash('sha256').update(endpoint).digest('hex'); }
 
 function allowedNotification(user: User, notification: Pick<Notification, 'entityType' | 'kind' | 'event'>) {
@@ -41,8 +49,10 @@ export async function deliverPushNotification(user: User, notification: Notifica
     } else if (insertError) { failed++; continue; }
     try {
       const subscription = validatePushSubscription(row.subscription);
-      const title = notification.kind === 'MESSAGE' ? `Message from ${notification.senderName || 'the office'}` : notification.title || 'BB Analytics';
-      const body = notification.kind === 'MESSAGE' ? notification.title : (notification.message || 'Open the app to see it.').slice(0, 140);
+      // Show the whole thing on the lock screen, as other apps do. The phone shortens it; pulling
+      // the notification down shows the rest. A push payload holds about 4 KB, so cap the text.
+      const title = (notification.title || 'BB Analytics').slice(0, 120);
+      const body = fitBytes(notification.message || 'Open the app to see it.', 3000);
       await webpush.sendNotification(subscription, JSON.stringify({ title, body, tag: notification.id, url: safeNotificationPath(notification.kind === 'MESSAGE' ? `/messages/${encodeURIComponent(notification.id)}` : notification.link || '/') }), { vapidDetails: config, TTL: 3600, urgency: notification.priority === 'URGENT' || notification.priority === 'HIGH' ? 'high' : 'normal', timeout: 5000 });
       await supabaseAdmin.from('push_deliveries').update({ state: 'sent', updated_at: new Date().toISOString() }).eq('notification_id', notification.id).eq('subscription_id', row.id);
       sent++;

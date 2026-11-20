@@ -3,7 +3,7 @@
  * Provides offline caching for static assets, app shell, and background sync integration.
  */
 
-const CACHE_NAME = 'bb-command-center-v10-apple-theme';
+const CACHE_NAME = 'bb-command-center-v11-full-push-text';
 // Install: Precache core app shell & static routes
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -145,7 +145,7 @@ self.addEventListener('push', (event) => {
   }
 
   const options = {
-    body: typeof data.body === 'string' ? data.body.slice(0, 300) : 'Open the app to review your work alerts.',
+    body: typeof data.body === 'string' ? data.body.slice(0, 2000) : 'Open the app to review your work alerts.',
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     tag: data.tag || 'bb-alert', // prevents duplicate notifications
@@ -153,7 +153,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(Promise.all([
-    self.registration.showNotification(typeof data.title === 'string' ? data.title.slice(0, 100) : 'BB Analytics', options),
+    self.registration.showNotification(typeof data.title === 'string' ? data.title.slice(0, 120) : 'BB Analytics', options),
     self.clients.matchAll({ type: 'window' }).then(windows => windows.forEach(client => client.postMessage({ type: 'PUSH_RECEIVED' }))),
   ]));
 });
