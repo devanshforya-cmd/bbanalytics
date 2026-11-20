@@ -17,7 +17,7 @@ const GROUPS = ['Online (D2C)', 'Stores (B2B)', 'Master lists', 'Work & marketin
 const QUICK: { name: string; datasets: DatasetKey[] }[] = [
   { name: 'Online sales', datasets: ['orders', 'order_lines', 'returns'] },
   { name: 'Store sales', datasets: ['store_orders', 'store_order_lines', 'dispatch_lines'] },
-  { name: 'Field work', datasets: ['visits', 'stock_counts', 'shelf_share', 'calls'] },
+  { name: 'Field work', datasets: ['visits', 'stock_counts', 'shelf_photos', 'shelf_share', 'calls'] },
   { name: 'Money', datasets: ['cheques', 'dispatch_lines', 'stores'] },
 ];
 

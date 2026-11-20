@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/auth-guard';
 import { getTeamMemberIds, getScope } from '@/lib/permissions';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
 import { getGoogleWorkspace, logGoogleFailure } from '@/lib/google-workspace';
-import { canReadDriveFile, DRIVE_UPLOAD_LIMIT, isDriveFeature } from '@/lib/google-workspace-security';
+import { canReadDriveFile, DRIVE_FEATURE_ACCESS, DRIVE_UPLOAD_LIMIT, isDriveFeature } from '@/lib/google-workspace-security';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const metadata = await drive.files.get({ fileId: id, fields: 'id,name,mimeType,size,appProperties,trashed', supportsAllDrives: true });
     const properties = metadata.data.appProperties;
     let teamIds: string[] = [];
-    if (properties && isDriveFeature(properties.feature) && getScope(auth.user, properties.feature) === 'TEAM') {
+    if (properties && isDriveFeature(properties.feature) && DRIVE_FEATURE_ACCESS[properties.feature].some((key) => getScope(auth.user, key) === 'TEAM')) {
       const { data, error } = await supabaseAdmin.from('users').select('id,reports_to_id');
       if (error) throw new Error('Team authorization is unavailable.');
       teamIds = await getTeamMemberIds(auth.user.id, data || []);

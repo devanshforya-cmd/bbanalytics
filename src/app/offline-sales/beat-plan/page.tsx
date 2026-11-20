@@ -35,6 +35,7 @@ import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
 import { canPerform, getScope, hasAccess, isSuperAdmin } from '@/lib/permissions';
 import { toast } from '@/components/common/Toast';
+import { capturePhoto } from '@/lib/photo-capture';
 
 // 58a. Modular Beat Plan Sub-components
 import BeatRouteList from './components/BeatRouteList';
@@ -884,16 +885,7 @@ export default function BeatPlanPage() {
                         accept="image/*"
                         capture="environment"
                         className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              if (ev.target?.result) setChequePhotoUrl(ev.target.result as string);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
+                        onChange={(e) => { void capturePhoto(e.target.files?.[0], 'cheque_tracker', setChequePhotoUrl); e.target.value = ''; }}
                       />
                     </label>
                   )}
@@ -990,18 +982,7 @@ export default function BeatPlanPage() {
                         accept="image/*"
                         capture="environment"
                         className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              if (ev.target?.result) {
-                                setBeforePhotoUrls((prev) => [...prev, ev.target!.result as string]);
-                              }
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
+                        onChange={(e) => { void capturePhoto(e.target.files?.[0], 'shelf_photos', (url) => setBeforePhotoUrls((prev) => [...prev, url])); e.target.value = ''; }}
                       />
                     </label>
                   </div>
@@ -1031,18 +1012,7 @@ export default function BeatPlanPage() {
                         accept="image/*"
                         capture="environment"
                         className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              if (ev.target?.result) {
-                                setAfterPhotoUrls((prev) => [...prev, ev.target!.result as string]);
-                              }
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
+                        onChange={(e) => { void capturePhoto(e.target.files?.[0], 'shelf_photos', (url) => setAfterPhotoUrls((prev) => [...prev, url])); e.target.value = ''; }}
                       />
                     </label>
                   </div>

@@ -43,7 +43,7 @@ export default function CameraCapture({
   maxFiles = 4,
   label = 'Capture Photo Evidence',
   sublabel,
-  folder = 'evidence',
+  folder = 'beat_plans',
   existingUrls = [],
   onRemoveExisting,
   autoCompress = true,
@@ -56,6 +56,8 @@ export default function CameraCapture({
   const [capturedItems, setCapturedItems] = useState<CapturedItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  /** What the last save did, e.g. "2 photos saved to Drive · 9.8 MB → 610 KB". */
+  const [savedNote, setSavedNote] = useState('');
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const totalCount = existingUrls.length + capturedItems.length;
@@ -72,9 +74,11 @@ export default function CameraCapture({
 
     setIsProcessing(true);
     setUploadError('');
+    setSavedNote('');
 
     const newItems: CapturedItem[] = [];
     const processedFiles: File[] = [];
+    const savedBytes = { original: 0, final: 0, offline: 0 };
     const uploadResults: UploadResult[] = [];
 
     for (const rawFile of filesToProcess) {
@@ -83,7 +87,7 @@ export default function CameraCapture({
 
       if (autoCompress && rawFile.type.startsWith('image/')) {
         try {
-          finalFile = await compressImage(rawFile, 1200, 0.75);
+          finalFile = await compressImage(rawFile);
         } catch {
           finalFile = rawFile;
         }
@@ -105,16 +109,24 @@ export default function CameraCapture({
       });
 
       if (onUpload) {
+        // Saved photos are shown by the form through existingUrls, so they are not kept here too.
+        const shown = newItems.pop();
+        if (shown) URL.revokeObjectURL(shown.previewUrl);
+        processedFiles.pop();
         try {
           const res = await uploadImage(finalFile, folder, false);
           uploadResults.push(res);
+          savedBytes.original += originalSize; savedBytes.final += res.size;
+          if (!res.savedToDrive) savedBytes.offline += 1;
         } catch (e) {
-          const failed = newItems.pop();
-          if (failed) URL.revokeObjectURL(failed.previewUrl);
-          processedFiles.pop();
           setUploadError(e instanceof Error ? e.message : 'Upload failed. Please try again.');
         }
       }
+    }
+    if (uploadResults.length) {
+      const sizes = savedBytes.original > savedBytes.final * 1.1 ? ` · ${formatFileSize(savedBytes.original)} → ${formatFileSize(savedBytes.final)}` : '';
+      const where = savedBytes.offline === uploadResults.length ? 'kept on this phone until there is signal, then moved to Drive' : 'saved to Drive';
+      setSavedNote(`${uploadResults.length} ${uploadResults.length === 1 ? 'photo' : 'photos'} ${where}${sizes}`);
     }
 
     const updated = [...capturedItems, ...newItems];
@@ -219,6 +231,7 @@ export default function CameraCapture({
       </div>
 
       {uploadError && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-xs text-rose-800">{uploadError}</p>}
+      {savedNote && !isProcessing && <p role="status" className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" />{savedNote}</p>}
 
       {/* Processing indicator */}
       {isProcessing && (

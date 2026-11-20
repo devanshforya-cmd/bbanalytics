@@ -445,6 +445,8 @@ export interface Visit {
   dateAd: string;
   dateBs: string;
   notes?: string;
+  /** Check-in photo. */
+  photoUrl?: string;
 }
 
 export interface DispatchItem {

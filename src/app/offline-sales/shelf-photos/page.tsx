@@ -6,6 +6,7 @@ import { db } from '@/lib/db/db-service';
 import { ShelfPhoto, FilterCriteria, Retailer, Branch } from '@/lib/types';
 import AdvancedFilterBar from '@/components/common/AdvancedFilterBar';
 import CameraCapture from '@/components/common/CameraCapture';
+import DownloadButton from '@/components/common/DownloadButton';
 import { matchesDateCriteria, adToBs } from '@/lib/nepali-calendar';
 import { toast } from '@/components/common/Toast';
 import {
@@ -92,25 +93,6 @@ export default function ShelfPhotosPage() {
     return true;
   });
 
-  // File upload reader
-  const handleFileUpload = (files: FileList | null, type: 'BEFORE' | 'AFTER') => {
-    if (!files || files.length === 0) return;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        if (result) {
-          if (type === 'BEFORE') {
-            setUploadBeforeUrls((prev) => [...prev, result]);
-          } else {
-            setUploadAfterUrls((prev) => [...prev, result]);
-          }
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
   const handleSaveMultiPhotos = (e: React.FormEvent) => {
     e.preventDefault();
     if (uploadBeforeUrls.length === 0 || uploadAfterUrls.length === 0) {
@@ -156,6 +138,7 @@ export default function ShelfPhotosPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <DownloadButton datasets={['shelf_photos']} records={{ shelfPhotos: filtered }} fileLabel="Shelf-photos" />
           {toastMsg && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold shadow-xs">
               <Sparkles className="w-3.5 h-3.5 text-emerald-600" />

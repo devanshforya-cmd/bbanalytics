@@ -18,6 +18,8 @@ export interface UploadResult {
 }
 
 export const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024; // Keep multipart uploads below the hosting request limit.
+/** Largest original photo accepted; it is compressed well under 4 MB before upload. */
+export const MAX_ORIGINAL_BYTES = 30 * 1024 * 1024;
 export const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
 
 /**
@@ -28,11 +30,12 @@ export async function validateFileSignature(file: File): Promise<{
   detectedType?: string;
   error?: string;
 }> {
-  // 1. Check size
-  if (file.size > MAX_FILE_SIZE_BYTES) {
+  // 1. Check size. Photos are compressed before upload, so a large phone photo is fine;
+  // the 4 MB limit applies to what is actually sent.
+  if (file.size > MAX_ORIGINAL_BYTES) {
     return {
       valid: false,
-      error: `File exceeds maximum limit of 4MB (${(file.size / (1024 * 1024)).toFixed(1)}MB).`,
+      error: `This file is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Photos up to 30 MB and PDFs up to 4 MB can be added.`,
     };
   }
 
@@ -101,80 +104,66 @@ export async function validateFileSignature(file: File): Promise<{
   });
 }
 
-/**
- * 56e. Strips EXIF metadata by drawing onto an HTML5 Canvas, then re-encoding.
- * Protects officer & customer location privacy and camera timestamps.
- */
-export async function stripExifAndCompress(
-  file: File,
-  maxWidth: number = 1200,
-  quality: number = 0.75
-): Promise<File> {
-  if (typeof window === 'undefined' || !file.type.startsWith('image/')) {
-    return file;
-  }
+/** Photos are shrunk to fit inside this many pixels on the longest side. */
+export const PHOTO_MAX_SIDE = 1600;
+/** Compression keeps lowering quality until a photo is under this size (or quality hits its floor). */
+export const PHOTO_TARGET_BYTES = 450 * 1024;
 
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
+/** How big a picture of this size ends up, keeping its shape. */
+export function fitWithin(width: number, height: number, maxSide = PHOTO_MAX_SIDE) {
+  const longest = Math.max(width, height);
+  if (longest <= maxSide) return { width, height };
+  const scale = maxSide / longest;
+  return { width: Math.round(width * scale), height: Math.round(height * scale) };
+}
 
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
+/** A photo waiting for signal is held smaller, since it travels inside the record until then. */
+export const OFFLINE_MAX_SIDE = 1280;
+export const OFFLINE_TARGET_BYTES = 160 * 1024;
 
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
+/** Quality steps tried in order until the photo is small enough. */
+export const QUALITY_STEPS = [0.78, 0.68, 0.58, 0.5];
 
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(file);
-          return;
-        }
-
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        // Drawing on canvas automatically discards all EXIF segments
-        ctx.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              resolve(file);
-              return;
-            }
-
-            const cleanName = file.name.replace(/\.[^/.]+$/, '') + '.jpg';
-            const cleanFile = new File([blob], cleanName, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-
-            resolve(cleanFile);
-          },
-          'image/jpeg',
-          quality
-        );
-      };
-
-      img.onerror = () => {
-        resolve(file);
-      };
-    };
-
-    reader.onerror = () => {
-      resolve(file);
-    };
+function loadImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('This image could not be read.')); };
+    img.src = url;
   });
+}
+
+const toBlob = (canvas: HTMLCanvasElement, quality: number) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+
+/**
+ * Built-in photo compressor, used on every upload. Resizes to fit 1600 px, re-encodes as JPEG
+ * and lowers quality step by step until the file is under about 450 KB. Redrawing the picture
+ * also drops hidden EXIF data (phone location and camera details).
+ * A 4-8 MB phone photo usually ends up around 200-400 KB. PDFs and non-images pass through.
+ */
+export async function stripExifAndCompress(file: File, maxSide: number = PHOTO_MAX_SIDE, targetBytes: number = PHOTO_TARGET_BYTES): Promise<File> {
+  if (typeof window === 'undefined' || !file.type.startsWith('image/')) return file;
+  let img: HTMLImageElement;
+  try { img = await loadImage(file); } catch { return file; }
+  const { width, height } = fitWithin(img.naturalWidth || img.width, img.naturalHeight || img.height, maxSide);
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return file;
+  // White behind transparent PNG screenshots, so they do not turn black as JPEG.
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, width, height);
+  let blob: Blob | null = null;
+  for (const quality of QUALITY_STEPS) {
+    blob = await toBlob(canvas, quality);
+    if (!blob || blob.size <= targetBytes) break;
+  }
+  if (!blob) return file;
+  return new File([blob], `${file.name.replace(/\.[^/.]+$/, '') || 'photo'}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
 }
 
 /**
@@ -182,42 +171,55 @@ export async function stripExifAndCompress(
  */
 export const compressImage = stripExifAndCompress;
 
-/**
- * Uploads a verified, EXIF-stripped, and compressed file.
- */
-export async function uploadImage(
-  file: File,
-  folder: string = 'uploads',
-  compress: boolean = true
-): Promise<UploadResult> {
-  const originalSize = file.size;
+/** Where each kind of photo is filed in Drive (BB Analytics → Photos → …). Matches the server list. */
+export const PHOTO_FEATURES = ['shelf_photos', 'document_handover', 'cheque_tracker', 'dispatches', 'beat_plans', 'call_tracker', 'reviews', 'orderflow'] as const;
+export type PhotoFeature = typeof PHOTO_FEATURES[number];
 
-  // 56e. Security verification
+const readAsDataUrl = (file: Blob) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result || ''));
+  reader.onerror = () => reject(new Error('This file could not be read.'));
+  reader.readAsDataURL(file);
+});
+
+/**
+ * Check, compress and save a photo or PDF. Online, it goes straight to Google Drive and the
+ * record keeps a link. With no signal (or Drive unreachable) the compressed photo is kept on
+ * the record for now and the hourly job moves it to Drive, so nobody is ever blocked.
+ */
+export async function uploadImage(file: File, folder: string = 'beat_plans', compress: boolean = true): Promise<UploadResult & { savedToDrive: boolean }> {
+  const originalSize = file.size;
   const verification = await validateFileSignature(file);
-  if (!verification.valid) {
-    throw new Error(verification.error || 'File failed security validation.');
-  }
+  if (!verification.valid) throw new Error(verification.error || 'File failed security validation.');
+  if (!(PHOTO_FEATURES as readonly string[]).includes(folder)) throw new Error('Choose a supported upload feature.');
 
   const isImage = (verification.detectedType || file.type).startsWith('image/');
   const processedFile = (compress && isImage) ? await stripExifAndCompress(file) : file;
+  if (processedFile.size > MAX_FILE_SIZE_BYTES) throw new Error(isImage ? 'This photo could not be made small enough. Try another photo.' : 'PDFs can be up to 4 MB.');
+  const base = { filename: processedFile.name, size: processedFile.size, originalSize, mimeType: processedFile.type || verification.detectedType || file.type };
 
-  if (!['shelf_photos', 'document_handover', 'cheque_tracker', 'dispatches'].includes(folder)) {
-    throw new Error('Choose a supported upload feature.');
+  if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+    try {
+      const form = new FormData();
+      form.set('file', processedFile);
+      form.set('feature', folder);
+      const response = await fetch('/api/drive/upload', { method: 'POST', body: form });
+      const result = await response.json().catch(() => ({}));
+      if (response.ok && result.success && result.viewUrl) return { ...base, url: result.viewUrl, filename: result.fileName || base.filename, savedToDrive: true };
+      // A refused file type or size will not succeed later either.
+      if (response.status === 400 || response.status === 413) throw new Error(result.error || 'Upload failed.');
+    } catch (error) {
+      if (error instanceof Error && /Only valid|exceeds|Provide an image/.test(error.message)) throw error;
+    }
   }
-  if (processedFile.size > MAX_FILE_SIZE_BYTES) throw new Error('File exceeds the 4MB upload limit.');
-  const form = new FormData();
-  form.set('file', processedFile);
-  form.set('feature', folder);
-  const response = await fetch('/api/drive/upload', { method: 'POST', body: form });
-  const result = await response.json();
-  if (!response.ok || !result.success || !result.viewUrl) throw new Error(result.error || 'Upload failed. Please retry.');
-  return {
-    url: result.viewUrl,
-    filename: result.fileName || processedFile.name,
-    size: processedFile.size,
-    originalSize,
-    mimeType: processedFile.type || verification.detectedType || file.type,
-  };
+  // Kept on the record until it reaches Drive, so it is made smaller still to keep syncing light.
+  const offlineCopy = isImage ? await stripExifAndCompress(file, OFFLINE_MAX_SIDE, OFFLINE_TARGET_BYTES) : processedFile;
+  return { ...base, size: offlineCopy.size, url: await readAsDataUrl(offlineCopy), savedToDrive: false };
+}
+
+/** Save one photo and get back what to store on the record. */
+export async function savePhoto(file: File, feature: PhotoFeature): Promise<string> {
+  return (await uploadImage(file, feature, true)).url;
 }
 
 /**
