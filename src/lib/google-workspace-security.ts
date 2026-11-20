@@ -1,12 +1,39 @@
 import { isSameOriginRequest } from './request-origin';
 import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import { getScope, hasAccess, canPerform, type UserWithPermissions } from './permissions';
+import { getScope, hasAccess, canPerform, type FeatureKey, type UserWithPermissions } from './permissions';
 
 export const GOOGLE_STATE_COOKIE = 'bb_google_oauth';
 export const GOOGLE_STATE_TTL_SECONDS = 600;
 export const DRIVE_UPLOAD_LIMIT = 4 * 1024 * 1024;
-export const DRIVE_FEATURES = ['shelf_photos', 'document_handover', 'cheque_tracker', 'dispatches'] as const;
+export const DRIVE_FEATURES = ['shelf_photos', 'document_handover', 'cheque_tracker', 'dispatches', 'beat_plans', 'call_tracker', 'reviews', 'orderflow'] as const;
 export type DriveFeature = typeof DRIVE_FEATURES[number];
+
+/**
+ * Who may add or open each kind of photo: the page it belongs to, plus the pages where the same
+ * photo is also taken (a rider photographs cheques and shelves from the beat plan; the order desk
+ * logs returns and order documents).
+ */
+export const DRIVE_FEATURE_ACCESS: Record<DriveFeature, FeatureKey[]> = {
+  shelf_photos: ['shelf_photos', 'beat_plans'],
+  document_handover: ['document_handover'],
+  cheque_tracker: ['cheque_tracker', 'beat_plans'],
+  dispatches: ['dispatches'],
+  beat_plans: ['beat_plans'],
+  call_tracker: ['call_tracker'],
+  reviews: ['reviews', 'order_desk'],
+  orderflow: ['orderflow', 'order_desk'],
+};
+
+/** Drive folder each kind of photo is filed in, under BB Analytics → Photos. */
+export const DRIVE_PHOTO_FOLDERS: Record<DriveFeature, string> = {
+  shelf_photos: 'Shelf photos', document_handover: 'Store documents', cheque_tracker: 'Cheques', dispatches: 'Dispatch challans',
+  beat_plans: 'Store visits and orders', call_tracker: 'Call screenshots', reviews: 'Reviews and returns', orderflow: 'Online orders',
+};
+
+/** Which of this person's pages lets them add a photo of this kind, if any. */
+export function driveUploadFeature(user: UserWithPermissions, feature: DriveFeature): FeatureKey | null {
+  return DRIVE_FEATURE_ACCESS[feature].find((key) => hasAccess(user, key) && canPerform(user, key, 'CREATE')) || null;
+}
 
 function key(secret: string, purpose: string): Buffer {
   if (Buffer.byteLength(secret) < 32) throw new Error('Google integration encryption is not configured.');
@@ -53,9 +80,11 @@ export function isDriveFeature(value: unknown): value is DriveFeature {
 
 export function canReadDriveFile(user: UserWithPermissions, properties: Record<string, string> | null | undefined, teamIds: string[] = []): boolean {
   if (properties?.app !== 'bb-analytics' || !isDriveFeature(properties.feature) || !properties.uploaderId) return false;
-  if (!hasAccess(user, properties.feature) || !canPerform(user, properties.feature, 'VIEW')) return false;
-  const scope = getScope(user, properties.feature);
-  return scope === 'ALL' || properties.uploaderId === user.id || (scope === 'TEAM' && teamIds.includes(properties.uploaderId));
+  return DRIVE_FEATURE_ACCESS[properties.feature].some((key) => {
+    if (!hasAccess(user, key) || !canPerform(user, key, 'VIEW')) return false;
+    const scope = getScope(user, key);
+    return scope === 'ALL' || properties.uploaderId === user.id || (scope === 'TEAM' && teamIds.includes(properties.uploaderId));
+  });
 }
 
 export function detectGoogleUploadType(bytes: Uint8Array, name: string): string | null {

@@ -14,6 +14,7 @@ import DynamicCheckboxes from '@/components/common/DynamicCheckboxes';
 import CameraCapture from '@/components/common/CameraCapture';
 import BulkActionBar from '@/components/common/BulkActionBar';
 import { toast } from '@/components/common/Toast';
+import { capturePhotos } from '@/lib/photo-capture';
 import { validateRequired } from '@/lib/validation';
 import CustomerLookup, { customerLookupError, EMPTY_CUSTOMER_LOOKUP, type CustomerLookupValue } from '@/components/common/CustomerLookup';
 import OrderPicker from '@/components/common/OrderPicker';
@@ -136,37 +137,13 @@ function FeedbackContent() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setUploadedPhotos((prev) => [...prev, event.target!.result as string]);
-          setHasScreenshot(true);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
   const handleDetailFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !selectedEntry) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const url = event.target.result as string;
-          db.attachPhotoToFeedback(selectedEntry.id, url);
-          refreshList();
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    const entryId = selectedEntry.id;
+    void capturePhotos(files, 'reviews', (url) => { db.attachPhotoToFeedback(entryId, url); refreshList(); });
+    e.target.value = '';
   };
 
   const handleAddProofUrl = () => {
@@ -1103,6 +1080,7 @@ function FeedbackContent() {
                 {hasScreenshot && (
                   <div className="space-y-3 pt-1">
                     <CameraCapture
+                      folder="reviews"
                       label="Capture / Attach Proof Photos"
                       sublabel="Photograph defect, chat screenshots, or damaged packaging"
                       maxFiles={6}

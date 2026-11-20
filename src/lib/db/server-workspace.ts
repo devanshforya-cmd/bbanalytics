@@ -181,7 +181,13 @@ export function validateWorkspaceMutation(value: unknown): asserts value is Work
     || typeof m.mutationId !== 'string' || m.mutationId.length < 8 || m.mutationId.length > 180
     || !Number.isSafeInteger(m.expectedVersion) || m.expectedVersion < 0) throw new WorkspaceError(400, 'Invalid workspace mutation.');
   if (m.operation === 'upsert' && (!m.data || typeof m.data !== 'object' || Array.isArray(m.data) || m.data.id !== m.id)) throw new WorkspaceError(400, 'The record ID must match its mutation.');
-  if (m.data && Buffer.byteLength(JSON.stringify(m.data)) > 512 * 1024) throw new WorkspaceError(413, 'This record is too large. Upload photos and documents to Drive first.');
+  if (m.data) {
+    // Photos taken with no signal ride on the record until the hourly job moves them to Drive,
+    // so they get extra room; everything else keeps the 512 KB limit.
+    const text = JSON.stringify(m.data);
+    const withoutPhotos = text.replace(/"data:(?:image\/[a-z0-9.+-]+|application\/pdf);base64,[A-Za-z0-9+/=]*"/gi, '""');
+    if (Buffer.byteLength(withoutPhotos) > 512 * 1024 || Buffer.byteLength(text) > 3 * 1024 * 1024) throw new WorkspaceError(413, 'This record is too large. Upload photos and documents to Drive first.');
+  }
   if (m.data) {
     for (const field of ['brandCodes', 'brandsStocked', 'brandsAvailable', 'brandsCarried', 'brandsPurchased', 'items', 'contacts', 'history']) {
       if (m.data[field] !== undefined && !Array.isArray(m.data[field])) throw new WorkspaceError(400, `${field} must be a list.`);

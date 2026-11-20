@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { capturePhoto } from '@/lib/photo-capture';
 import {
   MapPin,
   Clock,
@@ -46,6 +47,7 @@ export default function CheckInFlow({
   onConcludeStoreVisit,
 }: CheckInFlowProps) {
   const [photoUrl, setPhotoUrl] = useState<string>('');
+  const [savingPhoto, setSavingPhoto] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const photoRequired = db.getRequireStorePhotoAtCheckIn();
 
@@ -86,19 +88,15 @@ export default function CheckInFlow({
 
   const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        if (result) setPhotoUrl(result);
-      };
-      reader.readAsDataURL(file);
-    }
+    e.target.value = '';
+    if (!file) return;
+    setSavingPhoto(true);
+    void capturePhoto(file, 'beat_plans', setPhotoUrl).finally(() => setSavingPhoto(false));
   };
 
   // Check-in only records a genuine device position.
   if (showCheckInModal) {
-    const canCheckIn = gpsReady && (!photoRequired || Boolean(photoUrl)) && (calculatedDistance <= 150 || Boolean(overrideReason.trim()));
+    const canCheckIn = !savingPhoto && gpsReady && (!photoRequired || Boolean(photoUrl)) && (calculatedDistance <= 150 || Boolean(overrideReason.trim()));
 
     return (
       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4">
@@ -172,7 +170,7 @@ export default function CheckInFlow({
                     <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center mb-2 shadow-sm">
                       <Camera className="w-6 h-6" />
                     </div>
-                    <span className="text-xs font-bold text-blue-700">Take Store Photo</span>
+                    <span className="text-xs font-bold text-blue-700">{savingPhoto ? 'Saving photo…' : 'Take Store Photo'}</span>
                     <span className="text-[11px] text-slate-500 mt-0.5">
                       Snap storefront before checking in
                     </span>
@@ -180,6 +178,7 @@ export default function CheckInFlow({
                       type="file"
                       accept="image/*"
                       capture="environment"
+                      disabled={savingPhoto}
                       onChange={handlePhotoCapture}
                       className="hidden"
                     />

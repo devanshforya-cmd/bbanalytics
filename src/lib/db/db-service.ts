@@ -1953,6 +1953,7 @@ export class DatabaseService {
       overrideReason,
       dateAd: beat.dateAd,
       dateBs: beat.dateBs,
+      photoUrl: checkInPhotoUrl,
     };
 
     this.visits.unshift(visit);
@@ -2066,6 +2067,7 @@ export class DatabaseService {
           dateAd: b.dateAd,
           dateBs: b.dateBs,
           notes: b.skipNotes,
+          photoUrl: b.checkInPhotoUrl,
         };
       });
   }

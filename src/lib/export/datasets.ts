@@ -11,13 +11,14 @@ import { allSubBrands, lineSubBrandId } from '../sub-brands';
 import type { Column, Sheet } from './xlsx';
 import type {
   Brand, CallLog, Cheque, Combo, Customer, DeliveryFailure, Dispatch, FacingAudit, FeedbackEntry, HandoverDocument, Influencer,
-  MarketingSend, Order, Product, ReturnEntry, SecondaryOrder, StockCount, Visit, Retailer, Branch, Distributor, Task,
+  MarketingSend, Order, Product, ReturnEntry, SecondaryOrder, ShelfPhoto, StockCount, Visit, Retailer, Branch, Distributor, Task,
 } from '../types';
+import { PHOTO_COLUMNS, photoCells, photoLink } from '../photo-links';
 
 export interface ExportSource {
   brands: Brand[]; products: Product[]; combos: Combo[];
   orders: Order[]; returns: ReturnEntry[]; feedback: FeedbackEntry[]; deliveryFailures: DeliveryFailure[]; customers: Customer[];
-  secondaryOrders: SecondaryOrder[]; dispatches: Dispatch[]; stockCounts: StockCount[]; visits: Visit[]; cheques: Cheque[];
+  secondaryOrders: SecondaryOrder[]; dispatches: Dispatch[]; stockCounts: StockCount[]; visits: Visit[]; cheques: Cheque[]; shelfPhotos: ShelfPhoto[];
   callLogs: CallLog[]; documents: HandoverDocument[]; facingAudits: FacingAudit[];
   retailers: Retailer[]; branches: Branch[]; distributors: Distributor[];
   tasks: Task[]; influencers: Influencer[]; marketingSends: MarketingSend[];
@@ -27,7 +28,7 @@ export interface ExportFilters { fromAd?: string; toAd?: string; brandCode?: str
 
 export type DatasetKey =
   | 'orders' | 'order_lines' | 'returns' | 'feedback' | 'delivery_failures' | 'customers'
-  | 'store_orders' | 'store_order_lines' | 'dispatch_lines' | 'stock_counts' | 'visits' | 'cheques' | 'calls' | 'documents' | 'shelf_share'
+  | 'store_orders' | 'store_order_lines' | 'dispatch_lines' | 'stock_counts' | 'visits' | 'cheques' | 'calls' | 'documents' | 'shelf_photos' | 'shelf_share'
   | 'stores' | 'products' | 'tasks' | 'influencers' | 'marketing_sends';
 
 export interface DatasetDefinition {
@@ -65,6 +66,9 @@ function lineMatches(source: ExportSource, f: ExportFilters, line: { productId: 
 const storeMatch = (f: ExportFilters, id?: string) => !f.storeId || id === f.storeId;
 const officerMatch = (f: ExportFilters, id?: string) => !f.officerId || id === f.officerId;
 const col = (header: string, type?: Column['type']): Column => ({ header, type });
+/** A clickable photo column, or several numbered ones. */
+const photoCol = (header: string) => col(header, 'link');
+const photoCols = (header: string, count = PHOTO_COLUMNS) => Array.from({ length: count }, (_, i) => col(`${header} ${i + 1}`, 'link'));
 
 function storeInfo(source: ExportSource) {
   const map = new Map<string, { name: string; kind: string; area: string; city: string; officer: string }>();
@@ -77,10 +81,10 @@ function storeInfo(source: ExportSource) {
 export const DATASETS: DatasetDefinition[] = [
   {
     key: 'orders', label: 'Online orders', group: 'Online (D2C)', dated: true, page: 'p.orders_all',
-    build: (s, f) => ({ name: 'Online orders', columns: [col('Order'), col('Date (AD)'), col('Date (BS)'), col('Brand'), col('Channel'), col('Status'), col('Customer'), col('Phone'), col('District'), col('Province'), col('Delivery'), col('Payment'), col('New or repeat'), col('Units', 'number'), col('Total (NPR)', 'money'), col('Offers'), col('Notes')],
+    build: (s, f) => ({ name: 'Online orders', columns: [col('Order'), col('Date (AD)'), col('Date (BS)'), col('Brand'), col('Channel'), col('Status'), col('Customer'), col('Phone'), col('District'), col('Province'), col('Delivery'), col('Payment'), col('New or repeat'), col('Units', 'number'), col('Total (NPR)', 'money'), col('Offers'), col('Notes'), photoCol('Order document'), photoCol('Delivery photo')],
       rows: s.orders.filter((o) => inRange(o.orderDateAd, f) && o.items.some((line) => lineMatches(s, f, line)))
         .map((o) => [o.orderNumber, day(o.orderDateAd), bs(o.orderDateAd, o.orderDateBs), brandOf(s, o.brandCode), o.platform, o.status, o.customerName, o.customerPhone, o.district, o.province, o.deliveryMethod, o.paymentTerms, o.orderType,
-          o.items.reduce((sum, line) => sum + (line.isGift ? 0 : line.quantity), 0), o.totalAmount, (o.appliedOffers || []).map((offer: any) => offer.name || offer.offerName).filter(Boolean).join(', '), o.notes || '']) }),
+          o.items.reduce((sum, line) => sum + (line.isGift ? 0 : line.quantity), 0), o.totalAmount, (o.appliedOffers || []).map((offer: any) => offer.name || offer.offerName).filter(Boolean).join(', '), o.notes || '', photoLink(o.orderDocUrl), photoLink(o.deliveryProof?.photoUrl)]) }),
   },
   {
     key: 'order_lines', label: 'Online order lines (one row per product)', group: 'Online (D2C)', dated: true, page: 'p.orders_all',
@@ -104,18 +108,18 @@ export const DATASETS: DatasetDefinition[] = [
     key: 'returns', label: 'Returns and exchanges', group: 'Online (D2C)', dated: true, page: 'p.returns',
     build: (s, f) => {
       const sub = subName(s);
-      return { name: 'Returns', columns: [col('Date (AD)'), col('Date (BS)'), col('Order'), col('Brand'), col('Sub-brand'), col('Product'), col('Combo'), col('Quantity', 'number'), col('Outcome'), col('Reason'), col('Issues'), col('Customer'), col('Phone'), col('Channel'), col('Valley'), col('Replacement order'), col('Remarks')],
+      return { name: 'Returns', columns: [col('Date (AD)'), col('Date (BS)'), col('Order'), col('Brand'), col('Sub-brand'), col('Product'), col('Combo'), col('Quantity', 'number'), col('Outcome'), col('Reason'), col('Issues'), col('Customer'), col('Phone'), col('Channel'), col('Valley'), col('Replacement order'), col('Remarks'), photoCol('Evidence photo')],
         rows: s.returns.filter((r) => inRange(r.dateAd, f) && lineMatches(s, f, { productId: r.productId, brandCode: r.brandCode }))
-          .map((r) => [day(r.dateAd), bs(r.dateAd, r.dateBs), r.orderNumber || '', brandOf(s, r.brandCode), sub(s.products.find((p) => p.id === r.productId)?.subBrandId), r.productName, r.comboName || '', r.quantity, r.orderStatus, r.reasonCategory, (r.issueCategories || []).join(', '), r.customerName, r.customerPhone, r.platform, r.valley, r.exchangeOrderNumber || '', r.remarks || '']) };
+          .map((r) => [day(r.dateAd), bs(r.dateAd, r.dateBs), r.orderNumber || '', brandOf(s, r.brandCode), sub(s.products.find((p) => p.id === r.productId)?.subBrandId), r.productName, r.comboName || '', r.quantity, r.orderStatus, r.reasonCategory, (r.issueCategories || []).join(', '), r.customerName, r.customerPhone, r.platform, r.valley, r.exchangeOrderNumber || '', r.remarks || '', photoLink(r.evidenceUrl)]) };
     },
   },
   {
     key: 'feedback', label: 'Reviews and complaints', group: 'Online (D2C)', dated: true, page: 'p.feedback',
     build: (s, f) => {
       const sub = subName(s);
-      return { name: 'Reviews & complaints', columns: [col('Date (AD)'), col('Date (BS)'), col('Type'), col('Sentiment'), col('Brand'), col('Sub-brand'), col('Product'), col('Customer'), col('Channel'), col('Issues'), col('Status'), col('Text')],
+      return { name: 'Reviews & complaints', columns: [col('Date (AD)'), col('Date (BS)'), col('Type'), col('Sentiment'), col('Brand'), col('Sub-brand'), col('Product'), col('Customer'), col('Channel'), col('Issues'), col('Status'), col('Text'), ...photoCols('Photo', 6)],
         rows: s.feedback.filter((e) => inRange(e.dateReceivedAd, f) && lineMatches(s, f, { productId: e.productId, brandCode: e.brandCode }))
-          .map((e) => [day(e.dateReceivedAd), bs(e.dateReceivedAd, e.dateReceivedBs), e.type, e.sentiment, brandOf(s, e.brandCode), sub(s.products.find((p) => p.id === e.productId)?.subBrandId), e.productName, e.customerName || e.customerHandle || '', e.channel, (e.issueCategories || []).join(', '), e.complaintStatus || '', e.fullText]) };
+          .map((e) => [day(e.dateReceivedAd), bs(e.dateReceivedAd, e.dateReceivedBs), e.type, e.sentiment, brandOf(s, e.brandCode), sub(s.products.find((p) => p.id === e.productId)?.subBrandId), e.productName, e.customerName || e.customerHandle || '', e.channel, (e.issueCategories || []).join(', '), e.complaintStatus || '', e.fullText, ...photoCells(e.screenshotUrls, 6)]) };
     },
   },
   {
@@ -134,9 +138,9 @@ export const DATASETS: DatasetDefinition[] = [
     key: 'store_orders', label: 'Store orders', group: 'Stores (B2B)', dated: true, page: 'p.beat_plan',
     build: (s, f) => {
       const store = storeInfo(s);
-      return { name: 'Store orders', columns: [col('Order'), col('Date (AD)'), col('Date (BS)'), col('Store'), col('Store type'), col('Area'), col('City'), col('Officer'), col('Distributor'), col('Status'), col('Units', 'number'), col('Value (NPR)', 'money'), col('Payment terms'), col('Notes')],
+      return { name: 'Store orders', columns: [col('Order'), col('Date (AD)'), col('Date (BS)'), col('Store'), col('Store type'), col('Area'), col('City'), col('Officer'), col('Distributor'), col('Status'), col('Units', 'number'), col('Value (NPR)', 'money'), col('Payment terms'), col('Notes'), photoCol('Order photo'), photoCol('Pro forma')],
         rows: s.secondaryOrders.filter((o) => inRange(o.orderDateAd, f) && storeMatch(f, o.entityId) && officerMatch(f, o.officerId) && o.items.some((line) => lineMatches(s, f, line)))
-          .map((o) => { const info = store(o.entityId); return [o.orderNumber, day(o.orderDateAd), bs(o.orderDateAd, o.orderDateBs), o.storeName, info.kind, info.area, info.city, o.officerName, o.distributorName || '', o.status, o.totalUnits, o.totalAmount, o.paymentTerms || '', o.notes || '']; }) };
+          .map((o) => { const info = store(o.entityId); return [o.orderNumber, day(o.orderDateAd), bs(o.orderDateAd, o.orderDateBs), o.storeName, info.kind, info.area, info.city, o.officerName, o.distributorName || '', o.status, o.totalUnits, o.totalAmount, o.paymentTerms || '', o.notes || '', photoLink(o.orderPhotoUrl), photoLink(o.proFormaUrl)]; }) };
     },
   },
   {
@@ -160,9 +164,9 @@ export const DATASETS: DatasetDefinition[] = [
       const rows: Sheet['rows'] = [];
       for (const d of s.dispatches) {
         if (!inRange(d.dispatchDateAd, f) || !(storeMatch(f, d.distributorId) || storeMatch(f, d.branchId))) continue;
-        for (const line of d.items) if (lineMatches(s, f, line)) rows.push([d.dispatchNumber || '', day(d.dispatchDateAd), bs(d.dispatchDateAd, d.dispatchDateBs), d.distributorName, d.branchName || '', brandOf(s, line.brandCode), sub(lineSubBrandId(line, s.products)), line.productName, line.quantity, d.paymentTerms || '', day(d.paymentDueDateAd), d.paymentStatus || '', d.amountDue ?? '', d.createdBy, (d.edits || []).length || '', d.notes || '']);
+        for (const line of d.items) if (lineMatches(s, f, line)) rows.push([d.dispatchNumber || '', day(d.dispatchDateAd), bs(d.dispatchDateAd, d.dispatchDateBs), d.distributorName, d.branchName || '', brandOf(s, line.brandCode), sub(lineSubBrandId(line, s.products)), line.productName, line.quantity, d.paymentTerms || '', day(d.paymentDueDateAd), d.paymentStatus || '', d.amountDue ?? '', d.createdBy, (d.edits || []).length || '', d.notes || '', photoLink(d.documentUrl)]);
       }
-      return { name: 'Dispatches', columns: [col('Dispatch'), col('Date (AD)'), col('Date (BS)'), col('Going to'), col('Branch'), col('Brand'), col('Sub-brand'), col('Product'), col('Units', 'number'), col('Payment terms'), col('Payment due (AD)'), col('Payment status'), col('Amount due', 'money'), col('Logged by'), col('Corrections', 'number'), col('Notes')], rows };
+      return { name: 'Dispatches', columns: [col('Dispatch'), col('Date (AD)'), col('Date (BS)'), col('Going to'), col('Branch'), col('Brand'), col('Sub-brand'), col('Product'), col('Units', 'number'), col('Payment terms'), col('Payment due (AD)'), col('Payment status'), col('Amount due', 'money'), col('Logged by'), col('Corrections', 'number'), col('Notes'), photoCol('Challan photo')], rows };
     },
   },
   {
@@ -182,28 +186,34 @@ export const DATASETS: DatasetDefinition[] = [
     key: 'visits', label: 'Store visits', group: 'Stores (B2B)', dated: true, page: 'p.beat_plan',
     build: (s, f) => {
       const store = storeInfo(s);
-      return { name: 'Visits', columns: [col('Date (AD)'), col('Date (BS)'), col('Store'), col('Store type'), col('City'), col('Officer'), col('Check-in'), col('Check-out'), col('Minutes', 'number'), col('Distance from store (m)', 'number'), col('Location override'), col('Notes')],
+      return { name: 'Visits', columns: [col('Date (AD)'), col('Date (BS)'), col('Store'), col('Store type'), col('City'), col('Officer'), col('Check-in'), col('Check-out'), col('Minutes', 'number'), col('Distance from store (m)', 'number'), col('Location override'), col('Notes'), photoCol('Check-in photo')],
         rows: s.visits.filter((v) => inRange(v.dateAd, f) && storeMatch(f, v.entityId) && officerMatch(f, v.officerId))
-          .map((v) => { const info = store(v.entityId); return [day(v.dateAd), bs(v.dateAd, v.dateBs), v.storeName, info.kind, info.city, v.officerName, v.checkInTime ? new Date(v.checkInTime).toLocaleTimeString('en-GB', { timeZone: 'Asia/Kathmandu', hour: '2-digit', minute: '2-digit' }) : '', v.checkOutTime ? new Date(v.checkOutTime).toLocaleTimeString('en-GB', { timeZone: 'Asia/Kathmandu', hour: '2-digit', minute: '2-digit' }) : '', v.durationMinutes ?? '', v.distanceMeters, v.overrideFlag ? v.overrideReason || 'Yes' : '', v.notes || '']; }) };
+          .map((v) => { const info = store(v.entityId); return [day(v.dateAd), bs(v.dateAd, v.dateBs), v.storeName, info.kind, info.city, v.officerName, v.checkInTime ? new Date(v.checkInTime).toLocaleTimeString('en-GB', { timeZone: 'Asia/Kathmandu', hour: '2-digit', minute: '2-digit' }) : '', v.checkOutTime ? new Date(v.checkOutTime).toLocaleTimeString('en-GB', { timeZone: 'Asia/Kathmandu', hour: '2-digit', minute: '2-digit' }) : '', v.durationMinutes ?? '', v.distanceMeters, v.overrideFlag ? v.overrideReason || 'Yes' : '', v.notes || '', photoLink(v.photoUrl)]; }) };
     },
   },
   {
     key: 'cheques', label: 'Cheques', group: 'Stores (B2B)', dated: true, page: 'p.cheques',
-    build: (s, f) => ({ name: 'Cheques', columns: [col('Received (AD)'), col('Received (BS)'), col('Store'), col('Officer'), col('Cheque number'), col('Bank'), col('Amount (NPR)', 'money'), col('Cash date (AD)'), col('Status'), col('Handed to'), col('Notes')],
+    build: (s, f) => ({ name: 'Cheques', columns: [col('Received (AD)'), col('Received (BS)'), col('Store'), col('Officer'), col('Cheque number'), col('Bank'), col('Amount (NPR)', 'money'), col('Cash date (AD)'), col('Status'), col('Handed to'), col('Notes'), photoCol('Cheque photo')],
       rows: s.cheques.filter((c) => inRange(c.receivedDateAd, f) && storeMatch(f, c.entityId) && officerMatch(f, c.officerId) && (!f.brandCode || f.brandCode === 'ALL' || !c.brandCodes?.length || c.brandCodes.includes(f.brandCode)))
-        .map((c) => [day(c.receivedDateAd), bs(c.receivedDateAd, c.receivedDateBs), c.storeName, c.officerName, c.chequeNumber, c.bankName, c.amount, day(c.cashDateAd), c.status, c.handedOverTo || '', c.notes || '']) }),
+        .map((c) => [day(c.receivedDateAd), bs(c.receivedDateAd, c.receivedDateBs), c.storeName, c.officerName, c.chequeNumber, c.bankName, c.amount, day(c.cashDateAd), c.status, c.handedOverTo || '', c.notes || '', photoLink(c.photoUrl)]) }),
   },
   {
     key: 'calls', label: 'Store calls', group: 'Stores (B2B)', dated: true, page: 'p.calls',
-    build: (s, f) => ({ name: 'Calls', columns: [col('Date (AD)'), col('Date (BS)'), col('Store'), col('Contact'), col('Phone'), col('Officer'), col('Purpose'), col('Outcome'), col('Seconds', 'number'), col('Notes')],
+    build: (s, f) => ({ name: 'Calls', columns: [col('Date (AD)'), col('Date (BS)'), col('Store'), col('Contact'), col('Phone'), col('Officer'), col('Purpose'), col('Outcome'), col('Seconds', 'number'), col('Notes'), photoCol('Screenshot')],
       rows: s.callLogs.filter((c) => inRange(c.dateAd, f) && storeMatch(f, c.entityId) && officerMatch(f, c.officerId))
-        .map((c) => [day(c.dateAd), bs(c.dateAd, c.dateBs), c.storeName, c.contactName, c.contactPhone, c.officerName, c.label, c.outcome, c.durationSeconds, c.notes || '']) }),
+        .map((c) => [day(c.dateAd), bs(c.dateAd, c.dateBs), c.storeName, c.contactName, c.contactPhone, c.officerName, c.label, c.outcome, c.durationSeconds, c.notes || '', photoLink(c.screenshotUrl)]) }),
   },
   {
     key: 'documents', label: 'Store documents', group: 'Stores (B2B)', dated: true, page: 'p.documents',
-    build: (s, f) => ({ name: 'Documents', columns: [col('Date (AD)'), col('Date (BS)'), col('Store'), col('Type'), col('Reference'), col('Collected by'), col('Status'), col('With'), col('Filed at'), col('Notes')],
+    build: (s, f) => ({ name: 'Documents', columns: [col('Date (AD)'), col('Date (BS)'), col('Store'), col('Type'), col('Reference'), col('Collected by'), col('Status'), col('With'), col('Filed at'), col('Notes'), ...photoCols('Photo', 8)],
       rows: s.documents.filter((d) => inRange(d.docDateAd, f) && storeMatch(f, d.entityId) && officerMatch(f, d.officerId))
-        .map((d) => [day(d.docDateAd), bs(d.docDateAd, d.docDateBs), d.storeName, d.documentType, d.referenceNumber || '', d.officerName, d.status, d.currentHolder || '', d.filedLocation || '', d.notes || '']) }),
+        .map((d) => [day(d.docDateAd), bs(d.docDateAd, d.docDateBs), d.storeName, d.documentType, d.referenceNumber || '', d.officerName, d.status, d.currentHolder || '', d.filedLocation || '', d.notes || '', ...photoCells(d.photoUrls, 8)]) }),
+  },
+  {
+    key: 'shelf_photos', label: 'Shelf photos', group: 'Stores (B2B)', dated: true, page: 'p.shelf_photos',
+    build: (s, f) => ({ name: 'Shelf photos', columns: [col('Date (AD)'), col('Date (BS)'), col('Store'), col('Officer'), col('Rack section'), ...photoCols('Before', 6), ...photoCols('After', 6)],
+      rows: s.shelfPhotos.filter((p) => inRange(p.dateAd || p.createdAt, f) && storeMatch(f, p.entityId) && officerMatch(f, p.officerId))
+        .map((p) => [day(p.dateAd || p.createdAt), bs(p.dateAd, p.dateBs), p.storeName, p.officerName, p.rackSection || '', ...photoCells(p.beforePhotoUrls, 6), ...photoCells(p.afterPhotoUrls, 6)]) }),
   },
   {
     key: 'shelf_share', label: 'Shelf share checks', group: 'Stores (B2B)', dated: true, page: 'p.shelf_photos',

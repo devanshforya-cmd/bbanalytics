@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { capturePhoto } from '@/lib/photo-capture';
 import {
   X,
   ShoppingBag,
@@ -216,15 +217,8 @@ export default function InlineOrderForm({
   };
 
   const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        if (result) setOrderPhotoUrl(result);
-      };
-      reader.readAsDataURL(file);
-    }
+    void capturePhoto(e.target.files?.[0], 'beat_plans', setOrderPhotoUrl);
+    e.target.value = '';
   };
 
   const handleProceedToReview = () => {

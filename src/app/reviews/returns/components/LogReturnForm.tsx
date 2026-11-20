@@ -17,6 +17,7 @@ import OrderPicker from '@/components/common/OrderPicker';
 import DualDateField from '@/components/common/DualDateField';
 import DynamicCheckboxes from '@/components/common/DynamicCheckboxes';
 import { toast } from '@/components/common/Toast';
+import { capturePhoto } from '@/lib/photo-capture';
 import { valleyOf } from '@/app/orderflow/delivery-failures/components/LogFailureForm';
 import { returnableLines } from '@/lib/return-lines';
 import { waitingExchangeOrders } from '@/lib/exchange';
@@ -87,12 +88,9 @@ export default function LogReturnForm({ onClose, onSaved, onViewCustomer, initia
     pickOrder(own.length === 1 ? own[0] : null);
   };
   const onEvidence = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (file.size > 350 * 1024) { toast.error('This photo is too large', 'Choose a photo under 350 KB, or upload it to Drive and paste the link in the remarks.'); event.target.value = ''; return; }
-    const reader = new FileReader();
-    reader.onloadend = () => setEvidence(reader.result as string);
-    reader.readAsDataURL(file);
+    // Compressed automatically and saved to Google Drive, so any size of phone photo is fine.
+    void capturePhoto(event.target.files?.[0], 'reviews', setEvidence);
+    event.target.value = '';
   };
 
   const save = () => guardedSubmit(async () => {

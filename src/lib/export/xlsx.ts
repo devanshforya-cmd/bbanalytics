@@ -6,7 +6,8 @@
  */
 import { strToU8, zipSync } from 'fflate';
 
-export type ColumnType = 'text' | 'number' | 'money' | 'percent';
+/** 'link' cells holding a web address become a clickable "Open" link. */
+export type ColumnType = 'text' | 'number' | 'money' | 'percent' | 'link';
 export interface Column { header: string; type?: ColumnType; width?: number }
 export interface Sheet { name: string; columns: Column[]; rows: (string | number | null | undefined | boolean)[][] }
 
@@ -32,12 +33,15 @@ export function safeSheetNames(names: string[]): string[] {
   });
 }
 
-// Style ids in styles.xml: 0 default, 1 header, 2 integer, 3 money (2 dp, thousands), 4 percent, 5 wrapped text.
-const STYLE: Record<ColumnType, number> = { text: 0, number: 2, money: 3, percent: 4 };
+// Style ids in styles.xml: 0 default, 1 header, 2 integer, 3 money (2 dp, thousands), 4 percent, 5 wrapped text, 6 link.
+const STYLE: Record<ColumnType, number> = { text: 0, number: 2, money: 3, percent: 4, link: 6 };
+const LINK_LABEL = 'Open';
+const isWebLink = (value: string) => /^https?:\/\/[^\s"]{1,240}$/.test(value);
 
 function sheetXml(sheet: Sheet): string {
   const widths = sheet.columns.map((column, i) => {
     if (column.width) return column.width;
+    if (column.type === 'link') return Math.max(8, column.header.length + 2);
     const longest = Math.max(column.header.length, ...sheet.rows.slice(0, 200).map((row) => String(row[i] ?? '').length));
     return Math.min(60, Math.max(8, longest + 2));
   });
@@ -50,6 +54,9 @@ function sheetXml(sheet: Sheet): string {
       const ref = `${colName(i)}${r + 2}`;
       if (value === null || value === undefined || value === '') return '';
       if (typeof value === 'number' && Number.isFinite(value) && column.type && column.type !== 'text') return `<c r="${ref}" s="${STYLE[column.type]}"><v>${value}</v></c>`;
+      if (column.type === 'link' && typeof value === 'string' && isWebLink(value)) {
+        return `<c r="${ref}" s="6" t="str"><f>${esc(`HYPERLINK("${value}","${LINK_LABEL}")`)}</f><v>${LINK_LABEL}</v></c>`;
+      }
       if (typeof value === 'boolean') return `<c r="${ref}" t="inlineStr"><is><t>${value ? 'Yes' : 'No'}</t></is></c>`;
       return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${esc(String(value))}</t></is></c>`;
     }).join('');
@@ -66,17 +73,18 @@ function sheetXml(sheet: Sheet): string {
 const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0.00"/><numFmt numFmtId="165" formatCode="0.0%"/></numFmts>
-<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>
+<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><u/><sz val="11"/><color rgb="FF1D4ED8"/><name val="Calibri"/></font></fonts>
 <fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8EEF6"/><bgColor indexed="64"/></patternFill></fill></fills>
 <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="6">
+<cellXfs count="7">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
 <xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 <xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 <xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment wrapText="1"/></xf>
+<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 </cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
 
 function filterNames(names: string[], sheets: Sheet[]): string {

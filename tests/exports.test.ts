@@ -20,7 +20,7 @@ const source: ExportSource = {
     { id: 'o2', orderNumber: 'FOR-2', brandCode: 'FORYA', orderDateAd: '2026-09-01', orderDateBs: '', status: 'DELIVERED', platform: 'Instagram', customerName: 'B', customerPhone: '97', district: '', province: '', deliveryMethod: '', paymentTerms: 'COD', orderType: 'NEW', totalAmount: 399, items: [{ productId: 'p1', productName: 'Aqua Roll On', brandCode: 'FORYA', quantity: 1, unitPrice: 399, totalPrice: 399 }] },
   ] as any[],
   returns: [], feedback: of('feedbackEntries'), deliveryFailures: [], customers: [],
-  secondaryOrders: of('secondaryOrders'), dispatches: of('dispatches'), stockCounts: of('stockCounts'), visits: of('visits'), cheques: of('cheques'),
+  secondaryOrders: of('secondaryOrders'), dispatches: of('dispatches'), stockCounts: of('stockCounts'), visits: of('visits'), cheques: of('cheques'), shelfPhotos: of('shelfPhotos'),
   callLogs: of('callLogs'), documents: of('documents'), facingAudits: of('facingAudits'),
   retailers: of('retailers'), branches: of('branches'), distributors: of('distributors'),
   tasks: of('tasks'), influencers: of('influencers'), marketingSends: of('marketingSends'),
