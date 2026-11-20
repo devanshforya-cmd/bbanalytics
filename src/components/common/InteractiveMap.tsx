@@ -360,17 +360,14 @@ export default function InteractiveMap({
       return `https://a.tile.opentopomap.org/${tile.z}/${tile.x}/${tile.y}.png`;
     }
 
-    // Use best-effort public tiles with per-tile fallback. No public tile provider promises 100% uptime.
+    // Street: free, keyless OpenStreetMap tiles, with the OSM Humanitarian style as the backup.
+    // (CARTO stopped serving tiles without an API key in September 2026.)
     const streetFallback = mapStyle === 'STREET' ? failures : failures - 1;
     if (streetFallback <= 0) {
-      return `https://${tile.subdomainCarto}.basemaps.cartocdn.com/rastertiles/voyager/${tile.z}/${tile.x}/${tile.y}.png`;
-    } else if (streetFallback === 1) {
-      return `https://${tile.subdomainCarto}.basemaps.cartocdn.com/light_all/${tile.z}/${tile.x}/${tile.y}.png`;
-    } else {
-      // ArcGIS can respond with an HTTP 200 "API KEY REQUIRED" image, which
-      // never fires <img onError>. Keep the no-key OSM source as the fallback.
       return `https://tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`;
     }
+    const hot = ['a', 'b', 'c'][(tile.x + tile.y) % 3];
+    return `https://${hot}.tile.openstreetmap.fr/hot/${tile.z}/${tile.x}/${tile.y}.png`;
   };
 
   const handleTileError = (key: string) => {
@@ -919,7 +916,7 @@ export default function InteractiveMap({
         </div>
 
         <div className="text-[9px] text-slate-500 bg-white/80 px-2 py-0.5 rounded shadow pointer-events-auto">
-          &copy; OpenStreetMap contributors &bull; CARTO &bull; Esri &bull; OpenTopoMap
+          &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors{mapStyle === 'SATELLITE' ? <> &bull; Esri</> : mapStyle === 'TOPO' ? <> &bull; OpenTopoMap</> : null}
         </div>
       </div>
     </div>
