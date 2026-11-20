@@ -1,7 +1,7 @@
 'use client';
 
 import InfoTip from '@/components/common/InfoTip';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db/db-service';
 import { Dispatch, DispatchItem, BrandCode } from '@/lib/types';
 import { formatDualDate, getTodayAd, getTodayBs, adToBs } from '@/lib/nepali-calendar';
@@ -28,6 +28,13 @@ import { useSubmitGuard } from '@/hooks/useSubmitGuard';
 export default function DispatchPage() {
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
   const [dispatches, setDispatches] = useState<Dispatch[]>(db.getDispatches());
+  // Keep the list current when a sync brings in new or changed dispatches.
+  useEffect(() => {
+    const refresh = () => setDispatches([...db.getDispatches()]);
+    refresh();
+    window.addEventListener('bb-db-updated', refresh);
+    return () => window.removeEventListener('bb-db-updated', refresh);
+  }, []);
   const unifiedStores = db.getStoresUnified();
   const products = db.getProducts().filter(product => product.active !== false);
 
@@ -40,57 +47,53 @@ export default function DispatchPage() {
   const [dispatchNotes, setDispatchNotes] = useState('');
   const [dispatchPhotoUrl, setDispatchPhotoUrl] = useState('');
   const [lightboxChallanUrl, setLightboxChallanUrl] = useState<string | null>(null);
-  const [selectedItems, setSelectedItems] = useState<{ productId: string; quantity: number }[]>([
-    { productId: products[0]?.id || '', quantity: 1 },
-  ]);
+  const [selectedItems, setSelectedItems] = useState<{ productId: string; cartons: number; units: number }[]>([{ productId: '', cartons: 0, units: 0 }]);
 
-  // Edit History Modal
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [targetDispatch, setTargetDispatch] = useState<Dispatch | null>(null);
-  const [editItem, setEditItem] = useState<{ productId: string; productName: string; quantity: number } | null>(null);
-  const [editReason, setEditReason] = useState('');
+  // Correcting a logged dispatch: all its lines at once, one reason.
+  const [correcting, setCorrecting] = useState<string | null>(null);
+  const [corrections, setCorrections] = useState<Record<string, number>>({});
+  const [correctionReason, setCorrectionReason] = useState('');
 
-  const selectedStore = unifiedStores.find((s) => s.id === selectedStoreId);
+  // The store list fills in after the first render, so fall back to the option the select is showing.
+  const effectiveStoreId = selectedStoreId || unifiedStores[0]?.id || '';
+  const selectedStore = unifiedStores.find((s) => s.id === effectiveStoreId);
   const branches = selectedStore?.storeType === 'DISTRIBUTOR' ? db.getBranches(selectedStore.id) : [];
+  const caseSize = (productId: string) => products.find((p) => p.id === productId)?.caseSize || 0;
+  const lineUnits = (row: { productId: string; cartons: number; units: number }) => row.cartons * caseSize(row.productId) + row.units;
+  const filledLines = selectedItems.filter((row) => row.productId && lineUnits(row) > 0);
+  const totalUnits = filledLines.reduce((sum, row) => sum + lineUnits(row), 0);
+  const terms = selectedStore?.paymentTerms || '';
+  const termDays = Number(/(\d+)/.exec(terms)?.[1] || 0);
+  const dueDateAd = termDays ? new Date(Date.parse(`${dispatchDateAd}T00:00:00Z`) + termDays * 86400000).toISOString().slice(0, 10) : '';
 
-  const handleAddItemRow = () => {
-    setSelectedItems([...selectedItems, { productId: products[0]?.id || '', quantity: 12 }]);
+  const resetForm = () => {
+    setSelectedItems([{ productId: '', cartons: 0, units: 0 }]);
+    setDispatchNotes('');
+    setDispatchPhotoUrl('');
+    setSelectedBranchId('');
+    setDispatchDateAd(getTodayAd());
   };
 
-  const handleRemoveItemRow = (idx: number) => {
-    setSelectedItems(selectedItems.filter((_, i) => i !== idx));
+  const updateLine = (idx: number, patch: Partial<{ productId: string; cartons: number; units: number }>) => {
+    setSelectedItems((rows) => rows.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
   };
-
-  const handleItemChange = (idx: number, field: 'productId' | 'quantity', val: string | number) => {
-    const updated = [...selectedItems];
-    if (field === 'productId') updated[idx].productId = val as string;
-    if (field === 'quantity') updated[idx].quantity = Math.max(1, Number(val) || 1);
-    setSelectedItems(updated);
-  };
-
-  const totalUnits = selectedItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
   const handleOpenConfirm = () => {
-    if (selectedItems.length === 0 || totalUnits <= 0) return;
+    if (!effectiveStoreId) { toast.error('Choose who the stock is going to.'); return; }
+    if (!filledLines.length) { toast.error('Add at least one product with a quantity.'); return; }
     setShowLogModal(false);
     setShowConfirmModal(true);
   };
 
   const handleConfirmDispatch = () => {
     guardedSubmit(async () => {
-      const items: DispatchItem[] = selectedItems.map((si) => {
-        const p = products.find((prod) => prod.id === si.productId);
+      const items: DispatchItem[] = filledLines.map((row) => {
+        const p = products.find((prod) => prod.id === row.productId);
         if (!p) throw new Error('Choose an active product before dispatching.');
-        return {
-          productId: si.productId,
-          productName: p?.name || 'Product',
-          brandCode: p.brandCode,
-          quantity: si.quantity,
-        };
+        return { productId: p.id, productName: p.name, brandCode: p.brandCode, quantity: lineUnits(row), quantityPcs: lineUnits(row) };
       });
-
       db.addDispatch({
-        distributorId: selectedStoreId,
+        distributorId: effectiveStoreId,
         distributorName: selectedStore?.name || 'Store',
         branchId: selectedBranchId || undefined,
         branchName: selectedBranchId ? branches.find((b) => b.id === selectedBranchId)?.name : undefined,
@@ -99,23 +102,33 @@ export default function DispatchPage() {
         items,
         notes: dispatchNotes,
         documentUrl: dispatchPhotoUrl || undefined,
+        paymentTerms: terms || undefined,
+        paymentDueDateAd: dueDateAd || undefined,
+        paymentDueDateBs: dueDateAd ? adToBs(`${dueDateAd}T12:00:00`).formatted : undefined,
+        paymentStatus: terms && !/cash/i.test(terms) ? 'PENDING' : undefined,
       });
-
       setDispatches([...db.getDispatches()]);
       setShowConfirmModal(false);
-      setDispatchPhotoUrl('');
-      toast.success('Dispatch recorded successfully. Inventory ledger updated.');
+      resetForm();
+      toast.success('Dispatch logged.');
     });
   };
 
-  const handleSaveEdit = () => {
-    if (!targetDispatch || !editItem || !editReason.trim()) return;
+  const startCorrecting = (disp: Dispatch) => {
+    setCorrecting(disp.id);
+    setCorrections(Object.fromEntries(disp.items.map((item) => [item.productId, item.quantity])));
+    setCorrectionReason('');
+  };
+
+  const saveCorrections = (disp: Dispatch) => {
+    const changed = disp.items.filter((item) => corrections[item.productId] !== item.quantity);
+    if (!changed.length) { setCorrecting(null); return; }
+    if (!correctionReason.trim()) { toast.error('Say why the quantities changed. It goes in the history.'); return; }
     guardedSubmit(async () => {
-      db.editDispatchItem(targetDispatch.id, editItem.productId, editItem.quantity, editReason);
+      for (const item of changed) db.editDispatchItem(disp.id, item.productId, Math.max(0, corrections[item.productId] || 0), correctionReason.trim());
       setDispatches([...db.getDispatches()]);
-      setShowEditModal(false);
-      setEditReason('');
-      toast.success('Dispatch quantity updated. Reason logged in audit trail.');
+      setCorrecting(null);
+      toast.success(`${changed.length} ${changed.length === 1 ? 'quantity' : 'quantities'} corrected.`);
     });
   };
 
@@ -132,11 +145,11 @@ export default function DispatchPage() {
           </div>
 
           <button
-            onClick={() => setShowLogModal(true)}
+            onClick={() => { resetForm(); setShowLogModal(true); }}
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 self-start sm:self-auto"
           >
             <Plus className="h-4 w-4" />
-            Log Dispatch
+            Log dispatch
           </button>
         </div>
 
@@ -178,59 +191,91 @@ export default function DispatchPage() {
                 </div>
               </div>
 
-              {/* Items Table */}
-              <div className="overflow-x-auto" tabIndex={0}>
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-100 text-slate-500 text-[10px]">
-                      <th className="py-2">Product</th>
-                      <th className="py-2">Brand</th>
-                      <th className="py-2 text-right">Quantity</th>
-                      <th className="py-2 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {disp.items.map((item) => (
-                      <tr key={item.productId} className="hover:bg-slate-50">
-                        <td className="py-2 font-medium text-slate-800">{item.productName}</td>
-                        <td className="py-2">
-                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
-                            {item.brandCode}
-                          </span>
-                        </td>
-                        <td className="py-2 text-right font-bold text-slate-900">{item.quantity} units</td>
-                        <td className="py-2 text-right">
-                          <button
-                            onClick={() => {
-                              setTargetDispatch(disp);
-                              setEditItem(item);
-                              setShowEditModal(true);
-                            }}
-                            className="inline-flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100"
-                          >
-                            <Edit2 className="h-3 w-3" />
-                            Edit Qty
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Edit History Trail */}
-              {disp.edits && disp.edits.length > 0 && (
-                <div className="rounded-lg bg-amber-50/60 border border-amber-200/60 p-3 text-xs space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-amber-900 text-[11px] ">
-                    <History className="h-3.5 w-3.5" />
-                    Edit History (Audit Trail)
-                  </div>
-                  {disp.edits.map((edit) => (
-                    <div key={edit.id} className="text-amber-800 text-[11px]">
-                      • {edit.productName}: Qty changed from <strong>{edit.oldQty}</strong> to <strong>{edit.newQty}</strong> by {edit.changedBy} — Reason: &quot;{edit.reason}&quot;
+              {/* Items, with one correction mode for the whole dispatch */}
+              {(() => {
+                const editing = correcting === disp.id;
+                const changes = editing ? disp.items.filter((item) => corrections[item.productId] !== item.quantity).length : 0;
+                return (
+                  <div className={editing ? 'rounded-xl ring-2 ring-blue-200 bg-blue-50/30 p-3 -mx-1' : ''}>
+                    <div className="overflow-x-auto" tabIndex={0}>
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-slate-500 text-[11px]">
+                            <th className="py-2 font-semibold">Product</th>
+                            <th className="py-2 font-semibold">Brand</th>
+                            <th className="py-2 text-right font-semibold">Units</th>
+                            {editing && <th className="py-2 pl-4 font-semibold">Corrected to</th>}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {disp.items.map((item) => {
+                            const next = corrections[item.productId] ?? item.quantity;
+                            const diff = next - item.quantity;
+                            return (
+                              <tr key={item.productId}>
+                                <td className="py-2 font-medium text-slate-800">{item.productName}</td>
+                                <td className="py-2"><span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">{item.brandCode}</span></td>
+                                <td className={`py-2 text-right font-bold ${editing && diff ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{item.quantity}</td>
+                                {editing && (
+                                  <td className="py-1.5 pl-4">
+                                    <div className="flex items-center gap-2">
+                                      <div className="inline-flex items-center rounded-lg border border-slate-300 bg-white">
+                                        <button type="button" aria-label={`Fewer ${item.productName}`} onClick={() => setCorrections((c) => ({ ...c, [item.productId]: Math.max(0, next - 1) }))} className="px-2.5 py-1.5 text-slate-600 hover:bg-slate-100">−</button>
+                                        <input aria-label={`Corrected units of ${item.productName}`} type="number" min={0} value={next}
+                                          onChange={(e) => setCorrections((c) => ({ ...c, [item.productId]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                          className="w-16 border-x border-slate-200 py-1.5 text-center font-bold outline-none" />
+                                        <button type="button" aria-label={`More ${item.productName}`} onClick={() => setCorrections((c) => ({ ...c, [item.productId]: next + 1 }))} className="px-2.5 py-1.5 text-slate-600 hover:bg-slate-100">+</button>
+                                      </div>
+                                      {diff !== 0 && <span className={`text-[11px] font-bold ${diff > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{diff > 0 ? '+' : ''}{diff}</span>}
+                                    </div>
+                                  </td>
+                                )}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
-                  ))}
-                </div>
+                    {editing ? (
+                      <div className="mt-3 flex flex-col sm:flex-row sm:items-end gap-2">
+                        <label className="flex-1 text-xs">
+                          <span className="block font-semibold text-slate-700 mb-1">Why are these changing?{changes ? '' : ' (change a quantity first)'}</span>
+                          <input value={correctionReason} onChange={(e) => setCorrectionReason(e.target.value)} placeholder="e.g. Challan shows 60, entered 72 by mistake"
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-blue-500" />
+                        </label>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setCorrecting(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+                          <button type="button" onClick={() => saveCorrections(disp)} disabled={isSubmitting || !changes || !correctionReason.trim()}
+                            className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+                            {changes ? `Save ${changes} ${changes === 1 ? 'correction' : 'corrections'}` : 'Save corrections'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 flex justify-end">
+                        <button type="button" onClick={() => startCorrecting(disp)} disabled={!!correcting}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+                          <Edit2 className="h-3 w-3" /> Correct quantities
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {disp.edits && disp.edits.length > 0 && (
+                <details className="rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2 text-xs">
+                  <summary className="cursor-pointer select-none flex items-center gap-1.5 font-semibold text-amber-900 text-[11px]">
+                    <History className="h-3.5 w-3.5" /> {disp.edits.length} {disp.edits.length === 1 ? 'correction' : 'corrections'} made
+                  </summary>
+                  <ul className="mt-2 space-y-1">
+                    {disp.edits.map((edit) => (
+                      <li key={edit.id} className="text-amber-900 text-[11px]">
+                        <strong>{edit.productName}</strong>: {edit.oldQty} → {edit.newQty} by {edit.changedBy}, {new Date(edit.createdAt).toLocaleDateString()}. <span className="text-amber-800">“{edit.reason}”</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
               )}
 
               {disp.documentUrl && (
@@ -251,275 +296,138 @@ export default function DispatchPage() {
         )}
       </div>
 
-      {/* Step 1: Log Dispatch Modal */}
+      {/* Step 1: Log Dispatch */}
       {showLogModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-base">Log Dispatch to Distributor</h3>
-              <button onClick={() => setShowLogModal(false)} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100">
-                <X className="h-5 w-5" />
-              </button>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 sm:p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="dispatch-title">
+          <div className="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+              <div>
+                <h3 id="dispatch-title" className="font-bold text-slate-900 text-base">Log a dispatch</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Stock leaving the warehouse for a distributor, chain or store.</p>
+              </div>
+              <button onClick={() => setShowLogModal(false)} aria-label="Close" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
             </div>
 
-            <div className="py-4 space-y-3 text-xs max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="dispatch-recipient-store-partner" className="block font-bold text-slate-700 mb-1">Recipient Store / Partner *</label>
-                  <select id="dispatch-recipient-store-partner"
-                    value={selectedStoreId}
-                    onChange={(e) => {
-                      setSelectedStoreId(e.target.value);
-                      setSelectedBranchId('');
-                    }}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none bg-white text-xs font-medium"
-                  >
-                    <optgroup label="Distributor Chains & Central Warehouses">
-                      {unifiedStores
-                        .filter((s) => s.storeType === 'DISTRIBUTOR')
-                        .map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.name} ({d.category || 'Distributor'})
-                          </option>
-                        ))}
-                    </optgroup>
-                    <optgroup label="Modern Trade / Chain Stores">
-                      {unifiedStores
-                        .filter((s) => s.storeType === 'CHAIN_STORE')
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name} ({c.category || 'Chain Store'})
-                          </option>
-                        ))}
-                    </optgroup>
-                    <optgroup label="Standalone Retail Stores">
-                      {unifiedStores
-                        .filter((s) => s.storeType === 'STANDALONE_RETAILER')
-                        .map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.name} ({r.category || 'Retailer'})
-                          </option>
-                        ))}
-                    </optgroup>
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 text-xs">
+              <section className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block sm:col-span-2">
+                  <span className="block font-semibold text-slate-700 mb-1">Going to *</span>
+                  <select value={effectiveStoreId} onChange={(e) => { setSelectedStoreId(e.target.value); setSelectedBranchId(''); }}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none bg-white text-sm focus:border-blue-500">
+                    {([['DISTRIBUTOR', 'Distributors'], ['CHAIN_STORE', 'Chains'], ['STANDALONE_RETAILER', 'Retail stores']] as const).map(([type, label]) => {
+                      const list = unifiedStores.filter((store) => store.storeType === type);
+                      return list.length ? <optgroup key={type} label={label}>{list.map((store) => <option key={store.id} value={store.id}>{store.name}{store.city ? `, ${store.city}` : ''}</option>)}</optgroup> : null;
+                    })}
                   </select>
-                </div>
-                {selectedStore?.storeType === 'DISTRIBUTOR' && branches.length > 0 ? (
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Branch (or Central)</label>
-                    <select aria-label="Branch (or Central)"
-                      value={selectedBranchId}
-                      onChange={(e) => setSelectedBranchId(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none bg-white text-xs font-medium"
-                    >
-                      <option value="">HQ / Central Warehouse</option>
-                      {branches.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
+                  <span className="mt-1 block text-[11px] text-slate-500">
+                    {[selectedStore?.address, terms ? `Terms: ${terms}` : 'No payment terms on file'].filter(Boolean).join(' · ')}
+                  </span>
+                </label>
+                {branches.length > 0 && (
+                  <label className="block">
+                    <span className="block font-semibold text-slate-700 mb-1">Branch</span>
+                    <select value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none bg-white text-sm">
+                      <option value="">Head office / central warehouse</option>
+                      {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Store Location</label>
-                    <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 truncate text-xs">
-                      {selectedStore?.address || 'Kathmandu Route'}
-                    </div>
-                  </div>
+                  </label>
                 )}
-              </div>
+                <label className="block">
+                  <span className="block font-semibold text-slate-700 mb-1">Dispatch date</span>
+                  <input type="date" value={dispatchDateAd} onChange={(e) => setDispatchDateAd(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none bg-white text-sm" />
+                  <span className="mt-1 block text-[11px] text-slate-500">{formatDualDate(dispatchDateAd).split(' (')[0]}</span>
+                </label>
+              </section>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Dispatch Date</label>
-                <input aria-label="Dispatch Date"
-                  type="date"
-                  value={dispatchDateAd}
-                  onChange={(e) => setDispatchDateAd(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none bg-white"
-                />
-              </div>
-
-              {/* Items Rows */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="font-bold text-slate-700">Products & Quantities *</label>
-                  <button
-                    type="button"
-                    onClick={handleAddItemRow}
-                    className="text-blue-600 hover:underline font-semibold text-[11px]"
-                  >
-                    + Add Product
-                  </button>
+              <section>
+                <div className="mb-2 flex items-baseline justify-between">
+                  <span className="font-semibold text-slate-700">Products *</span>
+                  <span className="text-[11px] text-slate-500">Cartons are worked out from each product&apos;s case size.</span>
                 </div>
-
-                <div className="space-y-2">
-                  {selectedItems.map((row, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <select
-                        value={row.productId}
-                        onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}
-                        className="flex-1 rounded-lg border border-slate-300 px-3 py-2 outline-none bg-white"
-                      >
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            [{p.brandCode}] {p.name}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        min="1"
-                        placeholder="Qty"
-                        value={row.quantity}
-                        onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                        className="w-24 rounded-lg border border-slate-300 px-3 py-2 outline-none text-center font-bold"
-                      />
-                      {selectedItems.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItemRow(idx)}
-                          className="rounded p-1.5 text-slate-500 hover:bg-slate-100"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                <div className="rounded-xl border border-slate-200">
+                  <div className="hidden sm:grid grid-cols-[minmax(0,1fr)_88px_88px_72px_32px] gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-500 rounded-t-xl">
+                    <span>Product</span><span className="text-center">Cartons</span><span className="text-center">Loose units</span><span className="text-right">Total</span><span />
+                  </div>
+                  <ul className="divide-y divide-slate-100">
+                    {selectedItems.map((row, idx) => {
+                      const size = caseSize(row.productId);
+                      const taken = new Set(selectedItems.filter((_, i) => i !== idx).map((r) => r.productId));
+                      return (
+                        <li key={idx} className="grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_88px_88px_72px_32px] items-center gap-2 px-3 py-2">
+                          <select aria-label={`Product ${idx + 1}`} value={row.productId} onChange={(e) => updateLine(idx, { productId: e.target.value })}
+                            className="col-span-2 sm:col-span-1 min-w-0 rounded-lg border border-slate-300 px-2.5 py-2 outline-none bg-white text-sm">
+                            <option value="">Choose a product…</option>
+                            {products.map((p) => <option key={p.id} value={p.id} disabled={taken.has(p.id)}>{(p as any).alias || p.name}{p.caseSize ? ` (${p.caseSize}/carton)` : ''}</option>)}
+                          </select>
+                          <input aria-label={`Cartons of product ${idx + 1}`} type="number" min={0} value={row.cartons || ''} placeholder="Cartons" disabled={!size}
+                            title={size ? `${size} units per carton` : 'No case size set for this product'}
+                            onChange={(e) => updateLine(idx, { cartons: Math.max(0, parseInt(e.target.value) || 0) })}
+                            className="rounded-lg border border-slate-300 px-2 py-2 text-center font-semibold outline-none disabled:bg-slate-50" />
+                          <input aria-label={`Loose units of product ${idx + 1}`} type="number" min={0} value={row.units || ''} placeholder="Units"
+                            onChange={(e) => updateLine(idx, { units: Math.max(0, parseInt(e.target.value) || 0) })}
+                            className="rounded-lg border border-slate-300 px-2 py-2 text-center font-semibold outline-none" />
+                          <span className="text-right font-bold text-slate-900 text-sm">{lineUnits(row) || '–'}</span>
+                          <button type="button" onClick={() => setSelectedItems((rows) => rows.length > 1 ? rows.filter((_, i) => i !== idx) : [{ productId: '', cartons: 0, units: 0 }])}
+                            aria-label={`Remove product ${idx + 1}`} className="justify-self-end rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-4 w-4" /></button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2">
+                    <button type="button" disabled={selectedItems.length >= products.length}
+                      onClick={() => setSelectedItems((rows) => [...rows, { productId: '', cartons: 0, units: 0 }])}
+                      className="inline-flex items-center gap-1 font-semibold text-blue-700 hover:underline disabled:opacity-40"><Plus className="h-3.5 w-3.5" /> Add product</button>
+                    <span className="text-slate-600">Total <strong className="text-slate-900 text-sm">{totalUnits.toLocaleString()}</strong> units</span>
+                  </div>
                 </div>
-              </div>
+              </section>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Remarks / Delivery Challan Ref</label>
-                <input aria-label="Remarks / Delivery Challan Ref"
-                  type="text"
-                  placeholder="e.g. Challan #DC-99241, Driver: Ram Bahadur"
-                  value={dispatchNotes}
-                  onChange={(e) => setDispatchNotes(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none"
-                />
-              </div>
-
-              {/* Delivery Challan Photo Evidence */}
-              <CameraCapture
-                folder="dispatches"
-                label="Photograph Delivery Challan / Bilti Copy"
-                sublabel="Capture stamped challan signed by receiving bay"
-                maxFiles={1}
-                existingUrls={dispatchPhotoUrl ? [dispatchPhotoUrl] : []}
-                onRemoveExisting={() => setDispatchPhotoUrl('')}
-                onUpload={(results) => setDispatchPhotoUrl(results[0]?.url || '')}
-              />
+              <section className="space-y-3">
+                <label className="block">
+                  <span className="block font-semibold text-slate-700 mb-1">Challan number or note</span>
+                  <input type="text" placeholder="e.g. Challan DC-99241, driver Ram Bahadur" value={dispatchNotes} onChange={(e) => setDispatchNotes(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none text-sm" />
+                </label>
+                <CameraCapture folder="dispatches" label="Photo of the signed challan" sublabel="Optional. Take it once the receiving bay has stamped it."
+                  maxFiles={1} existingUrls={dispatchPhotoUrl ? [dispatchPhotoUrl] : []} onRemoveExisting={() => setDispatchPhotoUrl('')} onUpload={(results) => setDispatchPhotoUrl(results[0]?.url || '')} />
+              </section>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-              <button
-                onClick={() => setShowLogModal(false)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleOpenConfirm}
-                className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white hover:bg-blue-700 shadow"
-              >
-                Review & Confirm Dispatch
-              </button>
+            <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-5 py-3">
+              <span className="text-xs text-slate-500">{filledLines.length} {filledLines.length === 1 ? 'product' : 'products'}, {totalUnits.toLocaleString()} units</span>
+              <div className="flex gap-2">
+                <button onClick={() => setShowLogModal(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+                <button onClick={handleOpenConfirm} disabled={!filledLines.length} className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white hover:bg-blue-700 shadow disabled:opacity-50">Review dispatch</button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* FIX 50b: Context-Rich Dispatch Confirmation Review Modal */}
+      {/* Step 2: confirm */}
       <ConfirmModal
         isOpen={showConfirmModal}
-        title={`Confirm Dispatch to ${selectedStore?.name || 'Store'}?`}
+        title={`Dispatch to ${selectedStore?.name || 'store'}${selectedBranchId ? `, ${branches.find((b) => b.id === selectedBranchId)?.name}` : ''}?`}
         variant="info"
-        confirmLabel="✓ Confirm Dispatch"
-        cancelLabel="← Back to Edit"
+        confirmLabel="Log dispatch"
+        cancelLabel="Back to edit"
         details={[
-          ...selectedItems.map((si) => {
-            const p = products.find((x) => x.id === si.productId);
-            return {
-              label: p?.name || 'Product',
-              value: `${si.quantity} units ${p?.caseSize ? `(${p.caseSize}/carton)` : ''}`,
-            };
+          ...filledLines.map((row) => {
+            const p = products.find((x) => x.id === row.productId);
+            return { label: p?.name || 'Product', value: `${lineUnits(row)} units${row.cartons ? ` (${row.cartons} × ${caseSize(row.productId)}${row.units ? ` + ${row.units}` : ''})` : ''}` };
           }),
-          { label: 'Total Volume', value: `${totalUnits} units, ${selectedItems.length} product(s)` },
-          { label: 'Dispatch Date', value: formatDualDate(dispatchDateAd).split(' (')[0] },
-          { label: 'Payment Terms', value: '15-day credit terms' },
-          { label: 'Payment Due Date', value: adToBs(new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]).formatted },
+          { label: 'Total', value: `${totalUnits.toLocaleString()} units, ${filledLines.length} ${filledLines.length === 1 ? 'product' : 'products'}` },
+          { label: 'Dispatch date', value: formatDualDate(dispatchDateAd).split(' (')[0] },
+          { label: 'Payment terms', value: terms || 'None on file' },
+          ...(dueDateAd ? [{ label: 'Payment due', value: adToBs(`${dueDateAd}T12:00:00`).formatted }] : []),
         ]}
         consequences={[
-          `Add ${totalUnits} units to ${selectedStore?.name || 'Distributor'} inventory ledger`,
-          `Create automated payment follow-up reminder for ${adToBs(new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]).formatted}`,
-          'Notify assigned field territory officer of scheduled handover',
+          'Add it to the dispatch list and the store’s record',
+          ...(dueDateAd && !/cash/i.test(terms) ? ['Mark the payment as pending until it is collected'] : []),
         ]}
         onConfirm={handleConfirmDispatch}
-        onCancel={() => {
-          setShowConfirmModal(false);
-          setShowLogModal(true);
-        }}
+        onCancel={() => { setShowConfirmModal(false); setShowLogModal(true); }}
       />
-
-      {/* Edit Quantity with Required Reason Modal */}
-      {showEditModal && targetDispatch && editItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4 text-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-base">Edit Dispatch Quantity</h3>
-              <button onClick={() => setShowEditModal(false)} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div>
-              <div className="font-semibold text-slate-800 mb-1">{editItem.productName}</div>
-              <div className="text-slate-500">Distributor: {targetDispatch.distributorName}</div>
-            </div>
-
-            <div>
-              <label htmlFor="dispatch-new-quantity" className="block font-bold text-slate-700 mb-1">New Quantity *</label>
-              <input id="dispatch-new-quantity"
-                type="number"
-                min="0"
-                value={editItem.quantity}
-                onChange={(e) => setEditItem({ ...editItem, quantity: parseInt(e.target.value) || 0 })}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 font-bold"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="dispatch-reason-for-change-required-f" className="block font-bold text-slate-700 mb-1">Reason for change (Required for Audit Trail) *</label>
-              <textarea id="dispatch-reason-for-change-required-f"
-                rows={3}
-                placeholder="e.g. Typo during entry (entered 30 instead of 20), verified with delivery challan copy"
-                value={editReason}
-                onChange={(e) => setEditReason(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 p-3 outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="rounded-lg border border-slate-200 px-4 py-2 font-semibold text-slate-600 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={isSubmitting || !editReason.trim()}
-                className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow disabled:opacity-50 flex items-center gap-2"
-              >
-                {isSubmitting && (
-                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
-                )}
-                {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save & Update Inventory'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Attached Challan Lightbox Modal */}
       {lightboxChallanUrl && (

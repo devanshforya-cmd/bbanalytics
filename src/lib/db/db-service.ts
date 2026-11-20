@@ -1211,7 +1211,7 @@ export class DatabaseService {
         primaryContactPhone: branch.contactPhone || branch.contacts?.[0]?.phone || '+977-9851000000',
         creditLimit: branch.creditLimit || 500000,
         creditPeriodDays: 30,
-        paymentTerms: dist?.creditTerms || '30 Days Net Cheque',
+        paymentTerms: dist?.creditTerms,
         outstandingBalance: branch.outstandingBalance || 85000,
         coordinates: validGpsCoordinates(branch.lat, branch.lng) ? { lat: branch.lat, lng: branch.lng } : undefined,
         assignedOfficerId: branch.assignedOfficerId || '',
@@ -1237,7 +1237,7 @@ export class DatabaseService {
         primaryContactPhone: retailer.contactPhone || retailer.contacts?.[0]?.phone || '+977-9800000000',
         creditLimit: retailer.creditLimit || 0,
         creditPeriodDays: (retailer as any).creditDays || (retailer as any).creditPeriodDays || 0,
-        paymentTerms: retailer.creditTerms || 'COD',
+        paymentTerms: retailer.creditTerms,
         outstandingBalance: retailer.outstandingBalance || 0,
         coordinates: validGpsCoordinates(retailer.lat, retailer.lng) ? { lat: retailer.lat, lng: retailer.lng } : undefined,
         assignedOfficerId: retailer.assignedOfficerId || '',
@@ -1263,7 +1263,7 @@ export class DatabaseService {
         primaryContactPhone: distributor.contactPhone || distributor.contacts?.[0]?.phone || '+977-9800000000',
         creditLimit: (distributor as any).creditLimit || 0,
         creditPeriodDays: 30,
-        paymentTerms: distributor.creditTerms || '15 Days Credit',
+        paymentTerms: distributor.creditTerms,
         outstandingBalance: 0,
         coordinates: undefined,
         assignedOfficerId: '',
@@ -1272,25 +1272,8 @@ export class DatabaseService {
       };
     }
 
-    // Fallback store if referenced by a recognized name
-    return {
-      id: `store_${clean.replace(/[^a-z0-9]/g, '_')}`,
-      name: decodeURIComponent(idOrName),
-      type: 'RETAILER' as const,
-      subType: 'Retail Partner',
-      address: 'Kathmandu, Nepal',
-      area: 'Kathmandu',
-      contacts: [],
-      primaryContactName: 'Store In-Charge',
-      primaryContactPhone: '+977-9800000000',
-      creditLimit: 0,
-      creditPeriodDays: 0,
-      paymentTerms: 'COD',
-      outstandingBalance: 0,
-      assignedOfficerId: '',
-      assignedOfficerName: 'Field Officer',
-      defaultMargins: undefined,
-    };
+    // Unknown store: say so rather than inventing one.
+    return null;
   }
 
   // Section 2: Unified Stores Access
@@ -1339,7 +1322,7 @@ export class DatabaseService {
         contacts: d.contacts || [],
         hasBranches: branches.length > 0,
         branchesCount: branches.length,
-        paymentTerms: d.creditTerms || '30 Days Net Cheque',
+        paymentTerms: d.creditTerms,
         healthScore: d.healthScore ?? this.getStoreHealthScore(d.id).overall,
         isActive: true,
       });
@@ -1366,7 +1349,7 @@ export class DatabaseService {
         contacts: r.contacts || [],
         hasBranches: false,
         branchesCount: 0,
-        paymentTerms: r.creditTerms || '15 Days Cheque on Delivery',
+        paymentTerms: r.creditTerms,
         healthScore: r.healthScore ?? this.getStoreHealthScore(r.id).overall,
         isActive: true,
       });
@@ -4256,12 +4239,12 @@ export class DatabaseService {
     return relatedDispatches.map((d) => ({
       id: d.id,
       dispatchDateBs: d.dispatchDateBs,
-      dueDateBs: d.paymentDueDateBs || '2083-06-01',
+      dueDateBs: d.paymentDueDateBs || null,
       paymentStatus: d.paymentStatus || 'PENDING',
-      amountDue: d.amountDue || 25000,
+      amountDue: d.amountDue ?? null,
       collectedDateBs: d.collectionDateBs || null,
       delayDays: d.paymentDelayDays || 0,
-      paymentTerms: d.paymentTerms || '15-day credit',
+      paymentTerms: d.paymentTerms || null,
     }));
   }
 
