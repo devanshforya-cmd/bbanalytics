@@ -8,26 +8,40 @@ import DriveBackupCard from '@/components/common/DriveBackupCard';
 import { toast } from '@/components/common/Toast';
 import { db } from '@/lib/db/db-service';
 import { hasAccess, isSuperAdmin } from '@/lib/permissions';
+import { canDownload } from '@/lib/download-access';
 import { DATASETS, buildSheets, exportFileName, type DatasetKey, type ExportFilters } from '@/lib/export/datasets';
 import { RANGE_LABELS, resolveRange, type RangeKey } from '@/lib/export/ranges';
 import { formatDualDate } from '@/lib/nepali-calendar';
 import type { ReportPreset } from '@/lib/types';
 
-const GROUPS = ['Online (D2C)', 'Stores (B2B)', 'Master lists', 'Work & marketing'] as const;
-const QUICK: { name: string; datasets: DatasetKey[] }[] = [
-  { name: 'Online sales', datasets: ['orders', 'order_lines', 'returns'] },
-  { name: 'Store sales', datasets: ['store_orders', 'store_order_lines', 'dispatch_orders', 'dispatch_lines'] },
-  { name: 'Field work', datasets: ['visits', 'stock_counts', 'shelf_photos', 'shelf_share', 'calls'] },
-  { name: 'Money', datasets: ['cheques', 'dispatch_orders', 'stores'] },
+type Side = 'ONLINE' | 'OFFLINE' | 'TEAM';
+/** Online and offline data are never mixed in one file: each side has its own data sets and quick picks. */
+const SIDES: { key: Side; label: string; description: string; datasets: DatasetKey[]; quick: { name: string; datasets: DatasetKey[] }[]; start: DatasetKey[] }[] = [
+  { key: 'ONLINE', label: 'Online (D2C)', description: 'Website, WhatsApp and social orders, returns, reviews, customers',
+    datasets: ['orders', 'order_lines', 'returns', 'feedback', 'delivery_failures', 'customers', 'products'],
+    quick: [{ name: 'Sales', datasets: ['orders', 'order_lines'] }, { name: 'After-sales', datasets: ['returns', 'feedback', 'delivery_failures'] }, { name: 'Customers', datasets: ['customers'] }],
+    start: ['orders', 'order_lines'] },
+  { key: 'OFFLINE', label: 'Offline (stores)', description: 'MT, SAMT, distributors and retail: orders, dispatch, stock, visits, cheques',
+    datasets: ['store_orders', 'store_order_lines', 'dispatch_orders', 'dispatch_lines', 'store_ledger', 'stock_counts', 'visits', 'cheques', 'calls', 'documents', 'shelf_photos', 'shelf_share', 'stores', 'products'],
+    quick: [{ name: 'Store sales', datasets: ['store_orders', 'store_order_lines'] }, { name: 'Dispatch & payment', datasets: ['dispatch_orders', 'dispatch_lines', 'cheques'] },
+      { name: 'Stock', datasets: ['store_ledger', 'stock_counts'] }, { name: 'Field work', datasets: ['visits', 'shelf_photos', 'shelf_share', 'calls'] }],
+    start: ['store_orders', 'store_order_lines'] },
+  { key: 'TEAM', label: 'Team & marketing', description: 'Tasks, influencers and marketing sends',
+    datasets: ['tasks', 'influencers', 'marketing_sends'], quick: [], start: ['tasks'] },
 ];
+const sideOf = (keys: string[]): Side => SIDES.find((side) => keys.length && keys.every((key) => side.datasets.includes(key as DatasetKey)))?.key || 'ONLINE';
 
 export default function ReportsPage() {
   const [, rerender] = useState(0);
   useEffect(() => { const refresh = () => rerender((n) => n + 1); window.addEventListener('bb-db-updated', refresh); return () => window.removeEventListener('bb-db-updated', refresh); }, []);
   const user = db.getCurrentUser();
-  const available = DATASETS.filter((dataset) => isSuperAdmin(user) || hasAccess(user, dataset.page));
+  const allowed = DATASETS.filter((dataset) => isSuperAdmin(user) || hasAccess(user, dataset.page));
+  const [side, setSide] = useState<Side>(() => (allowed.some((d) => d.key === 'orders') ? 'ONLINE' : 'OFFLINE'));
+  const sideDef = SIDES.find((entry) => entry.key === side)!;
+  const available = allowed.filter((dataset) => sideDef.datasets.includes(dataset.key)).sort((a, b) => sideDef.datasets.indexOf(a.key) - sideDef.datasets.indexOf(b.key));
 
-  const [chosen, setChosen] = useState<DatasetKey[]>(['order_lines', 'store_order_lines']);
+  const [chosen, setChosen] = useState<DatasetKey[]>(() => SIDES.find((entry) => entry.key === (allowed.some((d) => d.key === 'orders') ? 'ONLINE' : 'OFFLINE'))!.start);
+  const switchSide = (next: Side) => { setSide(next); setChosen(SIDES.find((entry) => entry.key === next)!.start); setStoreId(''); };
   const [range, setRange] = useState<RangeKey>('THIS_BS_MONTH');
   const [custom, setCustom] = useState<{ fromAd?: string; toAd?: string }>({});
   const [brandCode, setBrandCode] = useState('ALL');
@@ -51,7 +65,7 @@ export default function ReportsPage() {
   const toggle = (key: DatasetKey) => setChosen((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]));
 
   const download = async (kind: 'report' | 'backup') => {
-    const keys = kind === 'backup' ? available.map((dataset) => dataset.key) : visibleChosen;
+    const keys = kind === 'backup' ? allowed.map((dataset) => dataset.key) : visibleChosen;
     if (!keys.length) { toast.error('Choose at least one data set.'); return; }
     setBusy(kind);
     try {
@@ -60,7 +74,7 @@ export default function ReportsPage() {
       const sheets = buildSheets(source, keys, kind === 'backup' ? {} : filters, { skipEmpty: kind === 'report' && keys.length > 1 });
       const rows = sheets.reduce((sum, sheet) => sum + sheet.rows.length, 0);
       if (!rows) { toast.error('Nothing matches these choices.'); return; }
-      const name = kind === 'backup' ? `Brand-Bucket_Full-backup_${new Date().toISOString().slice(0, 10)}` : exportFileName(`Report_${resolved.label}`, filters, source);
+      const name = kind === 'backup' ? `Brand-Bucket_Full-backup_${new Date().toISOString().slice(0, 10)}` : exportFileName(`${side === 'ONLINE' ? 'Online' : side === 'OFFLINE' ? 'Offline' : 'Team'}_${resolved.label}`, filters, source);
       downloadWorkbook(sheets, name, { title: kind === 'backup' ? 'Brand Bucket full backup' : `Report: ${resolved.label}`, author: user.fullName });
       toast.success(`${sheets.length} ${sheets.length === 1 ? 'sheet' : 'sheets'}, ${rows.toLocaleString()} rows.`);
     } catch (error) {
@@ -79,11 +93,23 @@ export default function ReportsPage() {
     toast.success(`Saved “${name}”. It's in your saved reports on any device.`);
   };
   const apply = (preset: ReportPreset) => {
+    setSide(sideOf(preset.datasets));
     setChosen(preset.datasets as DatasetKey[]); setRange(preset.range as RangeKey); setCustom({ fromAd: preset.fromAd, toAd: preset.toAd });
     setBrandCode(preset.brandCode || 'ALL'); setSubBrandId(preset.subBrandId || ''); setStoreId(preset.storeId || ''); setOfficerId(preset.officerId || '');
   };
 
   const select = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500';
+
+  if (!canDownload(user)) {
+    return (
+      <PageGuard feature="export">
+        <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-6 text-center">
+          <h1 className="text-lg font-bold text-slate-900">Downloads are not part of your role</h1>
+          <p className="mt-2 text-sm text-slate-600">Ask an admin to turn on &quot;Download data&quot; for your role in Settings → Staff &amp; roles if you need Excel files.</p>
+        </div>
+      </PageGuard>
+    );
+  }
 
   return (
     <PageGuard feature="export">
@@ -98,24 +124,34 @@ export default function ReportsPage() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6">
+            <div role="tablist" aria-label="Which data" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {SIDES.filter((entry) => allowed.some((d) => entry.datasets.includes(d.key))).map((entry) => (
+                <button key={entry.key} type="button" role="tab" aria-selected={side === entry.key} onClick={() => switchSide(entry.key)}
+                  className={`rounded-2xl border p-4 text-left transition ${side === entry.key ? 'border-blue-600 bg-blue-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-800 hover:border-blue-300'}`}>
+                  <span className="block text-sm font-bold">{entry.label}</span>
+                  <span className={`mt-0.5 block text-[11px] ${side === entry.key ? 'text-blue-100' : 'text-slate-500'}`}>{entry.description}</span>
+                </button>
+              ))}
+            </div>
+
             <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-sm font-bold text-slate-900">1. What to include</h2>
+                <h2 className="text-sm font-bold text-slate-900">1. What to include from {sideDef.label}</h2>
                 <div className="flex flex-wrap gap-1.5">
-                  {QUICK.map((quick) => (
+                  {sideDef.quick.map((quick) => (
                     <button key={quick.name} type="button" onClick={() => setChosen(quick.datasets)} className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50">{quick.name}</button>
                   ))}
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
-                {GROUPS.map((group) => {
-                  const list = available.filter((dataset) => dataset.group === group);
-                  if (!list.length) return null;
+                {[['Records', available.filter((d) => d.group !== 'Master lists')], ['Lists', available.filter((d) => d.group === 'Master lists')]].map(([group, list]) => {
+                  const rows = list as typeof available;
+                  if (!rows.length) return null;
                   return (
-                    <fieldset key={group}>
-                      <legend className="mb-1.5 text-xs font-semibold text-slate-500">{group}</legend>
+                    <fieldset key={group as string}>
+                      <legend className="mb-1.5 text-xs font-semibold text-slate-500">{group as string}</legend>
                       <div className="space-y-1">
-                        {list.map((dataset) => (
+                        {rows.map((dataset) => (
                           <label key={dataset.key} className="flex cursor-pointer items-start gap-2 rounded-lg px-1.5 py-1 text-sm text-slate-800 hover:bg-slate-50">
                             <input type="checkbox" checked={chosen.includes(dataset.key)} onChange={() => toggle(dataset.key)} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
                             <span>{dataset.label}{!dataset.dated && <span className="text-xs text-slate-500"> (current list, no dates)</span>}</span>
@@ -160,13 +196,13 @@ export default function ReportsPage() {
                     {subBrands.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}{sub.isActive ? '' : ' (archived)'}</option>)}
                   </select>
                 </label>
-                <label className="block text-xs">
+                {side === 'OFFLINE' && <label className="block text-xs">
                   <span className="mb-1 block font-semibold text-slate-700">Store</span>
                   <select className={select} value={storeId} onChange={(e) => setStoreId(e.target.value)}>
                     <option value="">All stores</option>
                     {stores.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}
                   </select>
-                </label>
+                </label>}
                 <label className="block text-xs">
                   <span className="mb-1 block font-semibold text-slate-700">Officer</span>
                   <select className={select} value={officerId} onChange={(e) => setOfficerId(e.target.value)}>
@@ -211,7 +247,7 @@ export default function ReportsPage() {
 
             <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
               <h2 className="flex items-center gap-1.5 text-sm font-bold text-slate-900"><HardDriveDownload className="h-4 w-4 text-slate-600" /> Full backup</h2>
-              <p className="mt-2 text-xs text-slate-600">Everything you can see, every date, one sheet per data set. Keep a copy somewhere safe.</p>
+              <p className="mt-2 text-xs text-slate-600">Everything you can see, online and offline, every date, one sheet per data set. Keep a copy somewhere safe.</p>
               <button type="button" onClick={() => download('backup')} disabled={!!busy}
                 className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50">
                 {busy === 'backup' ? 'Preparing…' : 'Download full backup'}

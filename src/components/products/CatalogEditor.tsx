@@ -6,6 +6,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import MobileBottomSheet from '@/components/common/MobileBottomSheet';
 import { toast } from '@/components/common/Toast';
 import { db } from '@/lib/db/db-service';
+import SubBrandPicker from '@/components/products/SubBrandPicker';
 import { isSuperAdmin } from '@/lib/permissions';
 import type { Combo, Product } from '@/lib/types';
 import { suggestComboKeywords, suggestProductKeywords } from '@/lib/keyword-suggest';
@@ -71,16 +72,10 @@ export default function CatalogEditor({ item, kind, products, onChanged }: { ite
           {field('Name', name, setName)}
           {kind === 'products' && <>
             {field('Short name (shown to field staff)', alias, setAlias, 'text', { maxLength: 60, placeholder: 'e.g. Aqua roll-on 50ml' })}
-            {(() => {
-              const subs = (db.getBrands('ALL').find(brand => brand.code === item.brandCode)?.subBrands || []).filter(sub => sub.isActive || sub.id === subBrandId);
-              return <label className="block text-sm font-semibold text-slate-700">Sub-brand
-                <select className={inputClass} value={subBrandId} onChange={e => setSubBrandId(e.target.value)} disabled={!subs.length}>
-                  <option value="">{subs.length ? 'None' : 'This brand has no sub-brands (add them in Settings → Brands)'}</option>
-                  {subs.map(sub => <option key={sub.id} value={sub.id}>{sub.name}{sub.isActive ? '' : ' (archived)'}</option>)}
-                </select>
-                {(item as Product).subBrandId !== (subBrandId || undefined) && <span className="mt-1 block text-xs font-normal text-amber-800">Orders already placed keep their sub-brand; new orders use this one.</span>}
-              </label>;
-            })()}
+            <div>
+              <SubBrandPicker id="catalog-sub-brand" brandCode={item.brandCode} value={subBrandId} onChange={setSubBrandId} savedValue={(item as Product).subBrandId} selectClassName={inputClass} />
+              {(item as Product).subBrandId !== (subBrandId || undefined) && <span className="mt-1 block text-xs font-normal text-amber-800">Orders already placed keep their sub-brand; new orders use this one.</span>}
+            </div>
           </>}
           {field('SKU', sku, setSku)}
           {kind === 'products' ? <>

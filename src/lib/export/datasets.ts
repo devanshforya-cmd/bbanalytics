@@ -7,7 +7,7 @@
  * orders that have at least one matching line. Every dated sheet has both an AD and a BS date.
  */
 import { adToBs } from '../nepali-calendar';
-import { allSubBrands, lineSubBrandId } from '../sub-brands';
+import { allSubBrands, lineSubBrandId, productLabel } from '../sub-brands';
 import type { Column, Sheet } from './xlsx';
 import type {
   Brand, CallLog, Cheque, Combo, Customer, DeliveryFailure, Dispatch, FacingAudit, FeedbackEntry, HandoverDocument, Influencer,
@@ -16,6 +16,7 @@ import type {
 import { PHOTO_COLUMNS, photoCells, photoLink } from '../photo-links';
 import { channelLabel, channelOfDistributor, channelOfRetailer, missingDistributor } from '../store-channels';
 import { destinationName, dispatchStatus, statusLabel } from '../dispatch-flow';
+import { buildStoreLedger, type LedgerStore } from '../store-ledger';
 
 export interface ExportSource {
   brands: Brand[]; products: Product[]; combos: Combo[];
@@ -30,7 +31,7 @@ export interface ExportFilters { fromAd?: string; toAd?: string; brandCode?: str
 
 export type DatasetKey =
   | 'orders' | 'order_lines' | 'returns' | 'feedback' | 'delivery_failures' | 'customers'
-  | 'store_orders' | 'store_order_lines' | 'dispatch_orders' | 'dispatch_lines' | 'stock_counts' | 'visits' | 'cheques' | 'calls' | 'documents' | 'shelf_photos' | 'shelf_share'
+  | 'store_orders' | 'store_order_lines' | 'dispatch_orders' | 'dispatch_lines' | 'store_ledger' | 'stock_counts' | 'visits' | 'cheques' | 'calls' | 'documents' | 'shelf_photos' | 'shelf_share'
   | 'stores' | 'products' | 'tasks' | 'influencers' | 'marketing_sends';
 
 export interface DatasetDefinition {
@@ -190,6 +191,21 @@ export const DATASETS: DatasetDefinition[] = [
         for (const line of d.items) if (lineMatches(s, f, line)) rows.push([d.dispatchNumber || '', d.orderNumber || '', statusLabel(dispatchStatus(d)), day(d.dispatchDateAd), bs(d.dispatchDateAd, d.dispatchDateBs), destinationName(d), d.branchName && d.distributorName !== d.branchName ? d.distributorName : '', brandOf(s, line.brandCode), sub(lineSubBrandId(line, s.products)), line.productName, line.orderedQty ?? line.quantity, line.quantity, line.unitPrice ?? '', line.unitPrice ? line.unitPrice * line.quantity : '', d.paymentTerms || '', day(d.paymentDueDateAd), d.paymentStatus || '', d.createdBy, (d.edits || []).filter((e) => e.productId === line.productId).length || '', d.notes || '', photoLink(d.documentUrl)]);
       }
       return { name: 'Dispatch lines', columns: [col('Dispatch'), col('Store order'), col('Status'), col('Sent (AD)'), col('Sent (BS)'), col('Going to'), col('Chain'), col('Brand'), col('Sub-brand'), col('Product'), col('Units ordered', 'number'), col('Units sent', 'number'), col('Rate (NPR)', 'money'), col('Value (NPR)', 'money'), col('Payment terms'), col('Payment due (AD)'), col('Payment status'), col('Created by'), col('Corrections', 'number'), col('Notes'), photoCol('Challan photo')], rows };
+    },
+  },
+  {
+    key: 'store_ledger', label: 'Store stock ledger (received, sold, on shelf)', group: 'Stores (B2B)', dated: true, page: 'p.stock_counts',
+    build: (s, f) => {
+      const stores: LedgerStore[] = [
+        ...s.retailers.map((r) => ({ id: r.id, name: r.name, kind: 'RETAILER' as const })),
+        ...s.branches.map((b) => ({ id: b.id, name: b.name, kind: 'BRANCH' as const })),
+        ...s.distributors.map((d) => ({ id: d.id, name: d.name, kind: 'DISTRIBUTOR' as const })),
+      ].filter((store) => storeMatch(f, store.id) || (f.storeId && s.branches.some((b) => b.id === store.id && b.distributorId === f.storeId)));
+      const names = new Map(s.products.map((p) => [p.id, productLabel(p)]));
+      const { entries } = buildStoreLedger(stores, s.dispatches, s.stockCounts, names);
+      const rows = entries.filter((e) => inRange(e.date, f) && lineMatches(s, f, { productId: e.productId, brandCode: s.products.find((p) => p.id === e.productId)?.brandCode || '' }))
+        .map((e) => [day(e.date), bs(e.date), e.storeName, e.productName, e.particulars, e.in || '', e.out || '', e.damaged || '', e.adjustment || '', e.balance, e.unitPrice ?? '', e.in && e.unitPrice ? e.in * e.unitPrice : '', e.out && e.unitPrice ? e.out * e.unitPrice : '']);
+      return { name: 'Store ledger', columns: [col('Date (AD)'), col('Date (BS)'), col('Store'), col('Product'), col('Particulars'), col('In: received', 'number'), col('Out: sold', 'number'), col('Damaged', 'number'), col('Found extra', 'number'), col('Balance on shelf', 'number'), col('Rate (NPR)', 'money'), col('Received value', 'money'), col('Sold value', 'money')], rows };
     },
   },
   {
