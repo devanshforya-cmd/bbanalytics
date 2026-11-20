@@ -23,7 +23,7 @@ const RULES: Record<string, Rule[]> = {
   ],
   secondaryOrders: [{ key: 's.money', numbers: ['totalAmount'], itemNumbers: ['unitPrice', 'totalAmount'] }],
   cheques: [{ key: 's.money', numbers: ['amount'] }],
-  dispatches: [{ key: 's.money', numbers: ['amountDue'] }],
+  dispatches: [{ key: 's.money', numbers: ['amountDue', 'totalAmount'], itemNumbers: ['unitPrice'] }],
   products: [{ key: 's.money', numbers: ['costPrice', 'dtpPrice', 'wholesalePrice'] }],
   customers: [{ key: 's.customers', phones: ['phone'], texts: ['address', 'email'] }],
   returns: [{ key: 's.customers', phones: ['customerPhone'] }],

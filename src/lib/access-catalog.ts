@@ -22,7 +22,7 @@ export type PageKey =
   | 'p.settings_task_templates' | 'p.settings_google' | 'p.settings_import' | 'p.settings_upgrade'
   | 'p.settings_experiments';
 
-export type SensitiveKey = 's.money' | 's.customers' | 's.influencers';
+export type SensitiveKey = 's.money' | 's.customers' | 's.influencers' | 's.download';
 
 export type AreaKey = 'overview' | 'online' | 'reviews' | 'customers' | 'offline' | 'marketing' | 'operations' | 'settings';
 
@@ -94,7 +94,7 @@ export const PAGES: PageDefinition[] = [
   page('p.beat_plan', 'Beat plans & routes', 'offline', 'beat_plans', 'Store visits, routes and field tasks', { href: '/offline-sales/beat-plan' }),
   page('p.stores', 'Stores & branches', 'offline', 'stores', 'Retailers, chain branches and contacts', { href: '/offline-sales/stores' }),
   page('p.distributors', 'Distributors & chains', 'offline', 'distributors', 'Distributor and chain head-office accounts, shown inside Stores'),
-  page('p.dispatch', 'Distributor dispatches', 'offline', 'dispatches', 'Dispatches, challans and payment terms', { href: '/offline-sales/dispatch' }),
+  page('p.dispatch', 'Orders & dispatch', 'offline', 'dispatches', 'Store orders as dispatch orders: received, packed, dispatched, delivered; order challans and payment terms', { href: '/offline-sales/dispatch' }),
   page('p.live_tracking', 'Live GPS tracking', 'offline', 'gps_tracking', 'Where field staff are right now', { href: '/offline-sales/live-tracking', actions: ['VIEW', 'EDIT'] }),
   page('p.stock_counts', 'Stock counts', 'offline', 'stock_counts', 'Shelf counts at every store, and what is out or running low', { href: '/offline-sales/stock-counts' }),
   page('p.shelf_photos', 'Shelf photos', 'offline', 'shelf_photos', 'Before and after shelf photos', { href: '/offline-sales/shelf-photos' }),
@@ -131,6 +131,7 @@ export const SENSITIVE: { key: SensitiveKey; label: string; description: string 
   { key: 's.money', label: 'Money', description: 'Order values, prices, discounts, revenue, cheque and dispatch amounts, costs and margins' },
   { key: 's.customers', label: 'Customer details', description: 'Customer phone numbers and addresses' },
   { key: 's.influencers', label: 'Influencer details', description: 'Influencer phone numbers, emails and delivery addresses' },
+  { key: 's.download', label: 'Download data', description: 'Excel downloads on every list, store and order, and the Reports & downloads page. Leave off for field staff' },
 ];
 
 /** Staff & roles is never grantable: only Super Admins manage people and access. */

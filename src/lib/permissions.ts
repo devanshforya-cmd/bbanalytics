@@ -66,7 +66,7 @@ export const FEATURE_METADATA: Record<FeatureKey, { label: string; group: 'OFFLI
   beat_plans: { label: 'Beat Plans & Routes', group: 'OFFLINE_SALES', description: 'Store visit scheduling, daily checklist, route sequencing' },
   stores: { label: 'Stores & Branches', group: 'OFFLINE_SALES', description: 'Retailers, chain branches, contacts, commercial terms' },
   distributors: { label: 'Distributors & Chains', group: 'OFFLINE_SALES', description: 'Primary distribution accounts and retail chain headquarters' },
-  dispatches: { label: 'Warehouse Dispatches', group: 'OFFLINE_SALES', description: 'Dispatch orders, challan documentation, payment terms' },
+  dispatches: { label: 'Orders & dispatch', group: 'OFFLINE_SALES', description: 'Dispatch orders from received to delivered, order challans, payment terms' },
   gps_tracking: { label: 'Live GPS Tracking', group: 'OFFLINE_SALES', description: 'Real-time field officer geolocations, arrival map' },
   shelf_photos: { label: 'Shelf Photos', group: 'OFFLINE_SALES', description: 'Before and after visual merchandising evidence' },
   stock_counts: { label: 'Stock counts', group: 'OFFLINE_SALES', description: 'Shelf stock counts at stores and what is running low' },
@@ -325,6 +325,8 @@ export function getEffectivePermission(
 
   // Accounts saved before page-level access: pages follow their feature; sensitive details stay visible.
   if (isPageKey(feature)) return getEffectivePermission(user, pageDefinition(feature)!.feature);
+  // Downloads came later: older field accounts do not get them; older office accounts keep them.
+  if (feature === 's.download') return user.role === 'SALES_OFFICER' ? undefined : { access: 'VIEW_ONLY', scope: null, actions: ['VIEW'] };
   if (isSensitiveKey(feature)) return { access: 'VIEW_ONLY', scope: null, actions: ['VIEW'] };
   return readPermission(custom?.[feature]) || readPermission(user.permissions?.[feature]);
 }

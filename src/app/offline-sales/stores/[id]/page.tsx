@@ -293,7 +293,7 @@ export default function StoreDetailPage() {
                 </button>
               )}
               <DownloadButton label="Download store file" fileLabel={store.name}
-                datasets={['stores', 'store_orders', 'store_order_lines', 'visits', 'stock_counts', 'shelf_photos', 'shelf_share', 'cheques', 'dispatch_lines', 'calls', 'documents']}
+                datasets={['stores', 'store_orders', 'store_order_lines', 'visits', 'stock_counts', 'shelf_photos', 'shelf_share', 'cheques', 'dispatch_orders', 'dispatch_lines', 'calls', 'documents']}
                 filters={{ storeId: store.id }} className="py-1.5" />
             </div>
           </div>

@@ -26,6 +26,7 @@ import {
   Brand,
   Product,
   Distributor,
+  DispatchStatus,
   Branch,
   Retailer,
   BeatItem,
@@ -99,7 +100,8 @@ export interface RecurringScheduleEntry {
 
 import { syncManager } from '../offline-sync';
 import { applyKarmaEvent, KARMA_RULES } from '../karma-calculator';
-import { getTodayAd, getTodayBs } from '../nepali-calendar';
+import { adToBs, getTodayAd, getTodayBs } from '../nepali-calendar';
+import { canMoveTo, dispatchFromOrder, dispatchStatus, dispatchValue, paymentDueDate, statusLabel, type StoreRef } from '../dispatch-flow';
 
 export interface OrderRealtimeEvent {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -2486,17 +2488,63 @@ export class DatabaseService {
   }
 
   public addDispatch(dispatch: Omit<Dispatch, 'id' | 'createdAt' | 'createdBy'>): Dispatch {
+    const at = new Date().toISOString();
+    const status = dispatch.status || 'ORDER_RECEIVED';
     const newDispatch: Dispatch = {
       ...dispatch,
+      status,
+      statusHistory: dispatch.statusHistory || [{ status, at, byName: this.currentUser.fullName }],
+      items: dispatch.items.map((item) => ({ ...item, orderedQty: item.orderedQty ?? item.quantity })),
       id: this.generateId('disp'),
       createdBy: this.currentUser.fullName,
-      createdAt: new Date().toISOString(),
+      createdAt: at,
       edits: [],
     };
     this.dispatches.unshift(newDispatch);
 
     this.persistState();
     return newDispatch;
+  }
+
+  /** A dispatch order for a store order that does not have one yet (older orders). */
+  public createDispatchOrderFromOrder(orderId: string): Dispatch | null {
+    const order = this.secondaryOrders.find((o) => o.id === orderId);
+    if (!order) return null;
+    const existing = this.dispatches.find((d) => d.orderId === orderId);
+    if (existing) return existing;
+    const store = order.entityType === 'BRANCH' ? this.branches.find((b) => b.id === order.entityId) : this.retailers.find((r) => r.id === order.entityId);
+    const ref: StoreRef | null = !store ? null : order.entityType === 'BRANCH'
+      ? { id: store.id, name: store.name, type: 'BRANCH', chainId: (store as Branch).distributorId, chainName: (store as Branch).distributorName }
+      : { id: store.id, name: store.name, type: 'RETAILER', distributorId: (store as Retailer).distributorId, distributorName: (store as Retailer).distributorName };
+    const dispatch = dispatchFromOrder(order, ref, this.currentUser.fullName) as Dispatch;
+    this.dispatches.unshift(dispatch);
+    this.persistState();
+    return dispatch;
+  }
+
+  /**
+   * Move a dispatch order to its next step. Dispatching stamps the date and starts the payment
+   * clock; delivering stamps the delivery date. The store order follows on the server.
+   */
+  public setDispatchStatus(dispatchId: string, status: DispatchStatus, details: { dateAd?: string; note?: string; documentUrl?: string } = {}): Dispatch {
+    const disp = this.dispatches.find((d) => d.id === dispatchId);
+    if (!disp) throw new Error('This dispatch order was not found. Refresh and try again.');
+    const from = dispatchStatus(disp);
+    if (!canMoveTo(from, status)) throw new Error(`This order is ${statusLabel(from).toLowerCase()}; it cannot move to ${statusLabel(status).toLowerCase()}.`);
+    const day = details.dateAd || getTodayAd();
+    disp.status = status;
+    disp.statusHistory = [...(disp.statusHistory || []), { status, at: new Date().toISOString(), byName: this.currentUser.fullName, ...(details.note ? { note: details.note } : {}) }];
+    if (details.documentUrl) disp.documentUrl = details.documentUrl;
+    if (status === 'DISPATCHED') {
+      disp.dispatchDateAd = day;
+      disp.dispatchDateBs = adToBs(`${day}T12:00:00`).formatted;
+      const due = paymentDueDate(day, disp.paymentTerms);
+      if (due) { disp.paymentDueDateAd = due; disp.paymentDueDateBs = adToBs(`${due}T12:00:00`).formatted; disp.paymentStatus = disp.paymentStatus || 'PENDING'; }
+      disp.amountDue = disp.amountDue ?? (dispatchValue(disp) || disp.totalAmount);
+    }
+    if (status === 'DELIVERED') disp.deliveredDateAd = day;
+    this.persistState();
+    return disp;
   }
 
   public editDispatchItem(dispatchId: string, productId: string, newQty: number, reason: string) {
@@ -2506,7 +2554,9 @@ export class DatabaseService {
     if (!item) return;
 
     const oldQty = item.quantity;
+    if (item.orderedQty === undefined) item.orderedQty = oldQty;
     item.quantity = newQty;
+    item.quantityPcs = newQty;
 
     if (!disp.edits) disp.edits = [];
     disp.edits.push({

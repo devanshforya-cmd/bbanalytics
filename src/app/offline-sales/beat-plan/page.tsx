@@ -385,7 +385,7 @@ export default function BeatPlanPage() {
 
     setActiveActionModal('NONE');
     handleActionComplete('SECONDARY_ORDER');
-    toast.success(`Secondary order booked: ${orderData.totalUnits} units (${orderData.items.length} SKUs) queued for distributor dispatch.`);
+    toast.success(`Order saved: ${orderData.totalUnits} units, ${orderData.items.length} ${orderData.items.length === 1 ? 'product' : 'products'}. It is now on Orders & dispatch as Order received.`);
   };
 
   // Cheque Collection submit
