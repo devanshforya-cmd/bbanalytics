@@ -18,6 +18,7 @@ export default function CatalogEditor({ item, kind, products, onChanged }: { ite
   const [open, setOpen] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [version, setVersion] = useState(0), [name, setName] = useState(''), [sku, setSku] = useState('');
   const [category, setCategory] = useState(''), [mrp, setMrp] = useState(''), [caseSize, setCaseSize] = useState(''), [threshold, setThreshold] = useState('0'), [unit, setUnit] = useState('BOTH');
+  const [alias, setAlias] = useState(''), [subBrandId, setSubBrandId] = useState(''), [barcode, setBarcode] = useState('');
   const [keywords, setKeywords] = useState(''), [extractorKeywords, setExtractorKeywords] = useState(''), [description, setDescription] = useState('');
   const [parts, setParts] = useState<Part[]>([]), [comboPrice, setComboPrice] = useState(''), [discount, setDiscount] = useState(''), [priceDetection, setPriceDetection] = useState(false), [confirmation, setConfirmation] = useState('');
   const user = db.getCurrentUser();
@@ -35,6 +36,7 @@ export default function CatalogEditor({ item, kind, products, onChanged }: { ite
       if (kind === 'products') {
         setCategory(current.category); setMrp(String(current.mrp)); setCaseSize(current.caseSize == null ? '' : String(current.caseSize));
         setThreshold(String(current.thresholdQty ?? 0)); setUnit(current.orderUnitMode || 'BOTH'); setKeywords((current.keywords || []).join(', '));
+        setAlias(current.alias || ''); setSubBrandId(current.subBrandId || ''); setBarcode(current.barcode || '');
       } else {
         setDescription(current.description || ''); setParts(current.items.map(part => ({ productId: part.productId, quantity: part.quantity })));
         setComboPrice(String(current.comboPrice)); setDiscount(''); setPriceDetection(current.priceDetectionEnabled !== false);
@@ -46,7 +48,7 @@ export default function CatalogEditor({ item, kind, products, onChanged }: { ite
     if (!version || (method === 'DELETE' && confirmation !== 'DELETE')) return;
     setBusy(true); setError('');
     const updates = kind === 'products'
-      ? { name, sku, category, mrp: Number(mrp), caseSize: caseSize === '' ? '' : Number(caseSize), thresholdQty: Number(threshold), orderUnitMode: unit, keywords: words(keywords), extractorKeywords: words(extractorKeywords) }
+      ? { name, sku, category, mrp: Number(mrp), caseSize: caseSize === '' ? '' : Number(caseSize), thresholdQty: Number(threshold), orderUnitMode: unit, keywords: words(keywords), extractorKeywords: words(extractorKeywords), alias, subBrandId, barcode }
       : { name, sku, description, items: parts, comboPrice: Number(comboPrice), extractorKeywords: words(extractorKeywords), priceDetectionEnabled: priceDetection };
     try {
       const response = await fetch(`/api/${kind}/${encodeURIComponent(item.id)}`, { method, headers: { 'Content-Type': 'application/json', 'X-Workspace-User': user.id }, body: JSON.stringify({ expectedVersion: version, ...(method === 'PATCH' ? { updates } : {}) }) });
@@ -66,8 +68,23 @@ export default function CatalogEditor({ item, kind, products, onChanged }: { ite
         {busy && <p role="status">Loading or saving…</p>}
         {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
         {!!version && <>
-          {field('Name', name, setName)} {field('SKU', sku, setSku)}
+          {field('Name', name, setName)}
+          {kind === 'products' && <>
+            {field('Short name (shown to field staff)', alias, setAlias, 'text', { maxLength: 60, placeholder: 'e.g. Aqua roll-on 50ml' })}
+            {(() => {
+              const subs = (db.getBrands('ALL').find(brand => brand.code === item.brandCode)?.subBrands || []).filter(sub => sub.isActive || sub.id === subBrandId);
+              return <label className="block text-sm font-semibold text-slate-700">Sub-brand
+                <select className={inputClass} value={subBrandId} onChange={e => setSubBrandId(e.target.value)} disabled={!subs.length}>
+                  <option value="">{subs.length ? 'None' : 'This brand has no sub-brands (add them in Settings → Brands)'}</option>
+                  {subs.map(sub => <option key={sub.id} value={sub.id}>{sub.name}{sub.isActive ? '' : ' (archived)'}</option>)}
+                </select>
+                {(item as Product).subBrandId !== (subBrandId || undefined) && <span className="mt-1 block text-xs font-normal text-amber-800">Orders already placed keep their sub-brand; new orders use this one.</span>}
+              </label>;
+            })()}
+          </>}
+          {field('SKU', sku, setSku)}
           {kind === 'products' ? <>
+            {field('Barcode (optional)', barcode, setBarcode, 'text', { inputMode: 'numeric', placeholder: 'EAN printed on the pack' })}
             {field('Category', category, setCategory)} {field('MRP (NPR)', mrp, setMrp, 'number', { min: '0.01', step: '0.01' })}
             {field('Case size (optional)', caseSize, setCaseSize, 'number', { min: '1', step: '1' })}
             {field('Low stock threshold', threshold, setThreshold, 'number', { min: '0', step: '1' })}

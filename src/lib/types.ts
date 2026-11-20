@@ -65,6 +65,13 @@ export type BrandCategory =
   | 'Fragrance'
   | 'Other';
 
+/** A product line inside a brand (Pee Safe → FURR, Comfort, Domina). Used to split reports; no separate numbering or access. */
+export interface SubBrand {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
 export interface Brand {
   id: string;
   code: BrandCode;
@@ -85,6 +92,7 @@ export interface Brand {
   };
   assignedManagerId?: string;
   assignedManagerName?: string;
+  subBrands?: SubBrand[];
 }
 
 export interface Product {
@@ -93,6 +101,12 @@ export interface Product {
   brandCode: BrandCode;
   sku: string;
   name: string;
+  /** Short name shown in field forms (stock counts, order taking). Reports and documents keep the full name. */
+  alias?: string;
+  /** Sub-brand within the product's brand, if the brand has sub-brands. */
+  subBrandId?: string;
+  /** Barcode (EAN/UPC) printed on the pack. */
+  barcode?: string;
   category: string;
   unitPrice: number;
   costPrice?: number;
@@ -299,6 +313,8 @@ export interface SecondaryOrderItem {
   productId: string;
   productName: string;
   brandCode: BrandCode;
+  /** Sub-brand when the order was placed; set by the server. */
+  subBrandId?: string;
   cases: number;
   unitsPerCase: number;
   totalUnits: number;
@@ -435,6 +451,7 @@ export interface DispatchItem {
   productId: string;
   productName: string;
   brandCode: BrandCode;
+  subBrandId?: string;
   quantity: number;
   quantityPcs?: number;
 }
@@ -483,6 +500,7 @@ export interface StockCountItem {
   productId: string;
   productName: string;
   brandCode: BrandCode;
+  subBrandId?: string;
   shelfQty: number;
   previousQty: number;
   flaggedDrop: boolean; // >50% drop
@@ -659,6 +677,8 @@ export interface OrderItem {
   productId: string;
   productName: string;
   brandCode: BrandCode;
+  /** Sub-brand when the order was placed; set by the server. */
+  subBrandId?: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;

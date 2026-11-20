@@ -5,6 +5,7 @@ import { canAccessBrand, canPerform, hasAccess } from '@/lib/permissions';
 import { readWorkspaceContext } from '@/lib/db/server-workspace';
 import { recordBrandCodes } from '@/lib/db/workspace-policy';
 import { isLocalPreviewAuthEnabled, LOCAL_PREVIEW_USER } from '@/lib/local-preview-auth';
+import { normalizeSubBrands } from '@/lib/sub-brands';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,15 @@ function mapBrand(row: any) {
     status: isActive ? 'ACTIVE' : 'ARCHIVED',
     category: row.category || undefined,
     principalCompany: row.principal_company || undefined,
+    subBrands: normalizeSubBrands(row.code || '', row.sub_brands),
   };
+}
+
+/** Sub-brands that products still point at cannot be deleted, only archived. */
+async function subBrandsInUse(ids: string[]): Promise<{ id: string; products: number }[]> {
+  if (!ids.length) return [];
+  const context = await readWorkspaceContext();
+  return ids.map((id) => ({ id, products: context.records.filter((row) => row.collection === 'products' && row.data.subBrandId === id).length })).filter((row) => row.products > 0);
 }
 
 function unavailable(error?: { code?: string; message?: string } | null) {
@@ -151,6 +160,7 @@ export async function POST(request: Request) {
       principal_company: body.principalCompany || null,
       logo_url: body.logoUrl || null,
       is_active: body.isActive !== false,
+      sub_brands: normalizeSubBrands(code, body.subBrands),
       updated_at: new Date().toISOString(),
     };
 
@@ -248,6 +258,22 @@ export async function PATCH(request: Request) {
     if (body.principalCompany !== undefined) updates.principal_company = body.principalCompany || null;
     if (body.logoUrl !== undefined) updates.logo_url = body.logoUrl || null;
     if (body.isActive !== undefined) updates.is_active = body.isActive;
+    if (body.subBrands !== undefined) {
+      const current = await supabaseAdmin.from('brands').select('code,sub_brands').eq('id', body.id).maybeSingle();
+      if (current.error) return unavailable(current.error);
+      if (!current.data) return NextResponse.json({ success: false, error: 'Brand not found.' }, { status: 404 });
+      const next = normalizeSubBrands(String(updates.code || current.data.code), body.subBrands);
+      const before = normalizeSubBrands(current.data.code, current.data.sub_brands);
+      const removed = before.filter((sub) => !next.some((entry) => entry.id === sub.id)).map((sub) => sub.id);
+      try {
+        const used = await subBrandsInUse(removed);
+        if (used.length) {
+          const names = used.map((row) => `${before.find((sub) => sub.id === row.id)?.name} (${row.products} products)`).join(', ');
+          return NextResponse.json({ success: false, error: `${names} still has products. Move them or archive the sub-brand instead of deleting it.` }, { status: 409 });
+        }
+      } catch { return NextResponse.json({ success: false, error: 'Products could not be checked. Try again.' }, { status: 503 }); }
+      updates.sub_brands = next;
+    }
     let { data, error } = await supabaseAdmin.from('brands').update(updates).eq('id', body.id).select('*').maybeSingle();
     if (error && isMissingColumn(error)) {
       const legacyUpdates = Object.fromEntries(

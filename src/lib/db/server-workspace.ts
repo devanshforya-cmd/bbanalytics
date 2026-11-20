@@ -1,3 +1,4 @@
+import { normalizeSubBrands } from '../sub-brands';
 import { hidesAnything, redactRecord, restoreRedacted } from '../sensitive-data';
 import { isOtherReason, REASON_DETAIL_MAX } from '../failure-reason';
 import { STORE_COLLECTIONS, storeDeletionPlan } from '../store-deletion';
@@ -52,7 +53,7 @@ async function readBrands(): Promise<Brand[]> {
   if (error) throw new WorkspaceError(503, 'Brands could not be loaded.');
   return (data || []).map((r) => ({ id: r.id, code: r.code, name: r.name, description: r.description || '', color: r.color || '#2563eb',
     category: r.category, principalCompany: r.principal_company, logoUrl: r.logo_url, isActive: r.is_active !== false,
-    status: r.is_active === false ? 'ARCHIVED' : 'ACTIVE' }));
+    status: r.is_active === false ? 'ARCHIVED' : 'ACTIVE', subBrands: normalizeSubBrands(r.code || '', r.sub_brands) }));
 }
 
 async function readRecords(): Promise<StoredWorkspaceRecord[]> {
@@ -390,6 +391,22 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
     if (data.brandPrefixes === undefined && prior.data.brandPrefixes !== undefined) data.brandPrefixes = prior.data.brandPrefixes;
   }
   if (mutation.collection === 'orders' && typeof data.orderNumber === 'string') data.orderNumber = data.orderNumber.trim().toUpperCase();
+  if (mutation.collection === 'products') {
+    if (data.alias !== undefined) { data.alias = String(data.alias || '').trim().replace(/\s+/g, ' ').slice(0, 60); if (!data.alias) delete data.alias; }
+    if (data.barcode !== undefined) { data.barcode = String(data.barcode || '').replace(/\s+/g, '').slice(0, 32); if (!data.barcode) delete data.barcode; }
+    if (data.subBrandId) {
+      const brand = context.brands.find((entry) => entry.code.toUpperCase() === String(data.brandCode || '').toUpperCase());
+      const sub = brand?.subBrands?.find((entry) => entry.id === data.subBrandId);
+      if (!sub) throw new WorkspaceError(400, 'Choose a sub-brand of this product’s brand.');
+      if (!sub.isActive && prior?.data.subBrandId !== data.subBrandId) throw new WorkspaceError(400, 'That sub-brand is archived. Choose an active one.');
+    } else delete data.subBrandId;
+  }
+  if (mutation.collection === 'stockCounts') {
+    for (const item of data.items || []) {
+      const product = context.records.find(row => row.collection === 'products' && row.id === item.productId);
+      if (!item.subBrandId && product?.data.subBrandId) item.subBrandId = product.data.subBrandId;
+    }
+  }
   if (mutation.collection === 'sharedAccessLinks') { data.accessCount = 0; delete data.lastAccessedAt; }
   const codes = recordBrandCodes({ collection: mutation.collection, id: mutation.id, data, created_by: prior?.created_by || user.id, version: prior?.version || 0 }, context.records);
   const previousCodes = prior ? recordBrandCodes(prior, context.records) : [];
@@ -399,6 +416,8 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
       if (prior?.data.items?.some((previous: any) => previous.productId === item.productId && JSON.stringify(previous) === JSON.stringify(item))) continue;
       const product = context.records.find(row => ['products', 'combos'].includes(row.collection) && row.id === item.productId);
       if (!product || product.data.active === false || product.data.isActive === false) throw new WorkspaceError(400, 'Choose an active product from the saved catalogue.');
+      // Keep the sub-brand the product had at this moment, so later catalogue moves do not rewrite reports.
+      if (!item.subBrandId && product.collection === 'products' && product.data.subBrandId) item.subBrandId = product.data.subBrandId;
       if (product.collection === 'combos' && product.data.items?.some((component: any) => !context.records.some(row => row.collection === 'products' && row.id === component.productId && row.data.active !== false))) throw new WorkspaceError(400, 'This bundle includes an archived or missing product. Choose an active bundle.');
     }
   }

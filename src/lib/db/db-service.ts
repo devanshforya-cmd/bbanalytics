@@ -173,6 +173,8 @@ export class DatabaseService {
   private recurringSchedules: RecurringScheduleEntry[] = [];
 
   private activeBrandFilter: BrandCode = 'ALL';
+  /** Sub-brand inside the active brand ('' = whole brand). */
+  private activeSubBrandFilter = '';
   private calendarMode: 'BS' | 'AD' = 'BS';
 
   private readonly server: boolean;
@@ -307,7 +309,7 @@ export class DatabaseService {
       this.deletedProductIds.clear(); this.deletedStoreIds.clear();
       this.hydrateSnapshot(this.initialSnapshot, user || ANONYMOUS_USER);
       this.users = user ? [user] : []; this.brands = [];
-      this.activeBrandFilter = 'ALL'; this.calendarMode = 'BS'; this.comparisonMode = 'OFF'; this.salesMode = 'ALL';
+      this.activeBrandFilter = 'ALL'; this.activeSubBrandFilter = ''; this.calendarMode = 'BS'; this.comparisonMode = 'OFF'; this.salesMode = 'ALL';
       syncManager.setUser(this.activeUserId);
       if (user) this.loadState();
       this.baseline = this.exportSnapshot();
@@ -452,6 +454,7 @@ export class DatabaseService {
         if (parsed.currentUser?.id === this.activeUserId) this.currentUser = this.readSessionUser() || parsed.currentUser;
         if (parsed.versions) this.versions = parsed.versions;
         if (parsed.activeBrandFilter) this.activeBrandFilter = parsed.activeBrandFilter;
+        if (typeof parsed.activeSubBrandFilter === 'string') this.activeSubBrandFilter = parsed.activeSubBrandFilter;
         if (parsed.calendarMode) this.calendarMode = parsed.calendarMode;
         if (parsed.brands && parsed.brands.length > 0) this.brands = parsed.brands;
         if (parsed.staffLiveLocations && parsed.staffLiveLocations.length > 0) this.staffLiveLocations = parsed.staffLiveLocations;
@@ -608,6 +611,7 @@ export class DatabaseService {
         documents: this.documents,
         currentUser: (() => { const safe = { ...this.currentUser } as any; delete safe.password; delete safe.passwordHash; delete safe.password_hash; return safe; })(),
         activeBrandFilter: this.activeBrandFilter,
+        activeSubBrandFilter: this.activeSubBrandFilter,
         calendarMode: this.calendarMode,
         staffLiveLocations: this.staffLiveLocations,
         holidays: this.holidays,
@@ -702,9 +706,25 @@ export class DatabaseService {
     return this.activeBrandFilter;
   }
 
-  public setActiveBrandFilter(brand: BrandCode) {
+  public setActiveBrandFilter(brand: BrandCode, subBrandId = '') {
     this.activeBrandFilter = brand;
+    this.activeSubBrandFilter = brand && brand !== 'ALL' ? subBrandId : '';
     this.persistState();
+  }
+
+  public getActiveSubBrandFilter(): string {
+    return this.activeBrandFilter && this.activeBrandFilter !== 'ALL' ? this.activeSubBrandFilter : '';
+  }
+
+  /** Does a product (or a combo, through its parts) belong to the active sub-brand? True when no sub-brand is chosen. */
+  private inActiveSubBrand(productId: string, stamped?: string): boolean {
+    const sub = this.getActiveSubBrandFilter();
+    if (!sub) return true;
+    if (stamped) return stamped === sub;
+    const product = this.products.find((p) => p.id === productId);
+    if (product) return product.subBrandId === sub;
+    const combo = this.combos.find((c) => c.id === productId);
+    return !!combo && combo.items.some((item) => this.products.find((p) => p.id === item.productId)?.subBrandId === sub);
   }
 
   public getCalendarMode(): 'BS' | 'AD' {
@@ -871,8 +891,9 @@ export class DatabaseService {
     }
     const brand = brandCode || this.activeBrandFilter;
     if (brand && brand !== 'ALL') {
-      return list.filter((p) => p.brandCode === brand);
+      list = list.filter((p) => p.brandCode === brand);
     }
+    if (!brandCode && this.getActiveSubBrandFilter()) list = list.filter((p) => this.inActiveSubBrand(p.id));
     return list;
   }
 
@@ -930,8 +951,9 @@ export class DatabaseService {
     }
     const brand = brandCode || this.activeBrandFilter;
     if (brand && brand !== 'ALL') {
-      return list.filter((c) => c.brandCode === brand);
+      list = list.filter((c) => c.brandCode === brand);
     }
+    if (!brandCode && this.getActiveSubBrandFilter()) list = list.filter((c) => this.inActiveSubBrand(c.id));
     return list;
   }
 
@@ -981,6 +1003,12 @@ export class DatabaseService {
           return prod ? user.assignedBrands!.includes(prod.brandCode) : true;
         });
       });
+    }
+    // The header's brand (and sub-brand) choice applies to store orders too: keep orders with a line in it.
+    if (this.activeBrandFilter && this.activeBrandFilter !== 'ALL') {
+      const brand = this.activeBrandFilter;
+      result = result.filter((o) => o.items.some((item) => (item.brandCode || this.products.find((p) => p.id === item.productId)?.brandCode) === brand
+        && this.inActiveSubBrand(item.productId, item.subBrandId)));
     }
     if (filter?.officerId) {
       result = result.filter((o) => o.officerId === filter.officerId);
@@ -2504,8 +2532,9 @@ export class DatabaseService {
     }
     const brand = brandCode || this.activeBrandFilter;
     if (brand && brand !== 'ALL') {
-      return list.filter((o) => o.brandCode === brand);
+      list = list.filter((o) => o.brandCode === brand);
     }
+    if (!brandCode && this.getActiveSubBrandFilter()) list = list.filter((o) => o.items.some((item) => this.inActiveSubBrand(item.productId, item.subBrandId)));
     return list;
   }
 
@@ -2740,8 +2769,9 @@ export class DatabaseService {
     }
     const brand = brandCode || this.activeBrandFilter;
     if (brand && brand !== 'ALL') {
-      return list.filter((df) => df.brandCode === brand);
+      list = list.filter((df) => df.brandCode === brand);
     }
+    if (!brandCode && this.getActiveSubBrandFilter()) list = list.filter((df) => (() => { const order = this.orders.find((o) => o.id === df.orderId); return !order || order.items.some((item) => this.inActiveSubBrand(item.productId, item.subBrandId)); })());
     return list;
   }
 
@@ -2927,8 +2957,9 @@ export class DatabaseService {
     }
     const brand = brandCode || this.activeBrandFilter;
     if (brand && brand !== 'ALL') {
-      return list.filter((r) => r.brandCode === brand);
+      list = list.filter((r) => r.brandCode === brand);
     }
+    if (!brandCode && this.getActiveSubBrandFilter()) list = list.filter((r) => this.inActiveSubBrand(r.productId));
     return list;
   }
 
@@ -3188,8 +3219,9 @@ export class DatabaseService {
     }
     const brand = brandCode || this.activeBrandFilter;
     if (brand && brand !== 'ALL') {
-      return list.filter((f) => f.brandCode === brand);
+      list = list.filter((f) => f.brandCode === brand);
     }
+    if (!brandCode && this.getActiveSubBrandFilter()) list = list.filter((f) => this.inActiveSubBrand(f.productId));
     return list;
   }
 
