@@ -227,72 +227,7 @@ export default function FieldSalesSettings() {
         </div>
       </div>
 
-      {/* 3. Store Categories & Frequency */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-amber-50 text-amber-600">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">
-                Retail Store Classification Categories
-              </h3>
-              <p className="text-xs text-slate-500">
-                Classify retail accounts into tiers (e.g. Tier-A High Volume, Pharmacy, Supermarket) with target visit rhythms.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Add Category Form */}
-        <form onSubmit={handleAddCategory} className="flex gap-2">
-          <input
-            type="text"
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            placeholder="e.g. Category A (Weekly), Category B (Bi-Weekly), Cosmetic Store…"
-            className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-2xs transition flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Category</span>
-          </button>
-        </form>
-
-        {/* Existing Categories */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
-          {categories.map((cat) => (
-            <div
-              key={cat.id}
-              className={`p-3 rounded-xl border flex items-center justify-between gap-2 transition ${
-                cat.isActive ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-200 opacity-60'
-              }`}
-            >
-              <div className="min-w-0">
-                <span className="text-xs font-bold text-slate-900 block truncate">{cat.name}</span>
-                <span className="text-[10px] text-slate-500">
-                  {cat.isActive ? 'Active on store forms' : 'Archived'}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleToggleCategory(cat.id)}
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition ${
-                  cat.isActive
-                    ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                }`}
-              >
-                {cat.isActive ? 'Active' : 'Disabled'}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
+      <p className="rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-600">Store categories are now in <a href="/settings?tab=lists" className="font-semibold text-blue-700 underline">Settings → Lists &amp; categories</a>.</p>
 
       {/* 4. Recurring Beat Schedules & Leave Management */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4">

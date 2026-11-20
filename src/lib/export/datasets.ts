@@ -14,6 +14,7 @@ import type {
   MarketingSend, Order, Product, ReturnEntry, SecondaryOrder, ShelfPhoto, StockCount, Visit, Retailer, Branch, Distributor, Task,
 } from '../types';
 import { PHOTO_COLUMNS, photoCells, photoLink } from '../photo-links';
+import { channelLabel, channelOfDistributor, channelOfRetailer, missingDistributor } from '../store-channels';
 
 export interface ExportSource {
   brands: Brand[]; products: Product[]; combos: Combo[];
@@ -228,11 +229,11 @@ export const DATASETS: DatasetDefinition[] = [
   },
   {
     key: 'stores', label: 'Stores and accounts', group: 'Master lists', dated: false, page: 'p.stores',
-    build: (s, f) => ({ name: 'Stores', columns: [col('Name'), col('Type'), col('Category'), col('Area'), col('City'), col('Province'), col('Address'), col('Officer'), col('Distributor or chain'), col('Contact'), col('Phone'), col('Payment terms'), col('Credit limit', 'money'), col('Outstanding', 'money'), col('Overdue', 'money'), col('Overdue days', 'number'), col('Bounced cheques', 'number'), col('Credit locked'), col('Last visit (AD)'), col('Latitude', 'number'), col('Longitude', 'number')],
+    build: (s, f) => ({ name: 'Stores', columns: [col('Name'), col('Store type'), col('Chain (for MT outlets)'), col('Supplied by distributor'), col('Category'), col('Area'), col('City'), col('Province'), col('Address'), col('Officer'), col('Contact'), col('Phone'), col('Payment terms'), col('Credit limit', 'money'), col('Outstanding', 'money'), col('Overdue', 'money'), col('Overdue days', 'number'), col('Bounced cheques', 'number'), col('Credit locked'), col('Last visit (AD)'), col('Latitude', 'number'), col('Longitude', 'number')],
       rows: [
-        ...s.distributors.filter((d) => storeMatch(f, d.id)).map((d) => [d.name, d.type, '', '', d.city, d.province || '', d.address || '', '', '', d.contactName, d.contactPhone, d.creditTerms || '', '', '', '', '', '', '', '', d.lat ?? '', d.lng ?? '']),
-        ...s.branches.filter((b) => storeMatch(f, b.id) && officerMatch(f, b.assignedOfficerId)).map((b) => [b.name, 'Chain branch (MT)', '', b.area || '', b.city || '', '', b.address, b.assignedOfficerName, b.distributorName, b.contactName, b.contactPhone, '', b.creditLimit ?? '', b.outstandingBalance ?? '', b.overdueBalance ?? '', b.overdueDays ?? '', b.bouncedChequesCount ?? '', b.isCreditLocked ? 'Yes' : '', day(b.lastVisitDate), b.lat, b.lng]),
-        ...s.retailers.filter((r) => storeMatch(f, r.id) && officerMatch(f, r.assignedOfficerId)).map((r) => [r.name, `Retailer (${r.type})`, r.category || '', r.area, r.city, r.province || '', r.address, r.assignedOfficerName, r.distributorName || '', r.contactName, r.contactPhone, r.creditTerms || '', r.creditLimit ?? '', r.outstandingBalance ?? '', r.overdueBalance ?? '', r.overdueDays ?? '', r.bouncedChequesCount ?? '', r.isCreditLocked ? 'Yes' : '', day(r.lastVisitDate), r.lat, r.lng]),
+        ...s.distributors.filter((d) => storeMatch(f, d.id)).map((d) => { const type = channelOfDistributor(d); return [d.name, type === 'CHAIN_STORE' ? 'MT chain (head office)' : 'Distributor', type === 'CHAIN_STORE' ? d.name : '', d.parentDistributorName || '', '', '', d.city, d.province || '', d.address || '', '', d.contactName, d.contactPhone, d.creditTerms || '', '', '', '', '', '', '', '', d.lat ?? '', d.lng ?? '']; }),
+        ...s.branches.filter((b) => storeMatch(f, b.id) && officerMatch(f, b.assignedOfficerId)).map((b) => [b.name, 'MT outlet', b.distributorName, '', '', b.area || '', b.city || '', '', b.address, b.assignedOfficerName, b.contactName, b.contactPhone, '', b.creditLimit ?? '', b.outstandingBalance ?? '', b.overdueBalance ?? '', b.overdueDays ?? '', b.bouncedChequesCount ?? '', b.isCreditLocked ? 'Yes' : '', day(b.lastVisitDate), b.lat || '', b.lng || '']),
+        ...s.retailers.filter((r) => storeMatch(f, r.id) && officerMatch(f, r.assignedOfficerId)).map((r) => [r.name, channelLabel(channelOfRetailer(r)), '', r.distributorName || (missingDistributor(channelOfRetailer(r), r.distributorId) ? 'Not assigned' : ''), r.category || '', r.area, r.city, r.province || '', r.address, r.assignedOfficerName, r.contactName, r.contactPhone, r.creditTerms || '', r.creditLimit ?? '', r.outstandingBalance ?? '', r.overdueBalance ?? '', r.overdueDays ?? '', r.bouncedChequesCount ?? '', r.isCreditLocked ? 'Yes' : '', day(r.lastVisitDate), r.lat, r.lng]),
       ] }),
   },
   {

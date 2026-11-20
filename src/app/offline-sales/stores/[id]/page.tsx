@@ -93,47 +93,77 @@ export default function StoreDetailPage() {
   // Lightbox for shelf photos
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [countOpen, setCountOpen] = useState(false);
+  /** For an MT chain: which outlet's records to show ('ALL' combines every outlet and the head office). */
+  const [outletFilter, setOutletFilter] = useState('ALL');
 
   // Load store
   const store = storeIdParam && [...db.getRetailers(), ...db.getBranches(), ...db.getDistributors()].some(row => row.id === storeIdParam) ? db.getUnifiedStoreById(storeIdParam) : null;
 
+  // An MT chain's history is every outlet's plus the head office's.
+  const chainOutlets = store?.type === 'DISTRIBUTOR' ? db.getBranches().filter((b) => b.distributorId === store.id) : [];
+  const isChain = chainOutlets.length > 0;
+  const scope: { id: string; name: string }[] = !store ? [] : !isChain ? [store]
+    : outletFilter === 'ALL' ? [store, ...chainOutlets]
+    : outletFilter === store.id ? [store]
+    : chainOutlets.filter((b) => b.id === outletFilter);
+  const scopeKey = scope.map((s) => s.id).join('|');
+  const inScope = (record: { entityId?: string; storeName?: string }) => scope.some((s) => belongsToStore(record, s));
+  const suppliedStores = store?.type === 'DISTRIBUTOR' && !isChain ? db.getRetailers().filter((r) => r.distributorId === store.id) : [];
+
   // Load associated operational records
   const visits: BeatItem[] = useMemo(() => {
     if (!store) return [];
-    return db.getBeatItems().filter((b) => belongsToStore(b, store));
-  }, [store]);
+    return db.getBeatItems().filter(inScope);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, scopeKey]);
 
   const cheques: Cheque[] = useMemo(() => {
     if (!store) return [];
-    return db.getCheques().filter((c) => belongsToStore(c, store));
-  }, [store]);
+    return db.getCheques().filter(inScope);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, scopeKey]);
 
   const documents: HandoverDocument[] = useMemo(() => {
     if (!store) return [];
-    return db.getDocuments().filter((d) => belongsToStore(d, store));
-  }, [store]);
+    return db.getDocuments().filter(inScope);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, scopeKey]);
 
   const shelfPhotos: ShelfPhoto[] = useMemo(() => {
     if (!store) return [];
-    return db.getShelfPhotos().filter((p) => belongsToStore(p, store));
-  }, [store]);
+    return db.getShelfPhotos().filter(inScope);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, scopeKey]);
 
   const secondaryOrders: SecondaryOrder[] = useMemo(() => {
     if (!store) return [];
-    return db.getSecondaryOrders().filter((o) => belongsToStore(o, store));
-  }, [store]);
+    return db.getSecondaryOrders().filter(inScope);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, scopeKey]);
 
   const stockCounts: StockCount[] = useMemo(() => {
     if (!store) return [];
-    return db.getStockCounts().filter((s) => belongsToStore(s, store))
+    return db.getStockCounts().filter(inScope)
       .sort((a, b) => (b.dateAd || b.createdAt).localeCompare(a.dateAd || a.createdAt));
-  }, [store]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, scopeKey]);
 
   // Fix 34: Store Health Score
   const healthScore: StoreHealthScore | null = useMemo(() => {
     if (!store) return null;
-    return db.getStoreHealthScore(store.id);
-  }, [store]);
+    // A chain's score is the average of its outlets (or the chosen outlet).
+    const ids = isChain ? scope.filter((s) => s.id !== store.id).map((s) => s.id) : [store.id];
+    if (ids.length <= 1) return db.getStoreHealthScore(ids[0] || store.id);
+    const scores = ids.map((id) => db.getStoreHealthScore(id));
+    const avg = (pick: (h: StoreHealthScore) => number) => Math.round(scores.reduce((sum, h) => sum + (pick(h) || 0), 0) / scores.length);
+    const overall = avg((h) => h.overall);
+    return {
+      ...scores[0], overall, tier: overall >= 70 ? 'TIER_1' : overall >= 40 ? 'TIER_2' : 'TIER_3',
+      orderRegularity: avg((h) => h.orderRegularity), paymentDiscipline: avg((h) => h.paymentDiscipline), stockMaintenance: avg((h) => h.stockMaintenance), visitCooperation: avg((h) => h.visitCooperation), issueRate: avg((h) => h.issueRate),
+      breakdown: scores[0].breakdown ? { orderVelocityScore: avg((h) => h.breakdown?.orderVelocityScore || 0), paymentScore: avg((h) => h.breakdown?.paymentScore || 0), visitFrequencyScore: avg((h) => h.breakdown?.visitFrequencyScore || 0), stockFreshnessScore: avg((h) => h.breakdown?.stockFreshnessScore || 0) } : undefined,
+    } as StoreHealthScore;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, scopeKey]);
 
   const areaStores = [...db.getRetailers().map(row => ({ ...row, entityType: 'RETAILER' as const })), ...db.getBranches().map(row => ({ ...row, entityType: 'BRANCH' as const }))];
   const storeRecord = store?.type === 'BRANCH' ? db.getBranches().find(row => row.id === store.id) : store?.type === 'RETAILER' ? db.getRetailers().find(row => row.id === store.id) : undefined;
@@ -203,12 +233,10 @@ export default function StoreDetailPage() {
                     {store.name}
                   </h1>
                   <StoreDeleteButton id={store.id} name={store.name} onDeleted={() => router.push('/offline-sales/stores')} />
-                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
-                    {store.type}
-                  </span>
                   <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold text-blue-800">
                     {store.subType}
                   </span>
+                  {store.type === 'BRANCH' && store.distributorId && <Link href={`/offline-sales/stores/${store.distributorId}`} className="text-[11px] font-semibold text-blue-700 hover:underline">Whole chain →</Link>}
                 </div>
                 <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
                   <MapPin className="h-3.5 w-3.5 text-slate-400" />
@@ -280,15 +308,15 @@ export default function StoreDetailPage() {
             </span>
             <div className="font-bold text-slate-900 flex items-center gap-1.5">
               <User className="h-3.5 w-3.5 text-slate-500" />
-              {store.primaryContactName}
+              {store.primaryContactName || 'No contact saved'}
             </div>
-            <a
+            {store.primaryContactPhone && <a
               href={`tel:${store.primaryContactPhone}`}
               className="font-mono text-blue-600 hover:underline flex items-center gap-1 text-[11px]"
             >
               <Phone className="h-3 w-3" />
               {store.primaryContactPhone}
-            </a>
+            </a>}
           </div>
 
           {!isOfficer && (
@@ -399,12 +427,12 @@ export default function StoreDetailPage() {
         <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <span className="text-[11px] font-bold text-slate-500 block mb-1">
-              Store Contacts ({store.contacts?.length || 1}):
+              Store contacts ({store.contacts?.length || 0}):
             </span>
             <div className="flex flex-wrap gap-2">
               {(store.contacts && store.contacts.length > 0
                 ? store.contacts
-                : [{ name: store.primaryContactName, role: 'Store Manager', phone: store.primaryContactPhone }]
+                : store.primaryContactName || store.primaryContactPhone ? [{ name: store.primaryContactName, role: '', phone: store.primaryContactPhone }] : []
               ).map((c, i) => (
                 <div
                   key={i}
@@ -530,6 +558,56 @@ export default function StoreDetailPage() {
       )}
 
       {storeRecord && <StoreAreaEditor key={`${store.type}:${store.id}`} record={storeRecord} entityType={store.type === 'BRANCH' ? 'BRANCH' : 'RETAILER'} />}
+
+      {isChain && (
+        <section className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/40 p-4" aria-labelledby="chain-outlets-title">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 id="chain-outlets-title" className="text-sm font-bold text-slate-900">Whole chain: {chainOutlets.length} {chainOutlets.length === 1 ? 'outlet' : 'outlets'}</h2>
+              <p className="text-xs text-slate-600">The tabs below show {outletFilter === 'ALL' ? 'every outlet combined' : `only ${scope[0]?.name || 'this outlet'}`}.</p>
+            </div>
+            <label className="text-xs font-semibold text-slate-700">Show
+              <select value={outletFilter} onChange={(e) => setOutletFilter(e.target.value)} className="ml-2 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs">
+                <option value="ALL">All outlets combined</option>
+                <option value={store.id}>Head office only</option>
+                {chainOutlets.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-600"><tr><th className="px-3 py-2">Outlet</th><th className="px-3 py-2 text-right">Orders</th>{!isOfficer && <th className="px-3 py-2 text-right">Order value</th>}<th className="px-3 py-2 text-right">Units</th><th className="px-3 py-2">Last visit</th><th className="px-3 py-2">Last count</th></tr></thead>
+              <tbody>
+                {[{ id: store.id, name: 'Head office' }, ...chainOutlets].map((outlet) => {
+                  const orders = db.getSecondaryOrders().filter((o) => o.status !== 'CANCELLED' && belongsToStore(o, outlet.id === store.id ? store : outlet));
+                  const lastVisit = db.getBeatItems().filter((b) => belongsToStore(b, outlet.id === store.id ? store : outlet) && b.status === 'VISITED').map((b) => b.dateAd).sort().at(-1);
+                  const lastCount = db.getStockCounts().filter((c) => belongsToStore(c, outlet.id === store.id ? store : outlet)).map((c) => c.dateAd || c.createdAt.slice(0, 10)).sort().at(-1);
+                  if (outlet.id === store.id && !orders.length && !lastVisit && !lastCount) return null;
+                  return (
+                    <tr key={outlet.id} className="border-t border-slate-100">
+                      <td className="px-3 py-2 font-semibold">{outlet.id === store.id ? 'Head office' : <Link href={`/offline-sales/stores/${outlet.id}`} className="text-blue-700 hover:underline">{outlet.name}</Link>}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{orders.length}</td>
+                      {!isOfficer && <td className="px-3 py-2 text-right tabular-nums"><Money>{orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0).toLocaleString()}</Money></td>}
+                      <td className="px-3 py-2 text-right tabular-nums">{orders.reduce((sum, o) => sum + (o.totalUnits || 0), 0).toLocaleString()}</td>
+                      <td className="px-3 py-2">{lastVisit || '—'}</td>
+                      <td className="px-3 py-2">{lastCount || '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {suppliedStores.length > 0 && (
+        <section className="rounded-2xl border border-slate-200 bg-white p-4" aria-labelledby="supplied-stores-title">
+          <h2 id="supplied-stores-title" className="text-sm font-bold text-slate-900">Stores this distributor supplies ({suppliedStores.length})</h2>
+          <ul className="mt-2 flex flex-wrap gap-2 text-xs">
+            {suppliedStores.map((r) => <li key={r.id}><Link href={`/offline-sales/stores/${r.id}`} className="inline-block rounded-lg border border-slate-200 px-2.5 py-1 font-semibold text-blue-700 hover:bg-blue-50">{r.name}<span className="ml-1 font-normal text-slate-500">{r.area}</span></Link></li>)}
+          </ul>
+        </section>
+      )}
 
       {/* Tabs Navigation */}
       <div className="flex overflow-x-auto gap-2 border-b border-slate-200 pb-2">

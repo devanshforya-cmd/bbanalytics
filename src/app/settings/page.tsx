@@ -24,6 +24,7 @@ import PromotionManager from './components/PromotionManager';
 import DataImport from './components/DataImport';
 import SharedAccessSettings from './components/SharedAccessSettings';
 import FieldSalesSettings from './components/FieldSalesSettings';
+import StoreCategoriesSettings from './components/StoreCategoriesSettings';
 import FeatureFlagsSettings from './components/FeatureFlagsSettings';
 import GoogleWorkspaceSettings from './components/GoogleWorkspaceSettings';
 import ListsSettings from './components/ListsSettings';
@@ -203,7 +204,7 @@ export default function SettingsPage() {
           {activeTab === 'IMPORT' && <DataImport />}
           {activeTab === 'SHARED_ACCESS' && <SharedAccessSettings />}
           {activeTab === 'FEATURE_FLAGS' && <FeatureFlagsSettings />}
-          {activeTab === 'LISTS' && <ListsSettings />}
+          {activeTab === 'LISTS' && <div className="space-y-6"><StoreCategoriesSettings /><ListsSettings /></div>}
           {activeTab === 'UPGRADE' && <DataUpgradeSettings />}
           {activeTab === 'TEST_DATA' && isSuperAdmin(user) && <TestDataSettings />}
         </div>

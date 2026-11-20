@@ -1229,21 +1229,21 @@ export class DatabaseService {
         id: branch.id,
         name: branch.name,
         type: 'BRANCH' as const,
-        subType: 'Modern Trade (MT)',
+        subType: `MT outlet of ${dist?.name || 'a chain'}`,
         address: branch.address,
         area: branch.address,
         distributorId: branch.distributorId,
-        distributorName: dist?.name || 'Central Distributor',
+        distributorName: dist?.name || '',
         contacts: branch.contacts || [],
-        primaryContactName: branch.contactName || branch.contacts?.[0]?.name || 'Store Manager',
-        primaryContactPhone: branch.contactPhone || branch.contacts?.[0]?.phone || '+977-9851000000',
-        creditLimit: branch.creditLimit || 500000,
-        creditPeriodDays: 30,
+        primaryContactName: branch.contactName || branch.contacts?.[0]?.name || '',
+        primaryContactPhone: branch.contactPhone || branch.contacts?.[0]?.phone || '',
+        creditLimit: branch.creditLimit || 0,
+        creditPeriodDays: Number(/(\d+)/.exec(dist?.creditTerms || '')?.[1] || 0),
         paymentTerms: dist?.creditTerms,
-        outstandingBalance: branch.outstandingBalance || 85000,
+        outstandingBalance: branch.outstandingBalance || 0,
         coordinates: validGpsCoordinates(branch.lat, branch.lng) ? { lat: branch.lat, lng: branch.lng } : undefined,
         assignedOfficerId: branch.assignedOfficerId || '',
-        assignedOfficerName: branch.assignedOfficerName || 'Field Officer',
+        assignedOfficerName: branch.assignedOfficerName || '',
         defaultMargins: branch.defaultMargins || dist?.defaultMargins,
       };
     }
@@ -1257,19 +1257,21 @@ export class DatabaseService {
         id: retailer.id,
         name: retailer.name,
         type: 'RETAILER' as const,
-        subType: retailer.type || 'General Trade (GT)',
+        subType: retailer.storeType === 'SAMT' ? 'SAMT' : 'Retail store',
+        distributorId: retailer.distributorId,
+        distributorName: retailer.distributorName || '',
         address: retailer.address,
         area: retailer.area,
         contacts: retailer.contacts || [],
-        primaryContactName: retailer.contactName || retailer.contacts?.[0]?.name || 'Proprietor',
-        primaryContactPhone: retailer.contactPhone || retailer.contacts?.[0]?.phone || '+977-9800000000',
+        primaryContactName: retailer.contactName || retailer.contacts?.[0]?.name || '',
+        primaryContactPhone: retailer.contactPhone || retailer.contacts?.[0]?.phone || '',
         creditLimit: retailer.creditLimit || 0,
         creditPeriodDays: (retailer as any).creditDays || (retailer as any).creditPeriodDays || 0,
         paymentTerms: retailer.creditTerms,
         outstandingBalance: retailer.outstandingBalance || 0,
         coordinates: validGpsCoordinates(retailer.lat, retailer.lng) ? { lat: retailer.lat, lng: retailer.lng } : undefined,
         assignedOfficerId: retailer.assignedOfficerId || '',
-        assignedOfficerName: retailer.assignedOfficerName || 'Field Officer',
+        assignedOfficerName: retailer.assignedOfficerName || '',
         defaultMargins: retailer.defaultMargins,
       };
     }
@@ -1283,19 +1285,21 @@ export class DatabaseService {
         id: distributor.id,
         name: distributor.name,
         type: 'DISTRIBUTOR' as const,
-        subType: 'Regional Distributor',
+        subType: (distributor.storeType === 'CHAIN_STORE' || distributor.type === 'Retail Chain' || distributor.type === 'Pharmacy Chain') ? 'MT chain' : 'Distributor',
+        distributorId: distributor.parentDistributorId,
+        distributorName: distributor.parentDistributorName || '',
         address: distributor.address || distributor.city,
         area: distributor.city,
         contacts: distributor.contacts || [],
-        primaryContactName: distributor.contactName || distributor.contacts?.[0]?.name || 'Manager',
-        primaryContactPhone: distributor.contactPhone || distributor.contacts?.[0]?.phone || '+977-9800000000',
+        primaryContactName: distributor.contactName || distributor.contacts?.[0]?.name || '',
+        primaryContactPhone: distributor.contactPhone || distributor.contacts?.[0]?.phone || '',
         creditLimit: (distributor as any).creditLimit || 0,
-        creditPeriodDays: 30,
+        creditPeriodDays: Number(/(\d+)/.exec(distributor.creditTerms || '')?.[1] || 0),
         paymentTerms: distributor.creditTerms,
         outstandingBalance: 0,
         coordinates: undefined,
         assignedOfficerId: '',
-        assignedOfficerName: 'Operations Lead',
+        assignedOfficerName: '',
         defaultMargins: distributor.defaultMargins,
       };
     }
@@ -1681,6 +1685,21 @@ export class DatabaseService {
     this.storeCategories.push(newCat);
     this.persistState();
     return newCat;
+  }
+
+  public renameStoreCategory(id: string, name: string): void {
+    const cat = this.storeCategories.find((x) => x.id === id);
+    const next = name.trim();
+    if (!cat || !next) return;
+    const old = cat.name;
+    cat.name = next;
+    // Stores keep the category by name, so carry the new name onto them.
+    for (const store of this.retailers) if (store.category === old) this.updateRetailer(store.id, { category: next });
+    this.persistState();
+  }
+
+  public storeCategoryUsage(name: string): number {
+    return this.retailers.filter((store) => store.category === name).length;
   }
 
   public toggleStoreCategory(id: string): void {
