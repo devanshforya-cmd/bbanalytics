@@ -5,6 +5,7 @@ import InfoTip from '@/components/common/InfoTip';
 import { countsAsSale } from '@/lib/order-status';
 import { productMetrics } from '@/lib/product-metrics';
 import { subBrandName } from '@/lib/sub-brands';
+import SubBrandPicker from '@/components/products/SubBrandPicker';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import DownloadButton from '@/components/common/DownloadButton';
@@ -1209,19 +1210,10 @@ export default function ProductsPage() {
                 )}
               </select>
             </div>
-            {(() => {
-              const subs = (activeBrandsList.find((b) => b.code === newProd.brandCode)?.subBrands || []).filter((sub) => sub.isActive);
-              return subs.length ? (
-                <div className="col-span-2">
-                  <label htmlFor="products-sub-brand" className="block text-xs font-bold text-slate-700 mb-1">Sub-brand</label>
-                  <select id="products-sub-brand" value={newProd.subBrandId} onChange={(e) => setNewProd({ ...newProd, subBrandId: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-medium bg-white">
-                    <option value="">None</option>
-                    {subs.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}</option>)}
-                  </select>
-                </div>
-              ) : null;
-            })()}
+            <div className="col-span-2">
+              <SubBrandPicker id="products-sub-brand" brandCode={newProd.brandCode} value={newProd.subBrandId} onChange={(v) => setNewProd({ ...newProd, subBrandId: v })}
+                selectClassName="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-medium bg-white" />
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3">

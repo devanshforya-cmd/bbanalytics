@@ -2,9 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ClipboardList, Search } from 'lucide-react';
+import { ClipboardList, Download, Search } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import DownloadButton from '@/components/common/DownloadButton';
+import { canDownload } from '@/lib/download-access';
+import { downloadStockCountWorkbook } from '@/lib/export/record-downloads';
 import InfoTip from '@/components/common/InfoTip';
 import ShelfCountSheet, { type CountTarget } from '@/components/stock/ShelfCountSheet';
 import { db } from '@/lib/db/db-service';
@@ -191,6 +193,9 @@ export default function StockCountsPage() {
                       </span>
                       <span className="shrink-0 text-xs font-semibold text-blue-700">{open ? 'Hide' : 'Show'}</span>
                     </button>
+                    {open && canDownload(db.getCurrentUser()) && (
+                      <button type="button" onClick={() => downloadStockCountWorkbook(count, db.getProducts('ALL'), db.getBrands('ALL'))} className="mt-2 inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-3 w-3" /> Download this count</button>
+                    )}
                     {open && (
                       <table className="mt-2 w-full text-left text-xs">
                         <thead><tr className="text-[11px] text-slate-500"><th className="py-1 font-semibold">Product</th><th className="py-1 text-right font-semibold">Shelf</th><th className="py-1 text-right font-semibold">Before</th><th className="py-1 text-right font-semibold">Sells a day</th></tr></thead>

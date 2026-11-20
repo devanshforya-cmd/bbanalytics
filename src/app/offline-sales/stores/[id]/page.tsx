@@ -1,12 +1,16 @@
 'use client';
 
-import Money from '@/components/common/Money';
+import Money, { canSeeMoney } from '@/components/common/Money';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
 import { analyzeStoreArea, applicableStorePromotions } from '@/lib/area-selling';
 import StoreUpsellPanel from '@/components/stores/StoreUpsellPanel';
+import StoreLedger from '@/components/stores/StoreLedger';
+import { canDownload } from '@/lib/download-access';
+import { downloadStockCountWorkbook, downloadStoreOrderWorkbook } from '@/lib/export/record-downloads';
+import { dispatchStatus, statusLabel } from '@/lib/dispatch-flow';
 import StoreDeleteButton from '@/components/stores/StoreDeleteButton';
 import StoreAreaEditor from '@/components/stores/StoreAreaEditor';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -43,6 +47,9 @@ import {
   BarChart3,
   Layers3,
   Activity,
+  BookOpen,
+  Download,
+  Printer,
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import { belongsToStore, orderCadenceDays, shelfForecast } from '@/lib/store-records';
@@ -76,7 +83,7 @@ export default function StoreDetailPage() {
   const canViewSelling = hasAccess(currentUser, 'beat_plans');
 
   const [activeTab, setActiveTab] = useState<
-    'VISITS' | 'STOCK' | 'PHOTOS' | 'CHEQUES' | 'DOCS' | 'ORDERS' | 'ANALYTICS' | 'SALES_INTELLIGENCE' | 'NOTES'
+    'VISITS' | 'STOCK' | 'LEDGER' | 'PHOTOS' | 'CHEQUES' | 'DOCS' | 'ORDERS' | 'ANALYTICS' | 'SALES_INTELLIGENCE' | 'NOTES'
   >(searchParams.get('tab') === 'selling' && canViewSelling ? 'SALES_INTELLIGENCE' : 'VISITS');
   const requestedSelling = searchParams.get('tab') === 'selling';
   useEffect(() => {
@@ -616,6 +623,7 @@ export default function StoreDetailPage() {
           ...(!isOfficer ? [{ key: 'ANALYTICS', label: 'Analytics & Credit', icon: TrendingUp }] : []),
           ...(canViewSelling ? [{ key: 'SALES_INTELLIGENCE', label: 'Area Selling Assist', icon: TrendingUp }] : []),
           { key: 'STOCK', label: 'Stock Counts', count: stockCounts.length, icon: ClipboardList },
+          { key: 'LEDGER', label: 'Stock ledger', icon: BookOpen },
           { key: 'PHOTOS', label: 'Shelf Photos', count: shelfPhotos.length, icon: Camera },
           { key: 'CHEQUES', label: 'Cheques', count: cheques.length, icon: CreditCard },
           { key: 'DOCS', label: 'Documents', count: documents.length, icon: FileText },
@@ -838,6 +846,10 @@ export default function StoreDetailPage() {
       {activeTab === 'SALES_INTELLIGENCE' && canViewSelling && <StoreUpsellPanel analysis={areaAnalysis} promotions={promotions} />}
 
       {/* TAB 2: STOCK COUNTS */}
+      {activeTab === 'LEDGER' && (
+        <StoreLedger stores={scope.map((s) => ({ id: s.id, name: s.id === store.id && isChain ? `${store.name} (head office)` : s.name, kind: s.id === store.id ? store.type : 'BRANCH' }))} downloadStoreId={store.id} fileLabel={store.name} />
+      )}
+
       {activeTab === 'STOCK' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
@@ -863,7 +875,9 @@ export default function StoreDetailPage() {
                       <span className="font-bold text-slate-900">{sc.dateBs}</span>
                       <span className="text-slate-500 text-[11px] ml-1">({sc.dateAd})</span>
                     </div>
-                    <span className="text-slate-500">Counted by {sc.officerName || 'not recorded'}</span>
+                    <span className="flex items-center gap-2 text-slate-500">Counted by {sc.officerName || 'not recorded'}{isChain && sc.entityId !== store.id ? ` · ${sc.storeName}` : ''}
+                      {canDownload(currentUser) && <button type="button" onClick={() => downloadStockCountWorkbook(sc, db.getProducts('ALL'), db.getBrands('ALL'))} aria-label={`Download the count of ${sc.dateBs}`} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-3 w-3" /> Excel</button>}
+                    </span>
                   </div>
 
                   {/* 7d: Product Name Link in stock items */}
@@ -1097,7 +1111,7 @@ export default function StoreDetailPage() {
       {activeTab === 'ORDERS' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-slate-900 text-sm">Secondary Orders Booked</h3>
+            <h3 className="font-bold text-slate-900 text-sm">Store orders</h3>
             <span className="text-xs text-slate-500 font-medium">
               {secondaryOrders.length} orders
             </span>
@@ -1111,13 +1125,20 @@ export default function StoreDetailPage() {
             <div className="space-y-3">
               {secondaryOrders.map((ord) => (
                 <div key={ord.id} className="rounded-xl border border-slate-200 bg-white p-4 text-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-bold text-slate-900">{/^PENDING-/i.test(ord.orderNumber) ? 'Awaiting ID' : ord.orderNumber}</span>
-                      <span className="text-slate-500 ml-1 text-[11px]">({ord.orderDateBs})</span>
+                      <span className="text-slate-500 text-[11px]">{ord.orderDateBs}{isChain && ord.entityId !== store.id ? ` · ${ord.storeName}` : ''}</span>
+                      {(() => {
+                        const dispatch = db.getDispatches().find((d) => d.orderId === ord.id);
+                        const label = dispatch ? statusLabel(dispatchStatus(dispatch)) : ord.status === 'CANCELLED' ? 'Cancelled' : ord.status === 'DELIVERED' ? 'Delivered' : ord.status === 'DISPATCHED' ? 'Dispatched' : 'Order received';
+                        return <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">{label}{dispatch?.dispatchNumber ? ` · ${dispatch.dispatchNumber}` : ''}</span>;
+                      })()}
                     </div>
-                    <div className="font-black text-slate-900 text-sm">
-                      <Money>{ord.totalAmount.toLocaleString()}</Money>
+                    <div className="flex items-center gap-2">
+                      {canDownload(currentUser) && <button type="button" onClick={() => downloadStoreOrderWorkbook(ord, db.getProducts('ALL'), db.getBrands('ALL'), canSeeMoney())} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50" aria-label={`Download order ${ord.orderNumber}`}><Download className="h-3 w-3" /> Excel</button>}
+                      {(() => { const dispatch = db.getDispatches().find((d) => d.orderId === ord.id); return dispatch && hasAccess(currentUser, 'dispatches') ? <Link href={`/offline-sales/dispatch/challan/${encodeURIComponent(dispatch.id)}`} target="_blank" className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"><Printer className="h-3 w-3" /> Challan</Link> : null; })()}
+                      <span className="font-black text-slate-900 text-sm"><Money>{ord.totalAmount.toLocaleString()}</Money></span>
                     </div>
                   </div>
 
