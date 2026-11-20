@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { PAGES, OPEN_PATHS, pageForPath, pageForSettingsTab } from '../src/lib/access-catalog.ts';
+import { PAGES, OPEN_PATHS, OPEN_PREFIXES, pageForPath, pageForSettingsTab } from '../src/lib/access-catalog.ts';
 import { canPerform, canSeeSensitive, firstAllowedPath, getScope, hasAccess } from '../src/lib/permissions.ts';
 import { diffAccess, normalizePagePermission, pagesFromFeatures, resolveAccess } from '../src/lib/roles.ts';
 import { HIDDEN_TEXT, maskPhone, redactRecord, restoreRedacted } from '../src/lib/sensitive-data.ts';
@@ -25,7 +25,7 @@ test('every app page belongs to exactly one permission', () => {
   };
   walk('src/app', '');
   const exempt = ['/', '/login', '/shared/[token]', '/about', '/privacy', '/terms', '/settings', ...OPEN_PATHS];
-  const missing = routes.filter((route) => !exempt.includes(route) && !route.startsWith('/zz-') && !pageForPath(route.replace(/\[[^\]]+\]/g, 'x')));
+  const missing = routes.filter((route) => !exempt.includes(route) && !route.startsWith('/zz-') && !OPEN_PREFIXES.some((prefix) => `${route}/`.startsWith(prefix)) && !pageForPath(route.replace(/\[[^\]]+\]/g, 'x')));
   assert.deepEqual(missing, []);
   for (const tab of ['BRANDS', 'CHANNELS', 'LISTS', 'PROMOTIONS', 'SHARED_ACCESS', 'RULES', 'FIELD_SALES', 'HOLIDAYS', 'TEMPLATES', 'GOOGLE', 'IMPORT', 'UPGRADE', 'FEATURE_FLAGS']) assert.ok(pageForSettingsTab(tab), tab);
   assert.equal(pageForSettingsTab('STAFF'), undefined, 'Staff & roles is never grantable');

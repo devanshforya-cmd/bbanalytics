@@ -1,4 +1,6 @@
 import { after, NextResponse } from 'next/server';
+import { readRouting } from '@/lib/notify-server';
+import { eventRecipients } from '@/lib/notification-events';
 import { flushUserPush } from '@/lib/push-server';
 import { openSystemWorkspace } from '@/lib/db/server-workspace';
 import { apiFailure } from '../../_workspace';
@@ -69,9 +71,12 @@ export async function GET(request: Request) {
     amberAlerts.push(...thresholdAlerts({ cheques, stores: [...db.getRetailers(), ...db.getBranches()], visits: db.getVisits(), orders: db.getOrders(), deliveryFailures: db.getDeliveryFailures() }, db.getAlertRules(), now.getTime()));
     const administrators = db.getUsers().filter(user => user.active !== false && isSuperAdmin(user));
     const actor = administrators[0];
-    const notifications = administrators.flatMap(user => [...redAlerts.map(message => ({ message, priority: 'URGENT' })), ...amberAlerts.map(message => ({ message, priority: 'MEDIUM' }))].map(alert => {
+    // Who gets the daily alerts follows Settings → Alerts & notifications.
+    const routing = await readRouting(true);
+    const route = (key: 'daily_alerts' | 'content_overdue', personIds?: string[]) => eventRecipients(key, db.getUsers(), routing, { personIds, isSuperAdmin: (user) => isSuperAdmin(user), canOpen: (user, feature) => hasAccess(user, feature) });
+    const notifications = route('daily_alerts').flatMap(user => [...redAlerts.map(message => ({ message, priority: 'URGENT' })), ...amberAlerts.map(message => ({ message, priority: 'MEDIUM' }))].map(alert => {
       const id = `daily_alert_${createHash('sha256').update(`${now.toISOString().slice(0, 10)}:${user.id}:${alert.message}`).digest('hex')}`;
-      return { collection: 'notifications', id, created_by: actor.id, version: 1, last_mutation_id: id, data: { id, userId: user.id, title: 'Daily operations alert', ...alert, read: false, entityType: 'systemAlerts', createdAt: now.toISOString() } };
+      return { collection: 'notifications', id, created_by: actor.id, version: 1, last_mutation_id: id, data: { id, userId: user.id, title: 'Daily operations alert', ...alert, read: false, entityType: 'systemAlerts', kind: 'EVENT', event: 'daily_alerts', link: '/dashboard', createdAt: now.toISOString() } };
     }));
     if (notifications.length) {
       const { error } = await supabaseAdmin.from('workspace_records').upsert(notifications, { onConflict: 'collection,id', ignoreDuplicates: true });
@@ -85,11 +90,11 @@ export async function GET(request: Request) {
     let overdueRaised = 0;
     for (const send of overdueSends) {
       const responsible = db.getUsers().find(user => user.id === send.responsibleId && user.active !== false);
-      const recipients = responsible ? [responsible] : administrators;
+      const recipients = route('content_overdue', responsible ? [responsible.id] : administrators.map((admin) => admin.id));
       const rows: Record<string, unknown>[] = recipients.map(user => {
         const id = `send_overdue_${createHash('sha256').update(`${send.id}:${user.id}`).digest('hex')}`;
         return { collection: 'notifications', id, created_by: actor.id, version: 1, last_mutation_id: id, data: { id, userId: user.id, title: `Content overdue: ${send.sendNumber}`,
-          message: `${send.influencerName} was expected to post by ${send.expectedContentDateAd}. No content is linked to this send yet.`, priority: 'MEDIUM', read: false, entityType: 'marketingSends', entityId: send.id, createdAt: now.toISOString() } };
+          message: `${send.influencerName} was expected to post by ${send.expectedContentDateAd}. No content is linked to this send yet.`, priority: 'MEDIUM', read: false, entityType: 'marketingSends', entityId: send.id, kind: 'EVENT', event: 'content_overdue', link: '/marketing/sends', createdAt: now.toISOString() } };
       });
       if (responsible && hasAccess(responsible, 'tasks')) {
         const id = `task_send_overdue_${send.id}`.slice(0, 170);

@@ -13,7 +13,7 @@ import OfflineBar from '@/components/common/OfflineBar';
 import FieldGpsTracker from '@/components/common/FieldGpsTracker';
 import { confirmSessionWithServer, getSessionUser, logout } from '@/lib/auth';
 import { firstAllowedPath, hasAccess, isSuperAdmin, setActivePage } from '@/lib/permissions';
-import { OPEN_PATHS, PAGES, pageForPath } from '@/lib/access-catalog';
+import { OPEN_PATHS, OPEN_PREFIXES, PAGES, pageForPath } from '@/lib/access-catalog';
 import type { User } from '@/lib/types';
 import { db } from '@/lib/db/db-service';
 
@@ -57,7 +57,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const page = pageForPath(pathname);
   const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
   const pageAllowed = !user ? false
-    : isSuperAdmin(user) || OPEN_PATHS.includes(pathname) ? true
+    : isSuperAdmin(user) || OPEN_PATHS.includes(pathname) || OPEN_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ? true
     : isSettings ? PAGES.some((entry) => entry.settingsTab && hasAccess(user, entry.key))
     : page ? hasAccess(user, page.key) : true;
 

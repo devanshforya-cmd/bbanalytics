@@ -4,8 +4,6 @@ import { isOtherReason, REASON_DETAIL_MAX } from '../failure-reason';
 import { STORE_COLLECTIONS, storeDeletionPlan } from '../store-deletion';
 import { readWorkspaceResetState } from './workspace-reset-server';
 import { createHash, randomUUID } from 'node:crypto';
-import { after } from 'next/server';
-import { deliverPushNotification } from '../push-server';
 import { validateAlertRules } from '../alert-rules';
 import { defaultOrderOptions, validateOrderOptions, requiredOrderOptionActions, assertActiveOrderOption } from '../order-options';
 import { DatabaseService } from './db-service';
@@ -17,7 +15,8 @@ import type { Brand, User, SharedAccessLink } from '../types';
 import { WORKSPACE_COLLECTIONS, isWorkspaceCollection, isLookupCollection, type WorkspaceMutation, type WorkspaceSnapshot, type WorkspaceVersions, type WorkspaceRecord } from './workspace-types';
 import { RESERVED_PREFIXES, brandPrefix, isShortDocumentId, isPendingDocumentId, validateBrandPrefix } from '../document-ids';
 import { nextDocumentId, documentIdTaken } from './document-counter';
-import { canMoveTo, dispatchFromOrder, dispatchStatus, orderStatusFor, type StoreRef } from '../dispatch-flow';
+import { canMoveTo, dispatchFromOrder, dispatchStatus, orderStatusFor, statusLabel, type StoreRef } from '../dispatch-flow';
+import { notifyEvent } from '../notify-server';
 import { editNeedsReason, historyEntries } from '../order-history';
 import { isFullPhone, phoneDigits } from '../customer-lookup';
 import { sameName } from '../marketing';
@@ -450,26 +449,68 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
   }
 }
 
-async function notifyRecordChange(user: User, mutation: WorkspaceMutation, context: WorkspaceContext, created: boolean) {
-  if (mutation.operation === 'delete') return;
-  const recipients = new Set<string>();
-  if (mutation.collection === 'tasks' && mutation.data?.assignedTo && mutation.data.assignedTo !== user.id) recipients.add(mutation.data.assignedTo);
-  if (mutation.collection === 'beatItems' && mutation.data?.officerId && mutation.data.officerId !== user.id) recipients.add(mutation.data.officerId);
-  if (created && !isSuperAdmin(user) && ['cheques', 'documents', 'secondaryOrders', 'feedbackEntries', 'returns'].includes(mutation.collection)) {
-    for (const admin of context.users) if (admin.active !== false && isSuperAdmin(admin)) recipients.add(admin.id);
-  }
-  for (const recipient of recipients) {
-    const id = `notification_${createHash('sha256').update(mutation.mutationId + ':' + recipient).digest('hex')}`;
-    const data = { id, userId: recipient, title: mutation.collection === 'tasks' ? 'Task assigned to you' : 'New field submission',
-      message: mutation.collection === 'tasks' ? String(mutation.data?.title || '') : `${user.fullName} submitted ${mutation.collection}.`,
-      priority: mutation.data?.priority || 'MEDIUM', read: false, entityType: mutation.collection, entityId: mutation.id, createdAt: new Date().toISOString() };
-    const { error } = await supabaseAdmin.from('workspace_records').upsert({ collection: 'notifications', id, data, created_by: user.id, version: 1, last_mutation_id: mutation.mutationId }, { onConflict: 'collection,id', ignoreDuplicates: true });
-    if (error) console.error('[Workspace] Notification could not be saved:', error.code);
-    else {
-      const target = context.users.find(entry => entry.id === recipient);
-      if (target) { try { after(async () => { await deliverPushNotification(target, data); }); } catch { /* Outside a request: the in-app notification is saved; push follows on the next flush. */ } }
+/**
+ * Automatic notifications for a saved record. Each goes through notifyEvent, so the Super
+ * Admin's notification settings decide who gets it; links open the record itself.
+ */
+async function notifyRecordChange(user: User, mutation: WorkspaceMutation, context: WorkspaceContext, prior: StoredWorkspaceRecord | null | undefined) {
+  if (mutation.operation === 'delete' || !mutation.data) return;
+  const d = mutation.data as Record<string, any>;
+  const was = (prior?.data || {}) as Record<string, any>;
+  const created = !prior;
+  const users = context.users;
+  const key = mutation.mutationId;
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  try {
+    switch (mutation.collection) {
+      case 'tasks':
+        if (d.assignedTo && (created || was.assignedTo !== d.assignedTo)) await notifyEvent(user, 'task_assigned', users, { dedupeKey: key, personIds: [d.assignedTo],
+          title: 'Task for you', message: `${String(d.title || 'A task')}${d.dueDateAd ? `, due ${d.dueDateAd}` : ''}. From ${user.fullName}.`, link: '/opscore/tasks', entityType: 'tasks', entityId: mutation.id, priority: d.priority });
+        break;
+      case 'beatItems':
+        if (d.officerId && (created || was.officerId !== d.officerId)) await notifyEvent(user, 'visit_assigned', users, { dedupeKey: key, personIds: [d.officerId],
+          title: 'Store visit added to your beat', message: `${d.storeName || 'A store'} on ${d.dateAd || 'your beat'}. Added by ${user.fullName}.`, link: '/offline-sales/beat-plan', entityType: 'beatItems', entityId: mutation.id });
+        break;
+      case 'secondaryOrders':
+        if (created && d.status !== 'CANCELLED') await notifyEvent(user, 'store_order_new', users, { dedupeKey: key,
+          title: `New store order ${d.orderNumber || ''}`.trim(), message: `${d.storeName}: ${plural(Number(d.totalUnits) || 0, 'unit')}, ${plural((d.items || []).length, 'product')}. Taken by ${d.officerName || user.fullName}.`,
+          link: `/offline-sales/dispatch?q=${encodeURIComponent(d.orderNumber || '')}`, entityType: 'secondaryOrders', entityId: mutation.id });
+        break;
+      case 'orders':
+        if (created && !d.isMarketing) await notifyEvent(user, 'online_order_new', users, { dedupeKey: key,
+          title: `New online order ${d.orderNumber || ''}`.trim(), message: `${d.customerName || 'Customer'}${d.district ? `, ${d.district}` : ''}: ${plural((d.items || []).length, 'item')}${d.platform ? ` via ${d.platform}` : ''}.`,
+          link: `/orderflow/orders/${encodeURIComponent(mutation.id)}`, entityType: 'orders', entityId: mutation.id });
+        break;
+      case 'returns':
+        if (created) await notifyEvent(user, 'return_new', users, { dedupeKey: key,
+          title: `${d.type === 'EXCHANGE' ? 'Exchange' : 'Return'} logged${d.orderNumber ? ` for ${d.orderNumber}` : ''}`, message: `${d.customerName || 'Customer'}${d.reason ? `: ${String(d.reason).slice(0, 100)}` : ''}. Logged by ${user.fullName}.`,
+          link: '/reviews/returns', entityType: 'returns', entityId: mutation.id });
+        break;
+      case 'feedbackEntries':
+        if (created && d.type === 'COMPLAINT') await notifyEvent(user, 'complaint_new', users, { dedupeKey: key, priority: d.priority === 'URGENT' ? 'URGENT' : 'HIGH',
+          title: `New ${d.priority === 'URGENT' ? 'urgent ' : ''}complaint`, message: `${d.customerName || 'Customer'}${(d.issueCategories || []).length ? `: ${(d.issueCategories as string[]).join(', ')}` : ''}. Logged by ${user.fullName}.`,
+          link: '/reviews/feedback', entityType: 'feedbackEntries', entityId: mutation.id });
+        break;
+      case 'cheques':
+        if (created) await notifyEvent(user, 'cheque_new', users, { dedupeKey: key,
+          title: `Cheque collected: ${d.storeName}`, message: `Cheque ${d.chequeNumber}${d.bankName ? `, ${d.bankName}` : ''}, to bank on ${d.cashDateAd}. Collected by ${d.officerName || user.fullName}.`,
+          link: '/offline-sales/cheques', entityType: 'cheques', entityId: mutation.id });
+        else if (['BOUNCED', 'DELAYED'].includes(d.status) && was.status !== d.status) await notifyEvent(user, 'cheque_problem', users, { dedupeKey: key, priority: d.status === 'BOUNCED' ? 'URGENT' : 'HIGH',
+          title: `Cheque ${d.status === 'BOUNCED' ? 'bounced' : 'delayed'}: ${d.storeName}`, message: `Cheque ${d.chequeNumber}${d.delayedReason ? `: ${d.delayedReason}` : ''}. Marked by ${user.fullName}.`,
+          link: '/offline-sales/cheques', entityType: 'cheques', entityId: mutation.id });
+        break;
+      case 'documents':
+        if (created) await notifyEvent(user, 'document_new', users, { dedupeKey: key,
+          title: `Store document: ${d.storeName || 'store'}`, message: `${d.documentType || d.type || 'Document'}${d.documentNumber ? ` ${d.documentNumber}` : ''}, logged by ${user.fullName}.`,
+          link: '/offline-sales/documents', entityType: 'documents', entityId: mutation.id });
+        break;
+      case 'marketingSends':
+        if (created && d.responsibleId) await notifyEvent(user, 'marketing_send_assigned', users, { dedupeKey: key, personIds: [d.responsibleId],
+          title: `Marketing send ${d.sendNumber} is yours`, message: `${user.fullName} recorded a send to ${d.influencerName}. You follow up the content.`,
+          link: '/marketing/sends', entityType: 'marketingSends', entityId: mutation.id });
+        break;
     }
-  }
+  } catch (error) { console.error('[Workspace] Notification not sent:', error instanceof Error ? error.message : 'unknown'); }
 }
 
 /** What the Order Desk may change on an existing order. */
@@ -559,15 +600,6 @@ export async function syncCustomersForPhones(user: User, phones: string[], refer
   }
 }
 
-async function notifyUser(actor: User, recipient: User | undefined, key: string, payload: { title: string; message: string; priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'; entityType: string; entityId: string }) {
-  if (!recipient || recipient.active === false) return;
-  const id = `notification_${createHash('sha256').update(key + ':' + recipient.id).digest('hex')}`;
-  const data = { id, userId: recipient.id, title: payload.title, message: payload.message, priority: payload.priority || ('MEDIUM' as const), read: false,
-    entityType: payload.entityType, entityId: payload.entityId, createdAt: new Date().toISOString() };
-  const { error } = await supabaseAdmin.from('workspace_records').upsert({ collection: 'notifications', id, data, created_by: actor.id, version: 1, last_mutation_id: key.slice(0, 170) }, { onConflict: 'collection,id', ignoreDuplicates: true });
-  if (error) console.error('[Workspace] Notification could not be saved:', error.code);
-  else { try { after(async () => { await deliverPushNotification(recipient, data); }); } catch { /* Outside a request (scheduled job or test): the in-app notification is saved; push follows on the next flush. */ } }
-}
 
 export async function saveWorkspaceMutation(user: User, input: unknown, suppliedContext?: WorkspaceContext): Promise<{ version: number; assigned?: Record<string, string | undefined> }> {
   validateWorkspaceMutation(input);
@@ -674,8 +706,8 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
   context.records = context.records.filter((r) => r.collection !== mutation.collection || r.id !== mutation.id);
   if (mutation.operation !== 'delete') context.records.push({ ...candidate, version, last_mutation_id: mutation.mutationId });
   await appendAudit(user, mutation, !prior);
-  await notifyRecordChange(user, mutation, context, !prior);
-  try { await linkOrderAndDispatch(user, mutation, prior); }
+  await notifyRecordChange(user, mutation, context, prior);
+  try { await linkOrderAndDispatch(user, mutation, prior, context.users); }
   catch (error) { console.error('[Workspace] Order and dispatch were not linked:', error instanceof Error ? error.message : 'unknown'); }
   if (mutation.collection === 'orders' && prior) {
     const before = phoneDigits(prior.data.customerPhone);
@@ -686,8 +718,8 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
       catch (error) { console.error('[Workspace] Customer totals were not refreshed:', error instanceof Error ? error.message : 'unknown'); }
     }
     if (overwrote?.id && overwrote.id !== user.id) {
-      await notifyUser(user, context.users.find(entry => entry.id === overwrote!.id), `order_overwrite:${mutation.mutationId}`, {
-        title: `Order ${prior.data.orderNumber} was edited after you`, priority: 'HIGH', entityType: 'orders', entityId: mutation.id,
+      await notifyEvent(user, 'order_overwrite', context.users, { dedupeKey: mutation.mutationId, personIds: [overwrote.id], priority: 'HIGH',
+        title: `Order ${prior.data.orderNumber} was edited after you`, entityType: 'orders', entityId: mutation.id, link: `/orderflow/orders/${encodeURIComponent(mutation.id)}`,
         message: `${user.fullName} saved a later change to order ${prior.data.orderNumber}. Their changes are now showing; both versions are in the order history.` });
     }
   }
@@ -716,11 +748,6 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
         .eq('collection', 'tasks').eq('id', taskId).eq('version', task.data.version);
     }
   }
-  if (mutation.collection === 'marketingSends' && !prior && mutation.data?.responsibleId && mutation.data.responsibleId !== user.id) {
-    await notifyUser(user, context.users.find(entry => entry.id === mutation.data!.responsibleId), `send_assigned:${mutation.mutationId}`, {
-      title: `Marketing send ${mutation.data.sendNumber} assigned to you`, entityType: 'marketingSends', entityId: mutation.id,
-      message: `${user.fullName} recorded a send to ${mutation.data.influencerName}. You are the responsible person for the content follow-up.` });
-  }
   return { version: mutation.operation === 'delete' ? 0 : version, ...(mutation.operation === 'upsert' && !prior ? { assigned: { orderNumber: mutation.data?.orderNumber, sendNumber: mutation.data?.sendNumber, dispatchNumber: mutation.data?.dispatchNumber } } : {}) };
 }
 
@@ -740,7 +767,7 @@ async function storeRefFor(entityType: string, id: string): Promise<StoreRef | n
  * - a store order cancelled before dispatch cancels its dispatch order;
  * - moving a dispatch order along updates its store order's status.
  */
-async function linkOrderAndDispatch(user: User, mutation: WorkspaceMutation, prior: StoredWorkspaceRecord | null) {
+async function linkOrderAndDispatch(user: User, mutation: WorkspaceMutation, prior: StoredWorkspaceRecord | null, users: User[] = []) {
   if (mutation.operation !== 'upsert' || !mutation.data) return;
   const stamp = () => new Date().toISOString();
   if (mutation.collection === 'secondaryOrders') {
@@ -771,6 +798,11 @@ async function linkOrderAndDispatch(user: User, mutation: WorkspaceMutation, pri
     const linked = await supabaseAdmin.from('workspace_records').select('data,version').eq('collection', 'secondaryOrders').eq('id', dispatch.orderId).maybeSingle();
     const order = linked.data?.data as any;
     const target = orderStatusFor(status);
+    if (order && prior && status !== 'ORDER_RECEIVED') {
+      await notifyEvent(user, 'dispatch_step', users, { dedupeKey: mutation.mutationId, personIds: [order.officerId],
+        title: `${order.orderNumber || 'Store order'}: ${statusLabel(status).toLowerCase()}`, message: `${dispatch.storeName || order.storeName}: dispatch ${dispatch.dispatchNumber || ''} is now ${statusLabel(status).toLowerCase()}.`.replace('  ', ' '),
+        link: `/offline-sales/stores/${encodeURIComponent(order.entityId)}`, entityType: 'secondaryOrders', entityId: order.id, priority: status === 'CANCELLED' ? 'HIGH' : 'MEDIUM' });
+    }
     if (!order || order.status === target) return;
     await supabaseAdmin.from('workspace_records').update({ data: { ...order, status: target, dispatchId: dispatch.id, dispatchNumber: dispatch.dispatchNumber }, version: linked.data!.version + 1, last_mutation_id: `status_${mutation.mutationId}`.slice(0, 170), updated_at: stamp() })
       .eq('collection', 'secondaryOrders').eq('id', dispatch.orderId).eq('version', linked.data!.version);
@@ -817,8 +849,11 @@ export async function openServerWorkspace(user: User) {
     if (error) { console.error('[Workspace] Transaction failed:', error.code); throw new WorkspaceError(503, 'The operation was not saved. Please retry.'); }
     const assigned: Record<string, string> = {};
     for (const mutation of pending) {
+      const before = context.records.find((row) => row.collection === mutation.collection && row.id === mutation.id && mutation.expectedVersion > 0);
       await appendAudit(user, mutation, mutation.expectedVersion === 0);
-      await notifyRecordChange(user, mutation, context, mutation.expectedVersion === 0);
+      await notifyRecordChange(user, mutation, context, before);
+      try { await linkOrderAndDispatch(user, mutation, before || null, context.users); }
+      catch (error) { console.error('[Workspace] Order and dispatch were not linked:', error instanceof Error ? error.message : 'unknown'); }
       const number = mutation.data?.orderNumber || mutation.data?.sendNumber || mutation.data?.dispatchNumber;
       if (mutation.operation === 'upsert' && typeof number === 'string') assigned[mutation.id] = number;
     }

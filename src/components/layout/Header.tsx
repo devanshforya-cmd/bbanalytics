@@ -17,6 +17,11 @@ import GlobalSearchModal from '@/components/common/GlobalSearchModal';
 import { getSessionUser } from '@/lib/auth';
 import { getTodayBs } from '@/lib/nepali-calendar';
 import { useExperiment } from '@/hooks/useExperiment';
+import { canPerform, isSuperAdmin } from '@/lib/permissions';
+import { isMessage, notificationTarget } from '@/lib/notification-open';
+import MessageModal from '@/components/notifications/MessageModal';
+import ComposeMessage from '@/components/notifications/ComposeMessage';
+import { toast } from '@/components/common/Toast';
 import {
   Menu,
   Bell,
@@ -34,6 +39,8 @@ import {
   ArrowRight,
   Sparkles,
   Calendar,
+  Mail,
+  Send,
 } from 'lucide-react';
 
 export default function Header() {
@@ -52,6 +59,10 @@ export default function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifTab, setNotifTab] = useState<'UNREAD' | 'ALL'>('UNREAD');
   const notifMenuRef = useRef<HTMLDivElement>(null);
+  const [openMessage, setOpenMessage] = useState<Notification | null>(null);
+  const [showCompose, setShowCompose] = useState(false);
+  const seenNotifIds = useRef<Set<string> | null>(null);
+  const canSendMessages = isSuperAdmin(currentUser) || canPerform(currentUser, 'p.settings_alerts', 'EDIT');
 
   // Global keyboard shortcut for Cmd+K / Ctrl+K
   useEffect(() => {
@@ -66,7 +77,17 @@ export default function Header() {
   }, []);
 
   const refreshNotifs = () => {
-    setNotifications(db.getNotifications());
+    const list = db.getNotifications();
+    // Pop up anything new that arrived since the last look (not old ones arriving with a first sync).
+    if (seenNotifIds.current) {
+      const recent = Date.now() - 15 * 60 * 1000;
+      const fresh = list.filter((n) => !n.read && !seenNotifIds.current!.has(n.id) && Date.parse(n.createdAt) > recent).slice(0, 3);
+      for (const n of fresh) {
+        toast.info(n.title, isMessage(n) ? `Message from ${n.senderName || 'the office'}` : n.message.slice(0, 120), { label: 'Open', onClick: () => openNotificationRef.current(n) });
+      }
+    }
+    seenNotifIds.current = new Set(list.map((n) => n.id));
+    setNotifications(list);
   };
 
   useEffect(() => {
@@ -131,21 +152,11 @@ export default function Header() {
     db.markNotificationRead(n.id);
     refreshNotifs();
     setShowNotifMenu(false);
-
-    // Deep link based on content
-    const text = (n.title + ' ' + n.message).toLowerCase();
-    if (text.includes('cheque') || text.includes('handover')) {
-      router.push('/offline-sales/cheques');
-    } else if (text.includes('delivery') || text.includes('failed')) {
-      router.push('/orderflow/delivery-failures');
-    } else if (text.includes('task') || text.includes('assigned') || text.includes('beat')) {
-      router.push('/offline-sales/beat-plan');
-    } else if (text.includes('stock')) {
-      router.push('/products');
-    } else {
-      router.push('/dashboard');
-    }
+    if (isMessage(n)) setOpenMessage(n);
+    else router.push(notificationTarget(n));
   };
+  const openNotificationRef = useRef(handleNotificationClick);
+  openNotificationRef.current = handleNotificationClick;
 
   const unreadNotifs = notifications.filter((n) => !n.read);
   const displayedNotifs = notifTab === 'UNREAD' ? unreadNotifs : notifications;
@@ -306,6 +317,7 @@ export default function Header() {
                       const isCheque = text.includes('cheque');
                       const isLogistics = text.includes('delivery') || text.includes('failed');
                       const isTask = text.includes('task') || text.includes('beat');
+                      const isMsg = isMessage(n);
 
                       return (
                         <div
@@ -317,7 +329,9 @@ export default function Header() {
                         >
                           <div
                             className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center mt-0.5 ${
-                              isCheque
+                              isMsg
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : isCheque
                                 ? 'bg-purple-100 text-purple-700'
                                 : isLogistics
                                 ? 'bg-rose-100 text-rose-700'
@@ -326,10 +340,7 @@ export default function Header() {
                                 : 'bg-slate-100 text-slate-700'
                             }`}
                           >
-                            {isCheque && <CreditCard className="w-3.5 h-3.5" />}
-                            {isLogistics && <Truck className="w-3.5 h-3.5" />}
-                            {isTask && <CheckSquare className="w-3.5 h-3.5" />}
-                            {!isCheque && !isLogistics && !isTask && <Info className="w-3.5 h-3.5" />}
+                            {isMsg ? <Mail className="w-3.5 h-3.5" /> : isCheque ? <CreditCard className="w-3.5 h-3.5" /> : isLogistics ? <Truck className="w-3.5 h-3.5" /> : isTask ? <CheckSquare className="w-3.5 h-3.5" /> : <Info className="w-3.5 h-3.5" />}
                           </div>
 
                           <div className="flex-1 min-w-0">
@@ -345,7 +356,7 @@ export default function Header() {
                               {n.message}
                             </p>
                             <span className="text-[10px] text-slate-500 mt-1 block">
-                              {n.createdAt || 'Today 10:30 AM'} • Click to view
+                              {isMsg ? `From ${n.senderName || 'the office'} · ` : ''}{n.createdAt ? new Date(n.createdAt).toLocaleString('en-GB', { timeZone: 'Asia/Kathmandu', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''}
                             </span>
                           </div>
                         </div>
@@ -356,6 +367,15 @@ export default function Header() {
 
                 {/* Footer: View Full Audit History */}
                 <div className="p-2.5 bg-slate-50 border-t border-slate-100 text-center">
+                  {canSendMessages && (
+                    <button
+                      type="button"
+                      onClick={() => { setShowNotifMenu(false); setShowCompose(true); }}
+                      className="mb-1 flex w-full items-center justify-center gap-1 rounded-lg bg-blue-600 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                    >
+                      <Send className="w-3.5 h-3.5" /> Send a message
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -426,6 +446,9 @@ export default function Header() {
         onBrandChange={handleBrandChange}
         onOpenProfile={() => setShowProfileDrawer(true)}
       />
+
+      {openMessage && <MessageModal message={openMessage} onClose={() => setOpenMessage(null)} />}
+      {showCompose && <ComposeMessage onClose={() => setShowCompose(false)} />}
 
       {/* Notification & Audit History Modal */}
       <NotificationHistoryModal

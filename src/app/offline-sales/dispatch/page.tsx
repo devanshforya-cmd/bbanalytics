@@ -74,6 +74,11 @@ export default function DispatchPage() {
   // Filters
   const [tab, setTab] = useState<DispatchStatus | 'OPEN' | 'ALL'>('OPEN');
   const [query, setQuery] = useState('');
+  // A notification link (?q=<order number>) lands on that order, whatever its step.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) { setQuery(q.slice(0, 80)); setTab('ALL'); }
+  }, []);
   const counts = Object.fromEntries(DISPATCH_STATUSES.map((s) => [s.status, dispatches.filter((d) => dispatchStatus(d) === s.status).length])) as Record<DispatchStatus, number>;
   const openCount = counts.ORDER_RECEIVED + counts.PACKED + counts.DISPATCHED;
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);

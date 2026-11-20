@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
 import { Notification } from '@/lib/types';
+import { isMessage, notificationTarget } from '@/lib/notification-open';
+import MessageModal from '@/components/notifications/MessageModal';
 import {
   Bell,
   CheckCheck,
@@ -36,6 +38,8 @@ export default function NotificationHistoryModal({
   const [filterCategory, setFilterCategory] = useState<'ALL' | 'CHEQUE' | 'DELIVERY' | 'TASK' | 'STOCK'>('ALL');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'UNREAD' | 'READ'>('ALL');
 
+  const [openMessage, setOpenMessage] = useState<Notification | null>(null);
+
   if (!isOpen) return null;
 
   const notifications = db.getNotifications();
@@ -48,15 +52,6 @@ export default function NotificationHistoryModal({
     if (text.includes('task') || text.includes('assigned') || text.includes('beat') || text.includes('todo')) return 'TASK';
     if (text.includes('stock') || text.includes('inventory') || text.includes('drop') || text.includes('low')) return 'STOCK';
     return 'OTHER';
-  };
-
-  const getTargetRoute = (n: Notification): string => {
-    const cat = getCategory(n);
-    if (cat === 'CHEQUE') return '/offline-sales/cheques';
-    if (cat === 'DELIVERY') return '/orderflow/delivery-failures';
-    if (cat === 'TASK') return '/opscore/calendar-tasks';
-    if (cat === 'STOCK') return '/products';
-    return '/dashboard';
   };
 
   const filteredNotifications = notifications.filter((n) => {
@@ -79,9 +74,9 @@ export default function NotificationHistoryModal({
   const handleClickNotification = (n: Notification) => {
     db.markNotificationRead(n.id);
     onNotificationsUpdated();
-    const route = getTargetRoute(n);
+    if (isMessage(n)) { setOpenMessage(n); return; }
     onClose();
-    router.push(route);
+    router.push(notificationTarget(n));
   };
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
@@ -92,6 +87,7 @@ export default function NotificationHistoryModal({
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4">
+      {openMessage && <MessageModal message={openMessage} onClose={() => setOpenMessage(null)} />}
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"

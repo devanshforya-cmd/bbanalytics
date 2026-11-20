@@ -165,3 +165,5 @@ export function pageForSettingsTab(tab: string): PageDefinition | undefined {
 
 /** Paths anyone signed in may open. */
 export const OPEN_PATHS = ['/no-access'];
+/** Pages anyone signed in can open: a message shows only to the person it was sent to. */
+export const OPEN_PREFIXES = ['/messages/'];

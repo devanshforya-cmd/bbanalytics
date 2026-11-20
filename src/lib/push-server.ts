@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/db/supabase-server';
 import { hasAccess, isSuperAdmin, type FeatureKey } from '@/lib/permissions';
 import type { Notification, User } from '@/lib/types';
 import { safeNotificationPath, validatePushSubscription } from './push-validation';
+import { eventByKey } from './notification-events';
 
 export function pushConfig() {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
@@ -14,9 +15,11 @@ export function pushConfig() {
 
 export function pushSubscriptionId(endpoint: string) { return createHash('sha256').update(endpoint).digest('hex'); }
 
-function allowedNotification(user: User, notification: Pick<Notification, 'entityType'>) {
-  if (notification.entityType === 'pushTest') return true;
+function allowedNotification(user: User, notification: Pick<Notification, 'entityType' | 'kind' | 'event'>) {
+  if (notification.entityType === 'pushTest' || notification.kind === 'MESSAGE') return true;
   if (isSuperAdmin(user)) return true;
+  const event = notification.event ? eventByKey(notification.event) : undefined;
+  if (event) return !event.feature || hasAccess(user, event.feature);
   const feature: Record<string, FeatureKey> = { tasks: 'tasks', cheques: 'cheque_tracker', documents: 'document_handover', secondaryOrders: 'beat_plans', feedbackEntries: 'reviews', returns: 'reviews', beatItems: 'beat_plans' };
   return !!notification.entityType && !!feature[notification.entityType] && hasAccess(user, feature[notification.entityType]);
 }
@@ -38,7 +41,9 @@ export async function deliverPushNotification(user: User, notification: Notifica
     } else if (insertError) { failed++; continue; }
     try {
       const subscription = validatePushSubscription(row.subscription);
-      await webpush.sendNotification(subscription, JSON.stringify({ title: 'BB Analytics', body: 'You have a new work alert. Open the app to review it.', tag: notification.id, url: safeNotificationPath('/') }), { vapidDetails: config, TTL: 3600, urgency: notification.priority === 'URGENT' || notification.priority === 'HIGH' ? 'high' : 'normal', timeout: 5000 });
+      const title = notification.kind === 'MESSAGE' ? `Message from ${notification.senderName || 'the office'}` : notification.title || 'BB Analytics';
+      const body = notification.kind === 'MESSAGE' ? notification.title : (notification.message || 'Open the app to see it.').slice(0, 140);
+      await webpush.sendNotification(subscription, JSON.stringify({ title, body, tag: notification.id, url: safeNotificationPath(notification.kind === 'MESSAGE' ? `/messages/${encodeURIComponent(notification.id)}` : notification.link || '/') }), { vapidDetails: config, TTL: 3600, urgency: notification.priority === 'URGENT' || notification.priority === 'HIGH' ? 'high' : 'normal', timeout: 5000 });
       await supabaseAdmin.from('push_deliveries').update({ state: 'sent', updated_at: new Date().toISOString() }).eq('notification_id', notification.id).eq('subscription_id', row.id);
       sent++;
     } catch (err) {
