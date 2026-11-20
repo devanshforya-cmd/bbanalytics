@@ -110,9 +110,9 @@ export default function Header() {
     };
   }, []);
 
-  const handleBrandChange = (brand: BrandCode) => {
+  const handleBrandChange = (brand: BrandCode, subBrandId = '') => {
     setBrandFilter(brand);
-    db.setActiveBrandFilter(brand);
+    db.setActiveBrandFilter(brand, subBrandId);
     window.location.reload();
   };
 

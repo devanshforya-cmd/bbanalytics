@@ -4,6 +4,7 @@ import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import { countsAsSale } from '@/lib/order-status';
 import { productMetrics } from '@/lib/product-metrics';
+import { subBrandName } from '@/lib/sub-brands';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -82,6 +83,9 @@ export default function ProductsPage() {
   // Add Product Form State (Fix 70b: no wholesalePrice, dtpPrice, costPrice; Fix 72a: extractorKeywords)
   const [newProd, setNewProd] = useState({
     name: '',
+    alias: '',
+    subBrandId: '',
+    barcode: '',
     sku: '',
     brandCode: '' as BrandCode,
     category: 'Personal Care',
@@ -259,6 +263,9 @@ export default function ProductsPage() {
 
     db.addProduct({
       name: newProd.name,
+      alias: newProd.alias.trim() || undefined,
+      subBrandId: newProd.subBrandId || undefined,
+      barcode: newProd.barcode.trim() || undefined,
       sku: newProd.sku.toUpperCase(),
       brandCode: newProd.brandCode,
       brandId: brand.id,
@@ -284,6 +291,9 @@ export default function ProductsPage() {
     else toast.error(`Product is pending sync. ${saved.message}`);
     setNewProd({
       name: '',
+      alias: '',
+      subBrandId: '',
+      barcode: '',
       sku: '',
       brandCode: '',
       category: 'Personal Care',
@@ -610,6 +620,7 @@ export default function ProductsPage() {
                         </span>
                       </div>
                       <h2 className="font-bold text-slate-900 text-sm mt-1">{p.name} {p.active === false && <span className="text-xs text-amber-700">Archived</span>}</h2>
+                      {(p.alias || p.subBrandId) && <p className="text-[11px] text-slate-500">{[subBrandName(db.getBrands('ALL'), p.subBrandId), p.alias && `Short name: ${p.alias}`].filter(Boolean).join(' · ')}</p>}
                       <p className="text-xs text-slate-500">
                         {p.category} &bull; Case of {p.caseSize || 24}N
                       </p>
@@ -717,7 +728,7 @@ export default function ProductsPage() {
                         >
                           {p.name} {p.active === false && <span className="text-xs text-amber-700">Archived</span>}
                         </button>
-                        <div className="text-[11px] font-mono text-slate-500 mt-0.5">{p.sku}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5"><span className="font-mono">{p.sku}</span>{p.alias && <> · Short name: <span className="font-medium text-slate-700">{p.alias}</span></>}</div>
                       </td>
                       <td className="p-3.5">
                         <span
@@ -725,6 +736,7 @@ export default function ProductsPage() {
                         >
                           {brandName(p.brandCode)}
                         </span>
+                        {subBrandName(db.getBrands('ALL'), p.subBrandId) && <div className="mt-1 text-[11px] font-medium text-slate-600">{subBrandName(db.getBrands('ALL'), p.subBrandId)}</div>}
                       </td>
                       <td className="p-3.5 text-slate-600">{p.category}</td>
                       <td className="p-3.5 text-slate-600 font-medium">
@@ -1144,6 +1156,21 @@ export default function ProductsPage() {
             />
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="products-short-name" className="block text-xs font-bold text-slate-700 mb-1">Short name</label>
+              <input id="products-short-name" type="text" maxLength={60} value={newProd.alias}
+                onChange={(e) => setNewProd({ ...newProd, alias: e.target.value })} placeholder="Shown to field staff, e.g. Aqua roll-on"
+                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-medium" />
+            </div>
+            <div>
+              <label htmlFor="products-barcode" className="block text-xs font-bold text-slate-700 mb-1">Barcode</label>
+              <input id="products-barcode" type="text" inputMode="numeric" value={newProd.barcode}
+                onChange={(e) => setNewProd({ ...newProd, barcode: e.target.value })} placeholder="EAN on the pack (optional)"
+                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono font-medium" />
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="products-sku-code" className="block text-xs font-bold text-slate-700 mb-1">
@@ -1165,7 +1192,7 @@ export default function ProductsPage() {
               <select id="products-brand"
                 value={newProd.brandCode}
                 onChange={(e) =>
-                  setNewProd({ ...newProd, brandCode: e.target.value as BrandCode })
+                  setNewProd({ ...newProd, brandCode: e.target.value as BrandCode, subBrandId: '' })
                 }
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-medium bg-white"
               >
@@ -1180,6 +1207,19 @@ export default function ProductsPage() {
                 )}
               </select>
             </div>
+            {(() => {
+              const subs = (activeBrandsList.find((b) => b.code === newProd.brandCode)?.subBrands || []).filter((sub) => sub.isActive);
+              return subs.length ? (
+                <div className="col-span-2">
+                  <label htmlFor="products-sub-brand" className="block text-xs font-bold text-slate-700 mb-1">Sub-brand</label>
+                  <select id="products-sub-brand" value={newProd.subBrandId} onChange={(e) => setNewProd({ ...newProd, subBrandId: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-medium bg-white">
+                    <option value="">None</option>
+                    {subs.map((sub) => <option key={sub.id} value={sub.id}>{sub.name}</option>)}
+                  </select>
+                </div>
+              ) : null;
+            })()}
           </div>
 
           <div className="grid grid-cols-3 gap-3">

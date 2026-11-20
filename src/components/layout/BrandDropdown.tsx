@@ -19,7 +19,7 @@ import { canAccessBrand, hasAccess, isSuperAdmin } from '@/lib/permissions';
 
 interface BrandDropdownProps {
   currentBrand: BrandCode;
-  onBrandChange: (brand: BrandCode) => void;
+  onBrandChange: (brand: BrandCode, subBrandId?: string) => void;
   className?: string;
   isCompact?: boolean;
 }
@@ -96,6 +96,7 @@ export default function BrandDropdown({
   }, [isOpen]);
 
   const activeBrandObj = brands.find((b) => b.code === currentBrand);
+  const activeSub = currentBrand !== 'ALL' ? (activeBrandObj?.subBrands || []).find((sub) => sub.id === db.getActiveSubBrandFilter()) : undefined;
 
   const filteredBrands = brands.filter((b) => {
     const q = searchQuery.toLowerCase().trim();
@@ -167,7 +168,7 @@ export default function BrandDropdown({
             />
           )}
           <span className="truncate">
-            {currentBrand === 'ALL' ? 'All Brands' : activeBrandObj?.name || currentBrand}
+            {currentBrand === 'ALL' ? 'All Brands' : `${activeBrandObj?.name || currentBrand}${activeSub ? ` · ${activeSub.name}` : ''}`}
           </span>
         </div>
 
@@ -257,12 +258,13 @@ export default function BrandDropdown({
                       {cat}
                     </div>
                     {catBrands.map((brand) => {
-                      const isSelected = currentBrand === brand.code;
+                      const isSelected = currentBrand === brand.code && !activeSub;
                       const skuCount = getSkuCount(brand.code);
+                      const subs = (brand.subBrands || []).filter((sub) => sub.isActive);
 
                       return (
+                        <React.Fragment key={brand.id}>
                         <button
-                          key={brand.id}
                           type="button"
                           onClick={() => {
                             onBrandChange(brand.code);
@@ -305,6 +307,17 @@ export default function BrandDropdown({
                             {isSelected && <Check className="h-4 w-4 text-blue-600" />}
                           </div>
                         </button>
+                        {subs.map((sub) => {
+                          const chosen = currentBrand === brand.code && activeSub?.id === sub.id;
+                          return (
+                            <button key={sub.id} type="button" onClick={() => { onBrandChange(brand.code, sub.id); setIsOpen(false); }}
+                              className={`flex w-full items-center justify-between rounded-lg py-1.5 pl-8 pr-2.5 text-left text-xs transition ${chosen ? 'bg-blue-50 font-semibold text-blue-900' : 'text-slate-700 hover:bg-slate-50'}`}>
+                              <span className="truncate">{sub.name}</span>
+                              {chosen && <Check className="h-4 w-4 text-blue-600" />}
+                            </button>
+                          );
+                        })}
+                        </React.Fragment>
                       );
                     })}
                   </div>

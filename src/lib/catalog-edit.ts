@@ -28,8 +28,21 @@ export function editProduct(current: Product, updates: Record<string, unknown>, 
   const caseSize = updates.caseSize === '' || updates.caseSize == null ? current.caseSize : quantity(updates.caseSize, 'Case size', 1);
   const thresholdQty = quantity(updates.thresholdQty, 'Threshold quantity', 0);
   if (!['CASES','PIECES','BOTH'].includes(String(updates.orderUnitMode))) throw new CatalogInputError('Choose a valid order unit.');
-  return { ...current, name, sku, category, mrp, ...(current.unitPrice === current.mrp ? { unitPrice: mrp } : {}),
+  const optional = (value: unknown, label: string, max: number) => {
+    if (value === undefined) return undefined;
+    const clean = String(value ?? '').trim().replace(/\s+/g, ' ');
+    if (clean.length > max || /[\u0000-\u001f\u007f]/.test(clean)) throw new CatalogInputError(`${label} must be at most ${max} characters.`);
+    return clean || undefined;
+  };
+  const alias = updates.alias === undefined ? current.alias : optional(updates.alias, 'Short name', 60);
+  const barcode = updates.barcode === undefined ? current.barcode : optional(String(updates.barcode ?? '').replace(/\s+/g, ''), 'Barcode', 32);
+  if (barcode && !/^[0-9A-Za-z-]+$/.test(barcode)) throw new CatalogInputError('A barcode may only contain letters, digits and dashes.');
+  const subBrandId = updates.subBrandId === undefined ? current.subBrandId : (typeof updates.subBrandId === 'string' && updates.subBrandId ? updates.subBrandId : undefined);
+  const next: Product = { ...current, name, sku, category, mrp, ...(current.unitPrice === current.mrp ? { unitPrice: mrp } : {}),
     caseSize, thresholdQty, orderUnitMode: updates.orderUnitMode as Product['orderUnitMode'], keywords: keywords(updates.keywords), extractorKeywords: keywords(updates.extractorKeywords) };
+  // Empty optional fields are removed rather than stored blank; the sub-brand is checked against the brand on save.
+  for (const [key, value] of [['alias', alias], ['barcode', barcode], ['subBrandId', subBrandId]] as const) { if (value) (next as any)[key] = value; else delete (next as any)[key]; }
+  return next;
 }
 
 export function editCombo(current: Combo, updates: Record<string, unknown>, products: Product[], catalogue: { id: string; sku?: string }[], editor: string): Combo {

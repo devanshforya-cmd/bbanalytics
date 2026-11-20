@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Tag, Plus, Edit2, Ban, CheckCircle, X, Trash2, AlertTriangle, AlertCircle } from 'lucide-react';
-import { Brand, BrandCode, BrandCategory } from '@/lib/types';
+import { Brand, BrandCode, BrandCategory, SubBrand } from '@/lib/types';
+import { subBrandIdFor } from '@/lib/sub-brands';
 import { db } from '@/lib/db/db-service';
 import {
   fetchBrandsFromSupabase,
@@ -37,6 +38,8 @@ export default function BrandSettings() {
   const [codeManuallyEdited, setCodeManuallyEdited] = useState(false);
   const [brandCategory, setBrandCategory] = useState<BrandCategory>('Personal Care');
   const [principalCompany, setPrincipalCompany] = useState('');
+  const [subBrands, setSubBrands] = useState<SubBrand[]>([]);
+  const [newSubBrand, setNewSubBrand] = useState('');
 
   // Delete State
   const [brandToDelete, setBrandToDelete] = useState<Brand | null>(null);
@@ -89,6 +92,8 @@ export default function BrandSettings() {
     setCodeManuallyEdited(false);
     setBrandCategory('Personal Care');
     setPrincipalCompany('');
+    setSubBrands([]);
+    setNewSubBrand('');
     setShowModal(true);
   };
 
@@ -100,7 +105,25 @@ export default function BrandSettings() {
     setCodeManuallyEdited(true);
     setBrandCategory(b.category || 'Personal Care');
     setPrincipalCompany(b.principalCompany || '');
+    setSubBrands(b.subBrands || []);
+    setNewSubBrand('');
     setShowModal(true);
+  };
+
+  // A name typed in the "add sub-brand" box but not added yet is saved too.
+  const withPendingSubBrand = (code: string): SubBrand[] => {
+    const name = newSubBrand.trim();
+    if (!name || subBrands.some((sub) => sub.name.toLowerCase() === name.toLowerCase())) return subBrands;
+    return [...subBrands, { id: subBrandIdFor(code, name), name, isActive: true }];
+  };
+
+  const addSubBrand = () => {
+    const name = newSubBrand.trim().replace(/\s+/g, ' ');
+    if (!name) return;
+    if (subBrands.some((sub) => sub.name.toLowerCase() === name.toLowerCase())) { toast.error(`${name} is already a sub-brand.`); return; }
+    const code = editingBrand?.code || (brandCode || brandName).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+    setSubBrands([...subBrands, { id: subBrandIdFor(code, name), name, isActive: true }]);
+    setNewSubBrand('');
   };
 
   const handleSaveBrand = async () => {
@@ -122,6 +145,7 @@ export default function BrandSettings() {
           color: brandColor,
           category: brandCategory,
           principalCompany: principalCompany.trim() || undefined,
+          subBrands: withPendingSubBrand(editingBrand.code),
         };
         await apiUpdateBrand(editingBrand.id, updates);
         toast.success(`Brand "${brandName}" updated successfully`);
@@ -141,6 +165,7 @@ export default function BrandSettings() {
           principalCompany: principalCompany.trim() || 'Brand Bucket Nepal',
           isActive: true,
           status: 'ACTIVE',
+          subBrands: withPendingSubBrand(cleanCode),
         };
         await apiAddBrand(newBrandObj);
         toast.success(isBrandStorageLocalPreview()
@@ -340,6 +365,14 @@ export default function BrandSettings() {
                   </span>
                 </div>
 
+                {(b.subBrands || []).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(b.subBrands || []).map((sub) => (
+                      <span key={sub.id} className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold ${sub.isActive ? 'border-slate-200 bg-white text-slate-700' : 'border-slate-200 bg-slate-50 text-slate-400 line-through'}`}>{sub.name}</span>
+                    ))}
+                  </div>
+                )}
+
                 {/* Products, Orders, Stores Count metrics */}
                 <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 flex items-center justify-between text-[11px] text-slate-600 font-semibold">
                   <span>Products: <strong className="text-slate-900">{entityCounts.products}</strong></span>
@@ -403,7 +436,7 @@ export default function BrandSettings() {
       {/* Add / Edit Brand Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full max-h-[92vh] overflow-y-auto p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-slate-900 text-base">
                 {editingBrand ? `Edit Brand: ${editingBrand.name}` : 'Add Brand'}
@@ -486,6 +519,35 @@ export default function BrandSettings() {
                   <option value="Baby Care">Baby Care</option>
                   <option value="Wellness">Wellness</option>
                 </select>
+              </div>
+
+              <div>
+                <span className="block font-bold text-slate-700 mb-1">Sub-brands</span>
+                <p className="text-slate-500 mb-2">Product lines inside this brand, e.g. Pee Safe → FURR, Comfort, Domina. Reports and downloads can split by them.</p>
+                {subBrands.length > 0 && (
+                  <ul className="mb-2 divide-y divide-slate-100 rounded-xl border border-slate-200">
+                    {subBrands.map((sub, index) => (
+                      <li key={sub.id} className="flex items-center gap-2 px-3 py-1.5">
+                        <input aria-label={`Sub-brand ${index + 1} name`} value={sub.name} maxLength={60}
+                          onChange={(e) => setSubBrands(subBrands.map((entry, i) => (i === index ? { ...entry, name: e.target.value } : entry)))}
+                          className={`min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 text-xs font-semibold hover:border-slate-200 focus:border-blue-400 focus:outline-none ${sub.isActive ? 'text-slate-900' : 'text-slate-400 line-through'}`} />
+                        <button type="button" onClick={() => setSubBrands(subBrands.map((entry, i) => (i === index ? { ...entry, isActive: !entry.isActive } : entry)))}
+                          className="rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100">{sub.isActive ? 'Archive' : 'Restore'}</button>
+                        {!(editingBrand?.subBrands || []).some((saved) => saved.id === sub.id) && (
+                          <button type="button" aria-label={`Remove ${sub.name}`} onClick={() => setSubBrands(subBrands.filter((_, i) => i !== index))}
+                            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-3.5 w-3.5" /></button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex gap-2">
+                  <input aria-label="New sub-brand name" value={newSubBrand} maxLength={60} placeholder="Sub-brand name"
+                    onChange={(e) => setNewSubBrand(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSubBrand(); } }}
+                    className="min-w-0 flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs" />
+                  <button type="button" onClick={addSubBrand} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50"><Plus className="h-3.5 w-3.5" /> Add</button>
+                </div>
+                <p className="mt-1.5 text-[11px] text-slate-500">Saved sub-brands can be archived, not deleted, so past reports keep their names.</p>
               </div>
 
               <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
