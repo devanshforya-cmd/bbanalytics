@@ -1887,12 +1887,19 @@ export class DatabaseService {
     return this.beatItems;
   }
 
-  public getTodayBeat(officerId?: string): BeatItem[] {
+  /** Every planned stop (any date) the current user may see, optionally for one officer. */
+  public getBeatItemsFor(officerId?: string): BeatItem[] {
     const targetOfficer = officerId || this.currentUser.id;
     if (this.currentUser.is_super_admin || this.currentUser.isSuperAdmin || this.currentUser.permissions?.beat_plans?.scope === 'ALL' || this.currentUser.role === 'ADMIN' || this.currentUser.role === 'SUPER_ADMIN') {
       return this.beatItems.filter((b) => !officerId || b.officerId === officerId);
     }
     return this.beatItems.filter((b) => b.officerId === targetOfficer);
+  }
+
+  /** Today's planned stops (Nepal date). Past days stay in the history, not on today's list. */
+  public getTodayBeat(officerId?: string): BeatItem[] {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kathmandu' });
+    return this.getBeatItemsFor(officerId).filter((b) => !b.dateAd || b.dateAd === today);
   }
 
   // Section 5: Silent GPS Check-In
