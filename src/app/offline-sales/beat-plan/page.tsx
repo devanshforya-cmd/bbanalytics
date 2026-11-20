@@ -40,7 +40,7 @@ import { toast } from '@/components/common/Toast';
 import BeatRouteList from './components/BeatRouteList';
 import CheckInFlow from './components/CheckInFlow';
 import CheckOutSummary from './components/CheckOutSummary';
-import StockCountForm from './components/StockCountForm';
+import ShelfCountSheet from '@/components/stock/ShelfCountSheet';
 import InlineOrderForm, { MultiProductOrderData } from './components/InlineOrderForm';
 import EndOfDayModal from './components/EndOfDayModal';
 
@@ -70,7 +70,6 @@ export default function BeatPlanPage() {
   >('NONE');
 
   // Stock count form state
-  const [stockCounts, setStockCounts] = useState<Record<string, number>>({});
 
   // Secondary order form state
   const [orderProductId, setOrderProductId] = useState('');
@@ -357,36 +356,6 @@ export default function BeatPlanPage() {
 
   const handleActionComplete = (actionKey: string) => {
     setCompletedActions((prev) => new Set(prev).add(actionKey));
-  };
-
-  // Stock count submit
-  const handleSaveStockCount = () => {
-    if (!targetBeat) return;
-    const allProducts = db.getProducts();
-    const items = Object.entries(stockCounts).map(([productId, shelfQty]) => {
-      const prod = allProducts.find((p) => p.id === productId);
-      return {
-        productId,
-        productName: prod?.name || 'Product',
-        brandCode: prod?.brandCode || (db.getBrands('ACTIVE')[0]?.code || 'BRAND'),
-        shelfQty,
-        previousQty: shelfQty,
-        flaggedDrop: false,
-      };
-    });
-
-    db.recordStockCount({
-      storeName: targetBeat.storeName,
-      entityType: targetBeat.entityType,
-      entityId: targetBeat.entityId,
-      items,
-      dateAd: targetBeat.dateAd,
-      dateBs: targetBeat.dateBs,
-    });
-
-    setActiveActionModal('NONE');
-    handleActionComplete('STOCK_COUNT');
-    toast.success(`Stock count recorded for ${items.length} SKUs.`);
   };
 
   // Secondary order submit (Multi-product with live margins)
@@ -794,14 +763,9 @@ export default function BeatPlanPage() {
           onClose={() => setShowCheckOutSummary(false)}
         />
 
-        <StockCountForm
-          isOpen={activeActionModal === 'STOCK_COUNT'}
-          targetBeat={targetBeat}
-          stockCounts={stockCounts}
-          onStockChange={(prodId, qty) =>
-            setStockCounts((prev) => ({ ...prev, [prodId]: qty }))
-          }
-          onSubmit={handleSaveStockCount}
+        <ShelfCountSheet
+          target={activeActionModal === 'STOCK_COUNT' && targetBeat ? { storeId: targetBeat.entityId, storeName: targetBeat.storeName, entityType: targetBeat.entityType, dateAd: targetBeat.dateAd, dateBs: targetBeat.dateBs } : null}
+          onSaved={() => handleActionComplete('STOCK_COUNT')}
           onClose={() => setActiveActionModal('NONE')}
         />
 

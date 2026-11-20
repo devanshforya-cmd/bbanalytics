@@ -8,6 +8,7 @@ export type FeatureKey =
   | 'dispatches'
   | 'gps_tracking'
   | 'shelf_photos'
+  | 'stock_counts'
   | 'call_tracker'
   | 'cheque_tracker'
   | 'document_handover'
@@ -43,6 +44,7 @@ export const ALL_FEATURE_KEYS: FeatureKey[] = [
   'dispatches',
   'gps_tracking',
   'shelf_photos',
+  'stock_counts',
   'call_tracker',
   'cheque_tracker',
   'document_handover',
@@ -67,6 +69,7 @@ export const FEATURE_METADATA: Record<FeatureKey, { label: string; group: 'OFFLI
   dispatches: { label: 'Warehouse Dispatches', group: 'OFFLINE_SALES', description: 'Dispatch orders, challan documentation, payment terms' },
   gps_tracking: { label: 'Live GPS Tracking', group: 'OFFLINE_SALES', description: 'Real-time field officer geolocations, arrival map' },
   shelf_photos: { label: 'Shelf Photos', group: 'OFFLINE_SALES', description: 'Before and after visual merchandising evidence' },
+  stock_counts: { label: 'Stock counts', group: 'OFFLINE_SALES', description: 'Shelf stock counts at stores and what is running low' },
   call_tracker: { label: 'Call Tracker', group: 'OFFLINE_SALES', description: 'Field and office call logs with outcome categorization' },
   cheque_tracker: { label: 'Cheque Tracker', group: 'OFFLINE_SALES', description: 'Cheque leaf collection, custody handover, banking clearance' },
   document_handover: { label: 'Document Handover', group: 'OFFLINE_SALES', description: 'VAT bills, challans, signed purchase orders' },

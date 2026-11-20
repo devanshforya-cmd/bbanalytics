@@ -993,7 +993,7 @@ export class DatabaseService {
   }
 
   // Secondary Orders (Bizom / BeatRoute secondary order booking)
-  public getSecondaryOrders(filter?: { officerId?: string; storeId?: string }): SecondaryOrder[] {
+  public getSecondaryOrders(filter?: { officerId?: string; storeId?: string; allBrands?: boolean }): SecondaryOrder[] {
     const user = this.getCurrentUser();
     let result = this.secondaryOrders;
     if (!user.is_super_admin && !user.isSuperAdmin && user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
@@ -1005,7 +1005,7 @@ export class DatabaseService {
       });
     }
     // The header's brand (and sub-brand) choice applies to store orders too: keep orders with a line in it.
-    if (this.activeBrandFilter && this.activeBrandFilter !== 'ALL') {
+    if (!filter?.allBrands && this.activeBrandFilter && this.activeBrandFilter !== 'ALL') {
       const brand = this.activeBrandFilter;
       result = result.filter((o) => o.items.some((item) => (item.brandCode || this.products.find((p) => p.id === item.productId)?.brandCode) === brand
         && this.inActiveSubBrand(item.productId, item.subBrandId)));
