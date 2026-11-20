@@ -1411,9 +1411,24 @@ export interface InfluencerContent {
 }
 
 /** Per-user choices saved on the account rather than in one browser. */
+export interface ReportPreset {
+  id: string;
+  name: string;
+  datasets: string[];
+  range: string;
+  fromAd?: string;
+  toAd?: string;
+  brandCode?: string;
+  subBrandId?: string;
+  storeId?: string;
+  officerId?: string;
+}
+
 export interface UserPreferenceRecord {
   id: string;
   setupGuideDismissedAt?: string;
+  /** Saved report-builder setups, newest first. */
+  reportPresets?: ReportPreset[];
   updatedAt?: string;
 }
 

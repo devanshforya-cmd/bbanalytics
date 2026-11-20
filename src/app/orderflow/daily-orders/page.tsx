@@ -1,6 +1,7 @@
 'use client';
 
 import Money from '@/components/common/Money';
+import DownloadButton from '@/components/common/DownloadButton';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db, OrderRealtimeEvent } from '@/lib/db/db-service';
@@ -297,6 +298,7 @@ export default function DailyOrdersPage() {
                   </span>
                 )}
               </div>
+          <DownloadButton datasets={['orders', 'order_lines']} records={{ orders: filteredOrders } as any} fileLabel="Daily orders" />
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
                 Real-time synchronized order stream for instant cross-checking against the WhatsApp group without refreshing.
               </p>

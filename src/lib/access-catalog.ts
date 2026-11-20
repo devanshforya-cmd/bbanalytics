@@ -16,7 +16,7 @@ export type PageKey =
   | 'p.beat_plan' | 'p.stores' | 'p.distributors' | 'p.dispatch' | 'p.live_tracking' | 'p.shelf_photos' | 'p.stock_counts'
   | 'p.calls' | 'p.cheques' | 'p.documents' | 'p.scorecards'
   | 'p.influencers' | 'p.marketing_sends'
-  | 'p.calendar_tasks' | 'p.tasks' | 'p.activity' | 'p.export'
+  | 'p.calendar_tasks' | 'p.tasks' | 'p.activity' | 'p.reports' | 'p.export'
   | 'p.settings_brands' | 'p.settings_channels' | 'p.settings_lists' | 'p.settings_promotions'
   | 'p.settings_shared_links' | 'p.settings_alerts' | 'p.settings_beats' | 'p.settings_holidays'
   | 'p.settings_task_templates' | 'p.settings_google' | 'p.settings_import' | 'p.settings_upgrade'
@@ -109,6 +109,7 @@ export const PAGES: PageDefinition[] = [
   page('p.calendar_tasks', 'Calendar to-do', 'operations', 'tasks', 'Your to-do list on the BS/AD calendar', { href: '/opscore/calendar-tasks' }),
   page('p.tasks', 'Task management', 'operations', 'tasks', 'Assign and follow up tasks', { href: '/opscore/tasks' }),
   page('p.activity', 'Activity trail', 'operations', 'activity', 'Who changed what, and when', { href: '/opscore/activity', actions: VIEW_ONLY }),
+  page('p.reports', 'Reports & downloads', 'operations', 'export', 'Build Excel reports by date, brand, sub-brand, store and officer, and download a full backup', { href: '/opscore/reports', actions: VIEW_ONLY, scoped: false }),
   page('p.export', 'Google Sheets export', 'operations', 'export', 'Send data to Google Sheets and download CSVs', { href: '/opscore/export', actions: ['VIEW', 'EDIT'], scoped: false }),
 
   settings('p.settings_brands', 'Brands & order IDs', 'BRANDS', 'Add brands and set order ID prefixes'),

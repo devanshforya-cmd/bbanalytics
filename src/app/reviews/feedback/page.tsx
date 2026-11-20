@@ -1,6 +1,7 @@
 'use client';
 
 import { confirmAction } from '@/components/common/confirm';
+import DownloadButton from '@/components/common/DownloadButton';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
@@ -362,6 +363,7 @@ function FeedbackContent() {
 <InfoTip label="About this page">Omnichannel feedback stream with dynamic issue classification, marketing design tagging, and complaint resolution tracking.</InfoTip></h1>
           
         </div>
+          <DownloadButton datasets={['feedback']} records={{ feedback: filtered } as any} />
 
         <button
           onClick={() => setShowLogModal(true)}

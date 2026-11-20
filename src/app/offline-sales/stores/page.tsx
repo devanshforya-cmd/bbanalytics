@@ -1,6 +1,7 @@
 'use client';
 
 import InfoTip from '@/components/common/InfoTip';
+import DownloadButton from '@/components/common/DownloadButton';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -470,6 +471,7 @@ export default function StoresPage() {
 <InfoTip label="About this page">Distributors &rarr; Chain Stores &rarr; Standalone GT Retailers across Nepal.</InfoTip></h1>
             
           </div>
+          <DownloadButton datasets={['stores']} records={{ retailers: filteredRetailers, distributors: filteredDistributors } as any} />
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Primary Action Button */}

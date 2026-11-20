@@ -1,6 +1,7 @@
 'use client';
 
 import { confirmAction } from '@/components/common/confirm';
+import DownloadButton from '@/components/common/DownloadButton';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
@@ -350,6 +351,7 @@ export default function DeliveryFailuresPage() {
               Delivery Failures
 <InfoTip label="About this page">Tracks courier bottlenecks (&quot;Call not received&quot;, &quot;Address not found&quot;) without muddying product quality metrics.</InfoTip></h1>
           </div>
+          <DownloadButton datasets={['delivery_failures']} records={{ deliveryFailures: filtered } as any} />
           
         </div>
 

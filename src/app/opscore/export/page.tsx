@@ -1,6 +1,8 @@
 'use client';
 
 import { nprText } from '@/components/common/Money';
+import { adToBs as adToBsForLabel, NEPALI_MONTHS } from '@/lib/nepali-calendar';
+import { bsMonthRange } from '@/lib/export/ranges';
 import InfoTip from '@/components/common/InfoTip';
 import { failureReasonLabel } from '@/lib/failure-reason';
 import React, { useState, useEffect } from 'react';
@@ -43,7 +45,19 @@ interface TabConfig {
 
 export default function SheetsExportPage() {
   const currentUser = getSessionUser() || db.getCurrentUser();
-  const [selectedMonth, setSelectedMonth] = useState('Bhadra 2083 (Sep 2026)');
+  // The six most recent Nepali months, newest first, labelled with the English month they start in.
+  const monthOptions = (() => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kathmandu' });
+    const now = adToBsForLabel(today);
+    return Array.from({ length: 6 }, (_, back) => {
+      let y = now.year, m = now.month - back;
+      while (m < 1) { m += 12; y -= 1; }
+      const { fromAd } = bsMonthRange(y, m);
+      const en = new Date(`${fromAd}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+      return `${NEPALI_MONTHS[m - 1].en} ${y} (${en})`;
+    });
+  })();
+  const [selectedMonth, setSelectedMonth] = useState(monthOptions[0]);
   const [selectedTabs, setSelectedTabs] = useState<string[]>([
     'summary',
     'scorecard',
@@ -1002,10 +1016,7 @@ export default function SheetsExportPage() {
             onChange={(e) => setSelectedMonth(e.target.value)}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-800 bg-white outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
           >
-            <option value="Bhadra 2083 (Sep 2026)">Bhadra 2083 (Sep 2026) — Current</option>
-            <option value="Shrawan 2083 (Aug 2026)">Shrawan 2083 (Aug 2026)</option>
-            <option value="Ashadh 2083 (Jul 2026)">Ashadh 2083 (Jul 2026)</option>
-            <option value="Jestha 2083 (Jun 2026)">Jestha 2083 (Jun 2026)</option>
+            {monthOptions.map((option, index) => <option key={option} value={option}>{option}{index === 0 ? ' (current)' : ''}</option>)}
           </select>
         </div>
       </div>

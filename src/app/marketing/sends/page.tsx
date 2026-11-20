@@ -1,6 +1,7 @@
 'use client';
 
 import InfoTip from '@/components/common/InfoTip';
+import DownloadButton from '@/components/common/DownloadButton';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -79,6 +80,7 @@ export default function MarketingSendsPage() {
 <InfoTip label="About this page">History of products sent to influencers. Never counted in orders, sales or delivery numbers.</InfoTip></h1>
             
           </div>
+          <DownloadButton datasets={['marketing_sends']} records={{ marketingSends: filtered } as any} />
           <Link href="/marketing/influencers" className="inline-flex items-center gap-1.5 self-start rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700"><Users className="h-3.5 w-3.5" /> Choose an influencer to send</Link>
         </div>
 

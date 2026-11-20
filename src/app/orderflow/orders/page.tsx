@@ -1,6 +1,7 @@
 'use client';
 
 import InfoTip from '@/components/common/InfoTip';
+import DownloadButton from '@/components/common/DownloadButton';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -124,6 +125,7 @@ export default function AllOrdersPage() {
 <InfoTip label="About this page">Find any order, then mark it dispatched or delivered, or log a failed delivery, a return or an exchange.</InfoTip></h1>
             
           </div>
+          <DownloadButton datasets={['orders', 'order_lines']} records={{ orders: list } as any} fileLabel="Orders" />
         </div>
 
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs sm:p-4">

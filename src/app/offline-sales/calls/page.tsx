@@ -1,6 +1,7 @@
 'use client';
 
 import InfoTip from '@/components/common/InfoTip';
+import DownloadButton from '@/components/common/DownloadButton';
 import React, { useState } from 'react';
 import { db } from '@/lib/db/db-service';
 import { CallLog, CallLabel, CallOutcome, Product } from '@/lib/types';
@@ -165,6 +166,7 @@ export default function CallsPage() {
 <InfoTip label="About this page">Logs sales, order-taking, and payment follow-up calls with inline order creation.</InfoTip></h1>
             
           </div>
+          <DownloadButton datasets={['calls']} records={{ callLogs: filteredCalls } as any} />
 
           <button
             onClick={() => setShowLogModal(true)}

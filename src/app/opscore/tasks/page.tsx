@@ -1,6 +1,7 @@
 'use client';
 
 import { confirmAction } from '@/components/common/confirm';
+import DownloadButton from '@/components/common/DownloadButton';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -242,6 +243,7 @@ export default function TasksPage() {
 <InfoTip label="About this page">Manual and auto-generated action items for field follow-ups, overdue cheques, and store visits.</InfoTip></h1>
             
           </div>
+          <DownloadButton datasets={['tasks']} records={{ tasks: filtered } as any} />
 
           <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
             <Link
