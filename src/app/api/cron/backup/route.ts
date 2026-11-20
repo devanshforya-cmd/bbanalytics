@@ -1,0 +1,27 @@
+import { NextResponse } from 'next/server';
+import { openSystemWorkspace } from '@/lib/db/server-workspace';
+import { requireCronAuth } from '@/lib/cron-auth';
+import { isBackupTriggerToken, runDriveBackup } from '@/lib/drive-backup';
+import { apiFailure } from '../../_workspace';
+
+export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
+
+/**
+ * Scheduled backup to Google Drive. The database scheduler calls it every hour with its own
+ * token; Vercel's daily cron calls it with CRON_SECRET as a back-up in case that stops.
+ * Runs with nothing new since the last backup do not make a new file.
+ */
+export async function GET(request: Request) {
+  const viaVercel = requireCronAuth(request) === null;
+  if (!viaVercel && !(await isBackupTriggerToken(request).catch(() => false))) {
+    return NextResponse.json({ success: false, error: 'Unauthorized.' }, { status: 401 });
+  }
+  try {
+    const { db } = await openSystemWorkspace();
+    const run = await runDriveBackup(db, 'schedule');
+    return NextResponse.json({ success: run.ok, at: run.at, unchanged: !!run.unchanged, rows: run.rows, error: run.error }, { status: run.ok ? 200 : 502 });
+  } catch (error) {
+    return apiFailure(error, 'The backup could not run.');
+  }
+}
