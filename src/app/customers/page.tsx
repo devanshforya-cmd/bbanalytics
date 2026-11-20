@@ -1,6 +1,7 @@
 'use client';
 
 import InfoTip from '@/components/common/InfoTip';
+import DownloadButton from '@/components/common/DownloadButton';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -169,6 +170,7 @@ export default function CustomersPage() {
 <InfoTip label="About this page">Unique customer profiles unified by phone number with auto-calculated Karma Scores (0-100).</InfoTip></h1>
           
         </div>
+          <DownloadButton datasets={['customers']} records={{ customers: filtered } as any} />
 
         <div className="flex items-center gap-2 flex-wrap">
           <button

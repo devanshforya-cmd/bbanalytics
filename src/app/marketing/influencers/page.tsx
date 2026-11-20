@@ -1,6 +1,7 @@
 'use client';
 
 import InfoTip from '@/components/common/InfoTip';
+import DownloadButton from '@/components/common/DownloadButton';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -94,6 +95,7 @@ export default function InfluencerDirectoryPage() {
 <InfoTip label="About this page">Open a profile to send products or add content. Every send starts from an influencer.</InfoTip></h1>
             
           </div>
+          <DownloadButton datasets={['influencers']} records={{ influencers: filtered.map((row) => row.influencer) } as any} />
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/marketing/sends" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><History className="h-3.5 w-3.5" /> Send history</Link>
             {canCreate && <button type="button" onClick={() => setShowAdd(true)} className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 active:scale-95"><Plus className="h-4 w-4" /> Add influencer</button>}

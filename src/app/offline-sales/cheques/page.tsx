@@ -1,6 +1,7 @@
 'use client';
 
 import Money, { nprText } from '@/components/common/Money';
+import DownloadButton from '@/components/common/DownloadButton';
 import { confirmAction } from '@/components/common/confirm';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
@@ -295,6 +296,7 @@ function ChequesContent() {
 <InfoTip label="About this page">Tracks physical custody: Field Collection → Office Handover → Bank Clearing with overdue alerts.</InfoTip></h1>
           
         </div>
+          <DownloadButton datasets={['cheques']} records={{ cheques: filteredCheques } as any} />
 
         <button
           onClick={() => setShowAddModal(true)}

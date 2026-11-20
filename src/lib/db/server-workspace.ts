@@ -223,7 +223,16 @@ export function validateWorkspaceMutation(value: unknown): asserts value is Work
     if (!name || name.length > 60 || /[\u0000-\u001f\u007f]/.test(name)) throw new WorkspaceError(400, 'Enter a name of at most 60 characters.');
     if (m.collection === 'marketingOptions' && !['REACH_OUT', 'CONTENT_PLATFORM'].includes(m.data.list)) throw new WorkspaceError(400, 'Invalid list.');
   }
-  if (m.collection === 'userPreferences' && m.data && Object.keys(m.data).some(key => !['id', 'setupGuideDismissedAt', 'updatedAt', 'createdById'].includes(key))) throw new WorkspaceError(400, 'Invalid preference.');
+  if (m.collection === 'userPreferences' && m.data && Object.keys(m.data).some(key => !['id', 'setupGuideDismissedAt', 'updatedAt', 'createdById', 'reportPresets'].includes(key))) throw new WorkspaceError(400, 'Invalid preference.');
+  if (m.collection === 'userPreferences' && m.data?.reportPresets !== undefined) {
+    const presets = m.data.reportPresets;
+    const plain = (value: unknown, max: number) => value === undefined || (typeof value === 'string' && value.length <= max);
+    if (!Array.isArray(presets) || presets.length > 30 || JSON.stringify(presets).length > 30000
+      || presets.some((preset: any) => !preset || typeof preset !== 'object' || typeof preset.id !== 'string' || typeof preset.name !== 'string' || !preset.name.trim() || preset.name.length > 80
+        || !Array.isArray(preset.datasets) || preset.datasets.length > 30 || preset.datasets.some((key: unknown) => typeof key !== 'string' || key.length > 40)
+        || !plain(preset.range, 30) || !['fromAd', 'toAd', 'brandCode', 'subBrandId', 'storeId', 'officerId'].every((key) => plain(preset[key], 120))))
+      throw new WorkspaceError(400, 'Invalid saved report.');
+  }
   if (m.collection === 'workspaceConfig' && m.data?.brandPrefixes !== undefined) {
     const prefixes = m.data.brandPrefixes;
     if (!prefixes || typeof prefixes !== 'object' || Array.isArray(prefixes)) throw new WorkspaceError(400, 'Invalid order ID prefixes.');

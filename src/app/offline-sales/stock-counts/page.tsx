@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ClipboardList, Search } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
+import DownloadButton from '@/components/common/DownloadButton';
 import InfoTip from '@/components/common/InfoTip';
 import ShelfCountSheet, { type CountTarget } from '@/components/stock/ShelfCountSheet';
 import { db } from '@/lib/db/db-service';
@@ -86,6 +87,7 @@ export default function StockCountsPage() {
             </h1>
             <p className="mt-1 text-sm text-slate-500">Count a store&apos;s shelf, see who is out of stock, and which stores haven&apos;t been counted lately.</p>
           </div>
+          <DownloadButton datasets={['stock_counts']} records={{ stockCounts: data.counts.filter((count) => shown.some((row) => row.id === count.entityId)) }} />
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

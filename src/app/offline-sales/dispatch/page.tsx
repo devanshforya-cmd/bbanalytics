@@ -1,6 +1,7 @@
 'use client';
 
 import InfoTip from '@/components/common/InfoTip';
+import DownloadButton from '@/components/common/DownloadButton';
 import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db/db-service';
 import { Dispatch, DispatchItem, BrandCode } from '@/lib/types';
@@ -143,6 +144,7 @@ export default function DispatchPage() {
 <InfoTip label="About this page">Bulk dispatches to distributor chains with 2-step confirmation and audit trail.</InfoTip></h1>
             
           </div>
+          <DownloadButton datasets={['dispatch_lines']} records={{ dispatches } as any} />
 
           <button
             onClick={() => { resetForm(); setShowLogModal(true); }}

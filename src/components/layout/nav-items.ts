@@ -1,6 +1,6 @@
 import type React from 'react';
 import {
-  ListChecks, ClipboardList, LayoutDashboard, Compass, Store, Truck, Camera, Phone, CreditCard, FileText, Award, Sparkles,
+  ListChecks, ClipboardList, Download, LayoutDashboard, Compass, Store, Truck, Camera, Phone, CreditCard, FileText, Award, Sparkles,
   ClipboardPen, ClipboardCheck, TruckIcon, MessageSquareHeart, RotateCcw, Tags, Users, PieChart, CheckSquare,
   History, FileSpreadsheet, BadgePercent, Navigation, Calendar, Settings, Package, Megaphone, Gift,
 } from 'lucide-react';
@@ -28,7 +28,7 @@ const ICONS: Partial<Record<PageKey, React.ComponentType<{ className?: string }>
   'p.beat_plan': Compass, 'p.stores': Store, 'p.dispatch': Truck, 'p.live_tracking': Navigation, 'p.shelf_photos': Camera, 'p.stock_counts': ClipboardList,
   'p.calls': Phone, 'p.cheques': CreditCard, 'p.documents': FileText, 'p.scorecards': Award,
   'p.influencers': Megaphone, 'p.marketing_sends': Gift,
-  'p.calendar_tasks': Calendar, 'p.tasks': CheckSquare, 'p.activity': History, 'p.export': FileSpreadsheet,
+  'p.calendar_tasks': Calendar, 'p.tasks': CheckSquare, 'p.activity': History, 'p.reports': Download, 'p.export': FileSpreadsheet,
 };
 
 /** The menu, built from the same page list roles are made from, so every page is in both. */

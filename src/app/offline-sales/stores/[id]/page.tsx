@@ -47,6 +47,7 @@ import {
 import PageGuard from '@/components/common/PageGuard';
 import { belongsToStore, orderCadenceDays, shelfForecast } from '@/lib/store-records';
 import ShelfCountSheet from '@/components/stock/ShelfCountSheet';
+import DownloadButton from '@/components/common/DownloadButton';
 import { canPerform, getScope, hasAccess } from '@/lib/permissions';
 import {
   BeatItem,
@@ -263,6 +264,9 @@ export default function StoreDetailPage() {
                   Count shelf
                 </button>
               )}
+              <DownloadButton label="Download store file" fileLabel={store.name}
+                datasets={['stores', 'store_orders', 'store_order_lines', 'visits', 'stock_counts', 'shelf_share', 'cheques', 'dispatch_lines', 'calls', 'documents']}
+                filters={{ storeId: store.id }} className="py-1.5" />
             </div>
           </div>
         </div>

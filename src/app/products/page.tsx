@@ -7,6 +7,7 @@ import { productMetrics } from '@/lib/product-metrics';
 import { subBrandName } from '@/lib/sub-brands';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import DownloadButton from '@/components/common/DownloadButton';
 import { db } from '@/lib/db/db-service';
 import ProductActions from '@/components/products/ProductActions';
 import CatalogEditor from '@/components/products/CatalogEditor';
@@ -416,6 +417,7 @@ export default function ProductsPage() {
               <span>Products, Combos &amp; Performance</span>
 <InfoTip label="About this page">Master SKU catalog, D2C social promotional kits, warehouse inventory, and sales telemetry.</InfoTip></h1>
           </div>
+          <DownloadButton datasets={['products']} records={{ products: filteredProducts, combos: filteredCombos }} fileLabel="Products" />
           
         </div>
 

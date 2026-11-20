@@ -1,6 +1,7 @@
 'use client';
 
 import { confirmAction } from '@/components/common/confirm';
+import DownloadButton from '@/components/common/DownloadButton';
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -188,6 +189,7 @@ export default function ReturnsPage() {
             <Link href="/orderflow/delivery-failures" className="font-semibold text-blue-700 hover:underline">Delivery failures</Link>.
           </p>
         </div>
+          <DownloadButton datasets={['returns']} records={{ returns: filtered } as any} />
         <button
           type="button"
           onClick={() => { setShowLogModal(true); setSaveSuccess(null); }}

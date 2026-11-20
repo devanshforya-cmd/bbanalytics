@@ -2044,26 +2044,30 @@ export class DatabaseService {
 
   public getVisits(): Visit[] {
     if (this.visits.length > 0) return [...this.visits];
+    // No saved visits yet: read them from completed beat stops, with only what those stops recorded.
     return this.beatItems
-      .filter((b) => b.status === 'VISITED')
-      .map((b) => ({
-        id: `VISIT-${b.id}`,
-        officerId: b.officerId,
-        officerName: this.currentUser?.fullName || 'Sales Officer',
-        entityType: b.entityType,
-        entityId: b.entityId,
-        storeName: b.storeName,
-        checkInTime: b.checkedInAt || new Date().toISOString(),
-        checkOutTime: b.checkedOutAt,
-        durationMinutes: 28,
-        lat: b.lat,
-        lng: b.lng,
-        distanceMeters: 12,
-        overrideFlag: false,
-        dateAd: b.dateAd,
-        dateBs: b.dateBs,
-        notes: b.skipNotes || 'Routine check-in',
-      }));
+      .filter((b) => b.status === 'VISITED' && b.checkedInAt)
+      .map((b) => {
+        const minutes = b.checkedInAt && b.checkedOutAt ? Math.max(0, Math.round((Date.parse(b.checkedOutAt) - Date.parse(b.checkedInAt)) / 60000)) : undefined;
+        return {
+          id: `VISIT-${b.id}`,
+          officerId: b.officerId,
+          officerName: this.users.find((u) => u.id === b.officerId)?.fullName || '',
+          entityType: b.entityType,
+          entityId: b.entityId,
+          storeName: b.storeName,
+          checkInTime: b.checkedInAt!,
+          checkOutTime: b.checkedOutAt,
+          durationMinutes: minutes,
+          lat: b.lat,
+          lng: b.lng,
+          distanceMeters: b.checkInDistanceM ?? 0,
+          overrideFlag: !!b.oneTimeOverride,
+          dateAd: b.dateAd,
+          dateBs: b.dateBs,
+          notes: b.skipNotes,
+        };
+      });
   }
 
   public skipBeatItem(beatId: string, reason: BeatItem['skipReason'], notes?: string) {

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import DownloadButton from '@/components/common/DownloadButton';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -409,6 +410,7 @@ export default function DocumentsPage() {
               {documents.length} Tracked
             </span>
           </div>
+          <DownloadButton datasets={['documents']} records={{ documents: filteredDocs } as any} />
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Physical custody trail for purchase orders, signed delivery challans, tax invoices, and stock audit sheets.
           </p>
