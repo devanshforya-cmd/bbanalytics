@@ -2,16 +2,21 @@
  * The data a download is built from, as this person can see it. Header brand choices are
  * ignored here: the download's own filters decide what goes in.
  */
-import { db } from '../db/db-service';
+import { db, type DatabaseService } from '../db/db-service';
 import type { ExportSource } from './datasets';
 
-export function clientExportSource(): ExportSource {
+/** Everything a workbook can be built from, read from one workspace. */
+export function exportSourceFrom(store: DatabaseService): ExportSource {
   return {
-    brands: db.getBrands('ALL'), products: db.getProducts('ALL'), combos: db.getCombos('ALL'),
-    orders: db.getOrders('ALL'), returns: db.getReturns('ALL'), feedback: db.getFeedback('ALL'), deliveryFailures: db.getDeliveryFailures('ALL'), customers: db.getCustomers(),
-    secondaryOrders: db.getSecondaryOrders({ allBrands: true }), dispatches: db.getDispatches(), stockCounts: db.getStockCounts(), visits: db.getVisits(), cheques: db.getCheques(),
-    callLogs: db.getCalls(), documents: db.getDocuments(), facingAudits: db.getFacingAudits(),
-    retailers: db.getRetailers(), branches: db.getBranches(), distributors: db.getDistributors(),
-    tasks: db.getTasks(), influencers: db.getInfluencers(), marketingSends: db.getMarketingSends(),
+    brands: store.getBrands('ALL'), products: store.getProducts('ALL'), combos: store.getCombos('ALL'),
+    orders: store.getOrders('ALL'), returns: store.getReturns('ALL'), feedback: store.getFeedback('ALL'), deliveryFailures: store.getDeliveryFailures('ALL'), customers: store.getCustomers(),
+    secondaryOrders: store.getSecondaryOrders({ allBrands: true }), dispatches: store.getDispatches(), stockCounts: store.getStockCounts(), visits: store.getVisits(), cheques: store.getCheques(),
+    callLogs: store.getCalls(), documents: store.getDocuments(), facingAudits: store.getFacingAudits(),
+    retailers: store.getRetailers(), branches: store.getBranches(), distributors: store.getDistributors(),
+    tasks: store.getTasks(), influencers: store.getInfluencers(), marketingSends: store.getMarketingSends(),
   };
+}
+
+export function clientExportSource(): ExportSource {
+  return exportSourceFrom(db);
 }

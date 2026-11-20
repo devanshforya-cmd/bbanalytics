@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ExternalLink, Loader2 } from 'lucide-react';
+import DriveBackupCard from '@/components/common/DriveBackupCard';
 
 interface GoogleStatus {
   oauthReady: boolean;
@@ -108,6 +109,7 @@ export default function GoogleWorkspaceSettings({ showExport = false }: { showEx
         <p className="text-xs text-slate-500">Manual export. Scheduled Sheets exports are not enabled.</p>
       </div>}
       {!showExport && <Link href="/opscore/export" className="inline-block text-sm font-semibold text-blue-700">Open reports and exports</Link>}
+      {status.connected && status.driveReady && <DriveBackupCard />}
       <p className="text-xs text-slate-500">OAuth access is limited to files this app creates. Uploads stay in the configured folder without public sharing. Service accounts can use an existing shared drive folder and report workbook.</p>
     </>}
   </section>;
