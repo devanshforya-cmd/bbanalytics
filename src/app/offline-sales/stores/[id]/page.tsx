@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import { belongsToStore, orderCadenceDays, shelfForecast } from '@/lib/store-records';
+import ShelfCountSheet from '@/components/stock/ShelfCountSheet';
 import { canPerform, getScope, hasAccess } from '@/lib/permissions';
 import {
   BeatItem,
@@ -90,6 +91,7 @@ export default function StoreDetailPage() {
 
   // Lightbox for shelf photos
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
+  const [countOpen, setCountOpen] = useState(false);
 
   // Load store
   const store = storeIdParam && [...db.getRetailers(), ...db.getBranches(), ...db.getDistributors()].some(row => row.id === storeIdParam) ? db.getUnifiedStoreById(storeIdParam) : null;
@@ -122,7 +124,8 @@ export default function StoreDetailPage() {
 
   const stockCounts: StockCount[] = useMemo(() => {
     if (!store) return [];
-    return db.getStockCounts().filter((s) => belongsToStore(s, store));
+    return db.getStockCounts().filter((s) => belongsToStore(s, store))
+      .sort((a, b) => (b.dateAd || b.createdAt).localeCompare(a.dateAd || a.createdAt));
   }, [store]);
 
   // Fix 34: Store Health Score
@@ -253,6 +256,13 @@ export default function StoreDetailPage() {
                 <CreditCard className="h-3.5 w-3.5 text-emerald-600" />
                 Cheques Register
               </Link>
+              {(store.type === 'RETAILER' || store.type === 'BRANCH') && (
+                <button type="button" onClick={() => setCountOpen(true)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+                  <ClipboardList className="h-3.5 w-3.5 text-blue-600" />
+                  Count shelf
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -749,15 +759,18 @@ export default function StoreDetailPage() {
       {activeTab === 'STOCK' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-slate-900 text-sm">Shelf Stock Count History</h3>
-            <span className="text-xs text-slate-500 font-medium">
-              {stockCounts.length} audits recorded
-            </span>
+            <h3 className="font-bold text-slate-900 text-sm">Shelf counts</h3>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-500 font-medium">{stockCounts.length} {stockCounts.length === 1 ? 'count' : 'counts'}</span>
+              {(store.type === 'RETAILER' || store.type === 'BRANCH') && (
+                <button type="button" onClick={() => setCountOpen(true)} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Count shelf</button>
+              )}
+            </div>
           </div>
 
           {stockCounts.length === 0 ? (
             <div className="p-8 text-center text-slate-500 text-xs border border-dashed rounded-xl">
-              No stock counts recorded for this store yet.
+              No shelf counts for this store yet. Use Count shelf to record the first one.
             </div>
           ) : (
             <div className="space-y-3">
@@ -768,7 +781,7 @@ export default function StoreDetailPage() {
                       <span className="font-bold text-slate-900">{sc.dateBs}</span>
                       <span className="text-slate-500 text-[11px] ml-1">({sc.dateAd})</span>
                     </div>
-                    <span className="text-slate-500">Auditor: {sc.officerName || 'Officer'}</span>
+                    <span className="text-slate-500">Counted by {sc.officerName || 'not recorded'}</span>
                   </div>
 
                   {/* 7d: Product Name Link in stock items */}
@@ -784,7 +797,7 @@ export default function StoreDetailPage() {
                           {item.productName} ↗
                         </Link>
                         <div className="flex justify-between items-center text-[11px] mt-1 text-slate-600">
-                          <span>Shelf: <strong>{item.shelfQty} units</strong> (Prev: {item.previousQty})</span>
+                          <span>Shelf: <strong>{item.shelfQty}</strong> (before: {item.previousQty})</span>
                           {item.flaggedDrop && (
                             <span className="text-[10px] text-rose-600 font-semibold bg-rose-50 px-1 rounded">
                               &gt;50% Drop
@@ -1089,6 +1102,11 @@ export default function StoreDetailPage() {
         </div>
       )}
       </div>
+      <ShelfCountSheet
+        target={countOpen && store && (store.type === 'RETAILER' || store.type === 'BRANCH') ? { storeId: store.id, storeName: store.name, entityType: store.type as 'RETAILER' | 'BRANCH' } : null}
+        onSaved={() => { setActiveTab('STOCK'); refresh((n) => n + 1); }}
+        onClose={() => setCountOpen(false)}
+      />
     </PageGuard>
   );
 }

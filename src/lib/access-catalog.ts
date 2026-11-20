@@ -13,7 +13,7 @@ export type PageKey =
   | 'p.sales_offers' | 'p.delivery_failures'
   | 'p.feedback' | 'p.returns' | 'p.issue_categories'
   | 'p.customers' | 'p.customer_insights'
-  | 'p.beat_plan' | 'p.stores' | 'p.distributors' | 'p.dispatch' | 'p.live_tracking' | 'p.shelf_photos'
+  | 'p.beat_plan' | 'p.stores' | 'p.distributors' | 'p.dispatch' | 'p.live_tracking' | 'p.shelf_photos' | 'p.stock_counts'
   | 'p.calls' | 'p.cheques' | 'p.documents' | 'p.scorecards'
   | 'p.influencers' | 'p.marketing_sends'
   | 'p.calendar_tasks' | 'p.tasks' | 'p.activity' | 'p.export'
@@ -96,6 +96,7 @@ export const PAGES: PageDefinition[] = [
   page('p.distributors', 'Distributors & chains', 'offline', 'distributors', 'Distributor and chain head-office accounts, shown inside Stores'),
   page('p.dispatch', 'Distributor dispatches', 'offline', 'dispatches', 'Dispatches, challans and payment terms', { href: '/offline-sales/dispatch' }),
   page('p.live_tracking', 'Live GPS tracking', 'offline', 'gps_tracking', 'Where field staff are right now', { href: '/offline-sales/live-tracking', actions: ['VIEW', 'EDIT'] }),
+  page('p.stock_counts', 'Stock counts', 'offline', 'stock_counts', 'Shelf counts at every store, and what is out or running low', { href: '/offline-sales/stock-counts' }),
   page('p.shelf_photos', 'Shelf photos', 'offline', 'shelf_photos', 'Before and after shelf photos', { href: '/offline-sales/shelf-photos' }),
   page('p.calls', 'Call tracker', 'offline', 'call_tracker', 'Calls to stores and their outcome', { href: '/offline-sales/calls' }),
   page('p.cheques', 'Cheque tracker', 'offline', 'cheque_tracker', 'Cheques collected, handed over and banked', { href: '/offline-sales/cheques', needs: ['s.money'] }),

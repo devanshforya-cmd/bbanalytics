@@ -19,7 +19,7 @@ const FEATURES: Record<WorkspaceCollection, AccessKey[]> = {
   products: ['products'], combos: ['products'], secondaryOrders: ['beat_plans'],
   facingAudits: ['beat_plans'], distributors: ['distributors'], branches: ['stores', 'distributors'],
   retailers: ['stores'], beatItems: ['beat_plans'], visits: ['beat_plans'], dispatches: ['dispatches'],
-  stockCounts: ['beat_plans'], shelfPhotos: ['shelf_photos'], callLogs: ['call_tracker'],
+  stockCounts: ['beat_plans', 'stock_counts'], shelfPhotos: ['shelf_photos'], callLogs: ['call_tracker'],
   cheques: ['cheque_tracker'], documents: ['document_handover'], orders: ['orderflow', 'order_desk'],
   deliveryFailures: ['orderflow', 'order_desk'], returns: ['reviews', 'order_desk'], reviewCategories: ['reviews'],
   feedbackEntries: ['reviews'], customers: ['customers', 'orderflow', 'order_desk'], tasks: ['tasks'],
@@ -41,15 +41,16 @@ const GLOBAL_CATALOG = new Set<WorkspaceCollection>([
 ]);
 
 export function collectionFeatures(collection: WorkspaceCollection, read = false): AccessKey[] {
-  if (read && (collection === 'products' || collection === 'combos')) return ['products', 'beat_plans', 'orderflow', 'order_desk', 'dispatches'];
+  if (read && (collection === 'products' || collection === 'combos')) return ['products', 'beat_plans', 'orderflow', 'order_desk', 'dispatches', 'stock_counts'];
   if (read && collection === 'reviewCategories') return ['reviews', 'order_desk'];
   if (read && ['documentTypes', 'storeCategories', 'workspaceConfig', 'promotions'].includes(collection)) return ['settings', 'beat_plans', 'stores', 'document_handover', 'orderflow', 'order_desk'];
   if (read && collection === 'holidays') return ['settings', 'beat_plans', 'tasks'];
   // Everyone who takes or reviews online orders sees the running sales; the Sales & offers page manages them.
   if (read && collection === 'campaigns') return ['p.sales_offers', 'settings', 'marketing', 'orderflow', 'order_desk', 'dashboard'];
   if (read && collection === 'failureReasons') return ['orderflow', 'order_desk', 'settings', 'reviews', 'dashboard'];
-  if (read && collection === 'stockCounts') return ['beat_plans', 'dispatches'];
-  if (read && (collection === 'retailers' || collection === 'branches')) return ['stores', 'beat_plans', 'cheque_tracker', 'shelf_photos', 'call_tracker', 'document_handover', 'dispatches'];
+  if (read && collection === 'stockCounts') return ['beat_plans', 'dispatches', 'stock_counts', 'stores'];
+  if (read && collection === 'secondaryOrders') return ['beat_plans', 'stock_counts'];
+  if (read && (collection === 'retailers' || collection === 'branches')) return ['stores', 'beat_plans', 'cheque_tracker', 'shelf_photos', 'call_tracker', 'document_handover', 'dispatches', 'stock_counts'];
   return FEATURES[collection];
 }
 
