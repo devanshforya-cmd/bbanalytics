@@ -17,6 +17,7 @@ import PageGuard from '@/components/common/PageGuard';
 import StaffManagement from './components/StaffManagement';
 import BrandSettings from './components/BrandSettings';
 import ChannelSettings from './components/ChannelSettings';
+import NotificationSettings from './components/NotificationSettings';
 import NotificationRules from './components/NotificationRules';
 import HolidayCalendar from './components/HolidayCalendar';
 import TaskTemplates from './components/TaskTemplates';
@@ -197,7 +198,7 @@ export default function SettingsPage() {
           {activeTab === 'FIELD_SALES' && <FieldSalesSettings />}
           {activeTab === 'BRANDS' && <div className="space-y-6"><BrandSettings /><OrderIdPrefixes /></div>}
           {activeTab === 'CHANNELS' && <ChannelSettings />}
-          {activeTab === 'RULES' && <NotificationRules />}
+          {activeTab === 'RULES' && <div className="space-y-6"><NotificationSettings /><NotificationRules /></div>}
           {activeTab === 'HOLIDAYS' && <HolidayCalendar />}
           {activeTab === 'TEMPLATES' && <TaskTemplates />}
           {activeTab === 'PROMOTIONS' && <PromotionManager />}

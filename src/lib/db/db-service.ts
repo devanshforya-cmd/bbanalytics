@@ -4374,44 +4374,55 @@ export class DatabaseService {
       filteredFeedback = filteredFeedback.filter((fb) => activeUser.assignedBrands!.includes(fb.brandCode));
     }
 
-    const overdueCheques = this.cheques.filter(
-      (c) => c.status === 'DELAYED' || c.status === 'PENDING'
-    );
+    // Days in Nepal time: "yesterday" means yesterday, not all time.
+    const today = getTodayAd();
+    const yesterday = new Date(Date.parse(`${today}T00:00:00Z`) - 86400000).toISOString().slice(0, 10);
+    const dayOf = (record: any): string => String(record?.dateAd || record?.orderDateAd || record?.returnDateAd || record?.dateReceivedAd || record?.receivedDateAd || record?.createdAt || '').slice(0, 10);
+    const onYesterday = <T,>(list: T[]) => list.filter((record) => dayOf(record) === yesterday);
+
+    // Overdue: the cheque's date has passed and it is still not in the bank (or was marked delayed).
+    const overdueCheques = this.cheques
+      .filter((c) => !['CASHED', 'BOUNCED', 'LOST'].includes(c.status) && (c.status === 'DELAYED' || ((c.newExpectedDate || c.cashDateAd) && (c.newExpectedDate || c.cashDateAd) < today)))
+      .filter((c) => !isOfficer || c.officerId === activeUser.id)
+      .sort((a, b) => (b.amount || 0) - (a.amount || 0));
 
     const unresolvedComplaints = filteredFeedback.filter(
       (f) => f.type === 'COMPLAINT' && f.complaintStatus !== 'RESOLVED' && f.complaintStatus !== 'CLOSED'
     );
 
-    const beatItems = isOfficer
-      ? this.beatItems.filter((b) => b.officerId === activeUser.id)
-      : this.beatItems;
-
-    const visitedBeats = beatItems.filter((b) => b.status === 'VISITED');
+    const myBeats = isOfficer ? this.beatItems.filter((b) => b.officerId === activeUser.id) : this.beatItems;
+    const yesterdayBeats = myBeats.filter((b) => b.dateAd === yesterday);
+    const todayBeats = myBeats.filter((b) => b.dateAd === today && b.status === 'PENDING');
+    const visitedYesterday = yesterdayBeats.filter((b) => b.status === 'VISITED');
+    const yesterdayOrders = onYesterday(filteredOrders);
+    const yesterdayFeedback = onYesterday(filteredFeedback);
     const upcomingHoliday = this.getUpcomingHolidayTomorrow();
 
     return {
       user: activeUser,
       yesterdaySummary: {
-        totalOrders: filteredOrders.length,
+        totalOrders: yesterdayOrders.length,
         brandBreakdown: this.getBrands('ACTIVE').map((b) => ({
           name: b.name,
           code: b.code,
-          count: filteredOrders.filter((o) => o.brandCode === b.code).length,
+          count: yesterdayOrders.filter((o) => o.brandCode === b.code).length,
         })),
-        deliveryFailures: filteredFailures.length,
-        deliveryFailuresReason: 'Call not received',
-        returnsCount: filteredReturns.length,
-        complaintsCount: filteredFeedback.filter((f) => f.type === 'COMPLAINT').length,
-        resolvedComplaints: filteredFeedback.filter((f) => f.type === 'COMPLAINT' && f.complaintStatus === 'RESOLVED').length,
-        storeVisits: `${visitedBeats.length}/${beatItems.length}`,
-        compliancePct: beatItems.length > 0 ? Math.round((visitedBeats.length / beatItems.length) * 100) : 0,
-        callsMade: this.callLogs.length,
-        chequesCollected: this.cheques.filter((c) => c.status === 'COLLECTED_IN_FIELD' || c.status === 'CASHED').length,
+        deliveryFailures: onYesterday(filteredFailures).length,
+        returnsCount: onYesterday(filteredReturns).length,
+        complaintsCount: yesterdayFeedback.filter((f) => f.type === 'COMPLAINT').length,
+        resolvedComplaints: yesterdayFeedback.filter((f) => f.type === 'COMPLAINT' && f.complaintStatus === 'RESOLVED').length,
+        storeVisits: `${visitedYesterday.length}/${yesterdayBeats.length}`,
+        compliancePct: yesterdayBeats.length > 0 ? Math.round((visitedYesterday.length / yesterdayBeats.length) * 100) : 0,
+        callsMade: onYesterday(isOfficer ? this.callLogs.filter((c: any) => c.officerId === activeUser.id) : this.callLogs).length,
+        chequesCollected: onYesterday(isOfficer ? this.cheques.filter((c) => c.officerId === activeUser.id) : this.cheques).length,
       },
       todayAttention: {
+        overdueChequeCount: overdueCheques.length,
+        overdueChequeTotal: overdueCheques.reduce((sum, c) => sum + (c.amount || 0), 0),
         overdueCheques: overdueCheques.slice(0, 3),
         unresolvedComplaints: unresolvedComplaints.slice(0, 2),
-        todayBeatCount: beatItems.length,
+        todayBeatCount: todayBeats.length,
+        todayOfficers: new Set(todayBeats.map((b) => b.officerId)).size,
         upcomingHoliday,
       },
     };

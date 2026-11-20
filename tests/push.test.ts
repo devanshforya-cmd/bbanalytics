@@ -4,6 +4,7 @@ import { createECDH, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { validatePushSubscription, safeNotificationPath } from '../src/lib/push-validation.ts';
+import * as notificationEvents from '../src/lib/notification-events.ts';
 import * as permissions from '../src/lib/permissions.ts';
 
 const key = createECDH('prime256v1'); key.generateKeys();
@@ -47,7 +48,7 @@ function pushServerHarness() {
     'web-push': { async sendNotification() { calls++; if (transportStatus >= 400) throw { statusCode: transportStatus }; return { statusCode: transportStatus }; } },
     'node:crypto': { createHash: (awaitImportCrypto as any).createHash },
     '@/lib/db/supabase-server': { supabaseAdmin: database }, '@/lib/permissions': permissions,
-    './push-validation': { validatePushSubscription, safeNotificationPath },
+    './push-validation': { validatePushSubscription, safeNotificationPath }, './notification-events': notificationEvents,
   };
   const module = { exports: {} as any };
   const source = ts.transpileModule(readFileSync(new URL('../src/lib/push-server.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText;

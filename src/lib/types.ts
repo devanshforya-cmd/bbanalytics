@@ -1073,6 +1073,14 @@ export interface Notification {
   read: boolean;
   entityType?: string;
   entityId?: string;
+  /** What caused it (see notification-events.ts), e.g. "store_order_new". */
+  event?: string;
+  /** A message someone wrote, or something that happened to a record. */
+  kind?: 'MESSAGE' | 'EVENT';
+  /** Where clicking it goes (the order, the store, the task). Messages open in place instead. */
+  link?: string;
+  senderId?: string;
+  senderName?: string;
   createdAt: string;
 }
 
