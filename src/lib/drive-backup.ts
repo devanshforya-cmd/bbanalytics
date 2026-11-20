@@ -1,11 +1,13 @@
 /**
- * Weekly full backup: every data set in one Excel workbook, saved to a "Backups" folder
- * inside the app's own "BB Analytics" Google Drive folder.
+ * Hourly full backup: every data set in one Excel workbook, saved to a "Backups" folder
+ * inside the app's own "BB Analytics" Google Drive folder. Scheduled runs skip the upload
+ * when nothing has changed since the last saved backup.
  *
  * The app only has drive.file access, so it can only see and write files it created itself.
  * That is why the backups live in a folder the app makes, not one picked elsewhere in Drive.
  */
 import { Readable } from 'node:stream';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { google, type drive_v3 } from 'googleapis';
 import { supabaseAdmin } from './db/supabase-server';
 import { getGoogleWorkspace, logGoogleFailure } from './google-workspace';
@@ -14,9 +16,10 @@ import { buildWorkbook } from './export/xlsx';
 import { exportSourceFrom } from './export/client-source';
 import type { DatabaseService } from './db/db-service';
 import { backupFileName, backupsToTrash } from './backup-plan';
-export { BACKUPS_KEPT } from './backup-plan';
+export { KEEP_ALL_HOURS, KEEP_DAILY_DAYS } from './backup-plan';
 
 const STATUS_KEY = 'drive_backup_status_v1';
+const TRIGGER_KEY = 'backup_trigger_v1';
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 export interface BackupRun {
@@ -32,9 +35,25 @@ export interface BackupRun {
   bytes?: number;
   trashed?: number;
   error?: string;
+  /** Nothing changed since the last saved backup, so no new file was made. */
+  unchanged?: boolean;
 }
 
-export interface BackupStatus { folderId?: string; lastRun?: BackupRun; lastSuccess?: BackupRun }
+export interface BackupStatus { folderId?: string; lastRun?: BackupRun; lastSuccess?: BackupRun; lastHash?: string; lastCheckedAt?: string }
+
+/**
+ * The database's scheduler (pg_cron) calls the backup with its own token. Only a hash of
+ * that token is stored here; the token itself stays in the database vault.
+ */
+export async function isBackupTriggerToken(request: Request): Promise<boolean> {
+  const header = request.headers.get('authorization') || '';
+  if (!header.startsWith('Bearer ') || header.length < 40) return false;
+  const { data, error } = await supabaseAdmin.from('system_settings').select('value').eq('key', TRIGGER_KEY).maybeSingle();
+  const stored = (data?.value as { sha256?: string } | null)?.sha256;
+  if (error || !stored || !/^[0-9a-f]{64}$/.test(stored)) return false;
+  const received = createHash('sha256').update(header.slice(7)).digest();
+  return timingSafeEqual(received, Buffer.from(stored, 'hex'));
+}
 
 export async function readBackupStatus(): Promise<BackupStatus> {
   const { data, error } = await supabaseAdmin.from('system_settings').select('value').eq('key', STATUS_KEY).maybeSingle();
@@ -66,8 +85,10 @@ async function backupFolder(drive: drive_v3.Drive, parentId: string, knownId?: s
 /** Build the full workbook from a workspace. Kept separate so it can be checked without Google. */
 export function buildBackupWorkbook(store: DatabaseService, now = new Date()) {
   const sheets = buildSheets(exportSourceFrom(store), DATASETS.map((d) => d.key), {});
+  // Fingerprint of the data itself (not the file, which carries a timestamp) to skip unchanged hours.
+  const hash = createHash('sha256').update(JSON.stringify(sheets.map((sheet) => [sheet.name, sheet.rows]))).digest('hex');
   const bytes = buildWorkbook(sheets, { title: `Brand Bucket full backup ${now.toISOString().slice(0, 10)}`, author: 'BB Analytics' });
-  return { bytes, sheets: sheets.length, rows: sheets.reduce((sum, sheet) => sum + sheet.rows.length, 0) };
+  return { bytes, hash, sheets: sheets.length, rows: sheets.reduce((sum, sheet) => sum + sheet.rows.length, 0) };
 }
 
 /**
@@ -86,6 +107,11 @@ export async function runDriveBackup(store: DatabaseService, trigger: BackupRun[
     status.folderId = folderId;
 
     const book = buildBackupWorkbook(store, now);
+    if (trigger === 'schedule' && status.lastHash === book.hash && status.lastSuccess) {
+      status.lastCheckedAt = now.toISOString();
+      try { await saveBackupStatus(status); } catch (error) { logGoogleFailure('backup status save', error); }
+      return { ...status.lastSuccess, at: now.toISOString(), trigger, unchanged: true };
+    }
     const fileName = backupFileName(now);
     const uploaded = await drive.files.create({
       requestBody: { name: fileName, parents: [folderId], appProperties: { app: 'bb-analytics', kind: 'backup' } },
@@ -99,9 +125,9 @@ export async function runDriveBackup(store: DatabaseService, trigger: BackupRun[
     try {
       const list = await drive.files.list({
         q: `'${folderId}' in parents and trashed = false and mimeType = '${XLSX_MIME}'`,
-        fields: 'files(id,createdTime)', pageSize: 200, orderBy: 'createdTime desc', supportsAllDrives: true, includeItemsFromAllDrives: true,
+        fields: 'files(id,createdTime)', pageSize: 1000, orderBy: 'createdTime desc', supportsAllDrives: true, includeItemsFromAllDrives: true,
       });
-      for (const old of backupsToTrash(list.data.files || [])) {
+      for (const old of backupsToTrash(list.data.files || [], now)) {
         if (!old.id) continue;
         await drive.files.update({ fileId: old.id, requestBody: { trashed: true }, supportsAllDrives: true });
         trashed += 1;
@@ -111,6 +137,7 @@ export async function runDriveBackup(store: DatabaseService, trigger: BackupRun[
     run = { ...run, ok: true, fileName, fileId: uploaded.data.id, fileUrl: uploaded.data.webViewLink || `https://drive.google.com/file/d/${uploaded.data.id}/view`,
       rows: book.rows, sheets: book.sheets, bytes: book.bytes.length, trashed };
     status.lastSuccess = run;
+    status.lastHash = book.hash;
   } catch (error) {
     logGoogleFailure('backup', error);
     const message = error instanceof Error && /^(Connect Google|Google Drive is connected|Google OAuth setup)/.test(error.message)
@@ -119,6 +146,7 @@ export async function runDriveBackup(store: DatabaseService, trigger: BackupRun[
     run = { ...run, error: message };
   }
   status.lastRun = run;
+  status.lastCheckedAt = now.toISOString();
   try { await saveBackupStatus(status); } catch (error) { logGoogleFailure('backup status save', error); }
   return run;
 }

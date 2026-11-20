@@ -9,8 +9,8 @@
       "schedule": "15 2 * * *"
     },
     {
-      "path": "/api/cron/weekly-backup",
-      "schedule": "20 18 * * 6"
+      "path": "/api/cron/backup",
+      "schedule": "20 18 * * *"
     }
   ]
 }

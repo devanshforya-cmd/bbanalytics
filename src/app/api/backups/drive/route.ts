@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireFeatureAccess } from '@/lib/auth-guard';
 import { isSuperAdmin } from '@/lib/permissions';
 import { openSystemWorkspace } from '@/lib/db/server-workspace';
-import { readBackupStatus, runDriveBackup, BACKUPS_KEPT } from '@/lib/drive-backup';
+import { readBackupStatus, runDriveBackup, KEEP_ALL_HOURS, KEEP_DAILY_DAYS } from '@/lib/drive-backup';
 import { isSameOriginGoogleMutation } from '@/lib/google-workspace-security';
 import { apiFailure } from '../../_workspace';
 
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   if (!isSuperAdmin(auth.user)) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   try {
     const status = await readBackupStatus();
-    return NextResponse.json({ success: true, lastRun: status.lastRun || null, lastSuccess: status.lastSuccess || null, kept: BACKUPS_KEPT, schedule: 'Every Sunday at about 12:00 AM Nepal time' }, { headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json({ success: true, lastRun: status.lastRun || null, lastSuccess: status.lastSuccess || null, lastCheckedAt: status.lastCheckedAt || null, keepAllHours: KEEP_ALL_HOURS, keepDailyDays: KEEP_DAILY_DAYS, schedule: 'Every hour' }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) { return apiFailure(error, 'The backup could not run.'); }
 }
 

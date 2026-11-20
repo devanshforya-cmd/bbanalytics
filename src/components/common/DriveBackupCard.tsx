@@ -8,13 +8,13 @@ interface BackupRun {
   at: string; ok: boolean; trigger: 'schedule' | 'manual'; by?: string;
   fileName?: string; fileUrl?: string; rows?: number; sheets?: number; bytes?: number; trashed?: number; error?: string;
 }
-interface BackupState { lastRun: BackupRun | null; lastSuccess: BackupRun | null; kept: number; schedule: string }
+interface BackupState { lastRun: BackupRun | null; lastSuccess: BackupRun | null; lastCheckedAt: string | null; keepAllHours: number; keepDailyDays: number; schedule: string }
 
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { timeZone: 'Asia/Kathmandu', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 const size = (bytes = 0) => (bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 
 /**
- * Weekly Drive backup: when it last ran, a link to the file, and a button to run it now.
+ * Hourly Drive backup: when it last ran, a link to the file, and a button to run it now.
  * Shown to Super Admins only; the server checks that too.
  */
 export default function DriveBackupCard({ settingsLink = false }: { settingsLink?: boolean }) {
@@ -47,10 +47,10 @@ export default function DriveBackupCard({ settingsLink = false }: { settingsLink
   const failedSince = last && !last.ok;
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs" aria-label="Weekly backup to Google Drive">
-      <h2 className="flex items-center gap-1.5 text-sm font-bold text-slate-900"><CloudUpload className="h-4 w-4 text-slate-600" /> Weekly backup to Google Drive</h2>
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs" aria-label="Backup to Google Drive">
+      <h2 className="flex items-center gap-1.5 text-sm font-bold text-slate-900"><CloudUpload className="h-4 w-4 text-slate-600" /> Hourly backup to Google Drive</h2>
       <p className="mt-2 text-xs text-slate-600">
-        {state?.schedule || 'Every Sunday at about 12:00 AM Nepal time'}: every record in one Excel file, saved to <span className="font-semibold">BB Analytics → Backups</span> in the connected Google account. The newest {state?.kept || 12} are kept; older ones go to Drive&apos;s trash.
+        Every hour, if anything changed, every record is saved as one Excel file in <span className="font-semibold">BB Analytics → Backups</span> in the connected Google account. All backups from the last {state?.keepAllHours || 48} hours are kept, then one per day for {state?.keepDailyDays || 30} days; older ones go to Drive&apos;s trash.
       </p>
 
       {good && (
@@ -58,6 +58,9 @@ export default function DriveBackupCard({ settingsLink = false }: { settingsLink
           Last saved {when(good.at)} · {(good.rows || 0).toLocaleString()} rows · {size(good.bytes)}
           {good.fileUrl && <> · <a href={good.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 font-semibold text-blue-700">Open in Drive <ExternalLink className="h-3 w-3" /></a></>}
         </p>
+      )}
+      {good && state?.lastCheckedAt && state.lastCheckedAt > good.at && !failedSince && (
+        <p className="mt-1 text-[11px] text-slate-500">Checked {when(state.lastCheckedAt)}: no changes since then.</p>
       )}
       {state && !good && !failedSince && <p className="mt-3 text-xs text-slate-500">No backup has been saved yet.</p>}
       {failedSince && (
