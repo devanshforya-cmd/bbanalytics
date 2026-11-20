@@ -7,6 +7,7 @@
  * follow orders, and balances follow cheques. Dates run up to the day it is loaded.
  */
 import { adToBs } from '../nepali-calendar';
+import { dispatchFromOrder, paymentDueDate } from '../dispatch-flow';
 import type {
   BeatItem, Branch, CallLabel, CallLog, CallOutcome, Cheque, ChequeStatus, Dispatch, Distributor, FacingAudit, FeedbackEntry,
   HandoverDocument, Influencer, InfluencerContent, MarketingSend, Product, Promotion, RecurringScheduleEntry, Retailer,
@@ -434,21 +435,32 @@ export function generateSampleData(options: SampleOptions): SampleSet {
       managerNote: s.habit === 'late_payer' ? 'Collect payment before taking a new order' : undefined });
   }
 
-  // Dispatches: chain orders go out from the warehouse; Pokhara GT stock goes to the distributor weekly.
-  for (const s of sims.filter((x) => x.entityType === 'BRANCH')) {
-    for (const order of s.orders.filter((o) => o.status === 'DELIVERED' || o.status === 'DISPATCHED')) {
+  // Every store order has its dispatch order, at the step its age suggests. Pokhara GT stock also goes to the distributor weekly.
+  for (const s of sims) {
+    for (const order of s.orders) {
       dpNumber += 1;
-      const sent = iso(Date.parse(`${order.orderDateAd}T00:00:00Z`) + between(1, 2) * DAY);
-      const due = iso(Date.parse(`${sent}T00:00:00Z`) + 30 * DAY);
+      const age = Math.round((today - Date.parse(`${order.orderDateAd}T00:00:00Z`)) / DAY);
+      const status: Dispatch['status'] = order.status === 'CANCELLED' ? 'CANCELLED' : order.status === 'DELIVERED' ? 'DELIVERED' : order.status === 'DISPATCHED' ? 'DISPATCHED' : age >= 1 ? 'PACKED' : 'ORDER_RECEIVED';
+      const draft = dispatchFromOrder(order, { id: s.id, name: s.name, type: s.entityType, chainId: s.entityType === 'BRANCH' ? s.distributorId : undefined, chainName: s.entityType === 'BRANCH' ? s.distributorName : undefined,
+        distributorId: s.entityType === 'RETAILER' ? s.distributorId : undefined, distributorName: s.entityType === 'RETAILER' ? s.distributorName : undefined }, manager.name, new Date(Date.parse(order.createdAt)));
+      const sent = ['DISPATCHED', 'DELIVERED'].includes(status!) ? iso(Date.parse(`${order.orderDateAd}T00:00:00Z`) + Math.min(age, between(1, 2)) * DAY) : '';
+      const delivered = status === 'DELIVERED' && sent ? iso(Math.min(today, Date.parse(`${sent}T00:00:00Z`) + between(0, 2) * DAY)) : undefined;
+      const due = sent ? paymentDueDate(sent, s.terms) : '';
       const collected = s.cheques.find((c) => c.notes === `For ${order.orderNumber}` && c.status === 'CASHED');
+      const history = [draft.statusHistory![0]];
+      if (status !== 'ORDER_RECEIVED' && status !== 'CANCELLED') history.push({ status: 'PACKED', at: at(sent || dayAd(Math.max(0, age - 1)), 9), byName: manager.name });
+      if (sent) history.push({ status: 'DISPATCHED', at: at(sent, 11), byName: manager.name });
+      if (delivered) history.push({ status: 'DELIVERED', at: at(delivered, 15), byName: s.officer.name });
+      if (status === 'CANCELLED') history.push({ status: 'CANCELLED', at: at(order.orderDateAd, 17), byName: manager.name, note: order.notes });
       add<Dispatch>('dispatches', {
-        id: sid('dispatch', dpNumber), dispatchNumber: `DP-${dpNumber}`, distributorId: s.distributorId!, distributorName: s.distributorName!, branchId: s.id, branchName: s.name,
-        dispatchDateAd: sent, dispatchDateBs: bs(sent), items: order.items.map((line) => ({ productId: line.productId, productName: line.productName, brandCode: line.brandCode, quantity: line.totalUnits, quantityPcs: line.totalUnits })),
-        createdBy: manager.name, createdAt: at(sent, 10), paymentTerms: s.terms, paymentDueDateAd: due, paymentDueDateBs: bs(due), amountDue: order.totalAmount,
-        paymentStatus: collected ? 'COLLECTED' : Date.parse(`${due}T00:00:00Z`) < today ? 'OVERDUE' : 'PENDING',
+        ...draft, id: sid('dispatch', dpNumber), dispatchNumber: `DP-${dpNumber}`, status, statusHistory: history,
+        dispatchDateAd: sent, dispatchDateBs: sent ? bs(sent) : '', deliveredDateAd: delivered,
+        paymentDueDateAd: due || undefined, paymentDueDateBs: due ? bs(due) : undefined, amountDue: sent ? order.totalAmount : undefined,
+        paymentStatus: !due ? undefined : collected ? 'COLLECTED' : Date.parse(`${due}T00:00:00Z`) < today ? 'OVERDUE' : 'PENDING',
         collectionDateAd: collected?.cashDateAd, collectionDateBs: collected?.cashDateBs, collectionMethod: collected ? 'Cheque' : undefined, collectedBy: collected ? s.officer.name : undefined,
-        notes: `Against ${order.orderNumber}`,
       });
+      (order as SecondaryOrder).dispatchId = sid('dispatch', dpNumber);
+      (order as SecondaryOrder).dispatchNumber = `DP-${dpNumber}`;
     }
   }
   const fewa = chainOf('fewa');
@@ -460,6 +472,7 @@ export function generateSampleData(options: SampleOptions): SampleSet {
     const due = iso(Date.parse(`${sent}T00:00:00Z`) + 45 * DAY);
     const paidOff = offset > 60;
     add<Dispatch>('dispatches', { id: sid('dispatch', dpNumber), dispatchNumber: `DP-${dpNumber}`, distributorId: fewa.id, distributorName: fewa.name, dispatchDateAd: sent, dispatchDateBs: bs(sent), items,
+      status: 'DELIVERED', statusHistory: [{ status: 'DISPATCHED', at: at(sent, 9), byName: manager.name }, { status: 'DELIVERED', at: at(sent, 16), byName: manager.name }], storeId: fewa.id, storeName: fewa.name, entityType: 'DISTRIBUTOR', fulfilledBy: 'WAREHOUSE', deliveredDateAd: sent,
       createdBy: manager.name, createdAt: at(sent, 9), paymentTerms: '45 days credit', paymentDueDateAd: due, paymentDueDateBs: bs(due), amountDue: amount,
       paymentStatus: paidOff ? 'COLLECTED' : Date.parse(`${due}T00:00:00Z`) < today ? 'OVERDUE' : offset > 40 ? 'PARTIAL' : 'PENDING',
       collectionDateAd: paidOff ? iso(Date.parse(`${due}T00:00:00Z`) + between(-5, 8) * DAY) : undefined, collectionMethod: paidOff ? 'Bank Transfer' : undefined,

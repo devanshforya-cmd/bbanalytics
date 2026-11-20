@@ -12,11 +12,12 @@ import { DatabaseService } from './db-service';
 import { supabaseAdmin } from './supabase-server';
 import { canManageSales, canPerform, getAssignedBrandCodes, getScope, hasAccess, isSuperAdmin } from '../permissions';
 import { validateCampaign } from '../offers';
-import type { Order } from '../types';
+import type { Dispatch, Order } from '../types';
 import type { Brand, User, SharedAccessLink } from '../types';
 import { WORKSPACE_COLLECTIONS, isWorkspaceCollection, isLookupCollection, type WorkspaceMutation, type WorkspaceSnapshot, type WorkspaceVersions, type WorkspaceRecord } from './workspace-types';
 import { RESERVED_PREFIXES, brandPrefix, isShortDocumentId, isPendingDocumentId, validateBrandPrefix } from '../document-ids';
 import { nextDocumentId, documentIdTaken } from './document-counter';
+import { canMoveTo, dispatchFromOrder, dispatchStatus, orderStatusFor, type StoreRef } from '../dispatch-flow';
 import { editNeedsReason, historyEntries } from '../order-history';
 import { isFullPhone, phoneDigits } from '../customer-lookup';
 import { sameName } from '../marketing';
@@ -426,6 +427,10 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
   const codes = recordBrandCodes({ collection: mutation.collection, id: mutation.id, data, created_by: prior?.created_by || user.id, version: prior?.version || 0 }, context.records);
   const previousCodes = prior ? recordBrandCodes(prior, context.records) : [];
   if (codes.some((code) => code !== 'ALL' && !previousCodes.includes(code) && !context.brands.some((brand) => brand.code.toUpperCase() === code))) throw new WorkspaceError(400, 'Configure the record’s brand in Settings before saving it.');
+  if (mutation.collection === 'dispatches' && prior && mutation.operation === 'upsert') {
+    const from = dispatchStatus(prior.data as { status?: Dispatch["status"] }), to = dispatchStatus(data as { status?: Dispatch["status"] });
+    if (from !== to && !canMoveTo(from, to)) throw new WorkspaceError(409, `This dispatch is already ${from.toLowerCase().replace('_', ' ')}. Refresh to see its latest step.`);
+  }
   if (['orders', 'secondaryOrders', 'dispatches'].includes(mutation.collection)) {
     for (const item of data.items || []) {
       if (prior?.data.items?.some((previous: any) => previous.productId === item.productId && JSON.stringify(previous) === JSON.stringify(item))) continue;
@@ -670,6 +675,8 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
   if (mutation.operation !== 'delete') context.records.push({ ...candidate, version, last_mutation_id: mutation.mutationId });
   await appendAudit(user, mutation, !prior);
   await notifyRecordChange(user, mutation, context, !prior);
+  try { await linkOrderAndDispatch(user, mutation, prior); }
+  catch (error) { console.error('[Workspace] Order and dispatch were not linked:', error instanceof Error ? error.message : 'unknown'); }
   if (mutation.collection === 'orders' && prior) {
     const before = phoneDigits(prior.data.customerPhone);
     const now = mutation.operation === 'delete' ? '' : phoneDigits(mutation.data?.customerPhone);
@@ -715,6 +722,59 @@ export async function saveWorkspaceMutation(user: User, input: unknown, supplied
       message: `${user.fullName} recorded a send to ${mutation.data.influencerName}. You are the responsible person for the content follow-up.` });
   }
   return { version: mutation.operation === 'delete' ? 0 : version, ...(mutation.operation === 'upsert' && !prior ? { assigned: { orderNumber: mutation.data?.orderNumber, sendNumber: mutation.data?.sendNumber, dispatchNumber: mutation.data?.dispatchNumber } } : {}) };
+}
+
+/** Find a store record (retailer, chain outlet or distributor/chain) for a dispatch order. */
+async function storeRefFor(entityType: string, id: string): Promise<StoreRef | null> {
+  const collection = entityType === 'BRANCH' ? 'branches' : entityType === 'RETAILER' ? 'retailers' : 'distributors';
+  const { data } = await supabaseAdmin.from('workspace_records').select('data').eq('collection', collection).eq('id', id).maybeSingle();
+  const row = data?.data as Record<string, any> | undefined;
+  if (!row) return null;
+  return { id, name: row.name, type: entityType as StoreRef['type'], chainId: row.distributorId, chainName: row.distributorName,
+    distributorId: entityType === 'RETAILER' ? row.distributorId : undefined, distributorName: entityType === 'RETAILER' ? row.distributorName : undefined };
+}
+
+/**
+ * Keep store orders and dispatch orders in step, whoever makes the change:
+ * - a new store order starts a dispatch order ("Order received") straight away;
+ * - a store order cancelled before dispatch cancels its dispatch order;
+ * - moving a dispatch order along updates its store order's status.
+ */
+async function linkOrderAndDispatch(user: User, mutation: WorkspaceMutation, prior: StoredWorkspaceRecord | null) {
+  if (mutation.operation !== 'upsert' || !mutation.data) return;
+  const stamp = () => new Date().toISOString();
+  if (mutation.collection === 'secondaryOrders') {
+    const order = mutation.data as any;
+    const dispatchId = `disp_so_${order.id}`.slice(0, 170);
+    if (!prior && order.status !== 'CANCELLED') {
+      const draft = dispatchFromOrder(order, await storeRefFor(order.entityType, order.entityId), user.fullName);
+      const dispatchNumber = await nextDocumentId(RESERVED_PREFIXES.dispatches, user.id, candidate => documentIdTaken('dispatches', 'dispatchNumber', candidate));
+      const data = { ...draft, dispatchNumber, ...(order.isSample ? { isSample: true } : {}) };
+      const inserted = await supabaseAdmin.from('workspace_records').insert({ collection: 'dispatches', id: dispatchId, data, created_by: user.id, version: 1, last_mutation_id: `dispatch_${mutation.mutationId}`.slice(0, 170) });
+      if (inserted.error && inserted.error.code !== '23505') console.error('[Workspace] Dispatch order could not be created:', inserted.error.code);
+    } else if (prior && order.status === 'CANCELLED' && prior.data.status !== 'CANCELLED') {
+      const linked = await supabaseAdmin.from('workspace_records').select('data,version').eq('collection', 'dispatches').eq('id', dispatchId).maybeSingle();
+      const current = linked.data?.data as any;
+      if (current && ['ORDER_RECEIVED', 'PACKED'].includes(dispatchStatus(current))) {
+        const next = { ...current, status: 'CANCELLED', statusHistory: [...(current.statusHistory || []), { status: 'CANCELLED', at: stamp(), byName: user.fullName, note: 'Store order cancelled' }] };
+        await supabaseAdmin.from('workspace_records').update({ data: next, version: linked.data!.version + 1, last_mutation_id: `cancel_${mutation.mutationId}`.slice(0, 170), updated_at: stamp() })
+          .eq('collection', 'dispatches').eq('id', dispatchId).eq('version', linked.data!.version);
+      }
+    }
+    return;
+  }
+  if (mutation.collection === 'dispatches') {
+    const dispatch = mutation.data as any;
+    if (!dispatch.orderId) return;
+    const status = dispatchStatus(dispatch);
+    if (prior && dispatchStatus(prior.data as { status?: Dispatch["status"] }) === status) return;
+    const linked = await supabaseAdmin.from('workspace_records').select('data,version').eq('collection', 'secondaryOrders').eq('id', dispatch.orderId).maybeSingle();
+    const order = linked.data?.data as any;
+    const target = orderStatusFor(status);
+    if (!order || order.status === target) return;
+    await supabaseAdmin.from('workspace_records').update({ data: { ...order, status: target, dispatchId: dispatch.id, dispatchNumber: dispatch.dispatchNumber }, version: linked.data!.version + 1, last_mutation_id: `status_${mutation.mutationId}`.slice(0, 170), updated_at: stamp() })
+      .eq('collection', 'secondaryOrders').eq('id', dispatch.orderId).eq('version', linked.data!.version);
+  }
 }
 
 export async function openServerWorkspace(user: User) {

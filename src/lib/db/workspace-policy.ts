@@ -16,7 +16,7 @@ export interface StoredWorkspaceRecord {
 type AccessKey = FeatureKey | PageKey;
 
 const FEATURES: Record<WorkspaceCollection, AccessKey[]> = {
-  products: ['products'], combos: ['products'], secondaryOrders: ['beat_plans'],
+  products: ['products'], combos: ['products'], secondaryOrders: ['beat_plans', 'dispatches'],
   facingAudits: ['beat_plans'], distributors: ['distributors'], branches: ['stores', 'distributors'],
   retailers: ['stores'], beatItems: ['beat_plans'], visits: ['beat_plans'], dispatches: ['dispatches'],
   stockCounts: ['beat_plans', 'stock_counts'], shelfPhotos: ['shelf_photos'], callLogs: ['call_tracker'],

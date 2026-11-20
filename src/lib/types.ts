@@ -354,6 +354,9 @@ export interface SecondaryOrder {
   notes?: string;
   proFormaUrl?: string;
   orderPhotoUrl?: string;
+  /** The dispatch order made from this store order. */
+  dispatchId?: string;
+  dispatchNumber?: string;
   createdAt: string;
 }
 
@@ -460,12 +463,43 @@ export interface DispatchItem {
   subBrandId?: string;
   quantity: number;
   quantityPcs?: number;
+  /** Units ordered by the store, kept when quantities are corrected. */
+  orderedQty?: number;
+  /** Price per unit the store pays, when known. */
+  unitPrice?: number;
+}
+
+/** Where a dispatch order is in its life. Older dispatches have no status and count as DISPATCHED. */
+export type DispatchStatus = 'ORDER_RECEIVED' | 'PACKED' | 'DISPATCHED' | 'DELIVERED' | 'CANCELLED';
+
+export interface DispatchStatusChange {
+  status: DispatchStatus;
+  at: string;
+  byName: string;
+  note?: string;
 }
 
 export interface Dispatch {
   id: string;
   /** Short ID, DP-0045. Assigned by the server. */
   dispatchNumber?: string;
+  status?: DispatchStatus;
+  statusHistory?: DispatchStatusChange[];
+  /** The store order this came from, if any (SO-0108). */
+  orderId?: string;
+  orderNumber?: string;
+  /** Who the stock goes to. distributorId/distributorName keep the account (or chain head office) for older screens. */
+  storeId?: string;
+  storeName?: string;
+  entityType?: 'DISTRIBUTOR' | 'BRANCH' | 'RETAILER';
+  /** Who delivers it: our warehouse, or the distributor that supplies the store. */
+  fulfilledBy?: 'WAREHOUSE' | 'DISTRIBUTOR';
+  fulfillerId?: string;
+  fulfillerName?: string;
+  orderDateAd?: string;
+  deliveredDateAd?: string;
+  /** Value of the lines at the store's price, when known. */
+  totalAmount?: number;
   distributorId: string;
   distributorName: string;
   branchId?: string;

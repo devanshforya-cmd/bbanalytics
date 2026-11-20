@@ -9,7 +9,14 @@ import { strToU8, zipSync } from 'fflate';
 /** 'link' cells holding a web address become a clickable "Open" link. */
 export type ColumnType = 'text' | 'number' | 'money' | 'percent' | 'link';
 export interface Column { header: string; type?: ColumnType; width?: number }
-export interface Sheet { name: string; columns: Column[]; rows: (string | number | null | undefined | boolean)[][] }
+/**
+ * One worksheet. `intro` adds "Label | value" lines above the table (for a single order or count),
+ * followed by a blank line; the table's header row, freeze and filter move down to match.
+ */
+export interface Sheet { name: string; columns: Column[]; rows: (string | number | null | undefined | boolean)[][]; intro?: [string, string | number][] }
+
+/** The row number (1-based) of a sheet's table header. */
+const headerRowOf = (sheet: Sheet) => (sheet.intro?.length ? sheet.intro.length + 2 : 1);
 
 const esc = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
   // Characters Excel refuses inside XML.
@@ -42,16 +49,23 @@ function sheetXml(sheet: Sheet): string {
   const widths = sheet.columns.map((column, i) => {
     if (column.width) return column.width;
     if (column.type === 'link') return Math.max(8, column.header.length + 2);
-    const longest = Math.max(column.header.length, ...sheet.rows.slice(0, 200).map((row) => String(row[i] ?? '').length));
+    const introText = i < 2 ? (sheet.intro || []).map((pair) => String(pair[i] ?? '').length) : [];
+    const longest = Math.max(column.header.length, ...introText.map((n) => Math.min(n, 40)), ...sheet.rows.slice(0, 200).map((row) => String(row[i] ?? '').length));
     return Math.min(60, Math.max(8, longest + 2));
   });
   const rows: string[] = [];
-  const header = sheet.columns.map((column, i) => `<c r="${colName(i)}1" t="inlineStr" s="1"><is><t>${esc(column.header)}</t></is></c>`).join('');
-  rows.push(`<row r="1">${header}</row>`);
+  const top = headerRowOf(sheet);
+  (sheet.intro || []).forEach(([label, value], r) => {
+    const valueCell = typeof value === 'number' ? `<c r="B${r + 1}"><v>${value}</v></c>` : `<c r="B${r + 1}" t="inlineStr"><is><t xml:space="preserve">${esc(String(value))}</t></is></c>`;
+    rows.push(`<row r="${r + 1}"><c r="A${r + 1}" t="inlineStr" s="1"><is><t>${esc(label)}</t></is></c>${valueCell}</row>`);
+  });
+  const header = sheet.columns.map((column, i) => `<c r="${colName(i)}${top}" t="inlineStr" s="1"><is><t>${esc(column.header)}</t></is></c>`).join('');
+  rows.push(`<row r="${top}">${header}</row>`);
   sheet.rows.forEach((row, r) => {
+    const n = top + 1 + r;
     const cells = sheet.columns.map((column, i) => {
       const value = row[i];
-      const ref = `${colName(i)}${r + 2}`;
+      const ref = `${colName(i)}${n}`;
       if (value === null || value === undefined || value === '') return '';
       if (typeof value === 'number' && Number.isFinite(value) && column.type && column.type !== 'text') return `<c r="${ref}" s="${STYLE[column.type]}"><v>${value}</v></c>`;
       if (column.type === 'link' && typeof value === 'string' && isWebLink(value)) {
@@ -60,14 +74,14 @@ function sheetXml(sheet: Sheet): string {
       if (typeof value === 'boolean') return `<c r="${ref}" t="inlineStr"><is><t>${value ? 'Yes' : 'No'}</t></is></c>`;
       return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${esc(String(value))}</t></is></c>`;
     }).join('');
-    rows.push(`<row r="${r + 2}">${cells}</row>`);
+    rows.push(`<row r="${n}">${cells}</row>`);
   });
   const lastCol = colName(Math.max(0, sheet.columns.length - 1));
   const cols = widths.map((width, i) => `<col min="${i + 1}" max="${i + 1}" width="${width}" customWidth="1"/>`).join('');
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
-<cols>${cols}</cols><sheetData>${rows.join('')}</sheetData>${sheet.rows.length ? `<autoFilter ref="A1:${lastCol}${sheet.rows.length + 1}"/>` : ''}</worksheet>`;
+<sheetViews><sheetView workbookViewId="0"><pane ySplit="${top}" topLeftCell="A${top + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+<cols>${cols}</cols><sheetData>${rows.join('')}</sheetData>${sheet.rows.length ? `<autoFilter ref="A${top}:${lastCol}${top + sheet.rows.length}"/>` : ''}</worksheet>`;
 }
 
 const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -89,7 +103,7 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 
 function filterNames(names: string[], sheets: Sheet[]): string {
   const entries = names.map((name, i) => sheets[i].rows.length
-    ? `<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${esc(name.replace(/'/g, "''"))}'!$A$1:$${colName(Math.max(0, sheets[i].columns.length - 1))}$${sheets[i].rows.length + 1}</definedName>`
+    ? `<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${esc(name.replace(/'/g, "''"))}'!$A$${headerRowOf(sheets[i])}:$${colName(Math.max(0, sheets[i].columns.length - 1))}$${headerRowOf(sheets[i]) + sheets[i].rows.length}</definedName>`
     : '').join('');
   return entries ? `<definedNames>${entries}</definedNames>` : '';
 }

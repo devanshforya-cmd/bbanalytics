@@ -15,6 +15,7 @@ import type {
 } from '../types';
 import { PHOTO_COLUMNS, photoCells, photoLink } from '../photo-links';
 import { channelLabel, channelOfDistributor, channelOfRetailer, missingDistributor } from '../store-channels';
+import { destinationName, dispatchStatus, statusLabel } from '../dispatch-flow';
 
 export interface ExportSource {
   brands: Brand[]; products: Product[]; combos: Combo[];
@@ -29,7 +30,7 @@ export interface ExportFilters { fromAd?: string; toAd?: string; brandCode?: str
 
 export type DatasetKey =
   | 'orders' | 'order_lines' | 'returns' | 'feedback' | 'delivery_failures' | 'customers'
-  | 'store_orders' | 'store_order_lines' | 'dispatch_lines' | 'stock_counts' | 'visits' | 'cheques' | 'calls' | 'documents' | 'shelf_photos' | 'shelf_share'
+  | 'store_orders' | 'store_order_lines' | 'dispatch_orders' | 'dispatch_lines' | 'stock_counts' | 'visits' | 'cheques' | 'calls' | 'documents' | 'shelf_photos' | 'shelf_share'
   | 'stores' | 'products' | 'tasks' | 'influencers' | 'marketing_sends';
 
 export interface DatasetDefinition {
@@ -159,15 +160,36 @@ export const DATASETS: DatasetDefinition[] = [
     },
   },
   {
-    key: 'dispatch_lines', label: 'Dispatches (one row per product)', group: 'Stores (B2B)', dated: true, page: 'p.dispatch',
+    key: 'dispatch_orders', label: 'Dispatch orders (one row per order, with status and payment)', group: 'Stores (B2B)', dated: true, page: 'p.dispatch',
+    build: (s, f) => {
+      const rows: Sheet['rows'] = [];
+      for (const d of s.dispatches) {
+        const when = d.dispatchDateAd || d.orderDateAd || d.createdAt;
+        if (!inRange(when, f) || !(storeMatch(f, d.storeId) || storeMatch(f, d.distributorId) || storeMatch(f, d.branchId))) continue;
+        const lines = d.items.filter((line) => lineMatches(s, f, line));
+        if (!lines.length) continue;
+        const status = dispatchStatus(d);
+        const value = lines.reduce((sum, line) => sum + (line.quantity || 0) * (line.unitPrice || 0), 0) || (lines.length === d.items.length ? d.totalAmount || 0 : 0);
+        rows.push([d.dispatchNumber || '', d.orderNumber || '', statusLabel(status), destinationName(d), d.branchName && d.distributorName !== d.branchName ? d.distributorName : '', d.fulfilledBy === 'DISTRIBUTOR' ? d.fulfillerName || 'Distributor' : 'Our warehouse',
+          day(d.orderDateAd || d.createdAt), day(d.dispatchDateAd), bs(d.dispatchDateAd, d.dispatchDateBs), day(d.deliveredDateAd),
+          lines.reduce((sum, line) => sum + (line.orderedQty ?? line.quantity ?? 0), 0), lines.reduce((sum, line) => sum + (line.quantity || 0), 0), value || '',
+          d.paymentTerms || '', day(d.paymentDueDateAd), d.paymentStatus || '', d.amountDue ?? '', d.createdBy, (d.edits || []).length || '', d.notes || '', photoLink(d.documentUrl)]);
+      }
+      return { name: 'Dispatch orders', columns: [col('Dispatch'), col('Store order'), col('Status'), col('Going to'), col('Chain'), col('Delivered by'), col('Ordered (AD)'), col('Sent (AD)'), col('Sent (BS)'), col('Delivered (AD)'),
+        col('Units ordered', 'number'), col('Units sent', 'number'), col('Value (NPR)', 'money'), col('Payment terms'), col('Payment due (AD)'), col('Payment status'), col('Amount due', 'money'), col('Created by'), col('Corrections', 'number'), col('Notes'), photoCol('Challan photo')], rows };
+    },
+  },
+  {
+    key: 'dispatch_lines', label: 'Dispatch order lines (one row per product)', group: 'Stores (B2B)', dated: true, page: 'p.dispatch',
     build: (s, f) => {
       const sub = subName(s);
       const rows: Sheet['rows'] = [];
       for (const d of s.dispatches) {
-        if (!inRange(d.dispatchDateAd, f) || !(storeMatch(f, d.distributorId) || storeMatch(f, d.branchId))) continue;
-        for (const line of d.items) if (lineMatches(s, f, line)) rows.push([d.dispatchNumber || '', day(d.dispatchDateAd), bs(d.dispatchDateAd, d.dispatchDateBs), d.distributorName, d.branchName || '', brandOf(s, line.brandCode), sub(lineSubBrandId(line, s.products)), line.productName, line.quantity, d.paymentTerms || '', day(d.paymentDueDateAd), d.paymentStatus || '', d.amountDue ?? '', d.createdBy, (d.edits || []).length || '', d.notes || '', photoLink(d.documentUrl)]);
+        const when = d.dispatchDateAd || d.orderDateAd || d.createdAt;
+        if (!inRange(when, f) || !(storeMatch(f, d.storeId) || storeMatch(f, d.distributorId) || storeMatch(f, d.branchId))) continue;
+        for (const line of d.items) if (lineMatches(s, f, line)) rows.push([d.dispatchNumber || '', d.orderNumber || '', statusLabel(dispatchStatus(d)), day(d.dispatchDateAd), bs(d.dispatchDateAd, d.dispatchDateBs), destinationName(d), d.branchName && d.distributorName !== d.branchName ? d.distributorName : '', brandOf(s, line.brandCode), sub(lineSubBrandId(line, s.products)), line.productName, line.orderedQty ?? line.quantity, line.quantity, line.unitPrice ?? '', line.unitPrice ? line.unitPrice * line.quantity : '', d.paymentTerms || '', day(d.paymentDueDateAd), d.paymentStatus || '', d.createdBy, (d.edits || []).filter((e) => e.productId === line.productId).length || '', d.notes || '', photoLink(d.documentUrl)]);
       }
-      return { name: 'Dispatches', columns: [col('Dispatch'), col('Date (AD)'), col('Date (BS)'), col('Going to'), col('Branch'), col('Brand'), col('Sub-brand'), col('Product'), col('Units', 'number'), col('Payment terms'), col('Payment due (AD)'), col('Payment status'), col('Amount due', 'money'), col('Logged by'), col('Corrections', 'number'), col('Notes'), photoCol('Challan photo')], rows };
+      return { name: 'Dispatch lines', columns: [col('Dispatch'), col('Store order'), col('Status'), col('Sent (AD)'), col('Sent (BS)'), col('Going to'), col('Chain'), col('Brand'), col('Sub-brand'), col('Product'), col('Units ordered', 'number'), col('Units sent', 'number'), col('Rate (NPR)', 'money'), col('Value (NPR)', 'money'), col('Payment terms'), col('Payment due (AD)'), col('Payment status'), col('Created by'), col('Corrections', 'number'), col('Notes'), photoCol('Challan photo')], rows };
     },
   },
   {

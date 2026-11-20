@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Download } from 'lucide-react';
 import { toast } from '@/components/common/Toast';
 import { buildSheets, exportFileName, datasetByKey, type DatasetKey, type ExportFilters, type ExportSource } from '@/lib/export/datasets';
+import { db } from '@/lib/db/db-service';
+import { canDownload } from '@/lib/download-access';
 
 /**
  * "Download Excel" for a list page. Pass the records the page is showing (after its own filters)
@@ -18,6 +20,8 @@ export default function DownloadButton({ datasets, records, filters = {}, fileLa
   className?: string;
 }) {
   const [busy, setBusy] = useState(false);
+  // Hidden for roles without "Download data" (Staff & roles).
+  if (!canDownload(db.getCurrentUser())) return null;
   const download = async () => {
     setBusy(true);
     try {
