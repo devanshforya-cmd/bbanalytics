@@ -186,9 +186,9 @@ export function generateSampleData(options: SampleOptions): SampleSet {
     const terms = r.habit === 'late_payer' || r.habit === 'big' ? '15 days credit' : chance(0.5) ? 'Cash on delivery' : '7 days credit';
     const phone = `98${String(41000000 + RETAILERS.indexOf(r) * 1313).slice(0, 8)}`;
     add<Retailer>('retailers', {
-      id: sid('retailer', r.key), name: r.name, type: r.type, storeType: 'STANDALONE_RETAILER', category: r.category, city: r.city, area: r.area,
+      id: sid('retailer', r.key), name: r.name, type: r.type, storeType: r.habit === 'big' ? 'SAMT' : 'STANDALONE_RETAILER', category: r.category, city: r.city, area: r.area,
       province: r.city === 'Pokhara' ? 'Gandaki' : 'Bagmati', valley: r.city === 'Pokhara' ? 'Outside' : 'Inside', address: `${r.area}, ${r.city}`,
-      lat: r.lat, lng: r.lng, distributorId: fewa?.id, distributorName: fewa?.name, assignedOfficerId: o.id, assignedOfficerName: o.name,
+      lat: r.lat, lng: r.lng, distributorId: RETAILERS.indexOf(r) % 5 === 4 ? undefined : fewa?.id, distributorName: RETAILERS.indexOf(r) % 5 === 4 ? undefined : fewa?.name, assignedOfficerId: o.id, assignedOfficerName: o.name,
       contactName: r.owner, contactRole: 'Owner', contactPhone: phone, contacts: [contact(`retailer-${r.key}`, r.owner, 'Owner', phone)],
       brandsStocked: brandCodes, defaultMargins: margin(marginPct), vatRegistered: r.type !== 'Kirana', creditTerms: terms,
       creditLimit: r.habit === 'big' ? 150000 : 60000,

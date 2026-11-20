@@ -180,7 +180,8 @@ export interface VendorContact {
   branchId?: string;
 }
 
-export type StoreType = 'DISTRIBUTOR' | 'CHAIN_STORE' | 'STANDALONE_RETAILER';
+/** See store-channels.ts: CHAIN_STORE is MT, SAMT is a single semi-modern-trade store, STANDALONE_RETAILER is a retail store. */
+export type StoreType = 'DISTRIBUTOR' | 'CHAIN_STORE' | 'SAMT' | 'STANDALONE_RETAILER';
 export type StoreMarginType = 'MARKUP' | 'MARKDOWN';
 
 export interface StoreMargin {
@@ -231,6 +232,9 @@ export interface Distributor {
   hasBranches?: boolean;
   notes?: string;
   creditTerms?: string;
+  /** For a distributor: the bigger distributor that supplies it, if any. */
+  parentDistributorId?: string;
+  parentDistributorName?: string;
 }
 
 export interface Branch {

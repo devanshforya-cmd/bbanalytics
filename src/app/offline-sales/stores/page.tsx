@@ -10,6 +10,9 @@ import { analyzeStoreArea } from '@/lib/area-selling';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toast } from '@/components/common/Toast';
 import ConfirmModal from '@/components/common/ConfirmModal';
+import SearchSelect from '@/components/common/SearchSelect';
+import AddOutletModal from '@/components/stores/AddOutletModal';
+import { STORE_CHANNELS, channelLabel, channelOfDistributor, channelOfRetailer, missingDistributor, storeChannel } from '@/lib/store-channels';
 import {
   Distributor,
   Branch,
@@ -52,6 +55,10 @@ export default function StoresPage() {
   const isSuper = isSuperAdmin(currentUser);
   const isSalesOfficer = !canPerform(currentUser, 'stores', 'DELETE') && getScope(currentUser, 'stores') === 'OWN';
   const canCreateStores = canPerform(currentUser, 'stores', 'CREATE');
+  // Distributors and MT chains are a separate permission ("Distributors & chains" page, Add).
+  const canCreateAccounts = canPerform(currentUser, 'distributors', 'CREATE');
+  const canEditStores = canPerform(currentUser, 'stores', 'EDIT');
+  const canEditAccounts = canPerform(currentUser, 'distributors', 'EDIT');
 
   const [distributors, setDistributors] = useState(() => db.getDistributors());
   const [branches, setBranches] = useState(() => db.getBranches());
@@ -59,7 +66,9 @@ export default function StoresPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [prioritizeOpportunities, setPrioritizeOpportunities] = useState(false);
   const canViewSelling = hasAccess(currentUser, 'beat_plans');
-  const [filterType, setFilterType] = useState<'ALL' | 'DISTRIBUTORS' | 'RETAILERS'>(isSalesOfficer ? 'RETAILERS' : 'ALL');
+  const [filterType, setFilterType] = useState<'ALL' | StoreType>('ALL');
+  const [onlyMissingDistributor, setOnlyMissingDistributor] = useState(false);
+  const [outletChain, setOutletChain] = useState<Distributor | null>(null);
   const officers = db.getUsers().filter((u) => hasAccess(u, 'beat_plans') || u.id.startsWith('user_'));
   const storeCategories = db.getStoreCategories().filter((c) => c.isActive);
 
@@ -95,7 +104,7 @@ export default function StoresPage() {
 
   const systemBrands = db.getBrands('ACTIVE');
   const [fieldStoreName, setFieldStoreName] = useState('');
-  const [fieldCategory, setFieldCategory] = useState(storeCategories[0]?.name || 'Kirana');
+  const [fieldCategory, setFieldCategory] = useState(storeCategories[0]?.name || '');
   const [fieldCity, setFieldCity] = useState('Kathmandu');
   const [fieldArea, setFieldArea] = useState('');
   const [fieldAddress, setFieldAddress] = useState('');
@@ -110,8 +119,10 @@ export default function StoresPage() {
 
   // Super Admin Add Store Form State (Section 2d)
   const [adminStoreType, setAdminStoreType] = useState<StoreType>('STANDALONE_RETAILER');
+  const [adminParentDistributorId, setAdminParentDistributorId] = useState('');
+  const [fieldStoreType, setFieldStoreType] = useState<StoreType>('STANDALONE_RETAILER');
   const [adminStoreName, setAdminStoreName] = useState('');
-  const [adminCategory, setAdminCategory] = useState(storeCategories[0]?.name || 'Supermarket');
+  const [adminCategory, setAdminCategory] = useState(storeCategories[0]?.name || '');
   const [adminCity, setAdminCity] = useState('Kathmandu');
   const [adminArea, setAdminArea] = useState('');
   const [adminAddress, setAdminAddress] = useState('');
@@ -213,13 +224,14 @@ export default function StoresPage() {
     if (!fieldArea.trim() || !fieldCity.trim()) { toast.error('Enter the store area and city.'); return; }
 
     guardedSubmit(async () => {
-      const firstContact = fieldContacts[0] || { name: 'Owner', role: 'Store Owner', phone: '+977-9800000000' };
+      const contacts = fieldContacts.filter((c) => c.name.trim() || c.phone.trim());
+      const firstContact = contacts[0] || { name: '', role: 'Store Owner', phone: '' };
 
       const newRet = db.addRetailer({
         name: fieldStoreName.trim(),
         type: 'GT',
-        storeType: 'STANDALONE_RETAILER',
-        category: fieldCategory,
+        storeType: fieldStoreType === 'SAMT' ? 'SAMT' : 'STANDALONE_RETAILER',
+        category: fieldCategory || undefined,
         city: fieldCity,
         area: fieldArea.trim(),
         address: fieldAddress || `${fieldArea}, ${fieldCity}`,
@@ -227,14 +239,14 @@ export default function StoresPage() {
         lng: fieldLng,
         assignedOfficerId: currentUser.id,
         assignedOfficerName: currentUser.fullName,
-        contactName: firstContact.name || 'Store Owner',
+        contactName: firstContact.name,
         contactRole: firstContact.role,
-        contactPhone: firstContact.phone || '+977-9800000000',
-        contacts: fieldContacts.map((c, i) => ({
+        contactPhone: firstContact.phone,
+        contacts: contacts.map((c, i) => ({
           id: `cnt_${Date.now()}_${i}`,
-          name: c.name || 'Store Owner',
+          name: c.name,
           role: c.role as ContactRole,
-          phone: c.phone || '+977-9800000000',
+          phone: c.phone,
           isPrimary: i === 0,
         })),
         brandsStocked: fieldBrands.length > 0 ? fieldBrands : (systemBrands[0]?.code ? [systemBrands[0].code] : []),
@@ -267,35 +279,31 @@ export default function StoresPage() {
       return;
     }
 
-    if (adminStoreType === 'STANDALONE_RETAILER' && (!adminArea.trim() || !adminCity.trim() || !adminLat.trim() || !adminLng.trim() || !validGpsCoordinates(Number(adminLat), Number(adminLng)))) { toast.error('Enter the store area, city and actual latitude/longitude before saving.'); return; }
+    const adminChannel = storeChannel(adminStoreType);
+    if ((adminChannel.account === 'distributors' ? !canCreateAccounts : !canCreateStores)) { toast.error(`You can't add ${adminChannel.label} accounts. Ask an admin to allow it in Staff & roles.`); return; }
+    if (adminChannel.account === 'retailers' && (!adminArea.trim() || !adminCity.trim() || !adminLat.trim() || !adminLng.trim() || !validGpsCoordinates(Number(adminLat), Number(adminLng)))) { toast.error('Enter the store area, city and actual latitude/longitude before saving.'); return; }
 
     guardedSubmit(async () => {
       if (adminStoreType === 'DISTRIBUTOR') {
         db.addDistributor({
           name: adminStoreName.trim(),
-          type: adminCategory === 'Supermarket' ? 'Retail Chain' : 'Distributor',
+          type: 'Distributor',
           storeType: 'DISTRIBUTOR',
           city: adminCity,
           address: adminAddress || `${adminArea}, ${adminCity}`,
-          contactName: adminContactName || 'Director',
+          parentDistributorId: adminParentDistributorId || undefined,
+          parentDistributorName: adminParentDistributorId ? distributors.find((d) => d.id === adminParentDistributorId)?.name : undefined,
+          contactName: adminContactName,
           contactRole: adminContactRole,
-          contactPhone: adminContactPhone || '+977-9800000000',
-          contactEmail: 'accounts@distributor.np',
+          contactPhone: adminContactPhone,
+          contactEmail: '',
           brandsCarried: systemBrands.map((b) => b.code),
           creditTerms: adminPaymentTerms,
           defaultMargins: adminDefaultMargins,
           hasBranches: adminHasBranches,
-          contacts: [
-            {
-              id: `cnt_${Date.now()}`,
-              name: adminContactName || 'Director',
-              role: adminContactRole as ContactRole,
-              phone: adminContactPhone || '+977-9800000000',
-              isPrimary: true,
-            },
-          ],
+          contacts: adminContactName || adminContactPhone ? [{ id: `cnt_${Date.now()}`, name: adminContactName, role: adminContactRole as ContactRole, phone: adminContactPhone, isPrimary: true }] : [],
         });
-        toast.success(`✓ Distributor "${adminStoreName}" created with custom commercial terms.`);
+        toast.success(`Distributor "${adminStoreName}" added.`);
       } else if (adminStoreType === 'CHAIN_STORE') {
         db.addDistributor({
           name: adminStoreName.trim(),
@@ -303,31 +311,25 @@ export default function StoresPage() {
           storeType: 'CHAIN_STORE',
           city: adminCity,
           address: adminAddress || `${adminArea}, ${adminCity}`,
-          contactName: adminContactName || 'Supermarket Manager',
+          contactName: adminContactName,
           contactRole: adminContactRole,
-          contactPhone: adminContactPhone || '+977-9800000000',
-          contactEmail: 'procurement@chain.np',
+          contactPhone: adminContactPhone,
+          contactEmail: '',
           brandsCarried: systemBrands.map((b) => b.code),
           creditTerms: adminPaymentTerms,
           defaultMargins: adminDefaultMargins,
           hasBranches: true,
-          contacts: [
-            {
-              id: `cnt_${Date.now()}`,
-              name: adminContactName || 'Supermarket Manager',
-              role: adminContactRole as ContactRole,
-              phone: adminContactPhone || '+977-9800000000',
-              isPrimary: true,
-            },
-          ],
+          contacts: adminContactName || adminContactPhone ? [{ id: `cnt_${Date.now()}`, name: adminContactName, role: adminContactRole as ContactRole, phone: adminContactPhone, isPrimary: true }] : [],
         });
-        toast.success(`✓ Chain Store "${adminStoreName}" created.`);
+        toast.success(`MT chain "${adminStoreName}" added. Add its outlets from the chain's card.`);
       } else {
         db.addRetailer({
           name: adminStoreName.trim(),
           type: 'GT',
-          storeType: 'STANDALONE_RETAILER',
-          category: adminCategory,
+          storeType: adminStoreType === 'SAMT' ? 'SAMT' : 'STANDALONE_RETAILER',
+          category: adminCategory || undefined,
+          distributorId: adminParentDistributorId || undefined,
+          distributorName: adminParentDistributorId ? distributors.find((d) => d.id === adminParentDistributorId)?.name : undefined,
           city: adminCity,
           area: adminArea.trim(),
           address: adminAddress || `${adminArea}, ${adminCity}`,
@@ -335,27 +337,19 @@ export default function StoresPage() {
           lng: Number(adminLng),
           assignedOfficerId: currentUser.id,
           assignedOfficerName: currentUser.fullName,
-          contactName: adminContactName || 'Store Owner',
+          contactName: adminContactName,
           contactRole: adminContactRole,
-          contactPhone: adminContactPhone || '+977-9800000000',
-          contacts: [
-            {
-              id: `cnt_${Date.now()}`,
-              name: adminContactName || 'Store Owner',
-              role: adminContactRole as ContactRole,
-              phone: adminContactPhone || '+977-9800000000',
-              isPrimary: true,
-            },
-          ],
+          contactPhone: adminContactPhone,
+          contacts: adminContactName || adminContactPhone ? [{ id: `cnt_${Date.now()}`, name: adminContactName, role: adminContactRole as ContactRole, phone: adminContactPhone, isPrimary: true }] : [],
           brandsStocked: systemBrands.map((b) => b.code),
           creditTerms: adminPaymentTerms,
           defaultMargins: adminDefaultMargins,
         });
-        toast.success(`✓ Standalone Retailer "${adminStoreName}" created.`);
+        toast.success(`${channelLabel(adminStoreType)} "${adminStoreName}" added.`);
       }
 
       setShowAdminAddModal(false);
-      setAdminLat(''); setAdminLng(''); setAdminArea(''); setAdminAddress('');
+      setAdminLat(''); setAdminLng(''); setAdminArea(''); setAdminAddress(''); setAdminParentDistributorId('');
       refreshData();
     });
   };
@@ -438,6 +432,8 @@ export default function StoresPage() {
     if (isSalesOfficer && r.assignedOfficerId !== currentUser.id && r.assignedOfficerName !== currentUser.fullName) {
       return false;
     }
+    if (filterType !== 'ALL' && channelOfRetailer(r) !== filterType) return false;
+    if (onlyMissingDistributor && !missingDistributor(channelOfRetailer(r), r.distributorId)) return false;
     return (
       r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.area.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -449,9 +445,26 @@ export default function StoresPage() {
 
   const filteredDistributors = distributors.filter(
     (d) =>
-      d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      d.city.toLowerCase().includes(searchTerm.toLowerCase())
+      (filterType === 'ALL' || channelOfDistributor(d) === filterType) &&
+      (!onlyMissingDistributor || missingDistributor(channelOfDistributor(d), d.parentDistributorId)) &&
+      (d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      d.city.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+  const channelCount = (type: StoreType) => type === 'CHAIN_STORE' || type === 'DISTRIBUTOR'
+    ? distributors.filter((d) => channelOfDistributor(d) === type).length
+    : retailers.filter((r) => channelOfRetailer(r) === type).length;
+  const missingCount = retailers.filter((r) => missingDistributor(channelOfRetailer(r), r.distributorId)).length
+    + distributors.filter((d) => missingDistributor(channelOfDistributor(d), d.parentDistributorId)).length;
+  const distributorOptions = distributors.filter((d) => channelOfDistributor(d) === 'DISTRIBUTOR').map((d) => ({ value: d.id, label: d.name, hint: d.city }));
+  const assignDistributor = (kind: 'retailer' | 'distributor', id: string, distributorId: string) => {
+    const parent = distributors.find((d) => d.id === distributorId);
+    try {
+      if (kind === 'retailer') db.updateRetailer(id, { distributorId: distributorId || undefined, distributorName: parent?.name });
+      else db.updateDistributor(id, { parentDistributorId: distributorId || undefined, parentDistributorName: parent?.name });
+      toast.success(distributorId ? `Now supplied by ${parent?.name}.` : 'Distributor removed.');
+      refreshData();
+    } catch (error) { toast.error('Not saved', error instanceof Error ? error.message : undefined); }
+  };
 
   return (
     <PageGuard feature="stores">
@@ -459,7 +472,7 @@ export default function StoresPage() {
         <Breadcrumbs
           items={[
             { label: 'Offline Sales', href: '/offline-sales/stores' },
-            { label: 'Store & Distributor Directory' },
+            { label: 'Stores' },
           ]}
         />
 
@@ -467,15 +480,15 @@ export default function StoresPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <div>
             <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              Stores &amp; Distribution Hierarchy
-<InfoTip label="About this page">Distributors &rarr; Chain Stores &rarr; Standalone GT Retailers across Nepal.</InfoTip></h1>
+              Stores
+<InfoTip label="About this page">Every account by type: MT chains and their outlets, SAMT stores, distributors and retail stores. SAMT, distributors and retail stores should name the distributor that supplies them.</InfoTip></h1>
             
           </div>
           <DownloadButton datasets={['stores']} records={{ retailers: filteredRetailers, distributors: filteredDistributors } as any} />
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Primary Action Button */}
-            {canCreateStores && (
+            {(canCreateStores || canCreateAccounts) && (
               <button
                 type="button"
                 onClick={() => {
@@ -488,7 +501,7 @@ export default function StoresPage() {
                 className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 min-h-[44px]"
               >
                 <Plus className="h-4 w-4" />
-                <span>{isSalesOfficer && !isSuper ? 'Add Store (Field)' : 'Add New Store'}</span>
+                <span>Add store</span>
               </button>
             )}
 
@@ -500,7 +513,7 @@ export default function StoresPage() {
                 className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 min-h-[44px]"
               >
                 <Store className="h-4 w-4 text-slate-500" />
-                <span>Field Form Mode</span>
+                <span>Quick field form</span>
               </button>
             )}
           </div>
@@ -547,43 +560,31 @@ export default function StoresPage() {
             />
           </div>
 
-          <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 text-xs w-full sm:w-auto">
-            <button
-              onClick={() => setFilterType('ALL')}
-              className={`flex-1 sm:flex-none rounded-lg px-3 py-1.5 font-bold transition ${
-                filterType === 'ALL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              All Outlets ({distributors.length + retailers.length})
-            </button>
-            <button
-              onClick={() => setFilterType('DISTRIBUTORS')}
-              className={`flex-1 sm:flex-none rounded-lg px-3 py-1.5 font-bold transition ${
-                filterType === 'DISTRIBUTORS' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Distributors &amp; Chains ({distributors.length})
-            </button>
-            <button
-              onClick={() => setFilterType('RETAILERS')}
-              className={`flex-1 sm:flex-none rounded-lg px-3 py-1.5 font-bold transition ${
-                filterType === 'RETAILERS' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Standalone Retailers ({retailers.length})
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div role="tablist" aria-label="Store type" className="flex flex-wrap items-center gap-1 rounded-xl bg-slate-100 p-1">
+              {([['ALL', 'All', distributors.length + retailers.length] as const, ...STORE_CHANNELS.map((c) => [c.type, c.label, channelCount(c.type)] as const)]).map(([key, label, count]) => (
+                <button key={key} role="tab" aria-selected={filterType === key} type="button" onClick={() => setFilterType(key)}
+                  className={`rounded-lg px-3 py-1.5 font-bold transition ${filterType === key ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}>
+                  {label} ({count})
+                </button>
+              ))}
+            </div>
+            <button type="button" aria-pressed={onlyMissingDistributor} onClick={() => setOnlyMissingDistributor((v) => !v)}
+              className={`rounded-lg border px-3 py-1.5 font-bold ${onlyMissingDistributor ? 'border-amber-400 bg-amber-50 text-amber-900' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              No distributor ({missingCount})
             </button>
           </div>
         </div>
 
         {/* SECTION 1: DISTRIBUTORS & CHAIN STORES */}
-        {(filterType === 'ALL' || filterType === 'DISTRIBUTORS') && (
+        {filteredDistributors.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold text-slate-500">
-                Distributors &amp; Retail Chains
+                MT chains and distributors
               </h2>
               <span className="text-xs text-slate-500 font-medium">
-                {branches.length} branches tracked
+                {branches.length} MT outlets
               </span>
             </div>
 
@@ -602,15 +603,23 @@ export default function StoresPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-bold text-slate-900 text-base">{dist.name}</h3><StoreDeleteButton id={dist.id} name={dist.name} onDeleted={refreshData} />
+                          <Link href={`/offline-sales/stores/${dist.id}`} className="font-bold text-slate-900 text-base hover:text-blue-700 hover:underline">{dist.name}</Link><StoreDeleteButton id={dist.id} name={dist.name} onDeleted={refreshData} />
                           <span className="rounded-full bg-blue-50 text-blue-700 px-2.5 py-0.5 text-[10px] font-bold border border-blue-200">
-                            {dist.storeType === 'CHAIN_STORE' ? 'Chain Store' : 'Bulk Distributor'}
+                            {channelLabel(channelOfDistributor(dist))}
                           </span>
                         </div>
                         <div className="text-xs text-slate-500 mt-1">
-                          Location: <strong className="text-slate-700">{dist.city}</strong> • Terms:{' '}
-                          <span className="font-semibold text-slate-800">{dist.creditTerms || '30-day credit'}</span>
+                          {dist.city}{dist.creditTerms ? <> · Terms: <span className="font-semibold text-slate-800">{dist.creditTerms}</span></> : <> · No payment terms set</>}
                         </div>
+                        {channelOfDistributor(dist) === 'DISTRIBUTOR' && (
+                          <div className="mt-2 max-w-xs">
+                            {dist.parentDistributorId && !canEditAccounts ? (
+                              <p className="text-[11px] text-slate-600">Supplied by <strong>{dist.parentDistributorName}</strong></p>
+                            ) : canEditAccounts ? (
+                              <SearchSelect label="Supplied by (bigger distributor)" options={distributorOptions.filter((o) => o.value !== dist.id)} value={dist.parentDistributorId || ''} onChange={(v) => assignDistributor('distributor', dist.id, v)} allowClear clearLabel="Supplied by us directly" placeholder="Search distributors" />
+                            ) : null}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1.5">
@@ -679,9 +688,15 @@ export default function StoresPage() {
 
                     {/* Branches List */}
                     <div className="border-t border-slate-100 pt-3">
-                      <div className="text-[11px] font-bold text-slate-500 mb-2">
-                        Branches ({distBranches.length})
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-500">Outlets ({distBranches.length})</span>
+                        {channelOfDistributor(dist) === 'CHAIN_STORE' && (canCreateAccounts || canCreateStores) && (
+                          <button type="button" onClick={() => setOutletChain(dist)} className="rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-50">+ Add outlet</button>
+                        )}
                       </div>
+                      {channelOfDistributor(dist) === 'CHAIN_STORE' && distBranches.length > 0 && (
+                        <Link href={`/offline-sales/stores/${dist.id}`} className="mb-2 block text-[11px] font-semibold text-blue-700 hover:underline">See the whole chain&apos;s history →</Link>
+                      )}
                       <div className="space-y-1.5">
                         {distBranches.map((branch) => (
                           <div
@@ -715,11 +730,11 @@ export default function StoresPage() {
         )}
 
         {/* SECTION 2: STANDALONE RETAILERS */}
-        {(filterType === 'ALL' || filterType === 'RETAILERS') && (
+        {filteredRetailers.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold text-slate-500">
-                Standalone GT Retail Outlets ({filteredRetailers.length})
+                SAMT and retail stores ({filteredRetailers.length})
               </h2>
             </div>
 
@@ -729,9 +744,10 @@ export default function StoresPage() {
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm">{ret.name}</h3><StoreDeleteButton id={ret.id} name={ret.name} onDeleted={refreshData} />
-                        <span className="inline-block mt-0.5 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
-                          {ret.category || ret.type}
+                        <Link href={`/offline-sales/stores/${ret.id}`} className="font-bold text-slate-900 text-sm hover:text-blue-700 hover:underline">{ret.name}</Link><StoreDeleteButton id={ret.id} name={ret.name} onDeleted={refreshData} />
+                        <span className="mt-0.5 flex flex-wrap gap-1">
+                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">{channelLabel(channelOfRetailer(ret))}</span>
+                          {(ret.category || ret.type) && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{ret.category || ret.type}</span>}
                         </span>
                       </div>
 
@@ -776,10 +792,14 @@ export default function StoresPage() {
                       </span>
                     </div>
 
-                    {ret.distributorName && (
-                      <div className="text-[11px] text-blue-700 bg-blue-50/80 px-2.5 py-1 rounded-lg font-medium">
-                        Under Distributor: <strong>{ret.distributorName}</strong>
+                    {canEditStores ? (
+                      <div className={ret.distributorId ? '' : 'rounded-lg bg-amber-50 p-2'}>
+                        <SearchSelect label={ret.distributorId ? 'Supplied by' : 'No distributor assigned'} options={distributorOptions} value={ret.distributorId || ''} onChange={(v) => assignDistributor('retailer', ret.id, v)} allowClear clearLabel="None" placeholder="Search distributors" />
                       </div>
+                    ) : ret.distributorName ? (
+                      <div className="text-[11px] text-blue-700 bg-blue-50/80 px-2.5 py-1 rounded-lg font-medium">Supplied by <strong>{ret.distributorName}</strong></div>
+                    ) : (
+                      <div className="text-[11px] text-amber-900 bg-amber-50 px-2.5 py-1 rounded-lg font-medium">No distributor assigned</div>
                     )}
 
                     {canViewSelling && <Link href={`/offline-sales/stores/${ret.id}?tab=selling`} className="block rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs hover:border-blue-300">
@@ -821,7 +841,7 @@ export default function StoresPage() {
                   {/* Footer Action */}
                   <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
                     <span className="text-slate-500">
-                      Officer: <strong className="text-slate-700">{ret.assignedOfficerName}</strong>
+                      Officer: <strong className="text-slate-700">{ret.assignedOfficerName || 'Not assigned'}</strong>
                     </span>
                     <a
                       href={`https://www.google.com/maps/dir/?api=1&destination=${ret.lat},${ret.lng}`}
@@ -845,8 +865,8 @@ export default function StoresPage() {
             <div className="bg-white rounded-3xl max-w-lg w-full my-6 p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Add New Store (Field Officer)</h3>
-                  <p className="text-xs text-slate-500">Mobile-optimized direct store creation</p>
+                  <h3 className="font-bold text-slate-900 text-base">Add store</h3>
+                  <p className="text-xs text-slate-500">Pin it with GPS while you are at the store</p>
                 </div>
                 <button
                   type="button"
@@ -870,38 +890,34 @@ export default function StoresPage() {
                   />
                 </div>
 
-                {/* Store Type (Locked for Sales Officers per Section 2c) */}
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Store Type</label>
-                  <div className="space-y-1.5">
-                    <label className="flex items-center gap-2 p-2 rounded-xl bg-blue-50/60 border border-blue-200 text-blue-900 font-semibold cursor-pointer">
-                      <input type="radio" checked readOnly name="fieldType" className="text-blue-600" />
-                      <span>● Standalone Retailer (General Trade GT Outlet)</span>
-                    </label>
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 cursor-not-allowed">
-                      <span>○ Bulk Distributor</span>
-                      <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded">Admin Only</span>
-                    </label>
-                    <label className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 cursor-not-allowed">
-                      <span>○ Multi-Branch Chain Store</span>
-                      <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded">Admin Only</span>
-                    </label>
+                <fieldset>
+                  <legend className="block font-bold text-slate-700 mb-1">Store type</legend>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {STORE_CHANNELS.filter((c) => c.account === 'retailers').map((c) => (
+                      <label key={c.type} className={`flex cursor-pointer flex-col rounded-xl border p-2.5 ${fieldStoreType === c.type ? 'border-blue-500 bg-blue-50 text-blue-900' : 'border-slate-200 bg-white text-slate-700'}`}>
+                        <span className="flex items-center gap-2 font-bold"><input type="radio" name="fieldType" checked={fieldStoreType === c.type} onChange={() => setFieldStoreType(c.type)} />{c.label}</span>
+                        <span className="mt-0.5 text-[11px] text-slate-500">{c.description}</span>
+                      </label>
+                    ))}
                   </div>
-                </div>
+                  <p className="mt-1.5 text-[11px] text-slate-500">MT chains and distributors are added by the office.</p>
+                </fieldset>
 
                 <div>
-                  <label htmlFor="stores-store-category" className="block font-bold text-slate-700 mb-1">Store Category *</label>
-                  <select id="stores-store-category"
-                    value={fieldCategory}
-                    onChange={(e) => setFieldCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-h-[44px]"
-                  >
-                    {storeCategories.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <label htmlFor="stores-store-category" className="block font-bold text-slate-700 mb-1">Store category</label>
+                  {storeCategories.length ? (
+                    <select id="stores-store-category"
+                      value={fieldCategory}
+                      onChange={(e) => setFieldCategory(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-h-[44px]"
+                    >
+                      {storeCategories.map((c) => (
+                        <option key={c.id} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : <p className="text-[11px] text-slate-500">No store categories set up yet. The office adds them in Settings → Lists &amp; categories.</p>}
                 </div>
 
                 {/* Location Section with GPS Pin */}
@@ -996,21 +1012,10 @@ export default function StoresPage() {
                   </div>
                 </div>
 
-                {/* Under Distributor */}
+                {/* Supplied by */}
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Under a Distributor? (Optional)</label>
-                  <select aria-label="Under a Distributor? (Optional)"
-                    value={fieldParentDistributorId}
-                    onChange={(e) => setFieldParentDistributorId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-h-[44px]"
-                  >
-                    <option value="">None (Independent Direct GT)</option>
-                    {distributors.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} ({d.city})
-                      </option>
-                    ))}
-                  </select>
+                  <SearchSelect label="Supplied by distributor" options={distributorOptions} value={fieldParentDistributorId} onChange={setFieldParentDistributorId} allowClear clearLabel="Not known yet" placeholder="Search distributors" />
+                  {!fieldParentDistributorId && <p className="mt-1 text-[11px] text-amber-800">Not required, but the store will show as &quot;No distributor&quot; until one is set.</p>}
                 </div>
 
                 {/* Section 3 Contacts List */}
@@ -1111,8 +1116,8 @@ export default function StoresPage() {
             <div className="bg-white rounded-3xl max-w-xl w-full my-6 p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Add Store Account (Admin Hub)</h3>
-                  <p className="text-xs text-slate-500">Create distributors, chain stores, and define brand margins</p>
+                  <h3 className="font-bold text-slate-900 text-base">Add store</h3>
+                  <p className="text-xs text-slate-500">MT chain, SAMT, distributor or retail store, with its brand margins</p>
                 </div>
                 <button
                   type="button"
@@ -1126,46 +1131,30 @@ export default function StoresPage() {
               <form onSubmit={handleSaveAdminStore} className="flex-1 overflow-y-auto py-4 space-y-4 pr-1 text-xs">
                 {/* Store Type Selection */}
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1.5">Select Store Entity Type *</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setAdminStoreType('STANDALONE_RETAILER')}
-                      className={`p-3 rounded-2xl border text-center font-bold transition ${
-                        adminStoreType === 'STANDALONE_RETAILER'
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      Standalone GT
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAdminStoreType('DISTRIBUTOR')}
-                      className={`p-3 rounded-2xl border text-center font-bold transition ${
-                        adminStoreType === 'DISTRIBUTOR'
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      Bulk Distributor
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAdminStoreType('CHAIN_STORE')}
-                      className={`p-3 rounded-2xl border text-center font-bold transition ${
-                        adminStoreType === 'CHAIN_STORE'
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      Retail Chain
-                    </button>
+                  <label className="block font-bold text-slate-700 mb-1.5">Store type *</label>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {STORE_CHANNELS.map((c) => {
+                      const allowed = c.account === 'distributors' ? canCreateAccounts : canCreateStores;
+                      return (
+                        <button key={c.type} type="button" disabled={!allowed} onClick={() => setAdminStoreType(c.type)} title={allowed ? c.description : 'Your role cannot add this type'}
+                          className={`rounded-2xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${adminStoreType === c.type ? 'border-blue-600 bg-blue-600 text-white shadow-xs' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'}`}>
+                          <span className="block font-bold">{c.label}</span>
+                          <span className={`mt-0.5 block text-[10px] font-normal ${adminStoreType === c.type ? 'text-blue-100' : 'text-slate-500'}`}>{c.description}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
+                {storeChannel(adminStoreType).wantsDistributor && (
+                  <div>
+                    <SearchSelect label={adminStoreType === 'DISTRIBUTOR' ? 'Supplied by (bigger distributor)' : 'Supplied by distributor'} options={distributorOptions} value={adminParentDistributorId} onChange={setAdminParentDistributorId} allowClear clearLabel={adminStoreType === 'DISTRIBUTOR' ? 'Supplied by us directly' : 'Not known yet'} placeholder="Search distributors" />
+                    {!adminParentDistributorId && adminStoreType !== 'DISTRIBUTOR' && <p className="mt-1 text-[11px] text-amber-800">Not required, but the store will show as &quot;No distributor&quot; until one is set.</p>}
+                  </div>
+                )}
+
                 <div>
-                  <label htmlFor="stores-entity-name" className="block font-bold text-slate-700 mb-1">Entity Name *</label>
+                  <label htmlFor="stores-entity-name" className="block font-bold text-slate-700 mb-1">Name *</label>
                   <input id="stores-entity-name"
                     type="text"
                     required
@@ -1179,17 +1168,21 @@ export default function StoresPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="stores-category" className="block font-bold text-slate-700 mb-1">Category</label>
-                    <select id="stores-category"
-                      value={adminCategory}
-                      onChange={(e) => setAdminCategory(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
-                    >
-                      {storeCategories.map((c) => (
-                        <option key={c.id} value={c.name}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                    {storeCategories.length ? (
+                      <select id="stores-category"
+                        value={adminCategory}
+                        onChange={(e) => setAdminCategory(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
+                      >
+                        {storeCategories.map((c) => (
+                          <option key={c.id} value={c.name}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="rounded-xl border border-dashed border-slate-300 p-2 text-[11px] text-slate-600">No categories yet. <Link href="/settings?tab=lists" className="font-semibold text-blue-700 underline">Add them in Settings</Link>.</p>
+                    )}
                   </div>
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Payment Credit Terms</label>
@@ -1207,23 +1200,15 @@ export default function StoresPage() {
                 </div>
 
                 {/* Has Branches Toggle */}
-                {adminStoreType !== 'STANDALONE_RETAILER' && (
-                  <label className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={adminHasBranches}
-                      onChange={(e) => setAdminHasBranches(e.target.checked)}
-                      className="rounded text-blue-600"
-                    />
-                    <span>Has multiple physical branches across Kathmandu</span>
-                  </label>
+                {adminStoreType === 'CHAIN_STORE' && (
+                  <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-blue-900">After saving, add each outlet from the chain&apos;s card (&quot;+ Add outlet&quot;). A chain with one shop is fine too.</p>
                 )}
 
                 <div className="grid grid-cols-2 gap-3 rounded-xl border p-3">
                   <label className="font-semibold">City<input value={adminCity} onChange={event => setAdminCity(event.target.value)} required className="block mt-1 w-full rounded-lg border p-2" /></label>
-                  <label className="font-semibold">Area<input value={adminArea} onChange={event => setAdminArea(event.target.value)} required={adminStoreType === 'STANDALONE_RETAILER'} className="block mt-1 w-full rounded-lg border p-2" /></label>
+                  <label className="font-semibold">Area<input value={adminArea} onChange={event => setAdminArea(event.target.value)} required={storeChannel(adminStoreType).account === 'retailers'} className="block mt-1 w-full rounded-lg border p-2" /></label>
                   <label className="font-semibold col-span-2">Address<input value={adminAddress} onChange={event => setAdminAddress(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
-                  {adminStoreType === 'STANDALONE_RETAILER' && <>
+                  {storeChannel(adminStoreType).account === 'retailers' && <>
                     <label className="font-semibold">Latitude<input type="number" step="any" min="-90" max="90" required value={adminLat} onChange={event => setAdminLat(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
                     <label className="font-semibold">Longitude<input type="number" step="any" min="-180" max="180" required value={adminLng} onChange={event => setAdminLng(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
                     <button type="button" className="col-span-2 rounded-lg border p-2 font-semibold text-blue-700" onClick={() => {
@@ -1712,6 +1697,7 @@ export default function StoresPage() {
           </div>
         )}
       </div>
+      {outletChain && <AddOutletModal chain={outletChain} onClose={() => setOutletChain(null)} onSaved={refreshData} />}
     </PageGuard>
   );
 }
