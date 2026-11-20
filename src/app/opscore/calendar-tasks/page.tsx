@@ -161,11 +161,11 @@ export default function CalendarTasksPage() {
               (uFirst.length > 2 && t.assignedToName.toLowerCase().includes(uFirst))))
       );
       setAllTasks(officerTasks);
-      setAllBeats(db.getTodayBeat(user.id));
+      setAllBeats(db.getBeatItemsFor(user.id));
       setAllCheques(db.getCheques().filter((c) => c.officerId === user.id));
     } else {
       setAllTasks(db.getTasks());
-      setAllBeats(db.getTodayBeat());
+      setAllBeats(db.getBeatItemsFor());
       setAllCheques(db.getCheques());
     }
   };

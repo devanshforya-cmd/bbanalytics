@@ -29,12 +29,13 @@ import GoogleWorkspaceSettings from './components/GoogleWorkspaceSettings';
 import ListsSettings from './components/ListsSettings';
 import OrderIdPrefixes from './components/OrderIdPrefixes';
 import DataUpgradeSettings from './components/DataUpgradeSettings';
+import TestDataSettings from './components/TestDataSettings';
 import SetupWizard from '@/components/dashboard/SetupWizard';
 import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
 import { hasAccess, isSuperAdmin, setActivePage } from '@/lib/permissions';
 import { pageForSettingsTab } from '@/lib/access-catalog';
-import { Compass, Sliders, ListChecks, DatabaseZap, Sparkles, Truck, Link2 } from 'lucide-react';
+import { Compass, Sliders, ListChecks, DatabaseZap, Sparkles, Truck, Link2, FlaskConical } from 'lucide-react';
 
 export type SettingsTab =
   | 'STAFF'
@@ -50,7 +51,8 @@ export type SettingsTab =
   | 'FEATURE_FLAGS'
   | 'GOOGLE'
   | 'LISTS'
-  | 'UPGRADE';
+  | 'UPGRADE'
+  | 'TEST_DATA';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('STAFF');
@@ -76,6 +78,7 @@ export default function SettingsPage() {
       google: 'GOOGLE',
       lists: 'LISTS',
       upgrade: 'UPGRADE',
+      'test-data': 'TEST_DATA',
     };
     if (tab && tabByQuery[tab]) setActiveTab(tabByQuery[tab]);
   }, []);
@@ -103,12 +106,13 @@ export default function SettingsPage() {
       { id: 'IMPORT', label: 'Import data', icon: FileSpreadsheet, tile: 'bg-blue-500' },
       { id: 'UPGRADE', label: 'Data upgrade', icon: DatabaseZap, tile: 'bg-slate-600' },
       { id: 'FEATURE_FLAGS', label: 'Experiments', icon: Sliders, tile: 'bg-purple-500' },
+      { id: 'TEST_DATA', label: 'Test data', icon: FlaskConical, tile: 'bg-orange-500' },
     ] },
   ];
   // Each tab is its own permission. Staff & roles stays with Super Admins.
   const allowed = (id: SettingsTab) => {
     if (isSuperAdmin(user)) return true;
-    if (id === 'STAFF') return false;
+    if (id === 'STAFF' || id === 'TEST_DATA') return false;
     const page = pageForSettingsTab(id);
     return !!page && hasAccess(user, page.key);
   };
@@ -119,7 +123,7 @@ export default function SettingsPage() {
   }, [activeTabAllowed]);
   const queryByTab: Record<SettingsTab, string> = {
     GOOGLE: 'google', STAFF: 'staff', FIELD_SALES: 'field-sales', BRANDS: 'brands', CHANNELS: 'channels', RULES: 'rules', HOLIDAYS: 'holidays',
-    TEMPLATES: 'templates', PROMOTIONS: 'promotions', IMPORT: 'import', SHARED_ACCESS: 'shared-access', FEATURE_FLAGS: 'feature-flags', LISTS: 'lists', UPGRADE: 'upgrade',
+    TEMPLATES: 'templates', PROMOTIONS: 'promotions', IMPORT: 'import', SHARED_ACCESS: 'shared-access', FEATURE_FLAGS: 'feature-flags', LISTS: 'lists', UPGRADE: 'upgrade', TEST_DATA: 'test-data',
   };
   const choose = (id: SettingsTab) => {
     setActiveTab(id);
@@ -201,6 +205,7 @@ export default function SettingsPage() {
           {activeTab === 'FEATURE_FLAGS' && <FeatureFlagsSettings />}
           {activeTab === 'LISTS' && <ListsSettings />}
           {activeTab === 'UPGRADE' && <DataUpgradeSettings />}
+          {activeTab === 'TEST_DATA' && isSuperAdmin(user) && <TestDataSettings />}
         </div>
           </section>
         </div>
