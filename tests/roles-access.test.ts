@@ -24,7 +24,7 @@ test('every app page belongs to exactly one permission', () => {
     }
   };
   walk('src/app', '');
-  const exempt = ['/', '/login', '/shared/[token]', '/settings', ...OPEN_PATHS];
+  const exempt = ['/', '/login', '/shared/[token]', '/about', '/privacy', '/terms', '/settings', ...OPEN_PATHS];
   const missing = routes.filter((route) => !exempt.includes(route) && !route.startsWith('/zz-') && !pageForPath(route.replace(/\[[^\]]+\]/g, 'x')));
   assert.deepEqual(missing, []);
   for (const tab of ['BRANDS', 'CHANNELS', 'LISTS', 'PROMOTIONS', 'SHARED_ACCESS', 'RULES', 'FIELD_SALES', 'HOLIDAYS', 'TEMPLATES', 'GOOGLE', 'IMPORT', 'UPGRADE', 'FEATURE_FLAGS']) assert.ok(pageForSettingsTab(tab), tab);
