@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Download, HardDriveDownload, Star, Trash2 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import InfoTip from '@/components/common/InfoTip';
+import DriveBackupCard from '@/components/common/DriveBackupCard';
 import { toast } from '@/components/common/Toast';
 import { db } from '@/lib/db/db-service';
 import { hasAccess, isSuperAdmin } from '@/lib/permissions';
@@ -216,6 +217,8 @@ export default function ReportsPage() {
                 {busy === 'backup' ? 'Preparing…' : 'Download full backup'}
               </button>
             </section>
+
+            {isSuperAdmin(user) && <DriveBackupCard settingsLink />}
           </aside>
         </div>
       </div>
