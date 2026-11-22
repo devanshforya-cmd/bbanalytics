@@ -69,7 +69,7 @@ function ItemPicker({ value, onChange, brands, single = false, productsOnly = fa
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={placeholder} className={`${field} pl-8`} aria-label={placeholder} />
           {term && <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
             {matches.map((item) => <li key={item.id}><button type="button" onClick={() => { onChange(single ? [item.id] : [...value, item.id]); setQuery(''); }} className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-blue-50">
-              {item.name}{item.combo && <span className="rounded-full bg-amber-100 px-1.5 text-[9px] font-bold text-amber-800">Combo</span>}</button></li>)}
+              {item.name}{item.combo && <span className="rounded-full bg-amber-100 px-1.5 text-[11px] font-bold text-amber-800">Combo</span>}</button></li>)}
             {!matches.length && <li className="px-3 py-2 text-xs text-slate-500">No match.</li>}
           </ul>}
         </div>
@@ -218,7 +218,7 @@ export default function CampaignEditor({ campaign, onClose, onSaved }: CampaignE
   const scheduled = draft.status !== 'DRAFT' && !draft.isTemplate;
   const footer = (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <button type="button" onClick={onClose} disabled={isSubmitting} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+      <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn-secondary">Cancel</button>
       {draft.isTemplate ? <button type="button" onClick={() => save('DRAFT')} disabled={isSubmitting} className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-semibold text-white hover:bg-blue-700">Save template</button> : <>
         {!scheduled && <button type="button" onClick={() => save('DRAFT')} disabled={isSubmitting} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Save draft</button>}
         <button type="button" onClick={() => save(scheduled ? draft.status : 'SCHEDULED')} disabled={isSubmitting} className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-semibold text-white hover:bg-blue-700">{scheduled ? 'Save changes' : 'Schedule'}</button>

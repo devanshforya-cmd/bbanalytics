@@ -49,7 +49,7 @@ export default function RevenueConcentration({
                 2b
               </span>
               <h2 className="text-base font-bold text-slate-900">
-                Revenue Concentration (Top 10% Contribution)
+                Revenue concentration (top 10% contribution)
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-1">
@@ -62,7 +62,7 @@ export default function RevenueConcentration({
         <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <div className="text-xs font-semibold text-blue-900 ">
-              Key Concentration Finding
+              Key concentration finding
             </div>
             <div className="text-sm sm:text-base font-black text-blue-950 mt-0.5">
               Top {revenueConcentration.topSlice.length} customers (10%) account for NPR{' '}
@@ -80,11 +80,11 @@ export default function RevenueConcentration({
               <tr>
                 <th className="py-3 px-3 text-center">Rank</th>
                 <th className="py-3 px-3">Customer</th>
-                <th className="py-3 px-3 text-right">Total Spend</th>
+                <th className="py-3 px-3 text-right">Total spend</th>
                 <th className="py-3 px-3 text-center">Orders</th>
-                <th className="py-3 px-3 text-right">Avg Order Value (AOV)</th>
-                <th className="py-3 px-3 text-center">Karma Score</th>
-                <th className="py-3 px-3">Brands Purchased</th>
+                <th className="py-3 px-3 text-right">Avg order value (AOV)</th>
+                <th className="py-3 px-3 text-center">Karma score</th>
+                <th className="py-3 px-3">Brands purchased</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -98,7 +98,7 @@ export default function RevenueConcentration({
                     >
                       {item.customer.name}
                     </Link>
-                    <div className="text-[10px] text-slate-500">{item.customer.phone}</div>
+                    <div className="text-[11px] text-slate-500">{item.customer.phone}</div>
                   </td>
                   <td className="py-3 px-3 text-right font-black text-slate-900">
                     <Money>{item.spend.toLocaleString()}</Money>
@@ -119,7 +119,7 @@ export default function RevenueConcentration({
                       {(item.customer.brandsPurchased || []).map((b) => (
                         <span
                           key={b}
-                          className="rounded bg-slate-100 text-slate-700 font-bold px-1.5 py-0.5 text-[9px]"
+                          className="rounded bg-slate-100 text-slate-700 font-bold px-1.5 py-0.5 text-[11px]"
                         >
                           {b}
                         </span>
@@ -142,7 +142,7 @@ export default function RevenueConcentration({
                 2l
               </span>
               <h2 className="text-base font-bold text-slate-900">
-                Customer Lifetime Value (LTV) Distribution
+                Customer lifetime value (LTV) distribution
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-1">
@@ -150,7 +150,7 @@ export default function RevenueConcentration({
             </p>
           </div>
           <div className="text-right">
-            <span className="text-[10px] font-bold text-slate-500">Mean Platform LTV</span>
+            <span className="text-[11px] font-bold text-slate-500">Mean platform LTV</span>
             <div className="text-lg font-black text-slate-900">
               <Money>{ltvDistribution.avgLtv.toLocaleString()}</Money>
             </div>
@@ -163,7 +163,7 @@ export default function RevenueConcentration({
               <div className="text-[11px] font-bold text-slate-600">{b.label}</div>
               <div className="text-xl font-black text-slate-900">{b.count}</div>
               <div className="space-y-1">
-                <div className="flex justify-between text-[10px] text-slate-500">
+                <div className="flex justify-between text-[11px] text-slate-500">
                   <span>Share</span>
                   <span className="font-bold">{b.pct}%</span>
                 </div>

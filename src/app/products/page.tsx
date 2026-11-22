@@ -21,7 +21,7 @@ import {
   Plus,
   Search,
   Filter,
-  Sparkles,
+  Lightbulb,
   TrendingUp,
   Percent,
   Layers,
@@ -411,11 +411,10 @@ export default function ProductsPage() {
       <div className="space-y-6 pb-36 sm:pb-20">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <Package className="w-6 h-6 text-brand-600" />
-              <span>Products, Combos &amp; Performance</span>
+              <span>Products &amp; combos</span>
 <InfoTip label="About this page">Master SKU catalog, D2C social promotional kits, warehouse inventory, and sales telemetry.</InfoTip></h1>
           </div>
           <DownloadButton datasets={['products']} records={{ products: filteredProducts, combos: filteredCombos }} fileLabel="Products" />
@@ -427,7 +426,7 @@ export default function ProductsPage() {
           <div className="flex items-center gap-2 flex-wrap">
             {toastMessage && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold shadow-xs animate-fade-in">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <Lightbulb className="w-3.5 h-3.5 text-emerald-600" />
                 <span>{toastMessage}</span>
               </div>
             )}
@@ -435,54 +434,47 @@ export default function ProductsPage() {
             <button
               type="button"
               onClick={() => setIsAddComboOpen(true)}
-              className="min-h-[44px] px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-98 transition shadow-xs"
+              className="btn btn-secondary"
             >
-              <Boxes className="w-4 h-4 text-purple-600" />
-              <span>Create D2C Combo</span>
+              <Boxes />
+              <span>Create D2C combo</span>
             </button>
 
             <button
               type="button"
               onClick={() => setIsAddProductOpen(true)}
-              className="min-h-[44px] px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-98 transition shadow-md shadow-blue-500/25 cursor-pointer"
+              className="btn btn-primary"
             >
-              <Plus className="w-4 h-4 text-white" />
-              <span>Add Single SKU</span>
+              <Plus />
+              <span>Add single SKU</span>
             </button>
           </div>
         )}
       </div>
 
-      {/* Metric Cards Banner */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
-          <div className="text-xs font-semibold text-slate-500">Active Brands</div>
-          <div className="text-2xl font-black text-slate-900 mt-1">{activeBrandsList.length}</div>
-          <div className="text-[11px] text-slate-500 mt-1 truncate" title={activeBrandsList.map((b) => b.name).join(', ')}>
-            {activeBrandsList.map((b) => b.name).join(', ') || 'No brands registered'}
-          </div>
+      {/* Figures */}
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-black/[0.08] bg-black/[0.06] lg:grid-cols-4">
+        <div className="bg-white p-4">
+          <dt className="text-xs text-slate-500">Active brands</dt>
+          <dd className="mt-1.5 text-[28px] font-medium leading-none tabular-nums text-slate-900">{activeBrandsList.length}</dd>
+          <dd className="mt-2 truncate text-xs text-slate-500" title={activeBrandsList.map((b) => b.name).join(', ')}>{activeBrandsList.map((b) => b.name).join(', ') || 'No brands yet'}</dd>
         </div>
-
-        <div className="bg-white rounded-2xl border border-purple-200 bg-purple-50/20 p-4 shadow-xs">
-          <div className="text-xs font-semibold text-purple-700">D2C &amp; Social Combos</div>
-          <div className="text-2xl font-black text-slate-900 mt-1">{combos.filter(combo => isSellableCombo(combo, products)).length}</div>
-          <div className="text-[11px] text-purple-600 mt-1">Instagram, TikTok &amp; Web (Not B2B)</div>
+        <div className="bg-white p-4">
+          <dt className="text-xs text-slate-500">Online combos</dt>
+          <dd className="mt-1.5 text-[28px] font-medium leading-none tabular-nums text-slate-900">{combos.filter(combo => isSellableCombo(combo, products)).length}</dd>
+          <dd className="mt-2 text-xs text-slate-500">Instagram, TikTok and web, not B2B</dd>
         </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
-          <div className="text-xs font-semibold text-slate-500">Active Catalog SKUs</div>
-          <div className="text-2xl font-black text-blue-600 mt-1">{products.filter(product => product.active !== false).length}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Master retail products</div>
+        <div className="bg-white p-4">
+          <dt className="text-xs text-slate-500">Active SKUs</dt>
+          <dd className="mt-1.5 text-[28px] font-medium leading-none tabular-nums text-slate-900">{products.filter(product => product.active !== false).length}</dd>
+          <dd className="mt-2 text-xs text-slate-500">In the master catalog</dd>
         </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
-          <div className="text-xs font-semibold text-slate-500">Warehouse Stock</div>
-          <div className="text-2xl font-black text-emerald-600 mt-1">
-            {products.reduce((acc, p) => acc + (p.stockQty !== undefined ? p.stockQty : 0), 0).toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-500 mt-1">Units available in depot</div>
+        <div className="bg-white p-4">
+          <dt className="text-xs text-slate-500">Warehouse stock</dt>
+          <dd className="mt-1.5 text-[28px] font-medium leading-none tabular-nums text-slate-900">{products.reduce((acc, p) => acc + (p.stockQty !== undefined ? p.stockQty : 0), 0).toLocaleString()}</dd>
+          <dd className="mt-2 text-xs text-slate-500">Units in the depot</dd>
         </div>
-      </div>
+      </dl>
 
       {/* Controls Bar: Search, Brand Filter, View Mode Toggle */}
       <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 shadow-xs space-y-3">
@@ -514,8 +506,8 @@ export default function ProductsPage() {
               onClick={() => setActiveTab('COMBOS')}
               className={`flex-1 lg:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                 activeTab === 'COMBOS'
-                  ? 'bg-purple-600 text-white shadow-xs'
-                  : 'text-purple-700 hover:text-purple-900'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Boxes className="w-3.5 h-3.5" />
@@ -548,7 +540,7 @@ export default function ProductsPage() {
                   }`}
                 >
                   <BarChart3 className="w-3.5 h-3.5" />
-                  <span>Sales &amp; Performance</span>
+                  <span>Sales &amp; performance</span>
                 </button>
               </div>
             )}
@@ -613,11 +605,11 @@ export default function ProductsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold">
+                        <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold">
                           {p.sku}
                         </span>
                         <span
-                          className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700"
+                          className="text-[13px] text-slate-700"
                         >
                           {brandName(p.brandCode)}
                         </span>
@@ -632,7 +624,7 @@ export default function ProductsPage() {
                     {/* Stock status badge */}
                     <div className="text-right shrink-0">
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                           m.isLowStock
                             ? 'bg-amber-100 text-amber-800 border border-amber-200'
                             : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -646,24 +638,24 @@ export default function ProductsPage() {
                   {/* Operational Telemetry Grid */}
                   <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl text-center text-xs border border-slate-100">
                     <div>
-                      <div className="text-[10px] text-slate-500 font-semibold">
-                        MRP (Catalog)
+                      <div className="text-[11px] text-slate-500 font-semibold">
+                        MRP (catalog)
                       </div>
                       <div className="font-black text-emerald-700 mt-0.5 font-mono">
                         <Money>{p.mrp}</Money>
                       </div>
                     </div>
                     <div className="border-x border-slate-200">
-                      <div className="text-[10px] text-brand-700 font-semibold">
-                        Units Sold
+                      <div className="text-[11px] text-brand-700 font-semibold">
+                        Units sold
                       </div>
                       <div className="font-black text-slate-900 mt-0.5 font-mono">
                         {m.totalUnitsSold.toLocaleString()}
                       </div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-blue-700 font-semibold">
-                        Store Penetration
+                      <div className="text-[11px] text-blue-700 font-semibold">
+                        Store penetration
                       </div>
                       <div className="font-black text-blue-700 mt-0.5 font-mono">
                         {m.storePenetrationPct}%
@@ -707,13 +699,13 @@ export default function ProductsPage() {
           <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold ">
-                  <th className="p-3.5">SKU &amp; Product Name</th>
+                <tr className="border-b border-black/[0.06] text-xs text-slate-500">
+                  <th className="p-3.5">SKU &amp; product name</th>
                   <th className="p-3.5">Brand</th>
                   <th className="p-3.5">Category</th>
-                  <th className="p-3.5">Case Size</th>
-                  <th className="p-3.5 text-right">MRP (Catalog)</th>
-                  <th className="p-3.5 text-center">Stock Level</th>
+                  <th className="p-3.5">Case size</th>
+                  <th className="p-3.5 text-right">MRP (catalog)</th>
+                  <th className="p-3.5 text-center">Stock level</th>
                   <th className="p-3.5 text-center">Performance</th>
                   <th className="p-3.5 text-center">Action</th>
                 </tr>
@@ -727,7 +719,7 @@ export default function ProductsPage() {
                         <button
                           type="button"
                           onClick={() => setSelectedPerfProduct(p)}
-                          className="font-bold text-slate-900 text-left hover:text-brand-600 transition"
+                          className="text-left text-[13px] font-medium text-slate-900 transition-colors hover:text-blue-700"
                         >
                           {p.name} {p.active === false && <span className="text-xs text-amber-700">Archived</span>}
                         </button>
@@ -735,7 +727,7 @@ export default function ProductsPage() {
                       </td>
                       <td className="p-3.5">
                         <span
-                          className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700"
+                          className="text-[13px] text-slate-700"
                         >
                           {brandName(p.brandCode)}
                         </span>
@@ -745,28 +737,24 @@ export default function ProductsPage() {
                       <td className="p-3.5 text-slate-600 font-medium">
                         {p.caseSize || 24} units / box
                       </td>
-                      <td className="p-3.5 text-right font-mono font-bold text-emerald-700">
+                      <td className="p-3.5 text-right tabular-nums text-slate-900">
                         <Money>{p.mrp}</Money>
                       </td>
                       <td className="p-3.5 text-center">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold font-mono ${
-                            m.isLowStock
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-100 text-slate-700'
-                          }`}
+                          className={`tabular-nums ${m.isLowStock ? 'font-medium text-amber-700' : 'text-slate-700'}`}
+                          title={m.isLowStock ? 'Low stock' : undefined}
                         >
-                          {m.stock}N
+                          {m.stock}
                         </span>
                       </td>
                       <td className="p-3.5 text-center">
                         <button
                           type="button"
                           onClick={() => setSelectedPerfProduct(p)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-800 font-semibold text-[11px] transition shadow-2xs"
+                          className="tabular-nums text-slate-700 underline-offset-2 hover:text-blue-700 hover:underline"
                         >
-                          <BarChart3 className="w-3 h-3 text-brand-600" />
-                          <span>{m.totalUnitsSold} Sold ({m.storePenetrationPct}%)</span>
+                          {m.totalUnitsSold.toLocaleString()} sold <span className="text-slate-400">· {m.storePenetrationPct}% of stores</span>
                         </button>
                       </td>
                       <td className="p-3.5 text-center">
@@ -774,9 +762,9 @@ export default function ProductsPage() {
                         <ProductActions product={p} onChanged={loadCatalog} />
                         <Link
                           href={`/products/${p.id}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-700 font-semibold text-slate-700 transition-colors"
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 font-medium text-slate-700 transition-colors hover:bg-slate-100"
                         >
-                          <span>360 Intel</span>
+                          <span>Open</span>
                           <ChevronRight className="w-3.5 h-3.5" />
                         </Link>
                       </td>
@@ -795,7 +783,7 @@ export default function ProductsPage() {
         filteredCombos.length === 0 ? (
           <EmptyState
             type="generic"
-            title="No Promotional Combos Found"
+            title="No promotional combos found"
             description="No combo bundles match your brand filter or search criteria."
           />
         ) : (
@@ -817,14 +805,14 @@ export default function ProductsPage() {
                 <div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">
                         {c.sku}
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
                         {brandName(c.brandCode)}
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-800 border border-pink-200">
-                        D2C / Social Media
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-800 border border-pink-200">
+                        D2C / social media
                       </span>
                     </div>
                     <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
@@ -862,11 +850,11 @@ export default function ProductsPage() {
                   {((c.extractorKeywords && c.extractorKeywords.length > 0) || c.priceDetectionEnabled) && (
                     <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-1.5">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-bold text-slate-500 text-[10px]">
-                          Extractor Auto-Match:
+                        <span className="font-bold text-slate-500 text-[11px]">
+                          Extractor auto-match:
                         </span>
                         {c.priceDetectionEnabled && (
-                          <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-bold text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-bold text-[11px]">
                             Price suggestion (Rs. {c.comboPrice})
                           </span>
                         )}
@@ -876,7 +864,7 @@ export default function ProductsPage() {
                           {c.extractorKeywords.map((k, ki) => (
                             <span
                               key={ki}
-                              className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-mono"
+                              className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-mono"
                             >
                               #{k}
                             </span>
@@ -889,19 +877,19 @@ export default function ProductsPage() {
                   {/* Combo Performance Telemetry Strip */}
                   <div className="mt-3 p-2.5 rounded-xl bg-purple-50/60 border border-purple-100 grid grid-cols-3 gap-2 text-center text-[11px]">
                     <div>
-                      <span className="text-slate-500 text-[10px] font-semibold">
-                        Stock Kits
+                      <span className="text-slate-500 text-[11px] font-semibold">
+                        Stock kits
                       </span>
                       <div className="font-bold text-slate-800 mt-0.5 font-mono">{kitsStock === undefined ? 'Not recorded' : `${kitsStock} kits`}</div>
                     </div>
                     <div className="border-x border-purple-200/60">
-                      <span className="text-slate-500 text-[10px] font-semibold">
+                      <span className="text-slate-500 text-[11px] font-semibold">
                         Kits sold
                       </span>
                       <div className="font-bold text-purple-700 mt-0.5 font-mono">{kitsSold}</div>
                     </div>
                     <div>
-                      <span className="text-slate-500 text-[10px] font-semibold">
+                      <span className="text-slate-500 text-[11px] font-semibold">
                         Discount
                       </span>
                       <div className="font-bold text-emerald-700 mt-0.5 font-mono">
@@ -914,19 +902,19 @@ export default function ProductsPage() {
                 {/* Price & Channel Pill */}
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-slate-500 line-through mr-2 font-mono">
+                    <span className="text-[11px] text-slate-500 line-through mr-2 font-mono">
                       <Money>{currentMrp.toFixed(2)}</Money>
                     </span>
-                    <span className="text-lg font-black text-purple-700 font-mono">
+                    <span className="text-lg font-black text-slate-900 font-mono">
                       <Money>{c.comboPrice}</Money>
                     </span>
                   </div>
                   <div className="text-right">
                     <Link href={`/products/combo/${encodeURIComponent(c.id)}`} className="mr-2 text-xs font-bold text-purple-700 hover:underline">Full details</Link>
                     <span className="inline-block text-[11px] text-purple-800 font-bold bg-purple-100 px-2.5 py-0.5 rounded-md border border-purple-200">
-                      D2C / Online (Not B2B)
+                      D2C / online (not B2B)
                     </span>
-                    <div className="text-[10px] text-slate-500">Instagram, TikTok &amp; Web</div>
+                    <div className="text-[11px] text-slate-500">Instagram, TikTok &amp; web</div>
                   </div>
                 </div>
                 <CatalogEditor item={c} kind="combos" products={products} onChanged={loadCatalog} />
@@ -951,7 +939,7 @@ export default function ProductsPage() {
               <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-100 text-brand-800">
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-brand-100 text-brand-800">
                       {brandName(selectedPerfProduct.brandCode)}
                     </span>
                     <span className="text-xs font-mono font-bold text-slate-500">
@@ -987,7 +975,7 @@ export default function ProductsPage() {
                       {/* 4 Performance KPI Cards */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="p-3.5 rounded-2xl bg-brand-50 border border-brand-200 space-y-1">
-                          <span className="text-[10px] font-bold text-brand-700">
+                          <span className="text-[11px] font-bold text-brand-700">
                             Units sold
                           </span>
                           <div className="text-2xl font-black text-brand-950 font-mono">
@@ -999,9 +987,9 @@ export default function ProductsPage() {
                           </div>
                         </div>
 
-                        <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 space-y-1">
-                          <span className="text-[10px] font-bold text-blue-700">
-                            Store Penetration
+                        <div className="p-3.5 rounded-2xl bg-white border border-black/[0.08] space-y-1">
+                          <span className="text-[11px] font-bold text-blue-700">
+                            Store penetration
                           </span>
                           <div className="text-2xl font-black text-blue-950 font-mono">
                             {m.storePenetrationPct}%
@@ -1011,9 +999,9 @@ export default function ProductsPage() {
                           </div>
                         </div>
 
-                        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 space-y-1">
-                          <span className="text-[10px] font-bold text-amber-700">
-                            Warehouse Stock
+                        <div className="p-3.5 rounded-2xl bg-white border border-black/[0.08] space-y-1">
+                          <span className="text-[11px] font-bold text-amber-700">
+                            Warehouse stock
                           </span>
                           <div className="text-2xl font-black text-amber-950 font-mono">
                             {m.stock} <span className="text-xs font-normal text-amber-700">units</span>
@@ -1025,9 +1013,9 @@ export default function ProductsPage() {
                           </div>
                         </div>
 
-                        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1">
-                          <span className="text-[10px] font-bold text-emerald-700">
-                            Quality Return Rate
+                        <div className="p-3.5 rounded-2xl bg-white border border-black/[0.08] space-y-1">
+                          <span className="text-[11px] font-bold text-emerald-700">
+                            Quality return rate
                           </span>
                           <div className="text-2xl font-black text-emerald-950 font-mono">
                             {m.returnRate}%
@@ -1041,7 +1029,7 @@ export default function ProductsPage() {
                       {/* Channel Sales Velocity Split */}
                       <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-3">
                         <span className="text-xs font-bold text-slate-800 ">
-                          Sales Channel Velocity
+                          Sales channel velocity
                         </span>
                         {m.totalUnitsSold === 0 ? (
                           <div className="py-4 text-center text-xs text-slate-500">
@@ -1051,7 +1039,7 @@ export default function ProductsPage() {
                           <div className="space-y-2 text-xs">
                             <div>
                               <div className="flex justify-between font-semibold text-slate-700 mb-1">
-                                <span>General Trade (Kiranas / Pharmacies)</span>
+                                <span>General trade (kiranas / pharmacies)</span>
                                 <span className="font-mono">{m.gtPct}% ({m.gtUnits} units)</span>
                               </div>
                               <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -1061,7 +1049,7 @@ export default function ProductsPage() {
 
                             <div>
                               <div className="flex justify-between font-semibold text-slate-700 mb-1">
-                                <span>Modern Trade (Supermarkets &amp; Chains)</span>
+                                <span>Modern trade (supermarkets &amp; chains)</span>
                                 <span className="font-mono">{m.mtPct}% ({m.mtUnits} units)</span>
                               </div>
                               <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -1071,7 +1059,7 @@ export default function ProductsPage() {
 
                             <div>
                               <div className="flex justify-between font-semibold text-slate-700 mb-1">
-                                <span>D2C Online &amp; Social Orders</span>
+                                <span>D2C online &amp; social orders</span>
                                 <span className="font-mono">{m.onlinePct}% ({m.onlineUnits} units)</span>
                               </div>
                               <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -1085,7 +1073,7 @@ export default function ProductsPage() {
                       {/* Recent Secondary Store Bookings */}
                       <div className="space-y-2">
                         <span className="text-xs font-bold text-slate-800 ">
-                          Recent Secondary Orders Booked:
+                          Recent secondary orders booked:
                         </span>
                         {matchingOrders.length === 0 ? (
                           <div className="p-4 text-center text-slate-500 bg-slate-50 rounded-xl">
@@ -1108,7 +1096,7 @@ export default function ProductsPage() {
                                   <div className="font-bold text-slate-800">
                                     {ord.totalUnits} units
                                   </div>
-                                  <div className="text-[10px] text-emerald-600 font-semibold">
+                                  <div className="text-[11px] text-emerald-600 font-semibold">
                                     {ord.status}
                                   </div>
                                 </div>
@@ -1124,7 +1112,7 @@ export default function ProductsPage() {
                           href={`/products/${selectedPerfProduct.id}`}
                           className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow flex items-center justify-center gap-2 transition"
                         >
-                          <span>Open Dedicated 360 Intel Page</span>
+                          <span>Open dedicated 360 intel page</span>
                           <ExternalLink className="w-4 h-4" />
                         </Link>
                       </div>
@@ -1141,13 +1129,13 @@ export default function ProductsPage() {
       <MobileBottomSheet
         isOpen={isAddProductOpen}
         onClose={() => setIsAddProductOpen(false)}
-        title="Add New Product SKU"
+        title="Add new product SKU"
         subtitle="Provision a new SKU with master wholesale pricing and warehouse buffer stock"
       >
         <form onSubmit={handleCreateProduct} className="space-y-4">
           <div>
             <label htmlFor="products-product-full-name" className="block text-xs font-bold text-slate-700 mb-1">
-              Product Full Name *
+              Product full name *
             </label>
             <input id="products-product-full-name"
               type="text"
@@ -1177,7 +1165,7 @@ export default function ProductsPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="products-sku-code" className="block text-xs font-bold text-slate-700 mb-1">
-                SKU Code *
+                SKU code *
               </label>
               <input id="products-sku-code"
                 type="text"
@@ -1225,16 +1213,16 @@ export default function ProductsPage() {
                 type="text"
                 value={newProd.category}
                 onChange={(e) => setNewProd({ ...newProd, category: e.target.value })}
-                placeholder="Personal Care"
+                placeholder="Personal care"
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium"
                 required
               />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Case Box Units (Pcs)
+                Case box units (pcs)
               </label>
-              <input aria-label="Case Box Units (Pcs)"
+              <input aria-label="Case box units (pcs)"
                 type="number"
                 value={newProd.caseSize}
                 onChange={(e) => setNewProd({ ...newProd, caseSize: Number(e.target.value) })}
@@ -1247,7 +1235,7 @@ export default function ProductsPage() {
           {/* Order Unit Mode (Cases, Pieces, or Both) */}
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
             <label className="block text-xs font-bold text-slate-700 ">
-              Order Taking Unit (Offline Sales)
+              Order taking unit (offline sales)
             </label>
             <p className="text-[11px] text-slate-500">
               Control how sales officers take orders in the field for this SKU.
@@ -1261,7 +1249,7 @@ export default function ProductsPage() {
                   onChange={() => setNewProd({ ...newProd, orderUnitMode: 'CASES' })}
                   className="rounded text-blue-600 focus:ring-blue-500"
                 />
-                <span>Cases Only</span>
+                <span>Cases only</span>
               </label>
               <label className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 cursor-pointer">
                 <input
@@ -1271,7 +1259,7 @@ export default function ProductsPage() {
                   onChange={() => setNewProd({ ...newProd, orderUnitMode: 'PIECES' })}
                   className="rounded text-blue-600 focus:ring-blue-500"
                 />
-                <span>Pieces Only</span>
+                <span>Pieces only</span>
               </label>
               <label className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 cursor-pointer">
                 <input
@@ -1281,7 +1269,7 @@ export default function ProductsPage() {
                   onChange={() => setNewProd({ ...newProd, orderUnitMode: 'BOTH' })}
                   className="rounded text-blue-600 focus:ring-blue-500"
                 />
-                <span>Both (Cases &amp; Pieces)</span>
+                <span>Both (cases &amp; pieces)</span>
               </label>
             </div>
           </div>
@@ -1289,7 +1277,7 @@ export default function ProductsPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="products-mrp-catalog-price" className="block text-xs font-bold text-slate-700 mb-1">
-                MRP (Catalog Price) *
+                MRP (catalog price) *
               </label>
               <input id="products-mrp-catalog-price"
                 type="number"
@@ -1301,7 +1289,7 @@ export default function ProductsPage() {
             </div>
             <div>
               <label htmlFor="products-threshold-alert-qty" className="block text-xs font-bold text-slate-700 mb-1">
-                Threshold Alert Qty
+                Threshold alert qty
               </label>
               <input id="products-threshold-alert-qty"
                 type="number"
@@ -1319,9 +1307,9 @@ export default function ProductsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <label className="block text-xs font-bold text-blue-950 ">
-                  Extractor Keywords (WhatsApp Matching)
+                  Extractor keywords (WhatsApp matching)
                 </label>
-                <p className="text-[10px] text-blue-700">
+                <p className="text-[11px] text-blue-700">
                   Nicknames, abbreviations, or phrases customers use in WhatsApp orders
                 </p>
               </div>
@@ -1339,7 +1327,7 @@ export default function ProductsPage() {
                 }}
                 className="px-2.5 py-1 bg-white hover:bg-blue-100 border border-blue-300 text-blue-700 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs transition cursor-pointer"
               >
-                <Sparkles className="w-3 h-3 text-blue-600" />
+                <Lightbulb className="w-3 h-3 text-blue-600" />
                 Auto-Suggest
               </button>
             </div>
@@ -1416,9 +1404,9 @@ export default function ProductsPage() {
 
           <button
             type="submit"
-            className="w-full min-h-[48px] py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md active:scale-98 transition cursor-pointer"
+            className="w-full min-h-[48px] py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-md active:scale-98 transition cursor-pointer"
           >
-            Confirm &amp; Add SKU to Master
+            Confirm &amp; add SKU to master
           </button>
         </form>
       </MobileBottomSheet>
@@ -1427,13 +1415,13 @@ export default function ProductsPage() {
       <MobileBottomSheet
         isOpen={isAddComboOpen}
         onClose={() => setIsAddComboOpen(false)}
-        title="Create Promotional Combo Kit"
+        title="Create promotional combo kit"
         subtitle="Bundle 2+ SKUs with promotional consumer discounts for beat distribution"
       >
         <form onSubmit={handleCreateCombo} className="space-y-4">
           <div>
             <label htmlFor="products-combo-bundle-name" className="block text-xs font-bold text-slate-700 mb-1">
-              Combo Bundle Name *
+              Combo bundle name *
             </label>
             <input id="products-combo-bundle-name"
               type="text"
@@ -1485,7 +1473,7 @@ export default function ProductsPage() {
 
           {/* Primary Item 1 */}
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-            <span className="text-[11px] font-bold text-slate-700 ">Item #1 (Required):</span>
+            <span className="text-[11px] font-bold text-slate-700 ">Item #1 (required):</span>
             <div className="grid grid-cols-3 gap-2">
               <select
                 value={newCombo.selectedProd1Id}
@@ -1514,14 +1502,14 @@ export default function ProductsPage() {
 
           {/* Item 2 */}
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-            <span className="text-[11px] font-bold text-slate-700 ">Item #2 (Optional):</span>
+            <span className="text-[11px] font-bold text-slate-700 ">Item #2 (optional):</span>
             <div className="grid grid-cols-3 gap-2">
               <select
                 value={newCombo.selectedProd2Id}
                 onChange={(e) => setNewCombo({ ...newCombo, selectedProd2Id: e.target.value })}
                 className="col-span-2 px-2.5 py-2 border border-slate-300 rounded-lg text-xs font-medium bg-white"
               >
-                <option value="">Select SKU #2 (Optional)</option>
+                <option value="">Select SKU #2 (optional)</option>
                 {products.filter(p => p.brandCode === newCombo.brandCode && p.active !== false).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} (MRP {p.mrp})
@@ -1541,14 +1529,14 @@ export default function ProductsPage() {
 
           {/* Item 3 */}
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-            <span className="text-[11px] font-bold text-slate-700 ">Item #3 (Optional):</span>
+            <span className="text-[11px] font-bold text-slate-700 ">Item #3 (optional):</span>
             <div className="grid grid-cols-3 gap-2">
               <select
                 value={newCombo.selectedProd3Id}
                 onChange={(e) => setNewCombo({ ...newCombo, selectedProd3Id: e.target.value })}
                 className="col-span-2 px-2.5 py-2 border border-slate-300 rounded-lg text-xs font-medium bg-white"
               >
-                <option value="">Select SKU #3 (Optional)</option>
+                <option value="">Select SKU #3 (optional)</option>
                 {products.filter(p => p.brandCode === newCombo.brandCode && p.active !== false).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} (MRP {p.mrp})
@@ -1569,11 +1557,11 @@ export default function ProductsPage() {
           {/* Dynamic Auto-Calculated Summary Box */}
           <div className="p-3.5 bg-purple-50 rounded-2xl border border-purple-200 space-y-2">
             <div className="flex items-center justify-between text-xs font-bold text-purple-900">
-              <span>Total Original Individual MRP:</span>
+              <span>Total original individual MRP:</span>
               <span className="font-mono text-sm"><Money>{dynamicComboOriginalMrp}</Money></span>
             </div>
             <div className="flex items-center justify-between text-xs font-semibold text-emerald-800">
-              <span>Consumer Discount Spread:</span>
+              <span>Consumer discount spread:</span>
               <span className="font-mono">
                 {dynamicComboSavingsPct}% (Save NPR{' '}
                 {Math.max(0, dynamicComboOriginalMrp - newCombo.comboPrice)})
@@ -1583,9 +1571,9 @@ export default function ProductsPage() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">
-              Final Bundled Combo Price (NPR) *
+              Final bundled combo price (NPR) *
             </label>
-            <input aria-label="Final Bundled Combo Price (NPR)"
+            <input aria-label="Final bundled combo price (NPR)"
               type="number"
               value={newCombo.comboPrice}
               onChange={(e) => setNewCombo({ ...newCombo, comboPrice: Number(e.target.value) })}
@@ -1599,9 +1587,9 @@ export default function ProductsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <label className="block text-xs font-bold text-purple-950 ">
-                  Combo Extractor Keywords
+                  Combo extractor keywords
                 </label>
-                <p className="text-[10px] text-purple-700">
+                <p className="text-[11px] text-purple-700">
                   Nicknames or phrases used by customers to refer to this combo bundle
                 </p>
               </div>
@@ -1619,7 +1607,7 @@ export default function ProductsPage() {
                 }}
                 className="px-2.5 py-1 bg-white hover:bg-purple-100 border border-purple-300 text-purple-700 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs transition cursor-pointer"
               >
-                <Sparkles className="w-3 h-3 text-purple-600" />
+                <Lightbulb className="w-3 h-3 text-purple-600" />
                 Auto-Suggest
               </button>
             </div>
@@ -1711,7 +1699,7 @@ export default function ProductsPage() {
 
           <div>
             <label htmlFor="products-bundle-description" className="block text-xs font-bold text-slate-700 mb-1">
-              Bundle Description
+              Bundle description
             </label>
             <textarea id="products-bundle-description"
               rows={2}
@@ -1724,9 +1712,9 @@ export default function ProductsPage() {
 
           <button
             type="submit"
-            className="w-full min-h-[48px] py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md active:scale-98 transition"
+            className="w-full min-h-[48px] py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-lg shadow-md active:scale-98 transition"
           >
-            Create &amp; Publish Combo Kit
+            Create &amp; publish combo kit
           </button>
         </form>
       </MobileBottomSheet>

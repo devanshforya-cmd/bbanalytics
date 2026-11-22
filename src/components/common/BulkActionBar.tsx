@@ -39,7 +39,7 @@ export default function BulkActionBar({
           onClick={onClearSelection}
           className="text-xs text-slate-300 hover:text-white underline underline-offset-2 transition font-medium"
         >
-          Deselect All
+          Deselect all
         </button>
 
         {onSelectAll && totalCount !== undefined && selectedCount < totalCount && (

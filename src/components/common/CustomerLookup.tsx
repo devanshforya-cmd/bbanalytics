@@ -130,7 +130,7 @@ export default function CustomerLookup({ value, onChange, allowNoPhone, error, a
             <span className="truncate font-bold text-slate-900">{customer.name || 'Unnamed customer'}</span>
             <span className="shrink-0 font-mono text-[11px] text-slate-600">{phoneDigits(customer.phone)}</span>
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-500">
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
             <span>{customer.totalOrders} order{customer.totalOrders === 1 ? '' : 's'}</span>
             <span>Last order {formatDate(customer.lastOrderDate)}</span>
             {customer.brandsPurchased?.length > 0 && <span className="truncate">{customer.brandsPurchased.map(brandName).join(', ')}</span>}

@@ -71,8 +71,8 @@ export default function OrderPicker({ customerPhone, selectedId, onSelect, onChe
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-sm font-black text-slate-900">{displayDocumentId(order.orderNumber)}</span>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">{brandName(order.brandCode)}</span>
-            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLE[order.status] || STATUS_STYLE.PENDING}`}>{statusLabel(order.status)}</span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">{brandName(order.brandCode)}</span>
+            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${STATUS_STYLE[order.status] || STATUS_STYLE.PENDING}`}>{statusLabel(order.status)}</span>
           </div>
           <span className="flex items-center gap-1.5 text-[11px] text-slate-500">{formatDate(order.orderDateAd, order.orderDateBs)}{isSelected && <CheckCircle2 className="h-4 w-4 text-blue-600" />}</span>
         </div>
@@ -108,7 +108,7 @@ export default function OrderPicker({ customerPhone, selectedId, onSelect, onChe
           <PackageSearch className="mx-auto mb-1.5 h-6 w-6 text-amber-500" />
           <p className="font-bold text-slate-800">No orders found for this number</p>
           <div className="mt-2 flex flex-wrap justify-center gap-2">
-            {onCheckNumber && <button type="button" onClick={onCheckNumber} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-bold text-slate-700 hover:bg-slate-50">Check the number</button>}
+            {onCheckNumber && <button type="button" onClick={onCheckNumber} className="btn btn-secondary">Check the number</button>}
             <button type="button" onClick={() => setById(true)} className="rounded-lg border border-blue-300 bg-white px-3 py-1.5 font-bold text-blue-700 hover:bg-blue-50">Search by order ID</button>
           </div>
         </div>

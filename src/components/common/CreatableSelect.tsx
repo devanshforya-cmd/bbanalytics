@@ -109,10 +109,10 @@ export default function CreatableSelect({ id, label, options, value, onChange, o
             const header = option.group && option.group !== filtered[index - 1]?.group;
             return (
               <React.Fragment key={option.id}>
-                {header && <li role="presentation" className="sticky top-0 bg-slate-50 px-3 py-1 text-[10px] font-bold text-slate-500">{option.group}</li>}
+                {header && <li role="presentation" className="sticky top-0 bg-slate-50 px-3 py-1 text-[11px] font-bold text-slate-500">{option.group}</li>}
                 <li role="option" aria-selected={isSelected} onMouseDown={(event) => event.preventDefault()} onClick={() => toggle(option)} onMouseEnter={() => setActive(index)}
                   className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 ${index === active ? 'bg-blue-50' : ''}`}>
-                  <span className="min-w-0"><span className="block truncate font-medium text-slate-800">{option.name}</span>{option.hint && <span className="block truncate text-[10px] text-slate-500">{option.hint}</span>}</span>
+                  <span className="min-w-0"><span className="block truncate font-medium text-slate-800">{option.name}</span>{option.hint && <span className="block truncate text-[11px] text-slate-500">{option.hint}</span>}</span>
                   {isSelected && <Check className="h-3.5 w-3.5 shrink-0 text-blue-600" />}
                 </li>
               </React.Fragment>

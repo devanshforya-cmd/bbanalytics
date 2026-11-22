@@ -73,6 +73,6 @@ export default function ChannelSettings() {
         {historical.length > 0 && <p className="text-xs text-slate-500">Historical attribution: {historical.join(', ')}. These labels remain on existing orders.</p>}
       </section>;
     })}
-    {dirty && <div className="flex flex-wrap items-center justify-end gap-3"><button type="button" disabled={saving} onClick={() => { setCatalog(db.getOrderOptions()); setDirty(false); }} className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600">Reset form</button><button type="button" disabled={saving} onClick={save} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"><Save className="w-4 h-4" />{saving ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save channels & logistics'}</button></div>}
+    {dirty && <div className="flex flex-wrap items-center justify-end gap-3"><button type="button" disabled={saving} onClick={() => { setCatalog(db.getOrderOptions()); setDirty(false); }} className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600">Reset form</button><button type="button" disabled={saving} onClick={save} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"><Save className="w-4 h-4" />{saving ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save channels & logistics'}</button></div>}
   </div>;
 }

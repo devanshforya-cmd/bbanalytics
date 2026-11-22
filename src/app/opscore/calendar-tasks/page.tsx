@@ -22,7 +22,7 @@ import {
   User as UserIcon,
   Check,
   X,
-  Sparkles,
+  Lightbulb,
   ChevronRight as ChevronRightIcon,
   Flag,
   PhoneCall,
@@ -464,7 +464,7 @@ export default function CalendarTasksPage() {
         <ChevronRightIcon className="h-3 w-3 text-slate-400" />
         <span className="text-slate-500">OpsCore</span>
         <ChevronRightIcon className="h-3 w-3 text-slate-400" />
-        <span className="font-semibold text-slate-800">Calendar & Tasks Hub</span>
+        <span className="font-semibold text-slate-800">Calendar & tasks hub</span>
       </nav>
 
       {/* Top Header & View Controls */}
@@ -474,7 +474,7 @@ export default function CalendarTasksPage() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white shadow-xs">
               <CalendarIcon className="w-5 h-5" />
             </span>
-            <span>Calendar-Based Operational To-Do List</span>
+            <span>Calendar-based operational to-do list</span>
 <InfoTip label="About this page">Dual BS/AD synchronized schedule tracking system auto-tasks, retail store beat visits, and cheque clearance deadlines.</InfoTip></h1>
           
         </div>
@@ -484,10 +484,10 @@ export default function CalendarTasksPage() {
           <button
             type="button"
             onClick={handleOpenCreateModal}
-            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 transition"
+            className="btn btn-primary"
           >
             <Plus className="h-4 w-4" />
-            <span>+ Create New Task</span>
+            <span>+ Create new task</span>
           </button>
         </div>
       </div>
@@ -508,36 +508,36 @@ export default function CalendarTasksPage() {
       {/* KPI Overview Summary Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-          <div className="text-[11px] font-semibold text-slate-500 ">All Active Tasks</div>
+          <div className="text-[11px] font-semibold text-slate-500 ">All active tasks</div>
           <div className="text-xl font-bold text-slate-900 mt-0.5">{allTasks.length} tasks</div>
-          <div className="text-[10px] text-slate-500 mt-1">Assigned across field & office</div>
+          <div className="text-[11px] text-slate-500 mt-1">Assigned across field & office</div>
         </div>
 
-        <div className="rounded-xl border border-purple-200 bg-purple-50/40 p-3.5 shadow-2xs">
+        <div className="rounded-xl border border-black/[0.08] bg-white p-3.5 shadow-2xs">
           <div className="text-[11px] font-semibold text-purple-700 flex items-center gap-1">
             <Zap className="h-3 w-3 text-purple-600" />
-            System Auto-Tasks (16b)
+            System auto-tasks (16b)
           </div>
-          <div className="text-xl font-bold text-purple-900 mt-0.5">{autoTasksCount} active</div>
-          <div className="text-[10px] text-purple-600/90 mt-1">Cheques, dormancies, calls & complaints</div>
+          <div className="text-xl font-bold text-slate-900 mt-0.5">{autoTasksCount} active</div>
+          <div className="text-[11px] text-purple-600/90 mt-1">Cheques, dormancies, calls & complaints</div>
         </div>
 
-        <div className="rounded-xl border border-rose-200 bg-rose-50/40 p-3.5 shadow-2xs">
+        <div className="rounded-xl border border-black/[0.08] bg-white p-3.5 shadow-2xs">
           <div className="text-[11px] font-semibold text-rose-700 flex items-center gap-1">
             <AlertCircle className="h-3 w-3 text-rose-600" />
-            Overdue Tasks
+            Overdue tasks
           </div>
           <div className="text-xl font-bold text-rose-900 mt-0.5">{overdueCount} items</div>
-          <div className="text-[10px] text-rose-600 mt-1">Require immediate intervention</div>
+          <div className="text-[11px] text-rose-600 mt-1">Require immediate intervention</div>
         </div>
 
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3.5 shadow-2xs">
+        <div className="rounded-xl border border-black/[0.08] bg-white p-3.5 shadow-2xs">
           <div className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3 text-emerald-600" />
             Completed
           </div>
-          <div className="text-xl font-bold text-emerald-900 mt-0.5">{completedCount} tasks</div>
-          <div className="text-[10px] text-emerald-600 mt-1">Resolved this period</div>
+          <div className="text-xl font-bold text-slate-900 mt-0.5">{completedCount} tasks</div>
+          <div className="text-[11px] text-emerald-600 mt-1">Resolved this period</div>
         </div>
       </div>
 
@@ -616,7 +616,7 @@ export default function CalendarTasksPage() {
                 onChange={(e) => setSelectedStaffId(e.target.value)}
                 className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
               >
-                <option value="ALL">All Assignees (Field & Office)</option>
+                <option value="ALL">All assignees (field & office)</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
@@ -634,7 +634,7 @@ export default function CalendarTasksPage() {
                   viewType === 'MONTH' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                Month Grid
+                Month grid
               </button>
               <button
                 type="button"
@@ -643,7 +643,7 @@ export default function CalendarTasksPage() {
                   viewType === 'LIST' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                Agenda List
+                Agenda list
               </button>
             </div>
           </div>
@@ -686,7 +686,7 @@ export default function CalendarTasksPage() {
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              Manual Tasks
+              Manual tasks
             </button>
 
             <button
@@ -722,9 +722,9 @@ export default function CalendarTasksPage() {
               onChange={(e) => setSelectedStatus(e.target.value as any)}
               className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 outline-none"
             >
-              <option value="ALL">All Statuses</option>
+              <option value="ALL">All statuses</option>
               <option value="OPEN">Open</option>
-              <option value="IN_PROGRESS">In Progress</option>
+              <option value="IN_PROGRESS">In progress</option>
               <option value="COMPLETED">Completed</option>
               <option value="OVERDUE">Overdue</option>
             </select>
@@ -804,7 +804,7 @@ export default function CalendarTasksPage() {
                       {dayNumber}
                     </span>
                     {dayEvents.length > 0 && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
                         {dayEvents.length} items
                       </span>
                     )}
@@ -815,7 +815,7 @@ export default function CalendarTasksPage() {
                     {dayEvents.slice(0, 2).map((ev) => (
                       <div
                         key={ev.id}
-                        className={`text-[10px] truncate px-1.5 py-0.5 rounded font-medium flex items-center gap-1 ${
+                        className={`text-[11px] truncate px-1.5 py-0.5 rounded font-medium flex items-center gap-1 ${
                           ev.status === 'COMPLETED'
                             ? 'bg-slate-100 text-slate-500 line-through'
                             : ev.status === 'OVERDUE'
@@ -834,7 +834,7 @@ export default function CalendarTasksPage() {
                       </div>
                     ))}
                     {dayEvents.length > 2 && (
-                      <div className="text-[9px] text-slate-500 font-bold px-1">
+                      <div className="text-[11px] text-slate-500 font-bold px-1">
                         +{dayEvents.length - 2} more…
                       </div>
                     )}
@@ -856,7 +856,7 @@ export default function CalendarTasksPage() {
                 className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span>Prev Week</span>
+                <span>Prev week</span>
               </button>
               <button
                 type="button"
@@ -870,7 +870,7 @@ export default function CalendarTasksPage() {
                 onClick={() => setWeekOffset((prev) => prev + 1)}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition"
               >
-                <span>Next Week</span>
+                <span>Next week</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -942,7 +942,7 @@ export default function CalendarTasksPage() {
 
                   {/* Day Events or Empty State */}
                   {dayEvents.length === 0 ? (
-                    <div className="p-3 text-center text-slate-500 text-xs italic">
+                    <div className="p-3 text-center text-slate-500 text-xs ">
                       No scheduled tasks, visits or cheques for this day.
                     </div>
                   ) : (
@@ -988,17 +988,17 @@ export default function CalendarTasksPage() {
                                 </h4>
 
                                 {ev.autoCreated ? (
-                                  <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-800">
+                                  <span className="inline-flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-800">
                                     <Zap className="h-2.5 w-2.5" /> Auto
                                   </span>
                                 ) : (
-                                  <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600">
+                                  <span className="text-[11px] font-semibold px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600">
                                     Manual
                                   </span>
                                 )}
 
                                 <span
-                                  className={`text-[9px] font-bold   px-1.5 py-0.2 rounded-full ${
+                                  className={`text-[11px] font-bold   px-1.5 py-0.2 rounded-full ${
                                     ev.status === 'COMPLETED'
                                       ? 'bg-emerald-100 text-emerald-800'
                                       : ev.status === 'IN_PROGRESS'
@@ -1006,7 +1006,7 @@ export default function CalendarTasksPage() {
                                       : ev.status === 'OVERDUE'
                                       ? 'bg-rose-100 text-rose-800'
                                       : 'bg-amber-100 text-amber-800'
-                                  }`}
+                                  } enum-label`}
                                 >
                                   {ev.status}
                                 </span>
@@ -1035,7 +1035,7 @@ export default function CalendarTasksPage() {
                                 type="button"
                                 onClick={() => handleOpenEditModal(ev.taskRef!)}
                                 className="p-1 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition"
-                                title="Edit Task"
+                                title="Edit task"
                               >
                                 <Edit3 className="h-3.5 w-3.5" />
                               </button>
@@ -1047,7 +1047,7 @@ export default function CalendarTasksPage() {
                               className="text-[11px] font-semibold px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 outline-none"
                             >
                               <option value="OPEN">Open</option>
-                              <option value="IN_PROGRESS">In Progress</option>
+                              <option value="IN_PROGRESS">In progress</option>
                               <option value="COMPLETED">Completed</option>
                               <option value="OVERDUE">Overdue</option>
                             </select>
@@ -1083,7 +1083,7 @@ export default function CalendarTasksPage() {
               <div>
                 <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
                   <CalendarIcon className="h-4 w-4 text-blue-600" />
-                  Scheduled Agenda & Tasks
+                  Scheduled agenda & tasks
                 </h3>
                 <p className="text-xs font-semibold text-blue-700 mt-0.5">{selectedDateLabel}</p>
               </div>
@@ -1107,24 +1107,24 @@ export default function CalendarTasksPage() {
                       <div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {ev.autoCreated ? (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-200">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-200">
                               <Zap className="h-2.5 w-2.5" />
                               Auto: {ev.autoTriggerType?.replace('_', ' ') || 'Trigger'}
                             </span>
                           ) : (
-                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                            <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
                               Manual
                             </span>
                           )}
 
                           <span
-                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded  ${
+                            className={`text-[11px] font-bold px-1.5 py-0.5 rounded  ${
                               ev.status === 'COMPLETED'
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : ev.status === 'OVERDUE'
                                 ? 'bg-rose-100 text-rose-800'
                                 : 'bg-blue-100 text-blue-800'
-                            }`}
+                            } enum-label`}
                           >
                             {ev.status}
                           </span>
@@ -1150,7 +1150,7 @@ export default function CalendarTasksPage() {
                         className="text-[11px] font-semibold px-2 py-1 rounded border border-slate-200 bg-white text-slate-700 shrink-0"
                       >
                         <option value="OPEN">Open</option>
-                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="IN_PROGRESS">In progress</option>
                         <option value="COMPLETED">Completed</option>
                         <option value="OVERDUE">Overdue</option>
                       </select>
@@ -1222,7 +1222,7 @@ export default function CalendarTasksPage() {
             <form onSubmit={handleSaveTask} className="space-y-3.5 text-xs">
               {/* Task Title */}
               <div className="space-y-1">
-                <label htmlFor="calendar-tasks-task-title" className="font-bold text-slate-700">Task Title *</label>
+                <label htmlFor="calendar-tasks-task-title" className="font-bold text-slate-700">Task title *</label>
                 <input id="calendar-tasks-task-title"
                   type="text"
                   required
@@ -1235,7 +1235,7 @@ export default function CalendarTasksPage() {
 
               {/* Description */}
               <div className="space-y-1">
-                <label htmlFor="calendar-tasks-description-directive" className="font-bold text-slate-700">Description / Directive</label>
+                <label htmlFor="calendar-tasks-description-directive" className="font-bold text-slate-700">Description / directive</label>
                 <textarea id="calendar-tasks-description-directive"
                   rows={2}
                   value={modalDesc}
@@ -1248,7 +1248,7 @@ export default function CalendarTasksPage() {
               {/* Assign To & Priority Row (16c) */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label htmlFor="calendar-tasks-assign-to" className="font-bold text-slate-700">Assign To *</label>
+                  <label htmlFor="calendar-tasks-assign-to" className="font-bold text-slate-700">Assign to *</label>
                   <select id="calendar-tasks-assign-to"
                     value={modalAssigneeId}
                     onChange={(e) => setModalAssigneeId(e.target.value)}
@@ -1263,8 +1263,8 @@ export default function CalendarTasksPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Priority Level</label>
-                  <select aria-label="Priority Level"
+                  <label className="font-bold text-slate-700">Priority level</label>
+                  <select aria-label="Priority level"
                     value={modalPriority}
                     onChange={(e) => setModalPriority(e.target.value as Priority)}
                     className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white font-semibold text-slate-800 outline-none"
@@ -1272,7 +1272,7 @@ export default function CalendarTasksPage() {
                     <option value="LOW">Low</option>
                     <option value="MEDIUM">Medium</option>
                     <option value="HIGH">High</option>
-                    <option value="URGENT">Urgent (Overdue Risk)</option>
+                    <option value="URGENT">Urgent (overdue risk)</option>
                   </select>
                 </div>
               </div>
@@ -1280,8 +1280,8 @@ export default function CalendarTasksPage() {
               {/* Dual BS / AD Due Date (16a & 16c) */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Due Date (BS) *</label>
-                  <input aria-label="Due Date (BS)"
+                  <label className="font-bold text-slate-700">Due date (BS) *</label>
+                  <input aria-label="Due date (BS)"
                     type="text"
                     required
                     value={modalDateBs}
@@ -1291,7 +1291,7 @@ export default function CalendarTasksPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label htmlFor="calendar-tasks-due-date-ad" className="font-bold text-slate-700">Due Date (AD) *</label>
+                  <label htmlFor="calendar-tasks-due-date-ad" className="font-bold text-slate-700">Due date (AD) *</label>
                   <input id="calendar-tasks-due-date-ad"
                     type="date"
                     required
@@ -1305,20 +1305,20 @@ export default function CalendarTasksPage() {
               {/* Related Entity (16c) */}
               <div className="grid grid-cols-3 gap-2">
                 <div className="space-y-1">
-                  <label htmlFor="calendar-tasks-entity-type" className="font-bold text-slate-700">Entity Type</label>
+                  <label htmlFor="calendar-tasks-entity-type" className="font-bold text-slate-700">Entity type</label>
                   <select id="calendar-tasks-entity-type"
                     value={modalEntityType}
                     onChange={(e) => setModalEntityType(e.target.value as any)}
                     className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs bg-white font-semibold"
                   >
-                    <option value="STORE">Store / Retailer</option>
+                    <option value="STORE">Store / retailer</option>
                     <option value="CHEQUE">Cheque</option>
                     <option value="COMPLAINT">Complaint</option>
-                    <option value="CALL">Call Follow-up</option>
+                    <option value="CALL">Call follow-up</option>
                   </select>
                 </div>
                 <div className="col-span-2 space-y-1">
-                  <label htmlFor="calendar-tasks-related-store-entity-name" className="font-bold text-slate-700">Related Store / Entity Name</label>
+                  <label htmlFor="calendar-tasks-related-store-entity-name" className="font-bold text-slate-700">Related store / entity name</label>
                   <input id="calendar-tasks-related-store-entity-name"
                     type="text"
                     value={modalRelatedTo}
@@ -1331,7 +1331,7 @@ export default function CalendarTasksPage() {
 
               {/* Status Selector (16c: Open → In Progress → Completed → Overdue) */}
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Task Status</label>
+                <label className="font-bold text-slate-700">Task status</label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['OPEN', 'IN_PROGRESS', 'COMPLETED', 'OVERDUE'] as TaskStatus[]).map((st) => (
                     <button
@@ -1366,7 +1366,7 @@ export default function CalendarTasksPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs"
+                  className="btn btn-primary"
                 >
                   {editingTask ? 'Save Changes' : 'Create Task'}
                 </button>

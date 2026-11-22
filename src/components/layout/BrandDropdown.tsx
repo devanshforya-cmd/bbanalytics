@@ -9,7 +9,7 @@ import {
   Search,
   Plus,
   Layers,
-  Sparkles,
+  Lightbulb,
   ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -136,7 +136,7 @@ export default function BrandDropdown({
     return (
       <Link
         href="/settings?tab=brands"
-        className={`flex h-10 min-w-0 items-center gap-1.5 rounded-full border border-dashed border-blue-300 bg-blue-50/50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100/60 sm:h-auto sm:rounded-lg sm:py-1.5 ${className}`}
+        className={`flex h-10 min-w-0 items-center gap-1.5 rounded-lg border border-dashed border-blue-300 bg-blue-50/50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100/60 sm:h-auto sm:rounded-lg sm:py-1.5 ${className}`}
       >
         <Plus className="h-3.5 w-3.5 shrink-0 text-blue-600" />
         <span className="truncate">Add brands</span>
@@ -181,7 +181,7 @@ export default function BrandDropdown({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute left-0 z-50 mt-1.5 w-72 origin-top-left rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute left-0 z-50 mt-1.5 w-72 origin-top-left rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-100">
           {/* Search Box */}
           <div className="p-2 border-b border-slate-100">
             <div className="relative flex items-center">
@@ -198,7 +198,7 @@ export default function BrandDropdown({
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2 text-[10px] text-slate-500 hover:text-slate-600"
+                  className="absolute right-2 text-[11px] text-slate-500 hover:text-slate-600"
                 >
                   ✕
                 </button>
@@ -226,12 +226,12 @@ export default function BrandDropdown({
                   <Layers className="h-3.5 w-3.5" />
                 </div>
                 <div className="truncate">
-                  <div className="font-semibold text-slate-900">All Brands Portfolio</div>
-                  <div className="text-[10px] text-slate-500">Master Aggregate Dashboard</div>
+                  <div className="font-semibold text-slate-900">All brands portfolio</div>
+                  <div className="text-[11px] text-slate-500">Master aggregate dashboard</div>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">
                   {totalSkus} SKUs
                 </span>
                 {currentBrand === 'ALL' && <Check className="h-4 w-4 text-blue-600" />}
@@ -254,7 +254,7 @@ export default function BrandDropdown({
 
                 return (
                   <div key={cat} className="space-y-0.5">
-                    <div className="px-2 py-1 text-[10px] font-bold text-slate-500">
+                    <div className="px-2 py-1 text-[11px] font-bold text-slate-500">
                       {cat}
                     </div>
                     {catBrands.map((brand) => {
@@ -287,13 +287,13 @@ export default function BrandDropdown({
                                   {brand.name}
                                 </span>
                                 {brand.status === 'PILOT' && (
-                                  <span className="rounded bg-amber-100 px-1 text-[9px] font-bold text-amber-800">
+                                  <span className="rounded bg-amber-100 px-1 text-[11px] font-bold text-amber-800">
                                     PILOT
                                   </span>
                                 )}
                               </div>
                               {brand.principalCompany && (
-                                <div className="text-[10px] text-slate-500 truncate">
+                                <div className="text-[11px] text-slate-500 truncate">
                                   {brand.principalCompany}
                                 </div>
                               )}
@@ -301,7 +301,7 @@ export default function BrandDropdown({
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="text-[10px] text-slate-500 font-medium">
+                            <span className="text-[11px] text-slate-500 font-medium">
                               {skuCount} SKUs
                             </span>
                             {isSelected && <Check className="h-4 w-4 text-blue-600" />}
@@ -336,7 +336,7 @@ export default function BrandDropdown({
               >
                 <div className="flex items-center gap-1.5">
                   <Plus className="h-3.5 w-3.5 text-blue-600" />
-                  <span>+ Onboard Principal Brand</span>
+                  <span>+ Onboard principal brand</span>
                 </div>
                 <ExternalLink className="h-3 w-3 text-blue-400" />
               </Link>

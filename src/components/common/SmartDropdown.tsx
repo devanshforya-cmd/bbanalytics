@@ -2,7 +2,7 @@
 
 import Money from '@/components/common/Money';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, ChevronDown, Check, Package, Sparkles } from 'lucide-react';
+import { Search, ChevronDown, Check, Package, Lightbulb } from 'lucide-react';
 import { Product, BrandCode } from '@/lib/types';
 
 export interface SmartDropdownItem {
@@ -128,7 +128,7 @@ export default function SmartDropdown({
               )}
               {selectedItem.group && (
                 <span
-                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                  className={`text-[11px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
                     getBrandStyle(selectedItem.group).bg
                   } ${getBrandStyle(selectedItem.group).text}`}
                 >
@@ -173,7 +173,7 @@ export default function SmartDropdown({
               Object.entries(grouped).map(([group, groupItems]) => (
                 <div key={group}>
                   <div
-                    className={`px-3 py-1 text-[10px] font-bold   ${
+                    className={`px-3 py-1 text-[11px] font-bold   ${
                       getBrandStyle(group).bg
                     } ${getBrandStyle(group).text}`}
                   >
@@ -207,8 +207,8 @@ export default function SmartDropdown({
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold text-slate-800 truncate">{item.name}</p>
                             {item.context && (
-                              <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
-                                <Sparkles className="w-3 h-3 text-amber-500" />
+                              <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                                <Lightbulb className="w-3 h-3 text-amber-500" />
                                 <span>{item.context}</span>
                               </p>
                             )}

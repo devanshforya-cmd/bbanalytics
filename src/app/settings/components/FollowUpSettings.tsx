@@ -126,7 +126,7 @@ export default function FollowUpSettings() {
       {canEdit ? (
         <div className="flex items-center justify-end gap-3">
           {dirty && <span className="text-xs text-amber-700">Unsaved changes</span>}
-          <button type="button" onClick={save} disabled={!dirty} className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-40">Save follow-up calls</button>
+          <button type="button" onClick={save} disabled={!dirty} className="btn btn-primary disabled:opacity-40">Save follow-up calls</button>
         </div>
       ) : <p className="text-xs text-slate-500">You can see these settings but not change them.</p>}
     </div>

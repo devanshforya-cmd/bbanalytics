@@ -417,7 +417,7 @@ export default function DispatchPage() {
                 <span className="text-xs text-slate-500">{filled.length} {filled.length === 1 ? 'product' : 'products'}, {totalUnits.toLocaleString()} units{seesMoney && totalValue ? `, NPR ${totalValue.toLocaleString()}` : ''}</span>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-                  <button type="button" onClick={review} disabled={!filled.length || !dest} className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50">Review</button>
+                  <button type="button" onClick={review} disabled={!filled.length || !dest} className="btn btn-primary disabled:opacity-50">Review</button>
                 </div>
               </div>
             </div>

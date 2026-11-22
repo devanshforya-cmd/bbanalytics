@@ -39,7 +39,7 @@ export default function MessagePage() {
       <p className="text-xs text-slate-500">Message from {message.senderName || 'the office'} · {new Date(message.createdAt).toLocaleString('en-GB', { timeZone: 'Asia/Kathmandu', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</p>
       <h1 className="mt-1 text-xl font-bold text-slate-900">{message.title}</h1>
       <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-800">{message.message}</p>
-      <Link href="/dashboard" className="mt-6 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Done</Link>
+      <Link href="/dashboard" className="btn btn-primary mt-6 inline-block">Done</Link>
     </article>
   );
 }

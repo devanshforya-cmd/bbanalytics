@@ -102,7 +102,7 @@ export default function WidgetEditor({ prepared, filters, initial, onSave, onClo
                           {list.map((m) => (
                             <label key={m.key} className={`flex cursor-pointer gap-2 px-3 py-1.5 text-xs hover:bg-blue-50 ${widget.metric === m.key ? 'bg-blue-50' : ''}`}>
                               <input type="radio" name="metric" checked={widget.metric === m.key} onChange={() => chooseMetric(m.key)} className="mt-0.5" />
-                              <span><span className="font-semibold text-slate-900">{m.label}</span>{m.snapshot && <span className="ml-1 text-[10px] text-slate-500">(right now)</span>}<span className="block text-slate-500">{m.description}</span></span>
+                              <span><span className="font-semibold text-slate-900">{m.label}</span>{m.snapshot && <span className="ml-1 text-[11px] text-slate-500">(right now)</span>}<span className="block text-slate-500">{m.description}</span></span>
                             </label>
                           ))}
                         </div>
@@ -220,7 +220,7 @@ export default function WidgetEditor({ prepared, filters, initial, onSave, onClo
           <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-3">
             {error && <p className="mr-auto text-xs font-semibold text-rose-600" role="alert">{error}</p>}
             <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-            <button type="button" onClick={save} className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700">{initial ? 'Save chart' : 'Add chart'}</button>
+            <button type="button" onClick={save} className="btn btn-primary">{initial ? 'Save chart' : 'Add chart'}</button>
           </div>
         </div>
         <div className="hidden flex-1 flex-col gap-3 overflow-y-auto p-6 lg:flex">

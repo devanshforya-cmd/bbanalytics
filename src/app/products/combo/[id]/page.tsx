@@ -86,7 +86,7 @@ export default function Combo360Page() {
   return (
     <PageGuard feature="products">
       <div className="space-y-6 pb-12 max-w-7xl mx-auto">
-        <Breadcrumbs items={[{ label: 'Product Catalog', href: '/products' }, { label: 'Combos', href: '/products?tab=combos' }, { label: combo.name }]} />
+        <Breadcrumbs items={[{ label: 'Product catalog', href: '/products' }, { label: 'Combos', href: '/products?tab=combos' }, { label: combo.name }]} />
 
         {/* Header */}
         <div className={`${card} sm:p-6`}>
@@ -95,7 +95,7 @@ export default function Combo360Page() {
               <div className="w-16 h-16 rounded-2xl bg-purple-600 flex items-center justify-center text-white shrink-0"><Layers className="w-8 h-8" /></div>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-black px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700">{brand}</span>
+                  <span className="text-[11px] font-black px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700">{brand}</span>
                   {combo.sku && <span className="text-[11px] font-mono text-purple-800 bg-purple-100 px-2 py-0.5 rounded-md font-bold">{combo.sku}</span>}
                   <span className="text-xs text-slate-500">Online only</span>
                   {!sellable && <span className="text-xs font-semibold text-amber-700">Unavailable for new orders: a product in it is missing or archived</span>}
@@ -106,9 +106,9 @@ export default function Combo360Page() {
               </div>
             </div>
             <div className="bg-slate-50 border border-slate-200 px-5 py-3 rounded-2xl">
-              <span className="text-[10px] font-bold text-slate-500 block">Combo price</span>
+              <span className="text-[11px] font-bold text-slate-500 block">Combo price</span>
               <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-xl sm:text-2xl font-black text-purple-700 font-mono"><Money>{combo.comboPrice}</Money></span>
+                <span className="text-xl sm:text-2xl font-black text-slate-900 font-mono"><Money>{combo.comboPrice}</Money></span>
                 <span className="text-xs text-slate-500 line-through font-mono"><Money>{currentMrp}</Money></span>
               </div>
               <span className="text-xs font-bold text-emerald-700">Saves {savings}% on today&apos;s product prices</span>
@@ -128,7 +128,7 @@ export default function Combo360Page() {
           </div>
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
             <div className="flex items-center justify-between text-slate-500 text-xs font-semibold"><span>Buyers</span><Users className="w-4 h-4 text-blue-600" /></div>
-            <div className="text-2xl font-black text-blue-700 mt-2 font-mono">{m.buyers}</div>
+            <div className="text-2xl font-black text-slate-900 mt-2 font-mono">{m.buyers}</div>
             <div className="text-xs text-slate-500 mt-1">{m.repeatBuyers} bought it more than once</div>
           </div>
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
@@ -177,14 +177,14 @@ export default function Combo360Page() {
                           <Link href={`/products/${part.productId}`} className="font-bold text-slate-900 hover:text-blue-600 hover:underline inline-flex items-center gap-1">
                             {product?.name || part.productName}<ArrowUpRight className="h-3 w-3 text-slate-400" />
                           </Link>
-                          {(!product || product.active === false) && <div className="text-[10px] text-amber-700">Archived or missing</div>}
+                          {(!product || product.active === false) && <div className="text-[11px] text-amber-700">Archived or missing</div>}
                         </td>
                         <td className="p-3 text-right font-mono">{part.perKit}</td>
                         <td className="p-3 text-right font-mono"><Money>{product?.mrp ?? combo.items.find((i) => i.productId === part.productId)?.mrp ?? 0}</Money></td>
                         <td className="p-3 text-right font-mono font-bold">{part.unitsViaCombo}</td>
                         <td className="p-3 text-right">
                           <span className="font-mono font-bold text-purple-700">{part.sharePct}%</span>
-                          <span className="text-[10px] text-slate-500 block">of {part.productUnitsOnline} units</span>
+                          <span className="text-[11px] text-slate-500 block">of {part.productUnitsOnline} units</span>
                         </td>
                       </tr>
                     );
@@ -221,7 +221,7 @@ export default function Combo360Page() {
               <>
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
                   {([['Returned', m.returns.returned], ['Exchanged', m.returns.exchanged], ['Refunded', m.returns.refunded]] as const).map(([label, value]) => (
-                    <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 p-2"><div className="font-black text-slate-900 font-mono text-base">{value}</div><div className="text-[10px] text-slate-500">{label}</div></div>
+                    <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 p-2"><div className="font-black text-slate-900 font-mono text-base">{value}</div><div className="text-[11px] text-slate-500">{label}</div></div>
                   ))}
                 </div>
                 {(m.returns.pending > 0 || m.returns.rejected > 0) && <p className="text-[11px] text-slate-500">{m.returns.pending} pending, {m.returns.rejected} rejected.</p>}
@@ -298,10 +298,10 @@ export default function Combo360Page() {
                 <div key={item.id} className="p-3.5 rounded-2xl border border-slate-200/80 bg-slate-50/50 text-xs space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-900">{item.customerName}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.type === 'COMPLAINT' ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>{item.type}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${item.type === 'COMPLAINT' ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>{item.type}</span>
                   </div>
-                  <p className="text-slate-600 line-clamp-3 italic">&ldquo;{item.fullText}&rdquo;</p>
-                  <div className="flex justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-100">
+                  <p className="text-slate-600 line-clamp-3 ">&ldquo;{item.fullText}&rdquo;</p>
+                  <div className="flex justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
                     <span>{item.productId === combo.id ? 'About the combo' : `About ${item.productName}`}</span><span>{item.dateReceivedBs || item.dateReceivedAd}</span>
                   </div>
                 </div>

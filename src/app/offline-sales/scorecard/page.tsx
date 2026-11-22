@@ -47,16 +47,16 @@ import {
   FileText,
   Filter,
   Calendar,
-  Sparkles,
+  Lightbulb,
   ShoppingBag,
 } from 'lucide-react';
 
 const DUTY_LABELS: Record<DutyStatus, { label: string; badge: string }> = {
   ONLINE: { label: 'Online', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  IN_FIELD: { label: 'In Field', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
-  ON_BREAK: { label: 'On Break', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
+  IN_FIELD: { label: 'In field', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+  ON_BREAK: { label: 'On break', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
   OFFLINE: { label: 'Offline', badge: 'bg-slate-100 text-slate-600 border-slate-300' },
-  ON_LEAVE: { label: 'On Leave', badge: 'bg-rose-50 text-rose-700 border-rose-200' },
+  ON_LEAVE: { label: 'On leave', badge: 'bg-rose-50 text-rose-700 border-rose-200' },
 };
 
 type PeriodPreset = 'THIS_WEEK' | 'THIS_MONTH' | 'LAST_MONTH' | 'CUSTOM';
@@ -279,8 +279,8 @@ function ScorecardContent() {
     <div className="space-y-8 pb-16 max-w-7xl mx-auto">
       <Breadcrumbs
         items={[
-          { label: 'Offline Sales', href: '/offline-sales/stores' },
-          { label: 'Sales Force Scorecards' },
+          { label: 'Offline sales', href: '/offline-sales/stores' },
+          { label: 'Staff scorecards' },
         ]}
       />
 
@@ -291,19 +291,19 @@ function ScorecardContent() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-black tracking-tight text-slate-900">
-              {isOfficer ? 'My Performance Scorecard' : 'Sales Force Scorecards — Side-by-Side'}
-<InfoTip label="About this page">{isOfficer ? 'Your activity metrics, beat compliance, and collections for the selected operational period.' : 'Direct side-by-side benchmarking across all 3 field officers on visit discipline, conversion, and cheque custody.'}</InfoTip></h1>
+              {isOfficer ? 'My scorecard' : 'Staff scorecards'}
+<InfoTip label="About this page">{isOfficer ? 'Your activity metrics, beat compliance, and collections for the selected operational period.' : 'Field officers side by side: store visits, calls that became orders, and cheque handover.'}</InfoTip></h1>
           </div>
           
         </div>
 
         {/* Period Selector Controls */}
-        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-100 p-1.5 border border-slate-200">
+        <div role="group" aria-label="Period" className="flex flex-wrap items-center gap-1 rounded-lg bg-slate-100 p-1">
           {[
-            { key: 'THIS_WEEK', label: 'This Week', sub: 'Current Week' },
-            { key: 'THIS_MONTH', label: 'This Month', sub: 'Current Month' },
-            { key: 'LAST_MONTH', label: 'Last Month', sub: 'Previous Month' },
-            { key: 'CUSTOM', label: 'Custom', sub: 'BS/AD' },
+            { key: 'THIS_WEEK', label: 'This week' },
+            { key: 'THIS_MONTH', label: 'This month' },
+            { key: 'LAST_MONTH', label: 'Last month' },
+            { key: 'CUSTOM', label: 'Custom dates' },
           ].map((preset) => {
             const isActive = selectedPeriod === preset.key;
             return (
@@ -316,16 +316,15 @@ function ScorecardContent() {
                     setSelectedPeriod(preset.key as PeriodPreset);
                   }
                 }}
-                className={`flex flex-col sm:flex-row items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                type="button"
+                aria-pressed={isActive}
+                className={`h-8 rounded-md px-3 text-[13px] transition-colors ${
                   isActive
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    ? 'bg-white font-medium text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>{preset.label}</span>
-                <span className={`text-[10px] ${isActive ? 'text-blue-600 font-black' : 'text-slate-500'}`}>
-                  ({preset.sub})
-                </span>
+                {preset.label}
               </button>
             );
           })}
@@ -339,7 +338,7 @@ function ScorecardContent() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-blue-600" />
-                <h3 className="font-bold text-slate-900 text-sm">Select Custom Range (BS / AD)</h3>
+                <h3 className="font-bold text-slate-900 text-sm">Select custom range (BS / AD)</h3>
               </div>
               <button
                 onClick={() => setShowCustomModal(false)}
@@ -351,7 +350,7 @@ function ScorecardContent() {
 
             <div className="space-y-3 text-xs">
               <div>
-                <label htmlFor="scorecard-start-date-gregorian-ad" className="font-bold text-slate-700 block mb-1">Start Date (Gregorian / AD):</label>
+                <label htmlFor="scorecard-start-date-gregorian-ad" className="font-bold text-slate-700 block mb-1">Start date (Gregorian / AD):</label>
                 <input id="scorecard-start-date-gregorian-ad"
                   type="date"
                   value={customRange.start}
@@ -360,7 +359,7 @@ function ScorecardContent() {
                 />
               </div>
               <div>
-                <label htmlFor="scorecard-end-date-gregorian-ad" className="font-bold text-slate-700 block mb-1">End Date (Gregorian / AD):</label>
+                <label htmlFor="scorecard-end-date-gregorian-ad" className="font-bold text-slate-700 block mb-1">End date (Gregorian / AD):</label>
                 <input id="scorecard-end-date-gregorian-ad"
                   type="date"
                   value={customRange.end}
@@ -368,7 +367,7 @@ function ScorecardContent() {
                   className="w-full rounded-xl border border-slate-200 p-2.5 font-medium"
                 />
               </div>
-              <p className="text-[11px] text-slate-500 italic">
+              <p className="text-[11px] text-slate-500 ">
                 Nepali Bikram Sambat equivalents will automatically compute for all beat logs and cheque deposits.
               </p>
             </div>
@@ -387,7 +386,7 @@ function ScorecardContent() {
                 }}
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700"
               >
-                Apply Custom Period
+                Apply custom period
               </button>
             </div>
           </div>
@@ -398,19 +397,12 @@ function ScorecardContent() {
       {/* 3a/3d. SIDE-BY-SIDE OFFICER CARDS (CLICKABLE FOR DRILLDOWN)               */}
       {/* ========================================================================= */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="text-xs font-bold text-slate-500 ">
-            Officer Field Cards (Click any card to open 360° Activity Ledger)
-          </div>
-          <span className="text-[11px] text-blue-600 font-bold hidden sm:inline">
-            Interactive Cards • Click to inspect stores, cheques &amp; tasks
-          </span>
-        </div>
+        <p className="text-[13px] text-slate-500">Open a card to see that officer&apos;s stores, cheques and tasks</p>
 
         {visibleCards.length === 0 ? (
           <EmptyState
             type="generic"
-            title="No Officer Scorecards Found"
+            title="No officer scorecards found"
             description="No scorecard metrics match the current officer filter."
           />
         ) : (
@@ -453,21 +445,15 @@ function ScorecardContent() {
                   <div className="flex flex-col items-end gap-1.5">
                     {!isOfficer && (
                       <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-black   ${
-                          rank === 0
-                            ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                            : rank === 1
-                            ? 'bg-slate-100 text-slate-700 border border-slate-200'
-                            : 'bg-orange-100 text-orange-900 border border-orange-200'
-                        }`}
+                        className={`font-mono text-xs ${rank === 0 ? 'font-medium text-slate-900' : 'text-slate-500'}`}
                       >
-                        Rank #{rank + 1}
+                        #{rank + 1}
                       </span>
                     )}
 
                     {/* Duty Status Pill */}
                     <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${dutyMeta.badge}`}>
+                      <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${dutyMeta.badge}`}>
                         {dutyMeta.label}
                       </span>
                       {isAdmin && (
@@ -477,7 +463,7 @@ function ScorecardContent() {
                             e.stopPropagation();
                             handleDutyToggle(sc.officerId, duty);
                           }}
-                          className="text-[10px] font-bold text-blue-600 hover:underline"
+                          className="text-[11px] font-bold text-blue-600 hover:underline"
                           title="Toggle duty status"
                         >
                           {isOffline ? 'Set Online' : 'Set Offline'}
@@ -490,7 +476,7 @@ function ScorecardContent() {
                 {/* Core KPI: Beat Compliance % */}
                 <div className="rounded-xl bg-slate-50 p-4 border border-slate-100 space-y-2">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span>Beat Compliance</span>
+                    <span>Beat compliance</span>
                     <strong className="text-sm font-black text-blue-600">{sc.beatCompliancePct}%</strong>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
@@ -502,15 +488,15 @@ function ScorecardContent() {
                   <div className="flex justify-between text-[11px] text-slate-500 pt-1">
                     <span>Visited: <strong className="text-slate-900 font-bold">{sc.storesVisited}</strong></span>
                     <span>Skipped: <strong className="text-rose-700 font-bold">{sc.storesSkipped}</strong></span>
-                    <span>Avg Duration: <strong className="text-slate-900 font-bold">{sc.avgVisitDurationMinutes > 0 ? `${sc.avgVisitDurationMinutes}m` : '—'}</strong></span>
+                    <span>Avg duration: <strong className="text-slate-900 font-bold">{sc.avgVisitDurationMinutes > 0 ? `${sc.avgVisitDurationMinutes}m` : '—'}</strong></span>
                   </div>
                 </div>
 
                 {/* 3e. Skip Reasons Breakdown & Clickable Link */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="text-[10px] font-bold text-slate-500">
-                      Missed Stores Breakdown:
+                    <div className="text-[11px] font-bold text-slate-500">
+                      Missed stores breakdown:
                     </div>
                     <button
                       type="button"
@@ -540,42 +526,42 @@ function ScorecardContent() {
 
                 {/* Calling & Conversion */}
                 <div className="space-y-2 border-t border-slate-100 pt-3">
-                  <div className="text-[10px] font-bold text-slate-500">
-                    Calls &amp; Order Conversion
+                  <div className="text-[11px] font-bold text-slate-500">
+                    Calls &amp; order conversion
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
                       <div className="text-base font-black text-slate-900">{sc.callsMade}</div>
-                      <div className="text-[10px] text-slate-500">Calls Made</div>
+                      <div className="text-[11px] text-slate-500">Calls made</div>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
                       <div className="text-base font-black text-emerald-600">{sc.productiveCalls}</div>
-                      <div className="text-[10px] text-slate-500">Orders Coll.</div>
+                      <div className="text-[11px] text-slate-500">Orders coll.</div>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
                       <div className="text-base font-black text-blue-600">{sc.callToOrderRatioPct}%</div>
-                      <div className="text-[10px] text-slate-500">Conversion %</div>
+                      <div className="text-[11px] text-slate-500">Conversion %</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Cheques & Collection Speed */}
                 <div className="space-y-2 border-t border-slate-100 pt-3">
-                  <div className="text-[10px] font-bold text-slate-500">
-                    Cheque Custody &amp; Collection Discipline
+                  <div className="text-[11px] font-bold text-slate-500">
+                    Cheque custody &amp; collection discipline
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
                       <div className="text-base font-black text-slate-900">{sc.chequesCollected}</div>
-                      <div className="text-[10px] text-slate-500">Cheques Coll.</div>
+                      <div className="text-[11px] text-slate-500">Cheques coll.</div>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
                       <div className="text-base font-black text-amber-600">{sc.avgChequeHandoverDays > 0 ? `${sc.avgChequeHandoverDays}d` : '—'}</div>
-                      <div className="text-[10px] text-slate-500">Handover Gap</div>
+                      <div className="text-[11px] text-slate-500">Handover gap</div>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-2 border border-slate-100">
                       <div className="text-base font-black text-rose-600">{sc.chequesOverdue}</div>
-                      <div className="text-[10px] text-slate-500">Overdue</div>
+                      <div className="text-[11px] text-slate-500">Overdue</div>
                     </div>
                   </div>
                 </div>
@@ -613,33 +599,33 @@ function ScorecardContent() {
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-bold text-slate-800 flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Latest Daily Summary</span>
+                          <span>Latest daily summary</span>
                         </span>
-                        <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                        <span className="text-[11px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
                           {latestSummary.dateBs}
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-600 space-y-1">
                         <div className="flex justify-between">
-                          <span>Beat Visits:</span>
+                          <span>Beat visits:</span>
                           <span className="font-bold text-slate-900">
                             {latestSummary.storesVisited}/{latestSummary.totalStores} ({latestSummary.compliancePct}%)
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Calls &amp; Orders:</span>
+                          <span>Calls &amp; orders:</span>
                           <span className="font-semibold text-slate-700">
                             {latestSummary.callsMade} calls &bull; {latestSummary.ordersCollected} orders
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Cheques Collected:</span>
+                          <span>Cheques collected:</span>
                           <span className="font-semibold text-emerald-700 font-mono">
                             {latestSummary.chequesCollected} (<Money>{latestSummary.chequeTotalAmount.toLocaleString()}</Money>)
                           </span>
                         </div>
-                        <div className="flex justify-between text-[10px] text-slate-500">
-                          <span>Field Time:</span>
+                        <div className="flex justify-between text-[11px] text-slate-500">
+                          <span>Field time:</span>
                           <span>{latestSummary.startTime} – {latestSummary.endTime} ({latestSummary.durationFormatted})</span>
                         </div>
                       </div>
@@ -686,7 +672,7 @@ function ScorecardContent() {
           <div className="py-8">
             <EmptyState
               type="visits"
-              title="No Staff Scorecards Available"
+              title="No staff scorecards available"
               description="Staff performance scorecards will appear once sales officers log activity or complete beat store visits."
             />
           </div>
@@ -695,14 +681,14 @@ function ScorecardContent() {
             <table className="w-full text-left text-xs text-slate-700">
               <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-4 font-bold text-slate-900">Operational Metric</th>
+                  <th className="py-3 px-4 font-bold text-slate-900">Operational metric</th>
                   {displayScorecards.map((sc) => (
                     <th key={sc.officerId} className="py-3 px-4 text-center font-bold text-slate-900">
                       {sc.officerName}
                     </th>
                   ))}
                   {displayScorecards.length > 1 && (
-                    <th className="py-3 px-4 text-center font-black text-slate-900">Best Leader</th>
+                    <th className="py-3 px-4 text-center font-black text-slate-900">Best leader</th>
                   )}
                 </tr>
               </thead>
@@ -821,7 +807,7 @@ function ScorecardContent() {
                       8-Week Compliance: <strong className="text-slate-900">{trend.start}% → {trend.current}%</strong>
                     </div>
                   </div>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-black border ${trend.statusColor}`}>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-black border ${trend.statusColor}`}>
                     {trend.status} ({trend.change})
                   </span>
                 </div>
@@ -865,7 +851,7 @@ function ScorecardContent() {
                     ))}
                   </svg>
 
-                  <div className="flex justify-between text-[10px] text-slate-500 font-bold mt-2 pt-1 border-t border-slate-100">
+                  <div className="flex justify-between text-[11px] text-slate-500 font-bold mt-2 pt-1 border-t border-slate-100">
                     <span>W1 ({trend.start}%)</span>
                     <span>W4</span>
                     <span>W8 ({trend.current}%)</span>
@@ -892,7 +878,7 @@ function ScorecardContent() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-black text-slate-900">{selectedOfficerSc.officerName}</h2>
-                    <span className="rounded-md bg-blue-100 text-blue-800 text-[10px] font-black px-2 py-0.5">
+                    <span className="rounded-md bg-blue-100 text-blue-800 text-[11px] font-black px-2 py-0.5">
                       {selectedOfficerSc.beatCompliancePct}% Beat Compliance
                     </span>
                   </div>
@@ -911,11 +897,11 @@ function ScorecardContent() {
             {/* Modal Navigation Tabs */}
             <div className="flex border-b border-slate-200 bg-slate-100/60 overflow-x-auto px-4 gap-1 pt-2">
               {[
-                { key: 'STORES', label: 'Stores & Beat', count: officerStores.length },
+                { key: 'STORES', label: 'Stores & beat', count: officerStores.length },
                 { key: 'CHEQUES', label: 'Cheques', count: officerCheques.length },
-                { key: 'TASKS', label: 'Pending Tasks', count: officerTasks.length },
-                { key: 'CALLS', label: 'Field Calls', count: officerCalls.length },
-                { key: 'PHOTOS', label: 'Shelf Photos', count: officerPhotos.length },
+                { key: 'TASKS', label: 'Pending tasks', count: officerTasks.length },
+                { key: 'CALLS', label: 'Field calls', count: officerCalls.length },
+                { key: 'PHOTOS', label: 'Shelf photos', count: officerPhotos.length },
                 { key: 'DOCS', label: 'Documents', count: officerDocs.length },
               ].map((t) => (
                 <button
@@ -928,7 +914,7 @@ function ScorecardContent() {
                   }`}
                 >
                   <span>{t.label}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  <span className={`text-[11px] px-1.5 py-0.2 rounded-full ${
                     drilldownTab === t.key ? 'bg-blue-100 text-blue-800 font-black' : 'bg-slate-200 text-slate-600'
                   }`}>
                     {t.count}
@@ -961,13 +947,13 @@ function ScorecardContent() {
                         </div>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                               st.status === 'VISITED'
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : st.status === 'SKIPPED'
                                 ? 'bg-rose-100 text-rose-800'
                                 : 'bg-slate-100 text-slate-600'
-                            }`}
+                            } enum-label`}
                           >
                             {st.status}
                           </span>
@@ -1011,7 +997,7 @@ function ScorecardContent() {
                           </div>
                           <div className="text-right">
                             <div className="font-black text-slate-900 text-xs"><Money>{ch.amount.toLocaleString()}</Money></div>
-                            <span className="rounded bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 text-[9px]">
+                            <span className="rounded bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 text-[11px] enum-label">
                               {ch.status}
                             </span>
                           </div>
@@ -1035,14 +1021,14 @@ function ScorecardContent() {
                         <div className="space-y-1">
                           <div className="font-bold text-slate-900">{t.title}</div>
                           <p className="text-[11px] text-slate-500">{t.description}</p>
-                          <div className="text-[10px] text-slate-500">Due: {t.dueDateBs} ({t.dueDateAd})</div>
+                          <div className="text-[11px] text-slate-500">Due: {t.dueDateBs} ({t.dueDateAd})</div>
                         </div>
                         <span
-                          className={`rounded px-2 py-0.5 text-[10px] font-bold shrink-0 ${
+                          className={`rounded px-2 py-0.5 text-[11px] font-bold shrink-0 ${
                             t.priority === 'HIGH'
                               ? 'bg-rose-100 text-rose-800'
                               : 'bg-blue-100 text-blue-800'
-                          }`}
+                          } enum-label`}
                         >
                           {t.priority}
                         </span>
@@ -1070,7 +1056,7 @@ function ScorecardContent() {
                             <div className="text-[11px] text-slate-500">{c.label} • Duration: {Math.round(c.durationSeconds / 60)}m</div>
                           </div>
                           <span
-                            className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                            className={`rounded px-2 py-0.5 text-[11px] font-bold ${
                               c.outcome === 'Order Received'
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : 'bg-slate-100 text-slate-700'
@@ -1113,7 +1099,7 @@ function ScorecardContent() {
                             )}
                             <div className="p-2.5 space-y-0.5">
                               <div className="font-bold text-slate-900 truncate">{p.storeName}</div>
-                              <div className="text-[10px] text-slate-500">{p.dateBs}</div>
+                              <div className="text-[11px] text-slate-500">{p.dateBs}</div>
                             </div>
                           </div>
                         );
@@ -1140,7 +1126,7 @@ function ScorecardContent() {
                             <div className="font-bold text-slate-900">{doc.documentType}</div>
                             <div className="text-[11px] text-slate-500">{doc.storeName} • Ref: {doc.referenceNumber || 'N/A'}</div>
                           </div>
-                          <span className="rounded bg-blue-100 text-blue-800 font-bold px-2 py-0.5 text-[10px]">
+                          <span className="rounded bg-blue-100 text-blue-800 font-bold px-2 py-0.5 text-[11px] enum-label">
                             {doc.status}
                           </span>
                         </div>
@@ -1157,7 +1143,7 @@ function ScorecardContent() {
                 onClick={() => setDrilldownOfficerId(null)}
                 className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition"
               >
-                Close Activity Ledger
+                Close activity ledger
               </button>
             </div>
           </div>
@@ -1174,7 +1160,7 @@ function ScorecardContent() {
               <div>
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <h3 className="font-bold text-slate-900 text-base">Skipped Stores Log &amp; Root Cause Analysis</h3>
+                  <h3 className="font-bold text-slate-900 text-base">Skipped stores log &amp; root cause analysis</h3>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Allows sales managers to detect recurring operational bottlenecks across retail store routes.
@@ -1191,7 +1177,7 @@ function ScorecardContent() {
 
             {/* Officer Filter in Modal */}
             <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/40 flex items-center gap-2 text-xs">
-              <span className="font-bold text-slate-600">Filter Officer:</span>
+              <span className="font-bold text-slate-600">Filter officer:</span>
               <div className="flex gap-1.5">
                 {[
                   { id: 'ALL', name: 'All Officers' },
@@ -1219,10 +1205,10 @@ function ScorecardContent() {
                   <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
                     <tr>
                       <th className="py-2.5 px-3">Date (BS/AD)</th>
-                      <th className="py-2.5 px-3">Store Name &amp; Area</th>
+                      <th className="py-2.5 px-3">Store name &amp; area</th>
                       <th className="py-2.5 px-3">Officer</th>
-                      <th className="py-2.5 px-3">Skip Reason</th>
-                      <th className="py-2.5 px-3">Notes / Operational Context</th>
+                      <th className="py-2.5 px-3">Skip reason</th>
+                      <th className="py-2.5 px-3">Notes / operational context</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1237,15 +1223,15 @@ function ScorecardContent() {
                         <tr key={item.id} className="hover:bg-slate-50 transition">
                           <td className="py-3 px-3">
                             <div className="font-bold text-slate-900">{item.dateBs}</div>
-                            <div className="text-[10px] text-slate-500">{item.dateAd}</div>
+                            <div className="text-[11px] text-slate-500">{item.dateAd}</div>
                           </td>
                           <td className="py-3 px-3">
                             <div className="font-bold text-slate-900">{item.storeName}</div>
-                            <div className="text-[10px] text-slate-500">{item.area}</div>
+                            <div className="text-[11px] text-slate-500">{item.area}</div>
                           </td>
                           <td className="py-3 px-3 font-semibold text-slate-700">{item.officerName}</td>
                           <td className="py-3 px-3">
-                            <span className="rounded bg-rose-100 text-rose-800 font-bold px-2 py-0.5 text-[10px]">
+                            <span className="rounded bg-rose-100 text-rose-800 font-bold px-2 py-0.5 text-[11px]">
                               {item.skipReason}
                             </span>
                           </td>
@@ -1264,7 +1250,7 @@ function ScorecardContent() {
                 onClick={() => setShowSkipModal(false)}
                 className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition"
               >
-                Close Log
+                Close log
               </button>
             </div>
           </div>
@@ -1280,7 +1266,7 @@ export default function ScorecardPage() {
       <Suspense
         fallback={
           <div className="p-8 text-center text-slate-500 font-medium">
-            Loading Scorecard and Officer Metrics…
+            Loading scorecard and officer metrics…
           </div>
         }
       >

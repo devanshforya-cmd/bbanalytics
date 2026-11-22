@@ -12,7 +12,7 @@ import {
   CreditCard,
   ShoppingBag,
   LogOut,
-  Sparkles,
+  Lightbulb,
   Upload,
 } from 'lucide-react';
 import { BeatItem } from '@/lib/types';
@@ -108,7 +108,7 @@ export default function CheckInFlow({
                   <MapPin className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Check In at Store</h3>
+                  <h3 className="text-lg font-bold text-slate-900">Check in at store</h3>
                   <p className="text-xs text-slate-500 font-medium">{targetBeat.storeName}</p>
                 </div>
               </div>
@@ -137,7 +137,7 @@ export default function CheckInFlow({
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <Camera className="w-4 h-4 text-blue-600" />
-                    <span>Store Entrance Photo</span>
+                    <span>Store entrance photo</span>
                     <span className="text-rose-600 font-bold">*Required</span>
                   </label>
                   {photoUrl && (
@@ -193,7 +193,7 @@ export default function CheckInFlow({
             <button
               type="button"
               onClick={onDismissCheckIn}
-              className="px-5 h-14 rounded-2xl border border-slate-300 bg-white font-semibold text-slate-700 hover:bg-slate-50 text-sm transition"
+              className="px-5 h-14 rounded-lg border border-slate-300 bg-white font-semibold text-slate-700 hover:bg-slate-50 text-sm transition"
             >
               Cancel
             </button>
@@ -204,7 +204,7 @@ export default function CheckInFlow({
               className="flex-1 h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-base shadow-sm transition flex items-center justify-center gap-2"
             >
               <MapPin className="w-5 h-5" />
-              <span>Check In</span>
+              <span>Check in</span>
             </button>
           </div>
         </div>
@@ -217,28 +217,28 @@ export default function CheckInFlow({
     const actions = [
       {
         id: 'STOCK_COUNT',
-        title: 'Shelf Stock Count',
+        title: 'Shelf stock count',
         desc: 'Audit stock across your saved product catalogue',
         icon: Layers,
         color: 'text-purple-600 bg-purple-50',
       },
       {
         id: 'SHELF_PHOTOS',
-        title: 'Shelf Before & After Photos',
+        title: 'Shelf before & after photos',
         desc: 'Capture merchandising compliance & placement evidence',
         icon: Camera,
         color: 'text-blue-600 bg-blue-50',
       },
       {
         id: 'SECONDARY_ORDER',
-        title: 'Book Secondary Order',
+        title: 'Book secondary order',
         desc: 'Take replenishment order with live store margins',
         icon: ShoppingBag,
         color: 'text-emerald-600 bg-emerald-50',
       },
       {
         id: 'COLLECT_CHEQUE',
-        title: 'Collect Cheque',
+        title: 'Collect cheque',
         desc: 'Record physical bank payment & photograph',
         icon: CreditCard,
         color: 'text-amber-600 bg-amber-50',
@@ -251,11 +251,11 @@ export default function CheckInFlow({
           {/* Active Store Workspace Header with Live Timer (Section 5) */}
           <div className="bg-slate-900 text-white px-5 sm:px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="w-3 h-3 rounded-full bg-emerald-500" />
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-emerald-400 font-bold ">
-                    In-Store Session
+                  <span className="text-[11px] text-emerald-400 font-bold ">
+                    In-store session
                   </span>
                   <span className="text-xs font-mono font-bold text-amber-300 bg-slate-800 px-2 py-0.5 rounded-full flex items-center gap-1">
                     <Clock className="w-3 h-3" />
@@ -326,7 +326,7 @@ export default function CheckInFlow({
             </div>
             <button
               onClick={onConcludeStoreVisit}
-              className="flex-1 sm:flex-initial sm:px-8 h-14 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-base font-bold shadow-sm transition flex items-center justify-center gap-2"
+              className="flex-1 sm:flex-initial sm:px-8 h-14 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-base font-bold shadow-sm transition flex items-center justify-center gap-2"
             >
               <LogOut className="w-5 h-5" />
               <span>Check Out ({formatTimer(elapsedSeconds)})</span>

@@ -129,7 +129,7 @@ export default function OrderPage() {
             <AlertCircle className="mx-auto h-10 w-10 text-rose-500" />
             <h2 className="text-xl font-bold text-slate-900">Order not found</h2>
             <p className="text-xs text-slate-500">This order was deleted, or it is outside your brands or team.</p>
-            <Link href="/orderflow/daily-orders" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white"><ArrowLeft className="h-4 w-4" /> Back to Daily Orders</Link>
+            <Link href="/orderflow/daily-orders" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white"><ArrowLeft className="h-4 w-4" /> Back to daily orders</Link>
           </div>
         ) : null}
       </PageGuard>
@@ -249,9 +249,9 @@ export default function OrderPage() {
   return (
     <PageGuard feature={["orderflow", "order_desk"]}>
       <div className="mx-auto max-w-6xl space-y-5 pb-28">
-        <Breadcrumbs items={[{ label: 'Orderflow', href: '/orderflow/daily-orders' }, { label: 'Daily Orders', href: '/orderflow/daily-orders' }, { label: displayDocumentId(order.orderNumber) }]} />
+        <Breadcrumbs items={[{ label: 'Online orders', href: '/orderflow/daily-orders' }, { label: 'Daily orders', href: '/orderflow/daily-orders' }, { label: displayDocumentId(order.orderNumber) }]} />
 
-        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs sm:flex-row sm:items-center">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-mono text-2xl font-black tracking-tight text-slate-900">{displayDocumentId(order.orderNumber)}</h1>
@@ -263,7 +263,7 @@ export default function OrderPage() {
               {order.legacyOrderNumber && <> · earlier ID <span className="font-mono">{order.legacyOrderNumber}</span></>}
             </p>
           </div>
-          <Link href="/orderflow/daily-orders" className="inline-flex items-center gap-1.5 self-start rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 sm:self-center"><ArrowLeft className="h-3.5 w-3.5" /> Daily Orders</Link>
+          <Link href="/orderflow/daily-orders" className="inline-flex items-center gap-1.5 self-start rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 sm:self-center"><ArrowLeft className="h-3.5 w-3.5" /> Daily orders</Link>
         </div>
 
         <section aria-labelledby="order-status" className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs sm:flex-row sm:items-start sm:justify-between">
@@ -330,7 +330,7 @@ export default function OrderPage() {
                 {draft.items.map((item, index) => (
                   <li key={`${item.productId}-${index}`} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-xs">
                     <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-1.5 font-semibold text-slate-900">{isCombo(item.productId) && <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700"><Layers className="h-3 w-3" /> Combo</span>}<span className="truncate">{item.productName}</span></span>
+                      <span className="flex items-center gap-1.5 font-semibold text-slate-900">{isCombo(item.productId) && <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-[11px] font-bold text-indigo-700"><Layers className="h-3 w-3" /> Combo</span>}<span className="truncate">{item.productName}</span></span>
                       <span className="text-[11px] text-slate-500">{money(item.unitPrice)} each{item.catalogUnitPrice !== undefined && item.catalogUnitPrice !== item.unitPrice ? ` (list ${money(item.catalogUnitPrice)})` : ''}</span>
                       {isCombo(item.productId) && canEdit && <button type="button" onClick={() => expandCombo(index)} className="ml-2 text-[11px] font-bold text-blue-700 hover:underline">Change what is inside</button>}
                     </span>
@@ -364,7 +364,7 @@ export default function OrderPage() {
                   <ul className="max-h-52 overflow-y-auto">
                     {pickable.map((entry) => (
                       <li key={entry.id}><button type="button" onClick={() => addCatalogueItem(entry.id)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-blue-50">
-                        <span className="flex min-w-0 items-center gap-1.5">{entry.combo && <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700">Combo</span>}<span className="truncate font-medium text-slate-800">{entry.name}</span></span>
+                        <span className="flex min-w-0 items-center gap-1.5">{entry.combo && <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-[11px] font-bold text-indigo-700">Combo</span>}<span className="truncate font-medium text-slate-800">{entry.name}</span></span>
                         <span className="shrink-0 font-bold text-slate-600">{money(entry.price)} <Plus className="ml-1 inline h-3 w-3 text-blue-600" /></span>
                       </button></li>
                     ))}
@@ -429,7 +429,7 @@ export default function OrderPage() {
                             <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px]"><span className="rounded bg-rose-50 px-1.5 py-0.5 text-rose-800 line-through decoration-rose-300">{entry.oldValue}</span><ArrowRight className="h-3 w-3 text-slate-400" /><span className="rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-800">{entry.newValue}</span></span></li>
                         ) : <li key={index} className="text-slate-600">{entry.note}</li>)}
                       </ul>
-                      {group.entries[0].reason && <p className="mt-2 text-[11px] italic text-slate-600">Reason: {group.entries[0].reason}</p>}
+                      {group.entries[0].reason && <p className="mt-2 text-[11px] text-slate-600">Reason: {group.entries[0].reason}</p>}
                     </li>
                   ))}
                 </ol>
@@ -444,7 +444,7 @@ export default function OrderPage() {
               <span className="text-xs text-slate-600">{changes.length ? <><strong className="text-slate-900">{changes.length} unsaved change{changes.length === 1 ? '' : 's'}</strong> · {changes.map((change) => change.field).join(', ')}</> : 'No changes yet'}</span>
               <div className="flex gap-2">
                 <button type="button" disabled={!changes.length} onClick={() => { setDraft(draftFrom(order)); setErrors({}); }} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40">Discard</button>
-                <button type="button" disabled={!changes.length} onClick={review} className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">Review changes</button>
+                <button type="button" disabled={!changes.length} onClick={review} className="btn btn-primary disabled:cursor-not-allowed disabled:bg-blue-300">Review changes</button>
               </div>
             </div>
           </div>
@@ -479,7 +479,7 @@ export default function OrderPage() {
               </div>
               <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3">
                 <button type="button" onClick={() => setConfirming(false)} disabled={isSubmitting} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Keep editing</button>
-                <button type="button" onClick={save} disabled={isSubmitting || (needsReason && !reason.trim())} className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
+                <button type="button" onClick={save} disabled={isSubmitting || (needsReason && !reason.trim())} className="btn btn-primary disabled:cursor-not-allowed disabled:bg-blue-300">
                   <Check className="h-3.5 w-3.5" /> {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save changes'}
                 </button>
               </div>

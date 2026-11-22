@@ -21,7 +21,7 @@ import {
   UploadCloud,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
+  Lightbulb,
   Columns,
   Maximize2,
   Image as ImageIcon,
@@ -131,8 +131,7 @@ export default function ShelfPhotosPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <Camera className="w-6 h-6 text-brand-600" />
-            <span>Shelf Share & Planogram Audit Archive</span>
+                        <span>Shelf photos</span>
 <InfoTip label="About this page">Multi-angle Before & After shelf photos across multiple racks and gondolas per store visit.</InfoTip></h1>
           
         </div>
@@ -141,7 +140,7 @@ export default function ShelfPhotosPage() {
           <DownloadButton datasets={['shelf_photos']} records={{ shelfPhotos: filtered }} fileLabel="Shelf-photos" />
           {toastMsg && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold shadow-xs">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <Lightbulb className="w-3.5 h-3.5 text-emerald-600" />
               <span>{toastMsg}</span>
             </div>
           )}
@@ -153,7 +152,7 @@ export default function ShelfPhotosPage() {
               className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-colors min-h-[44px]"
             >
               <UploadCloud className="w-4 h-4" />
-              <span>Upload Shelf Evidence</span>
+              <span>Upload shelf evidence</span>
             </button>
           )}
         </div>
@@ -163,7 +162,7 @@ export default function ShelfPhotosPage() {
       <AdvancedFilterBar
         criteria={filterCriteria}
         onChange={setFilterCriteria}
-        title="Filter Shelf Audit Archive"
+        title="Filter shelf audit archive"
         hideBrand={true}
       />
 
@@ -172,7 +171,7 @@ export default function ShelfPhotosPage() {
         {filtered.length === 0 ? (
           <EmptyState
             type="photos"
-            title="No Shelf Photos Found"
+            title="No shelf photos found"
             description="No before/after shelf share photos match your filter criteria or officer assignment."
           />
         ) : (
@@ -191,8 +190,8 @@ export default function ShelfPhotosPage() {
                       Rack: {item.rackSection}
                     </span>
                   )}
-                  <span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold ">
-                    GPS Verified Audit
+                  <span className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[11px] font-bold ">
+                    GPS verified audit
                   </span>
                 </div>
                 <div className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
@@ -217,7 +216,7 @@ export default function ShelfPhotosPage() {
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-blue-700 transition shadow-2xs"
                 >
                   <Columns className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Compare Before / After</span>
+                  <span>Compare before / after</span>
                 </button>
                 <div className="text-xs text-slate-500 font-mono hidden sm:block">
                   {item.beforePhotoUrls.length} Before • {item.afterPhotoUrls.length} After
@@ -254,12 +253,12 @@ export default function ShelfPhotosPage() {
                       <img
                         src={url}
                         alt={`Before shelf angle ${idx + 1}`}
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        className="h-full w-full object-cover transition-transform duration-200"
                       />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                         <ZoomIn className="w-5 h-5" />
                       </div>
-                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px] font-mono">
+                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[11px] font-mono">
                         Angle #{idx + 1}
                       </span>
                     </div>
@@ -294,12 +293,12 @@ export default function ShelfPhotosPage() {
                       <img
                         src={url}
                         alt={`After shelf angle ${idx + 1}`}
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        className="h-full w-full object-cover transition-transform duration-200"
                       />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                         <ZoomIn className="w-5 h-5" />
                       </div>
-                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px] font-mono">
+                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[11px] font-mono">
                         Angle #{idx + 1}
                       </span>
                     </div>
@@ -398,7 +397,7 @@ export default function ShelfPhotosPage() {
               <div className="space-y-2 flex flex-col">
                 <div className="flex items-center justify-between bg-amber-950/40 border border-amber-800/40 px-3 py-1.5 rounded-xl">
                   <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
                     BEFORE ARRANGEMENT
                   </span>
                   <span className="text-[11px] text-amber-300/80 font-mono">
@@ -436,7 +435,7 @@ export default function ShelfPhotosPage() {
               <div className="space-y-2 flex flex-col">
                 <div className="flex items-center justify-between bg-emerald-950/40 border border-emerald-800/40 px-3 py-1.5 rounded-xl">
                   <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
                     AFTER ARRANGEMENT (PLANOGRAM COMPLIANT)
                   </span>
                   <span className="text-[11px] text-emerald-300/80 font-mono">
@@ -478,7 +477,7 @@ export default function ShelfPhotosPage() {
                 onClick={() => setComparePhoto(null)}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs transition"
               >
-                Close Comparison
+                Close comparison
               </button>
             </div>
           </div>
@@ -494,7 +493,7 @@ export default function ShelfPhotosPage() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Camera className="w-5 h-5 text-brand-600" />
-                <h3 className="font-bold text-slate-900 text-base">Upload Shelf Evidence (Before & After)</h3>
+                <h3 className="font-bold text-slate-900 text-base">Upload shelf evidence (before & after)</h3>
               </div>
               <button
                 type="button"
@@ -509,7 +508,7 @@ export default function ShelfPhotosPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="shelf-photos-store-outlet-name" className="block text-xs font-bold text-slate-700 mb-1">Store / Outlet Name *</label>
+                  <label htmlFor="shelf-photos-store-outlet-name" className="block text-xs font-bold text-slate-700 mb-1">Store / outlet name *</label>
                   <select id="shelf-photos-store-outlet-name"
                     value={uploadStoreName}
                     onChange={(e) => setUploadStoreName(e.target.value)}
@@ -522,7 +521,7 @@ export default function ShelfPhotosPage() {
                         </option>
                       ))}
                     </optgroup>
-                    <optgroup label="Distributor Branches">
+                    <optgroup label="Distributor branches">
                       {branches.map((b) => (
                         <option key={b.id} value={b.name}>
                           {b.name} ({b.distributorName})
@@ -533,8 +532,8 @@ export default function ShelfPhotosPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Rack / Section Label *</label>
-                  <input aria-label="Rack / Section Label"
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Rack / section label *</label>
+                  <input aria-label="Rack / section label"
                     type="text"
                     required
                     value={uploadSection}
@@ -549,7 +548,7 @@ export default function ShelfPhotosPage() {
               <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200">
                 <CameraCapture
                 folder="shelf_photos"
-                  label="Before Arrangement Photos"
+                  label="Before arrangement photos"
                   sublabel="Capture or browse shelf arrangement photos before audit / restock"
                   maxFiles={6}
                   existingUrls={uploadBeforeUrls}
@@ -564,7 +563,7 @@ export default function ShelfPhotosPage() {
               <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
                 <CameraCapture
                 folder="shelf_photos"
-                  label="After Arrangement Photos"
+                  label="After arrangement photos"
                   sublabel="Capture or browse aligned shelf photos after planogram restock"
                   maxFiles={6}
                   existingUrls={uploadAfterUrls}
@@ -587,7 +586,7 @@ export default function ShelfPhotosPage() {
                   type="submit"
                   className="px-5 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-sm"
                 >
-                  Save Multi-Angle Photos
+                  Save multi-angle photos
                 </button>
               </div>
             </form>

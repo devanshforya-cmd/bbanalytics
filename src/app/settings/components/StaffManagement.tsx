@@ -231,7 +231,7 @@ export default function StaffManagement() {
         <button
           type="button"
           onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 shadow-xs transition-colors"
+          className="btn btn-primary"
         >
           <Plus className="w-4 h-4" />
           <span>Add person</span>
@@ -259,7 +259,7 @@ export default function StaffManagement() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-slate-900 text-sm">{u.fullName}</span>
                       {u.isSuperAdmin ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800">
                           Super Admin
                         </span>
                       ) : (() => {
@@ -277,7 +277,7 @@ export default function StaffManagement() {
                         );
                       })()}
                       <span
-                        className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                           isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
                         }`}
                       >
@@ -374,11 +374,11 @@ export default function StaffManagement() {
               {/* SECTION: BASIC INFO */}
               <div>
                 <div className="text-[11px] font-bold text-slate-500 mb-2">
-                  Basic Information
+                  Basic information
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div>
-                    <label htmlFor="staffmanagement-full-name" className="block font-bold text-slate-700 mb-1">Full Name *</label>
+                    <label htmlFor="staffmanagement-full-name" className="block font-bold text-slate-700 mb-1">Full name *</label>
                     <input id="staffmanagement-full-name"
                       type="text"
                       required
@@ -389,7 +389,7 @@ export default function StaffManagement() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="staffmanagement-mobile-number" className="block font-bold text-slate-700 mb-1">Mobile Number *</label>
+                    <label htmlFor="staffmanagement-mobile-number" className="block font-bold text-slate-700 mb-1">Mobile number *</label>
                     <input id="staffmanagement-mobile-number"
                       type="tel"
                       required
@@ -400,7 +400,7 @@ export default function StaffManagement() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="staffmanagement-email-address" className="block font-bold text-slate-700 mb-1">Email Address *</label>
+                    <label htmlFor="staffmanagement-email-address" className="block font-bold text-slate-700 mb-1">Email address *</label>
                     <input id="staffmanagement-email-address"
                       type="email"
                       required
@@ -440,13 +440,13 @@ export default function StaffManagement() {
                     )}
                   </div>
                   <div>
-                    <label htmlFor="staffmanagement-reports-to-manager" className="block font-bold text-slate-700 mb-1">Reports To (Manager)</label>
+                    <label htmlFor="staffmanagement-reports-to-manager" className="block font-bold text-slate-700 mb-1">Reports to (manager)</label>
                     <select id="staffmanagement-reports-to-manager"
                       value={reportsToId}
                       onChange={(e) => setReportsToId(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">None (Top Level / Direct)</option>
+                      <option value="">None (top level / direct)</option>
                       {users
                         .filter((u) => !editingUser || u.id !== editingUser.id)
                         .map((mgr) => (
@@ -457,8 +457,8 @@ export default function StaffManagement() {
                     </select>
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Territory / Area</label>
-                    <input aria-label="Territory / Area"
+                    <label className="block font-bold text-slate-700 mb-1">Territory / area</label>
+                    <input aria-label="Territory / area"
                       type="text"
                       value={assignedTerritory}
                       onChange={(e) => setAssignedTerritory(e.target.value)}
@@ -559,7 +559,7 @@ export default function StaffManagement() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs disabled:opacity-60"
+                  className="btn btn-primary disabled:opacity-60"
                 >
                   {saving ? 'Saving…' : editingUser ? 'Save' : 'Create account'}
                 </button>

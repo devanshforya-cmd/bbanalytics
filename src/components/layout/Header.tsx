@@ -36,7 +36,6 @@ import {
   Info,
   Clock,
   ArrowRight,
-  Sparkles,
   Calendar,
   Mail,
   Send,
@@ -163,7 +162,7 @@ export default function Header() {
   return (
     <>
       <header
-        className={`sticky top-0 z-30 flex h-14 sm:h-16 w-full items-center justify-between gap-2 border-b px-2.5 sm:px-6 transition duration-200 border-black/[0.06] bg-white/80 backdrop-blur-xl backdrop-saturate-150`}
+        className={`sticky top-0 z-30 flex h-14 sm:h-16 w-full items-center justify-between gap-2 border-b px-2.5 sm:px-6 transition duration-200 border-black/[0.06] bg-[#fafafa]/95 backdrop-blur-sm`}
       >
         <SavingBar />
         {/* Left: Hamburger (mobile/tablet) + Clean Brand Dropdown */}
@@ -172,7 +171,7 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setShowMobileNavDrawer(true)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-800 hover:bg-black/[0.05] transition sm:h-9 sm:w-9 sm:rounded-xl sm:border sm:border-slate-200 sm:bg-white sm:shadow-2xs lg:hidden"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-800 hover:bg-black/[0.05] transition sm:h-9 sm:w-9 sm:rounded-lg sm:border sm:border-black/[0.08] sm:bg-white lg:hidden"
             aria-label="Open navigation menu"
           >
             <Menu className="h-5 w-5" />
@@ -193,14 +192,14 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setShowSearchModal(true)}
-            className="flex w-full items-center gap-2.5 px-3.5 py-1.5 rounded-xl border border-slate-200/90 bg-slate-50/70 hover:bg-white hover:border-blue-300 hover:shadow-xs text-slate-500 hover:text-slate-600 transition duration-150 shadow-2xs group cursor-pointer"
+            className="group flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg border border-black/[0.08] bg-white px-3 text-slate-500 transition-colors hover:border-black/[0.14]"
             aria-label="Search your workspace"
           >
-            <Search className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition shrink-0" />
-            <span className="text-xs text-slate-500 group-hover:text-slate-600 font-medium truncate">
-              Search your workspace
+            <Search className="h-4 w-4 shrink-0 text-slate-400" />
+            <span className="truncate text-[13px] text-slate-500">
+              Search
             </span>
-            <kbd className="ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 bg-white border border-slate-200 rounded-md shadow-2xs shrink-0">
+            <kbd className="ml-auto inline-flex shrink-0 items-center gap-0.5 rounded border border-black/[0.08] bg-slate-50 px-1.5 py-px font-mono text-[11px] text-slate-500">
               <span className="text-xs">⌘</span>K
             </kbd>
           </button>
@@ -209,8 +208,8 @@ export default function Header() {
         {/* Right: Offline Sync Pill, Date Badge, Notification Center, Profile Drawer Button */}
         <div className="flex shrink-0 items-center gap-0.5 sm:gap-2.5">
           {/* Dual Calendar Date Badge */}
-          <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 bg-slate-50/70 text-xs font-bold text-slate-700 shadow-2xs">
-            <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+          <div className="hidden items-center gap-1.5 px-2 text-[13px] text-slate-600 xl:flex">
+            <Calendar className="h-4 w-4 shrink-0 text-slate-400" />
             <span>{todayBs}</span>
           </div>
 
@@ -232,12 +231,12 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setShowNotifMenu(!showNotifMenu)}
-              className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-700 hover:bg-black/[0.05] transition sm:h-9 sm:w-9 sm:rounded-lg sm:border sm:border-slate-200 sm:bg-white sm:shadow-2xs"
+              className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-700 hover:bg-black/[0.05] transition sm:h-9 sm:w-9 sm:rounded-lg sm:border sm:border-black/[0.08] sm:bg-white"
               aria-label={unreadNotifs.length ? `View notifications, ${unreadNotifs.length} unread` : 'View notifications'}
             >
               <Bell className="h-[18px] w-[18px] sm:h-4 sm:w-4" />
               {unreadNotifs.length > 0 && (
-                <span className="absolute top-1 right-1 sm:-top-1 sm:-right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white ring-2 ring-white">
+                <span className="absolute top-1 right-1 sm:-top-1 sm:-right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 font-mono text-[11px] text-white ring-2 ring-white">
                   {unreadNotifs.length}
                 </span>
               )}
@@ -253,7 +252,7 @@ export default function Header() {
                       Notifications
                     </span>
                     {unreadNotifs.length > 0 && (
-                      <span className="rounded-full bg-rose-100 text-rose-800 px-2 py-0.5 text-[10px] font-bold">
+                      <span className="rounded-full bg-rose-100 text-rose-800 px-2 py-0.5 text-[11px] font-bold">
                         {unreadNotifs.length} unread
                       </span>
                     )}
@@ -301,7 +300,7 @@ export default function Header() {
                 <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
                   {displayedNotifs.length === 0 ? (
                     <div className="p-6 text-center text-xs text-slate-500">
-                      <Sparkles className="w-6 h-6 mx-auto text-slate-300 mb-1" />
+                      <Bell className="mx-auto mb-1 h-6 w-6 text-slate-300" />
                       <span>No {notifTab === 'UNREAD' ? 'unread ' : ''}notifications</span>
                     </div>
                   ) : (
@@ -348,7 +347,7 @@ export default function Header() {
                             <p className="text-slate-500 mt-0.5 line-clamp-2 text-[11px] leading-snug">
                               {n.message}
                             </p>
-                            <span className="text-[10px] text-slate-500 mt-1 block">
+                            <span className="text-[11px] text-slate-500 mt-1 block">
                               {isMsg ? `From ${n.senderName || 'the office'} · ` : ''}{n.createdAt ? new Date(n.createdAt).toLocaleString('en-GB', { timeZone: 'Asia/Kathmandu', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''}
                             </span>
                           </div>
@@ -377,7 +376,7 @@ export default function Header() {
                     }}
                     className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center justify-center gap-1 w-full py-1 hover:underline"
                   >
-                    <span>View Notification &amp; Audit History</span>
+                    <span>View notification &amp; audit history</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -412,7 +411,7 @@ export default function Header() {
               <div className="font-bold leading-none truncate max-w-[100px]">
                 {(currentUser?.fullName || 'User').split(' ')[0]}
               </div>
-              <div className="text-[10px] text-slate-500 font-medium leading-tight mt-0.5">
+              <div className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">
                 {duty === 'ONLINE' ? 'Online' : duty.replace('_', ' ')}
               </div>
             </div>

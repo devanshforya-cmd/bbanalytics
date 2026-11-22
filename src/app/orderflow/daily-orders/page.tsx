@@ -29,7 +29,7 @@ import {
   ClipboardCheck,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
+  Lightbulb,
   ShoppingBag,
   Gift,
   Pencil,
@@ -276,8 +276,8 @@ export default function DailyOrdersPage() {
       <div className="space-y-6 pb-24 max-w-7xl mx-auto">
         <Breadcrumbs
           items={[
-            { label: 'Orderflow', href: '/orderflow/extractor' },
-            { label: 'Daily Orders Cross-Check' },
+            { label: 'Online orders', href: '/orderflow/extractor' },
+            { label: 'Daily orders cross-check' },
           ]}
         />
 
@@ -287,7 +287,7 @@ export default function DailyOrdersPage() {
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-                  Daily Orders
+                  Daily orders
                 </h1>
                 {/* Live indicator badge */}
                 {isToday ? (
@@ -312,7 +312,7 @@ export default function DailyOrdersPage() {
               <button
                 onClick={() => handleShiftDay(-1)}
                 className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 transition"
-                title="Previous Day"
+                title="Previous day"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -333,7 +333,7 @@ export default function DailyOrdersPage() {
               <button
                 onClick={() => handleShiftDay(1)}
                 className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 transition"
-                title="Next Day"
+                title="Next day"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -381,7 +381,7 @@ export default function DailyOrdersPage() {
             {/* Counts Summary */}
             <div className="flex items-center gap-3 text-xs text-slate-600">
               <span>
-                <strong>Total Orders:</strong>{' '}
+                <strong>Total orders:</strong>{' '}
                 <span className="font-bold text-slate-900">{commercialOrders.length}</span>
               </span>
               <span className="text-slate-300">|</span>
@@ -490,7 +490,7 @@ export default function DailyOrdersPage() {
                           key={ord.id}
                           className={`transition-colors duration-500 ${
                             isInserted
-                              ? 'bg-emerald-50/80 animate-pulse'
+                              ? 'bg-emerald-50/80'
                               : isUpdated
                               ? 'bg-amber-50/80'
                               : 'hover:bg-slate-50/60'
@@ -499,13 +499,13 @@ export default function DailyOrdersPage() {
                           <td className="py-3 px-3 text-center text-sm font-black text-slate-900">{dayNumberOf.get(ord.id)}</td>
                           <td className="py-3 px-3 whitespace-nowrap">
                             <Link href={`/orderflow/orders/${ord.id}`} className="font-mono font-bold text-blue-700 hover:underline">{displayDocumentId(ord.orderNumber)}</Link>
-                            {(ord.editHistory?.length || 0) > 0 && <span className="ml-1.5 rounded bg-amber-50 px-1 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200" title="This order has been edited">Edited</span>}
+                            {(ord.editHistory?.length || 0) > 0 && <span className="ml-1.5 rounded bg-amber-50 px-1 py-0.5 text-[11px] font-bold text-amber-700 border border-amber-200" title="This order has been edited">Edited</span>}
                           </td>
                           <td className="py-3 px-3 whitespace-nowrap font-mono text-[11px] text-slate-500">
                             {ord.createdAt ? new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
                           </td>
                           <td className="py-3 px-3">
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">
                               {ord.brandCode}
                             </span>
                           </td>
@@ -513,11 +513,11 @@ export default function DailyOrdersPage() {
                             <span className="font-semibold text-slate-900 block">
                               {ord.customerName}
                             </span>
-                            <span className="text-[10px] text-slate-500 block truncate max-w-[140px]">
+                            <span className="text-[11px] text-slate-500 block truncate max-w-[140px]">
                               {ord.address}
                             </span>
-                            <span className="text-[10px] text-slate-500 block">{[ord.district, ord.province].filter(Boolean).join(', ') || 'City and province not added'}</span>
-                            <span className="text-[10px] text-slate-500 block">Responsible: {ord.assignedToName || 'Not assigned'}</span>
+                            <span className="text-[11px] text-slate-500 block">{[ord.district, ord.province].filter(Boolean).join(', ') || 'City and province not added'}</span>
+                            <span className="text-[11px] text-slate-500 block">Responsible: {ord.assignedToName || 'Not assigned'}</span>
                           </td>
                           <td className="py-3 px-3 whitespace-nowrap font-mono text-[11px] text-slate-600">
                             {ord.customerPhone}
@@ -573,7 +573,7 @@ export default function DailyOrdersPage() {
                           </td>
                           <td className="py-3 px-3">
                             <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
                                 ord.paymentTerms === 'Prepaid' || ord.paymentTerms === 'Advance'
                                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                   : 'bg-amber-50 text-amber-700 border border-amber-200'
@@ -608,7 +608,7 @@ export default function DailyOrdersPage() {
                               {canPerform(db.getCurrentUser(), 'orderflow', 'DELETE') && <button
                                 onClick={() => setOrderToDelete(ord)}
                                 className="p-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded"
-                                title="Delete Order"
+                                title="Delete order"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>}
@@ -642,7 +642,7 @@ export default function DailyOrdersPage() {
                       <th className="py-2.5 px-3">Brand</th>
                       <th className="py-2.5 px-3 text-right">Units</th>
                       <th className="py-2.5 px-3 text-right">Orders</th>
-                      <th className="py-2.5 px-3 text-right">Avg/Order</th>
+                      <th className="py-2.5 px-3 text-right">Avg/order</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
@@ -650,7 +650,7 @@ export default function DailyOrdersPage() {
                       <tr key={i} className="hover:bg-slate-50/50">
                         <td className="py-2.5 px-3 font-semibold text-slate-800">{row.product}</td>
                         <td className="py-2.5 px-3">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">
                             {row.brand}
                           </span>
                         </td>
@@ -677,10 +677,10 @@ export default function DailyOrdersPage() {
                 <table className="w-full text-left text-xs text-slate-600">
                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
                     <tr>
-                      <th className="py-2.5 px-3">Combo Name</th>
+                      <th className="py-2.5 px-3">Combo name</th>
                       <th className="py-2.5 px-3">Brand</th>
-                      <th className="py-2.5 px-3 text-right">Units Sold</th>
-                      <th className="py-2.5 px-3 text-right">% of Combos</th>
+                      <th className="py-2.5 px-3 text-right">Units sold</th>
+                      <th className="py-2.5 px-3 text-right">% of combos</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
@@ -695,7 +695,7 @@ export default function DailyOrdersPage() {
                         <tr key={i} className="hover:bg-slate-50/50">
                           <td className="py-2.5 px-3 font-semibold text-purple-900">{row.combo}</td>
                           <td className="py-2.5 px-3">
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700">
                               {row.brand}
                             </span>
                           </td>
@@ -718,12 +718,12 @@ export default function DailyOrdersPage() {
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-4 flex-wrap">
               <span>
-                <strong>Day Tally:</strong> {statsFooter.totalCommercial} commercial orders ({statsFooter.totalUnits} units)
+                <strong>Day tally:</strong> {statsFooter.totalCommercial} commercial orders ({statsFooter.totalUnits} units)
               </span>
               <span className="text-slate-600">|</span>
               <span>Brands represented: <strong>{statsFooter.brandCount}</strong></span>
               <span>Instagram: <strong>{statsFooter.instaPct}%</strong></span>
-              <span>Repeat Customers: <strong>{statsFooter.repeatPct}%</strong></span>
+              <span>Repeat customers: <strong>{statsFooter.repeatPct}%</strong></span>
             </div>
 
           </div>
@@ -735,7 +735,7 @@ export default function DailyOrdersPage() {
             <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex items-center gap-3 text-rose-600">
                 <AlertTriangle className="w-5 h-5" />
-                <h3 className="text-base font-bold text-slate-900">Delete Order?</h3>
+                <h3 className="text-base font-bold text-slate-900">Delete order?</h3>
               </div>
               <p className="text-xs text-slate-600">
                 Are you sure you want to delete order{' '}
@@ -751,7 +751,7 @@ export default function DailyOrdersPage() {
                 <button
                   onClick={handleDeleteConfirmed}
                   disabled={deleting}
-                  className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 disabled:bg-rose-300 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 disabled:bg-rose-300 disabled:cursor-not-allowed"
                 >
                   {deleting ? 'Deleting…' : 'Delete Order'}
                 </button>

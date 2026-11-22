@@ -40,8 +40,8 @@ export default function DownloadButton({ datasets, records, filters = {}, fileLa
   };
   return (
     <button type="button" onClick={download} disabled={busy}
-      className={`inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 disabled:opacity-60 sm:ml-auto sm:self-auto ${className}`}>
-      <Download className={`h-3.5 w-3.5 text-emerald-600 ${busy ? 'animate-pulse' : ''}`} />
+      className={`btn btn-secondary shrink-0 self-start disabled:opacity-60 sm:self-auto ${className}`}>
+      {busy ? <span className="bb-spinner" aria-hidden="true" /> : <Download />}
       {busy ? 'Preparing…' : label}
     </button>
   );

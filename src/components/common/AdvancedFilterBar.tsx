@@ -12,7 +12,7 @@ import {
   X,
   ChevronDown,
   RotateCcw,
-  Sparkles,
+  Lightbulb,
   Check,
   Building2,
   SlidersHorizontal,
@@ -359,7 +359,7 @@ export default function AdvancedFilterBar({
                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                 }`}
               >
-                <option value="">Field Rep: All</option>
+                <option value="">Field rep: All</option>
                 {salesOfficers.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.fullName}
@@ -376,14 +376,14 @@ export default function AdvancedFilterBar({
             onClick={() => setIsDrawerOpen(true)}
             className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition shadow-2xs active:scale-98 ${
               activeFilterCount > 0
-                ? 'border-blue-600 bg-blue-600 text-white shadow-blue-500/20'
+                ? 'border-blue-600 bg-blue-600 text-white'
                 : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
             <span>Filters</span>
             {activeFilterCount > 0 && (
-              <span className="ml-0.5 rounded-full bg-white text-blue-700 px-1.5 py-0.2 text-[10px] font-black">
+              <span className="ml-0.5 rounded-full bg-white text-blue-700 px-1.5 py-0.2 text-[11px] font-black">
                 {activeFilterCount}
               </span>
             )}
@@ -517,10 +517,10 @@ export default function AdvancedFilterBar({
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="w-4 h-4 text-blue-600" />
                 <h3 className="font-bold text-slate-900 text-sm">
-                  Multi-Dimensional Dashboard Slicer
+                  Multi-dimensional dashboard slicer
                 </h3>
                 {activeFilterCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-600 text-white">
                     {activeFilterCount} Active
                   </span>
                 )}
@@ -542,7 +542,7 @@ export default function AdvancedFilterBar({
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                    Date, Day &amp; Calendar Dimension
+                    Date, day &amp; calendar dimension
                   </span>
                   <div className="flex items-center rounded-lg bg-slate-100 p-0.5 text-[11px] font-bold">
                     <button
@@ -570,7 +570,7 @@ export default function AdvancedFilterBar({
                 {!hideDayOfWeek && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                      Day of Week (Beat Plan Route):
+                      Day of week (beat plan route):
                     </label>
                     <div className="grid grid-cols-7 gap-1.5">
                       {DAYS_OF_WEEK.map((d) => {
@@ -593,7 +593,7 @@ export default function AdvancedFilterBar({
                           >
                             <div className="leading-tight text-[11px] font-bold">{d.short}</div>
                             <div
-                              className={`text-[9px] font-normal ${
+                              className={`text-[11px] font-normal ${
                                 isSelected ? 'text-blue-100' : 'text-slate-500'
                               }`}
                             >
@@ -617,7 +617,7 @@ export default function AdvancedFilterBar({
                       onChange={(e) => updateCriteria({ month: e.target.value || undefined })}
                       className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
-                      <option value="">All Months</option>
+                      <option value="">All months</option>
                       {calendarMode === 'BS'
                         ? NEPALI_MONTHS.map((m) => (
                             <option key={m.en} value={m.en}>
@@ -654,7 +654,7 @@ export default function AdvancedFilterBar({
                       onChange={(e) => updateCriteria({ year: e.target.value || undefined })}
                       className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
-                      <option value="">All Years</option>
+                      <option value="">All years</option>
                       {(calendarMode === 'BS' ? BS_YEARS : AD_YEARS).map((y) => (
                         <option key={y} value={y}>
                           {y} {calendarMode === 'BS' ? 'BS' : 'AD'}
@@ -668,9 +668,9 @@ export default function AdvancedFilterBar({
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Custom Range (From):
+                      Custom range (from):
                     </label>
-                    <input aria-label="Custom Range (From):"
+                    <input aria-label="Custom range (from):"
                       type="date"
                       value={criteria.dateFrom || ''}
                       onChange={(e) =>
@@ -685,9 +685,9 @@ export default function AdvancedFilterBar({
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Custom Range (To):
+                      Custom range (to):
                     </label>
-                    <input aria-label="Custom Range (To):"
+                    <input aria-label="Custom range (to):"
                       type="date"
                       value={criteria.dateTo || ''}
                       onChange={(e) =>
@@ -707,14 +707,14 @@ export default function AdvancedFilterBar({
                 <div className="space-y-3.5 border-t border-slate-100 pt-4">
                   <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                    Territory, Province &amp; City Dimension
+                    Territory, province &amp; city dimension
                   </span>
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Valley Scope:
+                      Valley scope:
                     </label>
-                    <select aria-label="Valley Scope:"
+                    <select aria-label="Valley scope:"
                       value={criteria.valley || 'ALL'}
                       onChange={(e) =>
                         updateCriteria({
@@ -723,9 +723,9 @@ export default function AdvancedFilterBar({
                       }
                       className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none"
                     >
-                      <option value="ALL">All Nepal (Inside &amp; Outside Valley)</option>
-                      <option value="Inside">Inside Valley (Kathmandu Ring Road)</option>
-                      <option value="Outside">Outside Valley (Outstation Hubs)</option>
+                      <option value="ALL">All Nepal (inside &amp; outside Valley)</option>
+                      <option value="Inside">Inside Valley (Kathmandu ring road)</option>
+                      <option value="Outside">Outside Valley (outstation hubs)</option>
                     </select>
                   </div>
 
@@ -741,7 +741,7 @@ export default function AdvancedFilterBar({
                         }
                         className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none"
                       >
-                        <option value="">All Provinces</option>
+                        <option value="">All provinces</option>
                         {PROVINCES.map((p) => (
                           <option key={p} value={p}>
                             {p}
@@ -752,16 +752,16 @@ export default function AdvancedFilterBar({
 
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        City / Hub:
+                        City / hub:
                       </label>
-                      <select aria-label="City / Hub:"
+                      <select aria-label="City / hub:"
                         value={criteria.city || ''}
                         onChange={(e) =>
                           updateCriteria({ city: e.target.value || undefined })
                         }
                         className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none"
                       >
-                        <option value="">All Cities</option>
+                        <option value="">All cities</option>
                         {CITIES.map((c) => (
                           <option key={c} value={c}>
                             {c}
@@ -777,22 +777,22 @@ export default function AdvancedFilterBar({
               <div className="space-y-3.5 border-t border-slate-100 pt-4">
                 <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-blue-600" />
-                  Outlet Type &amp; Field Force Dimension
+                  Outlet type &amp; field force dimension
                 </span>
 
                 {!hideOutletType && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Outlet Classification:
+                      Outlet classification:
                     </label>
-                    <select aria-label="Outlet Classification:"
+                    <select aria-label="Outlet classification:"
                       value={criteria.outletType || ''}
                       onChange={(e) =>
                         updateCriteria({ outletType: e.target.value || undefined })
                       }
                       className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none"
                     >
-                      <option value="">All Outlet Types</option>
+                      <option value="">All outlet types</option>
                       {OUTLET_TYPES.map((t) => (
                         <option key={t} value={t}>
                           {t}
@@ -805,16 +805,16 @@ export default function AdvancedFilterBar({
                 {!hideOfficer && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Assigned Field Sales Officer:
+                      Assigned field sales officer:
                     </label>
-                    <select aria-label="Assigned Field Sales Officer:"
+                    <select aria-label="Assigned field sales officer:"
                       value={criteria.officerId || ''}
                       onChange={(e) =>
                         updateCriteria({ officerId: e.target.value || undefined })
                       }
                       className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none"
                     >
-                      <option value="">All Sales Officers</option>
+                      <option value="">All sales officers</option>
                       {salesOfficers.map((o) => (
                         <option key={o.id} value={o.id}>
                           {o.fullName} ({o.territory || 'Field Rep'})
@@ -831,9 +831,9 @@ export default function AdvancedFilterBar({
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
+                className="px-4 py-2.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
               >
-                Reset All
+                Reset all
               </button>
 
               <button
@@ -841,7 +841,7 @@ export default function AdvancedFilterBar({
                 onClick={() => setIsDrawerOpen(false)}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white shadow-xs transition active:scale-98"
               >
-                Apply &amp; Close Slicer
+                Apply &amp; close slicer
               </button>
             </div>
           </div>

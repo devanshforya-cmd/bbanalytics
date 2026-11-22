@@ -11,7 +11,7 @@ import {
   Loader2,
   Eye,
   Maximize2,
-  Sparkles,
+  Lightbulb,
 } from 'lucide-react';
 
 export interface CameraCaptureProps {
@@ -195,7 +195,7 @@ export default function CameraCapture({
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-800">{label}</span>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
               {totalCount} / {maxFiles}
             </span>
           </div>
@@ -274,7 +274,7 @@ export default function CameraCapture({
                 )}
               </div>
 
-              <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-xs text-white text-[9px] font-semibold px-1.5 py-0.5 rounded">
+              <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-xs text-white text-[11px] font-semibold px-1.5 py-0.5 rounded">
                 Attached #{idx + 1}
               </div>
             </div>
@@ -321,11 +321,11 @@ export default function CameraCapture({
 
                 {/* Compression Pill Badge */}
                 <div className="absolute bottom-1 left-1 right-1 flex items-center justify-between pointer-events-none">
-                  <span className="bg-blue-900/80 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-2xs">
+                  <span className="bg-blue-900/80 backdrop-blur-xs text-white text-[11px] font-bold px-1.5 py-0.5 rounded shadow-2xs">
                     {formatFileSize(item.compressedSize)}
                   </span>
                   {savingsPct > 10 && (
-                    <span className="bg-emerald-600/90 text-white text-[8px] font-bold px-1 py-0.5 rounded shadow-2xs">
+                    <span className="bg-emerald-600/90 text-white text-[11px] font-bold px-1 py-0.5 rounded shadow-2xs">
                       -{savingsPct}%
                     </span>
                   )}

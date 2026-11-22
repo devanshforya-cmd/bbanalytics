@@ -30,7 +30,7 @@ export default function RepeatFunnel({ repeatFunnel }: RepeatFunnelProps) {
               2d
             </span>
             <h2 className="text-base font-bold text-slate-900">
-              Repeat Purchase Funnel & Drop-Off Dynamics
+              Repeat purchase funnel & drop-off dynamics
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -43,7 +43,7 @@ export default function RepeatFunnel({ repeatFunnel }: RepeatFunnelProps) {
       <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 flex items-start gap-2.5">
         <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
         <div className="text-xs text-amber-900">
-          <span className="font-bold">Conversion Alert:</span> The greatest drop-off occurs between{' '}
+          <span className="font-bold">Conversion alert:</span> The greatest drop-off occurs between{' '}
           <span className="font-black underline">{repeatFunnel.biggestDrop}</span> with a{' '}
           <span className="font-black">{repeatFunnel.biggestDropPct}% attrition rate</span>. Re-order post-purchase
           outreach should trigger at Day 7 post-delivery.
@@ -58,7 +58,7 @@ export default function RepeatFunnel({ repeatFunnel }: RepeatFunnelProps) {
               <span className="font-bold text-slate-800">{step.label}</span>
               <div className="flex items-center gap-3">
                 {idx > 0 && (
-                  <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                  <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
                     -{step.drop}% drop
                   </span>
                 )}

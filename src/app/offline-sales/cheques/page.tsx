@@ -111,7 +111,7 @@ function ChequesContent() {
       setActionType('NONE');
       setActionNotes('');
       refreshCheques();
-      toast.success(`✓ Cheque status updated to ${status}.`);
+      toast.success(`Cheque status updated to ${status}.`);
     });
   };
 
@@ -128,7 +128,7 @@ function ChequesContent() {
       setActionNotes('');
       refreshCheques();
       toast.success(
-        `✓ Cheque ₹${selectedCheque.amount.toLocaleString()} cashed`,
+        `Cheque ₹${selectedCheque.amount.toLocaleString()} cashed`,
         `${selectedCheque.storeName} payment updated`
       );
     });
@@ -182,7 +182,7 @@ function ChequesContent() {
       setNewChequePhoto('');
       setFormErrors({});
       refreshCheques();
-      toast.success('✓ Cheque logged successfully!');
+      toast.success('Cheque logged');
     });
   };
 
@@ -230,7 +230,7 @@ function ChequesContent() {
           notes: 'Bulk marked as cashed by ' + currentUser.fullName,
         });
       });
-      toast.success(`✓ Marked ${selectedIds.length} cheques as Cashed.`);
+      toast.success(`Marked ${selectedIds.length} cheques as Cashed.`);
       handleClearSelection();
       refreshCheques();
     });
@@ -256,17 +256,17 @@ function ChequesContent() {
     if (selectedChequesData.length === 0) return;
 
     const columns = [
-      { key: 'chequeNumber', label: 'Cheque Number' },
-      { key: 'storeName', label: 'Store Name' },
-      { key: 'bankName', label: 'Bank Name' },
+      { key: 'chequeNumber', label: 'Cheque number' },
+      { key: 'storeName', label: 'Store name' },
+      { key: 'bankName', label: 'Bank name' },
       { key: 'amount', label: 'Amount (NPR)' },
       { key: 'status', label: 'Status' },
-      { key: 'officerName', label: 'Collector Officer' },
-      { key: 'receivedDateBs', label: 'Received Date (BS)' },
-      { key: 'receivedDateAd', label: 'Received Date (AD)' },
-      { key: 'cashDateBs', label: 'Cash Date (BS)' },
-      { key: 'cashDateAd', label: 'Cash Date (AD)' },
-      { key: 'handedOverTo', label: 'Office Custody' },
+      { key: 'officerName', label: 'Collector officer' },
+      { key: 'receivedDateBs', label: 'Received date (BS)' },
+      { key: 'receivedDateAd', label: 'Received date (AD)' },
+      { key: 'cashDateBs', label: 'Cash date (BS)' },
+      { key: 'cashDateAd', label: 'Cash date (AD)' },
+      { key: 'handedOverTo', label: 'Office custody' },
     ];
 
     const csv = generateCSV(columns, selectedChequesData);
@@ -283,8 +283,8 @@ function ChequesContent() {
     <div className="space-y-6">
       <Breadcrumbs
         items={[
-          { label: 'Offline Sales', href: '/offline-sales/stores' },
-          { label: 'Cheques Register' },
+          { label: 'Offline sales', href: '/offline-sales/stores' },
+          { label: 'Cheque tracker' },
         ]}
       />
 
@@ -292,7 +292,7 @@ function ChequesContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            Cheque Tracker (Two-Step Handover)
+            Cheque tracker
 <InfoTip label="About this page">Tracks physical custody: Field Collection → Office Handover → Bank Clearing with overdue alerts.</InfoTip></h1>
           
         </div>
@@ -303,23 +303,23 @@ function ChequesContent() {
           className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" />
-          Add Cheque
+          Add cheque
         </button>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-[11px] font-bold text-slate-500">Total Pipeline</div>
+          <div className="text-[11px] font-bold text-slate-500">Total pipeline</div>
           <div className="text-lg sm:text-xl font-bold text-slate-900 mt-1">
             <Money>{totalAmount.toLocaleString()}</Money>
           </div>
           <div className="text-xs text-slate-500 mt-0.5">{cheques.length} cheques logged</div>
         </div>
 
-        <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
+        <div className="rounded-xl border border-black/[0.08] bg-white p-4 shadow-sm">
           <div className="text-[11px] font-bold text-amber-800">
-            Pending Office Handover
+            Pending office handover
           </div>
           <div className="text-lg sm:text-xl font-bold text-amber-900 mt-1">
             {pendingHandover.length} Cheques
@@ -327,14 +327,14 @@ function ChequesContent() {
           <div className="text-xs text-amber-700 mt-0.5">Physical cheque with officer</div>
         </div>
 
-        <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 shadow-sm">
-          <div className="text-[11px] font-bold text-blue-800">Delayed Deposit</div>
-          <div className="text-lg sm:text-xl font-bold text-blue-900 mt-1">{delayedCount} Cheques</div>
+        <div className="rounded-xl border border-black/[0.08] bg-white p-4 shadow-sm">
+          <div className="text-[11px] font-bold text-blue-800">Delayed deposit</div>
+          <div className="text-lg sm:text-xl font-bold text-slate-900 mt-1">{delayedCount} Cheques</div>
           <div className="text-xs text-blue-700 mt-0.5">Grace period agreed</div>
         </div>
 
-        <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4 shadow-sm">
-          <div className="text-[11px] font-bold text-rose-800">Bounced / Incident</div>
+        <div className="rounded-xl border border-black/[0.08] bg-white p-4 shadow-sm">
+          <div className="text-[11px] font-bold text-rose-800">Bounced / incident</div>
           <div className="text-lg sm:text-xl font-bold text-rose-900 mt-1">{bouncedCount} Cheques</div>
           <div className="text-xs text-rose-700 mt-0.5">Vendor flagged</div>
         </div>
@@ -345,7 +345,7 @@ function ChequesContent() {
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 flex items-start gap-3 shadow-sm">
           <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <strong className="font-bold">Physical Cheque Handover Alert:</strong>
+            <strong className="font-bold">Physical cheque handover alert:</strong>
             <p>
               {pendingHandover[0].officerName} has <strong><Money>{pendingHandover[0].amount.toLocaleString()}</Money></strong> ({pendingHandover[0].storeName}) marked &quot;Collected in Field&quot; for more than 2 days. Physical custody must be transferred to the office person to prevent lost cheques.
             </p>
@@ -367,16 +367,16 @@ function ChequesContent() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
-          <span className="text-xs text-slate-500 whitespace-nowrap">Filter Status:</span>
+          <span className="text-xs text-slate-500 whitespace-nowrap">Filter status:</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs bg-white outline-none"
           >
-            <option value="ALL">All Statuses</option>
-            <option value="COLLECTED_IN_FIELD">Collected in Field</option>
-            <option value="HANDED_OVER_AT_OFFICE">Handed Over at Office</option>
-            <option value="PENDING">Pending Cash Date</option>
+            <option value="ALL">All statuses</option>
+            <option value="COLLECTED_IN_FIELD">Collected in field</option>
+            <option value="HANDED_OVER_AT_OFFICE">Handed over at office</option>
+            <option value="PENDING">Pending cash date</option>
             <option value="CASHED">Cashed ✓</option>
             <option value="DELAYED">Delayed</option>
             <option value="BOUNCED">Bounced </option>
@@ -409,7 +409,7 @@ function ChequesContent() {
       {filteredCheques.length === 0 ? (
         <EmptyState
           type="cheques"
-          title="No Cheques Found"
+          title="No cheques found"
           description="No cheques match your filter criteria or officer assignment."
         />
       ) : (
@@ -459,7 +459,7 @@ function ChequesContent() {
 
               <div className="rounded-lg bg-slate-50 p-3 space-y-1 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Cheque Number:</span>
+                  <span className="text-slate-500">Cheque number:</span>
                   <strong className="font-mono font-bold text-slate-800">{chq.chequeNumber}</strong>
                 </div>
                 <div className="flex justify-between">
@@ -469,7 +469,7 @@ function ChequesContent() {
                   </strong>
                 </div>
                 <div className="flex justify-between text-[11px]">
-                  <span className="text-slate-500">Agreed Cash Date:</span>
+                  <span className="text-slate-500">Agreed cash date:</span>
                   <span className="font-medium text-slate-700">{chq.cashDateBs}</span>
                 </div>
               </div>
@@ -487,7 +487,7 @@ function ChequesContent() {
                   </Link>
                 </span>
                 <span className="text-blue-600 font-semibold flex items-center gap-1 group-hover:underline">
-                  View Timeline & Handover →
+                  View timeline & handover →
                 </span>
               </div>
             </div>
@@ -502,7 +502,7 @@ function ChequesContent() {
           <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
-                <h3 className="font-bold text-slate-900 text-base">Cheque Lifecycle Details</h3>
+                <h3 className="font-bold text-slate-900 text-base">Cheque lifecycle details</h3>
                 <p className="text-xs text-slate-500">
                   Cheque #{selectedCheque.chequeNumber} —{' '}
                   <Link
@@ -537,7 +537,7 @@ function ChequesContent() {
               {/* Information Cards */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl bg-slate-50 p-3 space-y-1">
-                  <div className="text-[10px] font-bold text-slate-500">Amount & Bank</div>
+                  <div className="text-[11px] font-bold text-slate-500">Amount & bank</div>
                   <div className="text-base font-bold text-slate-900">
                     <Money>{selectedCheque.amount.toLocaleString()}</Money>
                   </div>
@@ -545,7 +545,7 @@ function ChequesContent() {
                 </div>
 
                 <div className="rounded-xl bg-slate-50 p-3 space-y-1">
-                  <div className="text-[10px] font-bold text-slate-500">Current Custody Status</div>
+                  <div className="text-[11px] font-bold text-slate-500">Current custody status</div>
                   <div className="font-bold text-blue-700 text-sm">
                     {selectedCheque.status.replace(/_/g, ' ')}
                   </div>
@@ -569,8 +569,8 @@ function ChequesContent() {
 
               {/* Action Buttons */}
               <div className="rounded-xl border border-slate-200 p-3.5 space-y-2">
-                <div className="font-bold text-slate-800 text-[10px] ">
-                  Update Cheque Lifecycle Step:
+                <div className="font-bold text-slate-800 text-[11px] ">
+                  Update cheque lifecycle step:
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {selectedCheque.status === 'COLLECTED_IN_FIELD' && (
@@ -578,7 +578,7 @@ function ChequesContent() {
                       onClick={() => setActionType('HANDOVER')}
                       className="rounded-lg bg-blue-600 px-3 py-1.5 font-semibold text-white hover:bg-blue-700"
                     >
-                      Hand Over at Office
+                      Hand over at office
                     </button>
                   )}
 
@@ -586,21 +586,21 @@ function ChequesContent() {
                     onClick={() => setShowCashedConfirm(true)}
                     className="rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white hover:bg-emerald-700"
                   >
-                    Mark as Cashed ✓
+                    Mark as cashed ✓
                   </button>
 
                   <button
                     onClick={() => setActionType('DELAY')}
                     className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 font-semibold text-amber-800 hover:bg-amber-100"
                   >
-                    Mark Delayed
+                    Mark delayed
                   </button>
 
                   <button
                     onClick={() => handleUpdateStatus('BOUNCED')}
                     className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 font-semibold text-rose-800 hover:bg-rose-100"
                   >
-                    Mark Bounced 
+                    Mark bounced 
                   </button>
                 </div>
               </div>
@@ -608,12 +608,12 @@ function ChequesContent() {
               {/* Handover Dialog */}
               {actionType === 'HANDOVER' && (
                 <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 space-y-3">
-                  <div className="font-bold text-blue-900">Physically Hand Over Cheque at Office</div>
+                  <div className="font-bold text-blue-900">Physically hand over cheque at office</div>
                   <p className="text-blue-800 text-[11px]">
                     Select the office staff member receiving this physical paper cheque:
                   </p>
                   <div>
-                    <label htmlFor="cheques-received-by" className="block font-bold text-blue-900 mb-1">Received By:</label>
+                    <label htmlFor="cheques-received-by" className="block font-bold text-blue-900 mb-1">Received by:</label>
                     <select id="cheques-received-by"
                       value={handoverTo}
                       onChange={(e) => setHandoverTo(e.target.value)}
@@ -638,7 +638,7 @@ function ChequesContent() {
                       onClick={() => handleUpdateStatus('HANDED_OVER_AT_OFFICE')}
                       className="rounded-lg bg-blue-600 px-4 py-1.5 font-semibold text-white hover:bg-blue-700"
                     >
-                      Confirm Handover
+                      Confirm handover
                     </button>
                   </div>
                 </div>
@@ -647,7 +647,7 @@ function ChequesContent() {
               {/* Delayed Dialog */}
               {actionType === 'DELAY' && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-3">
-                  <div className="font-bold text-amber-900">Record Agreed Payment Delay</div>
+                  <div className="font-bold text-amber-900">Record agreed payment delay</div>
                   <div>
                     <label className="block font-bold text-amber-900 mb-1">Reason for Delay:</label>
                     <select aria-label="Reason for Delay:"
@@ -662,7 +662,7 @@ function ChequesContent() {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="cheques-new-expected-cash-date" className="block font-bold text-amber-900 mb-1">New Expected Cash Date:</label>
+                    <label htmlFor="cheques-new-expected-cash-date" className="block font-bold text-amber-900 mb-1">New expected cash date:</label>
                     <input id="cheques-new-expected-cash-date"
                       type="date"
                       value={newDelayDate}
@@ -681,7 +681,7 @@ function ChequesContent() {
                       onClick={() => handleUpdateStatus('DELAYED')}
                       className="rounded-lg bg-amber-600 px-4 py-1.5 font-semibold text-white hover:bg-amber-700"
                     >
-                      Save Delay
+                      Save delay
                     </button>
                   </div>
                 </div>
@@ -689,8 +689,8 @@ function ChequesContent() {
 
               {/* Status Timeline */}
               <div className="space-y-3 border-t border-slate-100 pt-4">
-                <div className="font-bold text-slate-500 text-[10px]">
-                  Custody & Status History (Audit Trail)
+                <div className="font-bold text-slate-500 text-[11px]">
+                  Custody & status history (audit trail)
                 </div>
                 <div className="space-y-3">
                   {selectedCheque.history.map((h, idx) => (
@@ -729,14 +729,14 @@ function ChequesContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-3 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-base">Add New Cheque Entry</h3>
+              <h3 className="font-bold text-slate-900 text-base">Add new cheque entry</h3>
               <button onClick={() => setShowAddModal(false)} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <div>
-              <label htmlFor="cheques-store-distributor" className="block font-bold text-slate-700 mb-1">Store / Distributor *</label>
+              <label htmlFor="cheques-store-distributor" className="block font-bold text-slate-700 mb-1">Store / distributor *</label>
               <input id="cheques-store-distributor"
                 type="text"
                 value={newStoreName}
@@ -757,7 +757,7 @@ function ChequesContent() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="cheques-cheque-number" className="block font-bold text-slate-700 mb-1">Cheque Number *</label>
+                <label htmlFor="cheques-cheque-number" className="block font-bold text-slate-700 mb-1">Cheque number *</label>
                 <input id="cheques-cheque-number"
                   type="text"
                   placeholder="e.g. NIBL-99824"
@@ -800,20 +800,20 @@ function ChequesContent() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="cheques-bank-name" className="block font-bold text-slate-700 mb-1">Bank Name</label>
+                <label htmlFor="cheques-bank-name" className="block font-bold text-slate-700 mb-1">Bank name</label>
                 <select id="cheques-bank-name"
                   value={newBank}
                   onChange={(e) => setNewBank(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
                 >
-                  <option>Nabil Bank Ltd</option>
-                  <option>Nepal Investment Mega Bank</option>
-                  <option>Standard Chartered Bank</option>
-                  <option>Global IME Bank</option>
+                  <option>Nabil bank ltd</option>
+                  <option>Nepal investment mega bank</option>
+                  <option>Standard chartered bank</option>
+                  <option>Global IME bank</option>
                 </select>
               </div>
               <div>
-                <label htmlFor="cheques-cash-date" className="block font-bold text-slate-700 mb-1">Cash Date *</label>
+                <label htmlFor="cheques-cash-date" className="block font-bold text-slate-700 mb-1">Cash date *</label>
                 <input id="cheques-cash-date"
                   type="date"
                   value={newCashDate}
@@ -836,7 +836,7 @@ function ChequesContent() {
             {/* Photo Capture */}
             <CameraCapture
                 folder="cheque_tracker"
-              label="Photograph Cheque Leaf"
+              label="Photograph cheque leaf"
               sublabel="Capture front face of cheque showing cheque #, amount, and signature"
               maxFiles={1}
               existingUrls={newChequePhoto ? [newChequePhoto] : []}
@@ -854,7 +854,7 @@ function ChequesContent() {
               <button
                 onClick={handleCreateCheque}
                 disabled={isSubmitting || !newChequeNumber || !newAmount}
-                className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow disabled:opacity-50 flex items-center gap-2"
+                className="btn btn-primary disabled:opacity-50"
               >
                 {isSubmitting && (
                   <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
@@ -879,7 +879,7 @@ function ChequesContent() {
           className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white shadow transition cursor-pointer"
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>Mark All as Cashed</span>
+          <span>Mark all as cashed</span>
         </button>
 
         <button
@@ -888,7 +888,7 @@ function ChequesContent() {
           className="flex items-center gap-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 px-3 py-1.5 text-xs font-bold text-white shadow transition cursor-pointer"
         >
           <AlertTriangle className="w-3.5 h-3.5" />
-          <span>Escalate Selected</span>
+          <span>Escalate selected</span>
         </button>
 
         <button
@@ -897,16 +897,16 @@ function ChequesContent() {
           className="flex items-center gap-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 px-3 py-1.5 text-xs font-bold text-white shadow transition cursor-pointer"
         >
           <Download className="w-3.5 h-3.5" />
-          <span>Export Selected (CSV)</span>
+          <span>Export selected (CSV)</span>
         </button>
       </BulkActionBar>
 
       {/* FIX 50a: Context-Rich Cheque Cashed Confirmation Modal */}
       <ConfirmModal
         isOpen={showCashedConfirm}
-        title="Mark Cheque as Cashed?"
+        title="Mark cheque as cashed?"
         variant="success"
-        confirmLabel="✓ Confirm Cashed"
+        confirmLabel="Confirm cashed"
         cancelLabel="Cancel"
         details={selectedCheque ? [
           { label: 'Cheque #', value: selectedCheque.chequeNumber },
@@ -914,7 +914,7 @@ function ChequesContent() {
           { label: 'Amount', value: `${nprText(selectedCheque.amount.toLocaleString())}` },
           { label: 'Bank', value: selectedCheque.bankName },
           { label: 'Collected', value: `${selectedCheque.receivedDateBs} by ${selectedCheque.officerName}` },
-          { label: 'Cash Date', value: `${selectedCheque.cashDateBs} (Clearing date)` },
+          { label: 'Cash date', value: `${selectedCheque.cashDateBs} (Clearing date)` },
         ] : []}
         consequences={[
           'Close this cheque permanently from pending custody register',
@@ -934,7 +934,7 @@ export default function ChequesPage() {
       <Suspense
         fallback={
           <div className="p-8 text-center text-slate-500 font-medium">
-            Loading Cheque Register…
+            Loading cheque register…
           </div>
         }
       >

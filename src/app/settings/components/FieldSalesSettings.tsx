@@ -14,7 +14,7 @@ import {
   AlertCircle,
   Clock,
   MapPin,
-  Sparkles,
+  Lightbulb,
 } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
 import {
@@ -140,7 +140,7 @@ export default function FieldSalesSettings() {
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Mandatory Store Photo at Check-In
+                Mandatory store photo at check-in
               </h3>
               <p className="text-xs text-slate-500">
                 Require field sales officers to snap a photo of the store front/counter before GPS check-in is confirmed.
@@ -169,7 +169,7 @@ export default function FieldSalesSettings() {
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Document Types &amp; Handover Receipts
+                Document types &amp; handover receipts
               </h3>
               <p className="text-xs text-slate-500">
                 Configure document categories collected in the field (e.g. Purchase Orders, Invoices, Agreements).
@@ -189,10 +189,10 @@ export default function FieldSalesSettings() {
           />
           <button
             type="submit"
-            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-2xs transition flex items-center gap-1.5"
+            className="btn btn-primary"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Type</span>
+            <span>Add type</span>
           </button>
         </form>
 
@@ -207,14 +207,14 @@ export default function FieldSalesSettings() {
             >
               <div className="min-w-0">
                 <span className="text-xs font-bold text-slate-900 block truncate">{dt.name}</span>
-                <span className="text-[10px] text-slate-500">
+                <span className="text-[11px] text-slate-500">
                   {dt.isActive ? 'Active in mobile app' : 'Deactivated'}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => handleToggleDocType(dt.id)}
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition ${
+                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition ${
                   dt.isActive
                     ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                     : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
@@ -238,7 +238,7 @@ export default function FieldSalesSettings() {
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Beat Management, Overrides &amp; Leave Coverage
+                Beat management, overrides &amp; leave coverage
               </h3>
               <p className="text-xs text-slate-500">
                 Configure weekly recurring route assignments, insert one-time store overrides, and reassign visits during officer leave.
@@ -252,8 +252,8 @@ export default function FieldSalesSettings() {
               onClick={() => setShowOverrideModal(true)}
               className="px-3.5 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs transition flex items-center gap-1.5 shadow-2xs"
             >
-              <Sparkles className="w-4 h-4 text-blue-600" />
-              <span>+ One-Time Beat Override</span>
+              <Lightbulb className="w-4 h-4 text-blue-600" />
+              <span>+ One-time beat override</span>
             </button>
             <button
               type="button"
@@ -261,7 +261,7 @@ export default function FieldSalesSettings() {
               className="px-3.5 py-2 rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 font-bold text-xs transition flex items-center gap-1.5 shadow-2xs"
             >
               <UserCheck className="w-4 h-4 text-amber-600" />
-              <span>Leave &amp; Coverage</span>
+              <span>Leave &amp; coverage</span>
             </button>
           </div>
         </div>
@@ -270,11 +270,11 @@ export default function FieldSalesSettings() {
         <div className="border border-slate-200 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto" tabIndex={0}>
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[10px]">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[11px]">
                 <tr>
-                  <th className="p-3">Field Sales Officer</th>
+                  <th className="p-3">Field sales officer</th>
                   <th className="p-3">Weekday</th>
-                  <th className="p-3">Assigned Stores Route</th>
+                  <th className="p-3">Assigned stores route</th>
                   <th className="p-3">Status</th>
                 </tr>
               </thead>
@@ -287,20 +287,20 @@ export default function FieldSalesSettings() {
                         {officer?.fullName || entry.officerId}
                       </td>
                       <td className="p-3">
-                        <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-bold text-[10px]">
+                        <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-bold text-[11px]">
                           {entry.daysOfWeek?.join(', ') || 'Mon-Fri'}
                         </span>
                       </td>
                       <td className="p-3 font-medium text-slate-800">
                         {entry.storeName}
                         {entry.managerNote && (
-                          <span className="text-[10px] text-slate-500 block">
+                          <span className="text-[11px] text-slate-500 block">
                             Directive: &ldquo;{entry.managerNote}&rdquo;
                           </span>
                         )}
                       </td>
                       <td className="p-3">
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[10px]">
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[11px]">
                           {entry.priority} Priority
                         </span>
                       </td>
@@ -318,7 +318,7 @@ export default function FieldSalesSettings() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-base">Add One-Time Beat Override</h3>
+              <h3 className="font-bold text-slate-900 text-base">Add one-time beat override</h3>
               <button
                 onClick={() => setShowOverrideModal(false)}
                 className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
@@ -329,7 +329,7 @@ export default function FieldSalesSettings() {
 
             <form onSubmit={handleSaveOverride} className="space-y-3 text-xs">
               <div>
-                <label htmlFor="fieldsalessettings-sales-officer" className="block font-bold text-slate-700 mb-1">Sales Officer</label>
+                <label htmlFor="fieldsalessettings-sales-officer" className="block font-bold text-slate-700 mb-1">Sales officer</label>
                 <select id="fieldsalessettings-sales-officer"
                   value={overrideOfficerId}
                   onChange={(e) => setOverrideOfficerId(e.target.value)}
@@ -344,8 +344,8 @@ export default function FieldSalesSettings() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Target Store</label>
-                <select aria-label="Target Store"
+                <label className="block font-bold text-slate-700 mb-1">Target store</label>
+                <select aria-label="Target store"
                   value={overrideStoreId}
                   onChange={(e) => setOverrideStoreId(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
@@ -360,8 +360,8 @@ export default function FieldSalesSettings() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Visit Date</label>
-                  <input aria-label="Visit Date"
+                  <label className="block font-bold text-slate-700 mb-1">Visit date</label>
+                  <input aria-label="Visit date"
                     type="date"
                     value={overrideDate}
                     onChange={(e) => setOverrideDate(e.target.value)}
@@ -375,16 +375,16 @@ export default function FieldSalesSettings() {
                     onChange={(e) => setOverridePriority(e.target.value as any)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                   >
-                    <option value="HIGH">★★★ High Priority</option>
-                    <option value="MEDIUM">★★ Medium</option>
-                    <option value="ROUTINE">★ Routine</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="ROUTINE">Routine</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Manager Note / Directive</label>
-                <input aria-label="Manager Note / Directive"
+                <label className="block font-bold text-slate-700 mb-1">Manager note / directive</label>
+                <input aria-label="Manager note / directive"
                   type="text"
                   placeholder="e.g. Urgent stock delivery, collect pending payment…"
                   value={overrideNote}
@@ -403,9 +403,9 @@ export default function FieldSalesSettings() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-2xs"
+                  className="btn btn-primary"
                 >
-                  Add to Beat
+                  Add to beat
                 </button>
               </div>
             </form>
@@ -418,7 +418,7 @@ export default function FieldSalesSettings() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-base">Officer Leave &amp; Route Coverage</h3>
+              <h3 className="font-bold text-slate-900 text-base">Officer leave &amp; route coverage</h3>
               <button
                 onClick={() => setShowLeaveModal(false)}
                 className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
@@ -429,7 +429,7 @@ export default function FieldSalesSettings() {
 
             <form onSubmit={handleSaveLeave} className="space-y-3 text-xs">
               <div>
-                <label htmlFor="fieldsalessettings-officer-going-on-leave" className="block font-bold text-slate-700 mb-1">Officer Going on Leave</label>
+                <label htmlFor="fieldsalessettings-officer-going-on-leave" className="block font-bold text-slate-700 mb-1">Officer going on leave</label>
                 <select id="fieldsalessettings-officer-going-on-leave"
                   value={leaveOfficerId}
                   onChange={(e) => setLeaveOfficerId(e.target.value)}
@@ -444,8 +444,8 @@ export default function FieldSalesSettings() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Covering Officer</label>
-                <select aria-label="Covering Officer"
+                <label className="block font-bold text-slate-700 mb-1">Covering officer</label>
+                <select aria-label="Covering officer"
                   value={leaveCoveringId}
                   onChange={(e) => setLeaveCoveringId(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
@@ -462,8 +462,8 @@ export default function FieldSalesSettings() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Leave Start Date</label>
-                  <input aria-label="Leave Start Date"
+                  <label className="block font-bold text-slate-700 mb-1">Leave start date</label>
+                  <input aria-label="Leave start date"
                     type="date"
                     value={leaveStartDate}
                     onChange={(e) => setLeaveStartDate(e.target.value)}
@@ -471,8 +471,8 @@ export default function FieldSalesSettings() {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Leave End Date</label>
-                  <input aria-label="Leave End Date"
+                  <label className="block font-bold text-slate-700 mb-1">Leave end date</label>
+                  <input aria-label="Leave end date"
                     type="date"
                     value={leaveEndDate}
                     onChange={(e) => setLeaveEndDate(e.target.value)}
@@ -495,9 +495,9 @@ export default function FieldSalesSettings() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-2xs"
+                  className="px-5 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-2xs"
                 >
-                  Confirm Coverage
+                  Confirm coverage
                 </button>
               </div>
             </form>

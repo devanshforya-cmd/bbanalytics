@@ -42,7 +42,7 @@ import {
   Flag,
   AlertTriangle,
   Layers,
-  Sparkles,
+  Lightbulb,
   Percent, Info } from 'lucide-react';
 import StoreDeleteButton from '@/components/stores/StoreDeleteButton';
 import PageGuard from '@/components/common/PageGuard';
@@ -257,7 +257,7 @@ export default function StoresPage() {
         notes: fieldNotes,
       });
 
-      toast.success(`✓ "${newRet.name}" saved! Added to store directory and your beat route.`);
+      toast.success(`"${newRet.name}" saved. Added to store directory and your beat route.`);
       setShowFieldAddModal(false);
       // Reset
       setFieldStoreName('');
@@ -357,7 +357,7 @@ export default function StoresPage() {
   // Section 3: Contact Actions
   const handleSetPrimary = (entityType: 'DISTRIBUTOR' | 'BRANCH' | 'RETAILER', entityId: string, contactId: string) => {
     db.setPrimaryContact(entityType, entityId, contactId);
-    toast.success('★ Marked as primary contact for store communication.');
+    toast.success('Marked as main contact');
     refreshData();
   };
 
@@ -379,7 +379,7 @@ export default function StoresPage() {
 
   const handleApproveRemoval = (item: typeof pendingRemovals[0]) => {
     db.approveContactRemoval(item.entityType, item.entityId, item.contact.id);
-    toast.success(`✓ Contact "${item.contact.name}" removed from ${item.entityName}.`);
+    toast.success(`Contact "${item.contact.name}" removed from ${item.entityName}.`);
     refreshData();
   };
 
@@ -396,7 +396,7 @@ export default function StoresPage() {
     }
     const success = db.transferContactToBranch(item.entityType, item.entityId, transferTargetBranchId, item.contact.id);
     if (success) {
-      toast.success(`✓ Contact transferred to target branch.`);
+      toast.success(`Contact transferred to target branch.`);
       setTransferTargetBranchId('');
       refreshData();
     }
@@ -413,7 +413,7 @@ export default function StoresPage() {
         commercialTermsStore.margins,
         commercialTermsStore.paymentTerms
       );
-      toast.success(`✓ Commercial terms updated for ${commercialTermsStore.name}.`);
+      toast.success(`Commercial terms updated for ${commercialTermsStore.name}.`);
       setCommercialTermsStore(null);
       refreshData();
     });
@@ -471,22 +471,21 @@ export default function StoresPage() {
       <div className="space-y-6 pb-20">
         <Breadcrumbs
           items={[
-            { label: 'Offline Sales', href: '/offline-sales/stores' },
+            { label: 'Offline sales', href: '/offline-sales/stores' },
             { label: 'Stores' },
           ]}
         />
 
         {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Stores
 <InfoTip label="About this page">Every account by type: MT chains and their outlets, SAMT stores, distributors and retail stores. SAMT, distributors and retail stores should name the distributor that supplies them.</InfoTip></h1>
             
           </div>
-          <DownloadButton datasets={['stores']} records={{ retailers: filteredRetailers, distributors: filteredDistributors } as any} />
-
           <div className="flex flex-wrap items-center gap-2">
+            <DownloadButton datasets={['stores']} records={{ retailers: filteredRetailers, distributors: filteredDistributors } as any} />
             {/* Primary Action Button */}
             {(canCreateStores || canCreateAccounts) && (
               <button
@@ -498,9 +497,9 @@ export default function StoresPage() {
                     setShowAdminAddModal(true);
                   }
                 }}
-                className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 min-h-[44px]"
+                className="btn btn-primary"
               >
-                <Plus className="h-4 w-4" />
+                <Plus />
                 <span>Add store</span>
               </button>
             )}
@@ -510,9 +509,9 @@ export default function StoresPage() {
               <button
                 type="button"
                 onClick={() => setShowFieldAddModal(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 min-h-[44px]"
+                className="btn btn-secondary"
               >
-                <Store className="h-4 w-4 text-slate-500" />
+                <Store />
                 <span>Quick field form</span>
               </button>
             )}
@@ -604,7 +603,7 @@ export default function StoresPage() {
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <Link href={`/offline-sales/stores/${dist.id}`} className="font-bold text-slate-900 text-base hover:text-blue-700 hover:underline">{dist.name}</Link><StoreDeleteButton id={dist.id} name={dist.name} onDeleted={refreshData} />
-                          <span className="rounded-full bg-blue-50 text-blue-700 px-2.5 py-0.5 text-[10px] font-bold border border-blue-200">
+                          <span className="rounded-full bg-blue-50 text-blue-700 px-2.5 py-0.5 text-[11px] font-bold border border-blue-200">
                             {channelLabel(channelOfDistributor(dist))}
                           </span>
                         </div>
@@ -658,7 +657,7 @@ export default function StoresPage() {
 
                     {/* Section 3: Contact Directory with Primary Star & Flag */}
                     <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/60 space-y-2">
-                      <div className="text-[10px] font-bold text-slate-500 ">
+                      <div className="text-[11px] font-bold text-slate-500 ">
                         Store Contacts ({dist.contacts?.length || 1})
                       </div>
                       <div className="flex flex-wrap gap-1.5">
@@ -746,8 +745,8 @@ export default function StoresPage() {
                       <div>
                         <Link href={`/offline-sales/stores/${ret.id}`} className="font-bold text-slate-900 text-sm hover:text-blue-700 hover:underline">{ret.name}</Link><StoreDeleteButton id={ret.id} name={ret.name} onDeleted={refreshData} />
                         <span className="mt-0.5 flex flex-wrap gap-1">
-                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">{channelLabel(channelOfRetailer(ret))}</span>
-                          {(ret.category || ret.type) && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{ret.category || ret.type}</span>}
+                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">{channelLabel(channelOfRetailer(ret))}</span>
+                          {(ret.category || ret.type) && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">{ret.category || ret.type}</span>}
                         </span>
                       </div>
 
@@ -809,7 +808,7 @@ export default function StoresPage() {
 
                     {/* Section 3 Contacts List */}
                     <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-200/60 space-y-1.5">
-                      <div className="text-[10px] font-bold text-slate-500 ">
+                      <div className="text-[11px] font-bold text-slate-500 ">
                         Contacts ({ret.contacts?.length || 1})
                       </div>
                       <div className="flex flex-wrap gap-1.5">
@@ -879,7 +878,7 @@ export default function StoresPage() {
 
               <form onSubmit={handleSaveFieldStore} className="flex-1 overflow-y-auto py-4 space-y-4 pr-1 text-xs">
                 <div>
-                  <label htmlFor="stores-store-name" className="block font-bold text-slate-700 mb-1">Store Name *</label>
+                  <label htmlFor="stores-store-name" className="block font-bold text-slate-700 mb-1">Store name *</label>
                   <input id="stores-store-name"
                     type="text"
                     required
@@ -923,11 +922,11 @@ export default function StoresPage() {
                 {/* Location Section with GPS Pin */}
                 <div className="space-y-2 rounded-2xl bg-slate-50 p-3.5 border border-slate-200">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-700 text-[10px] ">Store Location</span>
+                    <span className="font-bold text-slate-700 text-[11px] ">Store location</span>
                     <button
                       type="button"
                       onClick={handlePinLocation}
-                      className="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center gap-1 shadow-xs hover:bg-blue-700 min-h-[40px]"
+                      className="btn btn-primary min-h-[40px]"
                     >
                       <MapPin className="w-3.5 h-3.5" />
                       <span>{fieldLat ? 'Re-Pin GPS' : 'Pin Location'}</span>
@@ -936,7 +935,7 @@ export default function StoresPage() {
 
                   {fieldLat && (
                     <div className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                      ✓ GPS Coordinates captured: {fieldLat.toFixed(4)}°N, {fieldLng?.toFixed(4)}°E
+                      GPS Coordinates captured: {fieldLat.toFixed(4)}°N, {fieldLng?.toFixed(4)}°E
                     </div>
                   )}
 
@@ -951,7 +950,7 @@ export default function StoresPage() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="stores-area-ward" className="block text-[11px] font-semibold text-slate-600 mb-0.5">Area / Ward</label>
+                      <label htmlFor="stores-area-ward" className="block text-[11px] font-semibold text-slate-600 mb-0.5">Area / ward</label>
                       <input id="stores-area-ward"
                         type="text"
                         placeholder="e.g. Baneshwor"
@@ -963,7 +962,7 @@ export default function StoresPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="stores-full-street-address" className="block text-[11px] font-semibold text-slate-600 mb-0.5">Full Street Address</label>
+                    <label htmlFor="stores-full-street-address" className="block text-[11px] font-semibold text-slate-600 mb-0.5">Full street address</label>
                     <input id="stores-full-street-address"
                       type="text"
                       placeholder="e.g. Near Krishna Mandir, New Baneshwor"
@@ -977,7 +976,7 @@ export default function StoresPage() {
                 {/* Brands Stocked */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="font-bold text-slate-700">Brands Stocked</label>
+                    <label className="font-bold text-slate-700">Brands stocked</label>
                     <button
                       type="button"
                       onClick={handleSelectAllBrands}
@@ -988,7 +987,7 @@ export default function StoresPage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {systemBrands.length === 0 ? (
-                      <p className="text-xs text-slate-500 italic">No brands configured yet. Add brands in Settings.</p>
+                      <p className="text-xs text-slate-500 ">No brands configured yet. Add brands in Settings.</p>
                     ) : (
                       systemBrands.map((b) => (
                         <label
@@ -1021,7 +1020,7 @@ export default function StoresPage() {
                 {/* Section 3 Contacts List */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="font-bold text-slate-700">Store Contacts</label>
+                    <label className="font-bold text-slate-700">Store contacts</label>
                     <button
                       type="button"
                       onClick={() => setFieldContacts([...fieldContacts, { name: '', role: 'Buyer', phone: '' }])}
@@ -1036,7 +1035,7 @@ export default function StoresPage() {
                       <div className="col-span-5">
                         <input
                           type="text"
-                          placeholder="Contact Name"
+                          placeholder="Contact name"
                           value={c.name}
                           onChange={(e) => {
                             const updated = [...fieldContacts];
@@ -1100,9 +1099,9 @@ export default function StoresPage() {
                   </button>
                   <button
                     type="submit"
-                    className="w-2/3 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md min-h-[52px]"
+                    className="w-2/3 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md min-h-[52px]"
                   >
-                    ✓ Save Store
+                    Save store
                   </button>
                 </div>
               </form>
@@ -1139,7 +1138,7 @@ export default function StoresPage() {
                         <button key={c.type} type="button" disabled={!allowed} onClick={() => setAdminStoreType(c.type)} title={allowed ? c.description : 'Your role cannot add this type'}
                           className={`rounded-2xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${adminStoreType === c.type ? 'border-blue-600 bg-blue-600 text-white shadow-xs' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'}`}>
                           <span className="block font-bold">{c.label}</span>
-                          <span className={`mt-0.5 block text-[10px] font-normal ${adminStoreType === c.type ? 'text-blue-100' : 'text-slate-500'}`}>{c.description}</span>
+                          <span className={`mt-0.5 block text-[11px] font-normal ${adminStoreType === c.type ? 'text-blue-100' : 'text-slate-500'}`}>{c.description}</span>
                         </button>
                       );
                     })}
@@ -1185,16 +1184,16 @@ export default function StoresPage() {
                     )}
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Payment Credit Terms</label>
-                    <select aria-label="Payment Credit Terms"
+                    <label className="block font-bold text-slate-700 mb-1">Payment credit terms</label>
+                    <select aria-label="Payment credit terms"
                       value={adminPaymentTerms}
                       onChange={(e) => setAdminPaymentTerms(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
                     >
-                      <option value="COD">Cash on Delivery (COD)</option>
-                      <option value="7-day credit">7-Day Net Credit</option>
-                      <option value="15-day credit">15-Day Net Credit</option>
-                      <option value="30-day credit">30-Day Net Credit</option>
+                      <option value="COD">Cash on delivery (COD)</option>
+                      <option value="7-day credit">7-Day net credit</option>
+                      <option value="15-day credit">15-Day net credit</option>
+                      <option value="30-day credit">30-Day net credit</option>
                     </select>
                   </div>
                 </div>
@@ -1224,14 +1223,14 @@ export default function StoresPage() {
                 {/* Section 4: Default Margins Per Brand */}
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800 text-[10px] ">
-                      Commercial Terms (Default Brand Margins)
+                    <span className="font-bold text-slate-800 text-[11px] ">
+                      Commercial terms (default brand margins)
                     </span>
                   </div>
 
                   <div className="space-y-2">
                     {systemBrands.length === 0 ? (
-                      <p className="text-xs text-slate-500 italic p-2 bg-slate-50 rounded-xl">No brands configured yet. Add brands in Settings.</p>
+                      <p className="text-xs text-slate-500 p-2 bg-slate-50 rounded-xl">No brands configured yet. Add brands in Settings.</p>
                     ) : (
                       systemBrands.map((b) => {
                         const brandKey = b.code;
@@ -1264,7 +1263,7 @@ export default function StoresPage() {
                                     [brandKey]: { ...cur, type: 'MARKDOWN' },
                                   })
                                 }
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                                   cur.type === 'MARKDOWN' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-500'
                                 }`}
                               >
@@ -1278,7 +1277,7 @@ export default function StoresPage() {
                                     [brandKey]: { ...cur, type: 'MARKUP' },
                                   })
                                 }
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                                   cur.type === 'MARKUP' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-500'
                                 }`}
                               >
@@ -1296,7 +1295,7 @@ export default function StoresPage() {
                 {/* Primary Contact */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="stores-primary-contact-name" className="block font-bold text-slate-700 mb-1">Primary Contact Name</label>
+                    <label htmlFor="stores-primary-contact-name" className="block font-bold text-slate-700 mb-1">Primary contact name</label>
                     <input id="stores-primary-contact-name"
                       type="text"
                       placeholder="e.g. Ramesh Shrestha"
@@ -1306,7 +1305,7 @@ export default function StoresPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="stores-contact-phone" className="block font-bold text-slate-700 mb-1">Contact Phone</label>
+                    <label htmlFor="stores-contact-phone" className="block font-bold text-slate-700 mb-1">Contact phone</label>
                     <input id="stores-contact-phone"
                       type="tel"
                       placeholder="98XXXXXXXX"
@@ -1328,7 +1327,7 @@ export default function StoresPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold shadow-xs flex items-center gap-2"
+                    className="btn btn-primary disabled:bg-blue-300"
                   >
                     {isSubmitting && (
                       <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
@@ -1347,7 +1346,7 @@ export default function StoresPage() {
             <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Flag Contact for Removal</h3>
+                  <h3 className="font-bold text-slate-900 text-base">Flag contact for removal</h3>
                   <p className="text-xs text-slate-500">{flagModalTarget.name}</p>
                 </div>
                 <button onClick={() => setFlagModalTarget(null)} className="p-1 text-slate-500 hover:text-slate-600">
@@ -1385,9 +1384,9 @@ export default function StoresPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-xs"
+                    className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shadow-xs"
                   >
-                    Submit Removal Flag
+                    Submit removal flag
                   </button>
                 </div>
               </form>
@@ -1401,7 +1400,7 @@ export default function StoresPage() {
             <div className="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Pending Contact Removals</h3>
+                  <h3 className="font-bold text-slate-900 text-base">Pending contact removals</h3>
                   <p className="text-xs text-slate-500">Approve removal, reject, or transfer contact to another branch</p>
                 </div>
                 <button
@@ -1425,7 +1424,7 @@ export default function StoresPage() {
                             {item.contact.name} ({item.contact.role}) — {item.contact.phone}
                           </div>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
                           Flagged: {item.contact.flaggedReason || 'Removal'}
                         </span>
                       </div>
@@ -1440,7 +1439,7 @@ export default function StoresPage() {
                           onClick={() => handleApproveRemoval(item)}
                           className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-xs"
                         >
-                          ✓ Approve Removal
+                          Approve removal
                         </button>
                         <button
                           type="button"
@@ -1456,7 +1455,7 @@ export default function StoresPage() {
                             onChange={(e) => setTransferTargetBranchId(e.target.value)}
                             className="px-2 py-1.5 rounded-xl border border-slate-200 bg-white text-[11px]"
                           >
-                            <option value="">Select Branch to Transfer…</option>
+                            <option value="">Select branch to transfer…</option>
                             {branches.map((b) => (
                               <option key={b.id} value={b.id}>
                                 {b.name}
@@ -1486,7 +1485,7 @@ export default function StoresPage() {
             <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Commercial Terms &amp; Margins</h3>
+                  <h3 className="font-bold text-slate-900 text-base">Commercial terms &amp; margins</h3>
                   <p className="text-xs text-slate-500">{commercialTermsStore.name}</p>
                 </div>
                 <button onClick={() => setCommercialTermsStore(null)} className="p-1 text-slate-500 hover:text-slate-600">
@@ -1496,7 +1495,7 @@ export default function StoresPage() {
 
               <form onSubmit={handleSaveCommercialTerms} className="py-4 space-y-4 text-xs">
                 <div>
-                  <label htmlFor="stores-payment-credit-terms" className="block font-bold text-slate-700 mb-1">Payment Credit Terms</label>
+                  <label htmlFor="stores-payment-credit-terms" className="block font-bold text-slate-700 mb-1">Payment credit terms</label>
                   <select id="stores-payment-credit-terms"
                     value={commercialTermsStore.paymentTerms}
                     onChange={(e) =>
@@ -1504,17 +1503,17 @@ export default function StoresPage() {
                     }
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-medium"
                   >
-                    <option value="COD">Cash on Delivery (COD)</option>
-                    <option value="7-day credit">7-Day Net Credit</option>
-                    <option value="15-day credit">15-Day Net Credit</option>
-                    <option value="30-day credit">30-Day Net Credit</option>
+                    <option value="COD">Cash on delivery (COD)</option>
+                    <option value="7-day credit">7-Day net credit</option>
+                    <option value="15-day credit">15-Day net credit</option>
+                    <option value="30-day credit">30-Day net credit</option>
                   </select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block font-bold text-slate-700">Per-Brand Default Margin</label>
+                  <label className="block font-bold text-slate-700">Per-brand default margin</label>
                   {systemBrands.length === 0 ? (
-                    <p className="text-xs text-slate-500 italic p-2 bg-slate-50 rounded-xl">No brands configured yet. Add brands in Settings.</p>
+                    <p className="text-xs text-slate-500 p-2 bg-slate-50 rounded-xl">No brands configured yet. Add brands in Settings.</p>
                   ) : (
                     systemBrands.map((brandObj) => {
                       const b = brandObj.code;
@@ -1551,7 +1550,7 @@ export default function StoresPage() {
                                   },
                                 })
                               }
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                                 cur.type === 'MARKDOWN' ? 'bg-blue-600 text-white' : 'text-slate-500'
                               }`}
                             >
@@ -1568,7 +1567,7 @@ export default function StoresPage() {
                                   },
                                 })
                               }
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                                 cur.type === 'MARKUP' ? 'bg-blue-600 text-white' : 'text-slate-500'
                               }`}
                             >
@@ -1593,7 +1592,7 @@ export default function StoresPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold rounded-xl shadow-xs flex items-center gap-2"
+                    className="btn btn-primary disabled:bg-blue-300"
                   >
                     {isSubmitting && (
                       <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
@@ -1612,7 +1611,7 @@ export default function StoresPage() {
             <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-200">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Add Store Contact</h3>
+                  <h3 className="font-bold text-slate-900 text-base">Add store contact</h3>
                   <p className="text-xs text-slate-500">{targetStoreForContact.name}</p>
                 </div>
                 <button
@@ -1634,7 +1633,7 @@ export default function StoresPage() {
                     phone: newContactPhone.trim(),
                     isPrimary: false,
                   });
-                  toast.success(`✓ Contact ${newContactName} added to ${targetStoreForContact.name}.`);
+                  toast.success(`Contact ${newContactName} added to ${targetStoreForContact.name}.`);
                   setTargetStoreForContact(null);
                   setNewContactName('');
                   refreshData();
@@ -1642,7 +1641,7 @@ export default function StoresPage() {
                 className="py-4 space-y-3 text-xs"
               >
                 <div>
-                  <label htmlFor="stores-contact-name" className="block font-bold text-slate-700 mb-1">Contact Name *</label>
+                  <label htmlFor="stores-contact-name" className="block font-bold text-slate-700 mb-1">Contact name *</label>
                   <input id="stores-contact-name"
                     type="text"
                     required
@@ -1653,21 +1652,21 @@ export default function StoresPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="stores-role-designation" className="block font-bold text-slate-700 mb-1">Role / Designation *</label>
+                  <label htmlFor="stores-role-designation" className="block font-bold text-slate-700 mb-1">Role / designation *</label>
                   <select id="stores-role-designation"
                     value={newContactRole}
                     onChange={(e) => setNewContactRole(e.target.value as ContactRole)}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 bg-white"
                   >
-                    <option value="Accounts / Cheque">Accounts / Cheque</option>
-                    <option value="Store Manager">Store Manager</option>
-                    <option value="Floor Supervisor">Floor Supervisor</option>
-                    <option value="Owner">Owner / Proprietor</option>
-                    <option value="Receiving Bay">Receiving Bay</option>
+                    <option value="Accounts / Cheque">Accounts / cheque</option>
+                    <option value="Store Manager">Store manager</option>
+                    <option value="Floor Supervisor">Floor supervisor</option>
+                    <option value="Owner">Owner / proprietor</option>
+                    <option value="Receiving Bay">Receiving bay</option>
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="stores-phone-number" className="block font-bold text-slate-700 mb-1">Phone Number *</label>
+                  <label htmlFor="stores-phone-number" className="block font-bold text-slate-700 mb-1">Phone number *</label>
                   <input id="stores-phone-number"
                     type="tel"
                     required
@@ -1687,9 +1686,9 @@ export default function StoresPage() {
                   </button>
                   <button
                     type="submit"
-                    className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-700 shadow-xs"
+                    className="btn btn-primary"
                   >
-                    Save Contact
+                    Save contact
                   </button>
                 </div>
               </form>
@@ -1736,7 +1735,7 @@ function ContactPill({
       </button>
 
       <span className="font-bold">{contact.name}</span>
-      <span className="text-[10px] text-slate-500">({contact.role})</span>
+      <span className="text-[11px] text-slate-500">({contact.role})</span>
 
       <a
         href={`tel:${contact.phone}`}
@@ -1748,7 +1747,7 @@ function ContactPill({
 
       {contact.isFlaggedForRemoval ? (
         <span
-          className="ml-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-200 text-amber-900"
+          className="ml-1 px-1.5 py-0.2 rounded text-[11px] font-bold bg-amber-200 text-amber-900"
           title={`Flagged reason: ${contact.flaggedReason || 'Removal requested'}`}
         >
           Flagged

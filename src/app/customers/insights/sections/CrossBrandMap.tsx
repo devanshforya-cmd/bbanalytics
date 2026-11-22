@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Sparkles, ChevronRight } from 'lucide-react';
+import { Lightbulb, ChevronRight } from 'lucide-react';
 import { Customer } from '@/lib/types';
 
 export interface CrossSellOpportunity {
@@ -57,7 +57,7 @@ export default function CrossBrandMap({
                 2c
               </span>
               <h2 className="text-base font-bold text-slate-900">
-                Cross-Brand Behavior Map & Portfolio Synergies
+                Cross-brand behavior map & portfolio synergies
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-1">
@@ -70,9 +70,9 @@ export default function CrossBrandMap({
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-center">
           {crossBrandMap.segments.map((m) => (
             <div key={m.label} className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-blue-900 space-y-1">
-              <div className="text-[10px] font-bold ">{m.label}</div>
+              <div className="text-[11px] font-bold ">{m.label}</div>
               <div className="text-xl font-black">{m.count}</div>
-              <div className="text-[10px] opacity-80">
+              <div className="text-[11px] opacity-80">
                 {Math.round((m.count / Math.max(1, crossBrandMap.total)) * 100)}% of total
               </div>
             </div>
@@ -82,18 +82,18 @@ export default function CrossBrandMap({
         {/* Cross-Sell Opportunities Table */}
         <div className="space-y-3">
           <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-purple-600" />
-            Cross-Sell Priority Candidates (High Karma, Untapped Brand)
+            <Lightbulb className="h-3.5 w-3.5 text-purple-600" />
+            Cross-sell priority candidates (high Karma, untapped brand)
           </h3>
           <div className="overflow-x-auto rounded-xl border border-slate-200" tabIndex={0}>
             <table className="w-full text-left text-xs text-slate-700">
               <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-3">Customer</th>
-                  <th className="py-3 px-3">Current Brands</th>
-                  <th className="py-3 px-3">Untapped Brand</th>
+                  <th className="py-3 px-3">Current brands</th>
+                  <th className="py-3 px-3">Untapped brand</th>
                   <th className="py-3 px-3 text-center">Karma</th>
-                  <th className="py-3 px-3">Suggested Recommendation Pitch</th>
+                  <th className="py-3 px-3">Suggested recommendation pitch</th>
                   <th className="py-3 px-3 text-right">Action</th>
                 </tr>
               </thead>
@@ -107,16 +107,16 @@ export default function CrossBrandMap({
                       >
                         {item.customer.name}
                       </Link>
-                      <div className="text-[10px] text-slate-500">{item.customer.phone}</div>
+                      <div className="text-[11px] text-slate-500">{item.customer.phone}</div>
                     </td>
                     <td className="py-3 px-3 font-medium text-slate-600">{item.currentBrands}</td>
                     <td className="py-3 px-3">
-                      <span className="rounded bg-purple-100 text-purple-800 font-bold px-2 py-0.5 text-[10px]">
+                      <span className="rounded bg-purple-100 text-purple-800 font-bold px-2 py-0.5 text-[11px]">
                         {item.targetBrand}
                       </span>
                     </td>
                     <td className="py-3 px-3 text-center">
-                      <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[10px]">
+                      <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[11px]">
                         {item.customer.karmaScore}
                       </span>
                     </td>
@@ -124,7 +124,7 @@ export default function CrossBrandMap({
                     <td className="py-3 px-3 text-right">
                       <Link
                         href={`/customers/${encodeURIComponent(item.customer.phone)}`}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 font-bold text-[10px] border border-purple-200 hover:bg-purple-100 transition"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 font-bold text-[11px] border border-purple-200 hover:bg-purple-100 transition"
                       >
                         Suggest <ChevronRight className="h-3 w-3" />
                       </Link>
@@ -146,7 +146,7 @@ export default function CrossBrandMap({
                 2g
               </span>
               <h2 className="text-base font-bold text-slate-900">
-                Channel Loyalty & Omnichannel Dynamics
+                Channel loyalty & omnichannel dynamics
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-1">
@@ -159,12 +159,12 @@ export default function CrossBrandMap({
           <table className="w-full text-left text-xs text-slate-700">
             <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
               <tr>
-                <th className="py-3 px-3">Acquisition Channel</th>
-                <th className="py-3 px-3 text-center">Unique Customers</th>
-                <th className="py-3 px-3 text-center">Total Orders</th>
+                <th className="py-3 px-3">Acquisition channel</th>
+                <th className="py-3 px-3 text-center">Unique customers</th>
+                <th className="py-3 px-3 text-center">Total orders</th>
                 <th className="py-3 px-3 text-center">Avg Karma</th>
-                <th className="py-3 px-3 text-center">Repeat Order Rate</th>
-                <th className="py-3 px-3 text-right">Channel Loyalist Share (&gt;80%)</th>
+                <th className="py-3 px-3 text-center">Repeat order rate</th>
+                <th className="py-3 px-3 text-right">Channel loyalist share (&gt;80%)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -174,7 +174,7 @@ export default function CrossBrandMap({
                   <td className="py-3 px-3 text-center font-bold text-slate-700">{row.customerCount}</td>
                   <td className="py-3 px-3 text-center font-semibold text-slate-600">{row.orderCount}</td>
                   <td className="py-3 px-3 text-center">
-                    <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[10px]">
+                    <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[11px]">
                       {row.avgKarma}
                     </span>
                   </td>
@@ -196,7 +196,7 @@ export default function CrossBrandMap({
                 2k
               </span>
               <h2 className="text-base font-bold text-slate-900">
-                Product Affinity by Customer Segment
+                Product affinity by customer segment
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-1">
@@ -228,9 +228,9 @@ export default function CrossBrandMap({
                     >
                       <div>
                         <span className="font-bold text-slate-900">{p.name}</span>
-                        <span className="ml-2 text-[10px] text-slate-500 font-medium">{p.brand}</span>
+                        <span className="ml-2 text-[11px] text-slate-500 font-medium">{p.brand}</span>
                       </div>
-                      <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                      <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
                         {p.share}
                       </span>
                     </div>
@@ -238,8 +238,8 @@ export default function CrossBrandMap({
                 )}
               </div>
 
-              <div className="text-[11px] text-slate-600 bg-white/70 p-2.5 rounded-lg border border-slate-100 italic">
-                <span className="font-bold not-italic text-slate-700">Directive:</span> {seg.strategy}
+              <div className="text-[11px] text-slate-600 bg-white/70 p-2.5 rounded-lg border border-slate-100 ">
+                <span className="font-bold not-text-slate-700">Directive:</span> {seg.strategy}
               </div>
             </div>
           ))}

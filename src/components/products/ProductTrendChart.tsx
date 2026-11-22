@@ -74,13 +74,13 @@ export default function ProductTrendChart({ productId, input, kind = 'product' }
                 : `${point.longLabel}: ${total} units (${point.d2c} online, ${point.b2b} in stores)${point.returned ? `, ${point.returned} returned` : ''}`;
               return (
                 <div key={point.key} className="flex flex-col items-center min-w-0" title={label} aria-label={label}>
-                  <span className="text-[10px] font-bold text-slate-700 font-mono mb-1">{total || ''}</span>
+                  <span className="text-[11px] font-bold text-slate-700 font-mono mb-1">{total || ''}</span>
                   <div className={`w-full h-24 flex flex-col justify-end rounded-t bg-slate-50 ${point.current ? 'ring-2 ring-blue-200' : ''}`}>
                     {point.b2b > 0 && <div className="w-full bg-brand-600 first:rounded-t" style={{ height: `${(point.b2b / max) * 100}%` }} />}
                     {point.d2c > 0 && <div className="w-full bg-purple-600 first:rounded-t" style={{ height: `${(point.d2c / max) * 100}%` }} />}
                   </div>
-                  <span className={`text-[10px] mt-1.5 font-bold truncate ${point.current ? 'text-blue-700' : 'text-slate-500'}`}>{point.label}</span>
-                  <span className="text-[9px] text-amber-700 h-3">{point.returned ? `↩${point.returned}` : ''}</span>
+                  <span className={`text-[11px] mt-1.5 font-bold truncate ${point.current ? 'text-blue-700' : 'text-slate-500'}`}>{point.label}</span>
+                  <span className="text-[11px] text-amber-700 h-3">{point.returned ? `↩${point.returned}` : ''}</span>
                 </div>
               );
             })}

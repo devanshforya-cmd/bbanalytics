@@ -95,7 +95,7 @@ export default function AddOutletModal({ chain, onClose, onSaved }: { chain: Dis
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 font-semibold text-slate-700 hover:bg-slate-100">Cancel</button>
-          <button type="submit" disabled={saving} className="rounded-lg bg-blue-600 px-4 py-2 font-bold text-white hover:bg-blue-700 disabled:opacity-50">Add outlet</button>
+          <button type="submit" disabled={saving} className="btn btn-primary disabled:opacity-50">Add outlet</button>
         </div>
       </form>
     </div>

@@ -26,7 +26,7 @@ import {
   HelpCircle,
   BarChart3,
   ShieldAlert,
-  Sparkles, Info } from 'lucide-react';
+  Lightbulb, Info } from 'lucide-react';
 
 interface CategoryAnalytics {
   allTimeTicks: number;
@@ -178,7 +178,7 @@ export default function ReviewCategoriesPage() {
     setShowArchiveModal(false);
     setCategoryToArchive(null);
     toast.undoable(
-      `✓ Category "${cat.name}" archived`,
+      `Category "${cat.name}" archived`,
       () => {
         db.unarchiveReviewCategory(cat.id);
         refreshList();
@@ -226,8 +226,8 @@ export default function ReviewCategoriesPage() {
       {/* 7f: Breadcrumbs */}
       <Breadcrumbs
         items={[
-          { label: 'Reviews & Quality', href: '/reviews/feedback' },
-          { label: 'Issue Categories Library' },
+          { label: 'Reviews & quality', href: '/reviews/feedback' },
+          { label: 'Issue categories library' },
         ]}
       />
 
@@ -236,7 +236,7 @@ export default function ReviewCategoriesPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              Dynamic Issue Categories Governance
+              Issue categories
 <InfoTip label="About this page">Admin oversight for dynamic tags logged across Customer Feedback and Product Returns. Rename typos, consolidate duplicates, and analyze defect trends.</InfoTip></h1>
           </div>
           
@@ -248,7 +248,7 @@ export default function ReviewCategoriesPage() {
           className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-700 self-start sm:self-auto transition"
         >
           <Plus className="h-4 w-4" />
-          Create New Category
+          Create new category
         </button>
       </div>
 
@@ -256,7 +256,7 @@ export default function ReviewCategoriesPage() {
       <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-xs text-blue-900 flex items-start gap-3 shadow-xs">
         <ShieldAlert className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <span className="font-bold">Enterprise Audit Rule: No Category Deletions</span>
+          <span className="font-bold">Enterprise audit rule: No category deletions</span>
           <p className="text-blue-800 text-[11px] leading-relaxed">
             Categories cannot be deleted to guarantee long-term historical data integrity. Obsolete tags can be <strong>Archived</strong> (hidden from new forms while preserving historical records) or <strong>Merged</strong> into an approved master tag.
           </p>
@@ -319,7 +319,7 @@ export default function ReviewCategoriesPage() {
               className="rounded-lg bg-purple-700 px-4 py-1.5 text-xs font-bold text-white hover:bg-purple-800 shadow-sm flex items-center gap-1.5"
             >
               <GitMerge className="h-3.5 w-3.5" />
-              Merge into One Category
+              Merge into one category
             </button>
           </div>
         )}
@@ -329,7 +329,7 @@ export default function ReviewCategoriesPage() {
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden text-xs">
         <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full text-left min-w-[850px]">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold ">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] font-bold ">
               <tr>
                 <th className="py-3 px-4 w-10 text-center">
                   <input
@@ -342,14 +342,14 @@ export default function ReviewCategoriesPage() {
                     className="rounded border-slate-300 cursor-pointer"
                   />
                 </th>
-                <th className="py-3 px-4">Category Name</th>
-                <th className="py-3 px-4">Created By</th>
-                <th className="py-3 px-4">Created Date</th>
-                <th className="py-3 px-4 text-center">Times Used</th>
-                <th className="py-3 px-4">Last Used</th>
+                <th className="py-3 px-4">Category name</th>
+                <th className="py-3 px-4">Created by</th>
+                <th className="py-3 px-4">Created date</th>
+                <th className="py-3 px-4 text-center">Times used</th>
+                <th className="py-3 px-4">Last used</th>
                 <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-center">Usage Trend</th>
-                <th className="py-3 px-4 text-right">Admin Actions</th>
+                <th className="py-3 px-4 text-center">Usage trend</th>
+                <th className="py-3 px-4 text-right">Admin actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
@@ -439,7 +439,7 @@ export default function ReviewCategoriesPage() {
                           </div>
                         )}
                         {cat.mergedIntoId && (
-                          <span className="text-[10px] text-purple-600 font-normal block mt-0.5">
+                          <span className="text-[11px] text-purple-600 font-normal block mt-0.5">
                             Merged into {categories.find((c) => c.id === cat.mergedIntoId)?.name || 'master tag'}
                           </span>
                         )}
@@ -470,11 +470,11 @@ export default function ReviewCategoriesPage() {
                       {/* Status */}
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         {isArchived ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-0.5 text-[10px] font-bold text-slate-700">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">
                             Archived
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
                             Active
                           </span>
                         )}
@@ -542,7 +542,7 @@ export default function ReviewCategoriesPage() {
                             >
                               Delete
                             </button>
-                            <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block w-48 rounded-lg bg-slate-900 p-2 text-[10px] text-white shadow-xl z-20 text-center font-normal leading-tight">
+                            <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block w-48 rounded-lg bg-slate-900 p-2 text-[11px] text-white shadow-xl z-20 text-center font-normal leading-tight">
                               Categories cannot be deleted to preserve data integrity. Use Archive instead.
                             </div>
                           </div>
@@ -581,40 +581,40 @@ export default function ReviewCategoriesPage() {
             {/* 12c: 5 Core Analytics Vectors */}
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1">
-                <span className="text-slate-500 font-semibold block text-[11px]">Total Times Ticked (All Time)</span>
+                <span className="text-slate-500 font-semibold block text-[11px]">Total times ticked (all time)</span>
                 <span className="text-xl font-black font-mono text-slate-900">
                   {analyticsMap[selectedAnalyticsCat.id]?.allTimeTicks}
                 </span>
-                <span className="text-[10px] text-slate-500 block">Across feedback & returns</span>
+                <span className="text-[11px] text-slate-500 block">Across feedback & returns</span>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1">
-                <span className="text-slate-500 font-semibold block text-[11px]">Times Ticked This Month</span>
-                <span className="text-xl font-black font-mono text-blue-700">
+                <span className="text-slate-500 font-semibold block text-[11px]">Times ticked this month</span>
+                <span className="text-xl font-black font-mono text-slate-900">
                   {analyticsMap[selectedAnalyticsCat.id]?.monthTicks}
                 </span>
-                <span className="text-[10px] text-slate-500 block">Current Month</span>
+                <span className="text-[11px] text-slate-500 block">Current month</span>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1 col-span-2">
-                <span className="text-slate-500 font-semibold block text-[11px]">Most Affected Product</span>
+                <span className="text-slate-500 font-semibold block text-[11px]">Most affected product</span>
                 <strong className="text-slate-900 text-sm block">
                   {analyticsMap[selectedAnalyticsCat.id]?.mostAffectedProduct}
                 </strong>
-                <span className="text-[10px] text-slate-500 block">
+                <span className="text-[11px] text-slate-500 block">
                   Generates 68% of incidents for this category
                 </span>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1">
-                <span className="text-slate-500 font-semibold block text-[11px]">Most Affected Brand</span>
+                <span className="text-slate-500 font-semibold block text-[11px]">Most affected brand</span>
                 <span className="inline-block rounded bg-teal-100 text-teal-800 font-bold px-2 py-0.5 text-xs">
                   {analyticsMap[selectedAnalyticsCat.id]?.mostAffectedBrand}
                 </span>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1">
-                <span className="text-slate-500 font-semibold block text-[11px]">Defect Velocity Trend</span>
+                <span className="text-slate-500 font-semibold block text-[11px]">Defect velocity trend</span>
                 <span className="font-bold text-xs flex items-center gap-1 text-slate-900">
                   {analyticsMap[selectedAnalyticsCat.id]?.trend === 'increasing' ? (
                     <span className="text-rose-600 flex items-center gap-1">
@@ -638,7 +638,7 @@ export default function ReviewCategoriesPage() {
                 onClick={() => setSelectedAnalyticsCat(null)}
                 className="rounded-xl bg-slate-900 px-5 py-2 text-xs font-bold text-white hover:bg-slate-800 shadow"
               >
-                Close Analytics
+                Close analytics
               </button>
             </div>
           </div>
@@ -655,7 +655,7 @@ export default function ReviewCategoriesPage() {
                   <GitMerge className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Consolidate & Merge Categories</h3>
+                  <h3 className="font-bold text-slate-900 text-base">Consolidate & merge categories</h3>
                   <p className="text-[11px] text-slate-500">Unify duplicate tags and re-tag historical records</p>
                 </div>
               </div>
@@ -683,9 +683,9 @@ export default function ReviewCategoriesPage() {
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">
-                Pick the Surviving Master Name:
+                Pick the surviving master name:
               </label>
-              <select aria-label="Pick the Surviving Master Name:"
+              <select aria-label="Pick the surviving master name:"
                 value={survivingCategoryId}
                 onChange={(e) => setSurvivingCategoryId(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-bold text-slate-900 focus:border-purple-500"
@@ -699,7 +699,7 @@ export default function ReviewCategoriesPage() {
                   );
                 })}
               </select>
-              <span className="text-[10px] text-slate-500 mt-1 block">
+              <span className="text-[11px] text-slate-500 mt-1 block">
                 All historical entries will be re-tagged to this category name.
               </span>
             </div>
@@ -719,10 +719,10 @@ export default function ReviewCategoriesPage() {
               <button
                 type="button"
                 onClick={handleConfirmMerge}
-                className="rounded-xl bg-purple-700 px-5 py-2 font-bold text-white shadow hover:bg-purple-800 flex items-center gap-1.5"
+                className="rounded-lg bg-purple-700 px-5 py-2 font-bold text-white shadow hover:bg-purple-800 flex items-center gap-1.5"
               >
                 <GitMerge className="h-4 w-4" />
-                Confirm & Consolidate
+                Confirm & consolidate
               </button>
             </div>
           </div>
@@ -739,7 +739,7 @@ export default function ReviewCategoriesPage() {
                   <Tags className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Create New Category</h3>
+                  <h3 className="font-bold text-slate-900 text-base">Create new category</h3>
                   <p className="text-[11px] text-slate-500">Add an issue tag for feedback & returns</p>
                 </div>
               </div>
@@ -767,7 +767,7 @@ export default function ReviewCategoriesPage() {
               </div>
 
               <div>
-                <label htmlFor="categories-created-by" className="block font-bold text-slate-700 mb-1">Created By</label>
+                <label htmlFor="categories-created-by" className="block font-bold text-slate-700 mb-1">Created by</label>
                 <select id="categories-created-by"
                   value={newCatCreator}
                   onChange={(e) => setNewCatCreator(e.target.value)}
@@ -795,9 +795,9 @@ export default function ReviewCategoriesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white shadow hover:bg-blue-700"
+                  className="btn btn-primary"
                 >
-                  Save Category
+                  Save category
                 </button>
               </div>
             </form>
@@ -810,12 +810,12 @@ export default function ReviewCategoriesPage() {
         isOpen={showArchiveModal}
         title={`Archive "${categoryToArchive?.name}" category?`}
         variant="warning"
-        confirmLabel="Archive Category"
+        confirmLabel="Archive category"
         cancelLabel="Cancel"
         details={categoryToArchive ? [
-          { label: 'Category Name', value: categoryToArchive.name },
-          { label: 'Usage Frequency', value: `${categoryToArchive.tickCount} tagged times` },
-          { label: 'Last Logged Activity', value: categoryToArchive.lastUsedDate || 'Recently' },
+          { label: 'Category name', value: categoryToArchive.name },
+          { label: 'Usage frequency', value: `${categoryToArchive.tickCount} tagged times` },
+          { label: 'Last logged activity', value: categoryToArchive.lastUsedDate || 'Recently' },
         ] : []}
         consequences={[
           'Hide it from future order, return, and complaint input forms',

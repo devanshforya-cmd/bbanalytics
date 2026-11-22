@@ -72,11 +72,11 @@ export default function MarketingSendsPage() {
   return (
     <PageGuard feature="marketing">
       <div className="mx-auto max-w-7xl space-y-6 pb-20">
-        <Breadcrumbs items={[{ label: 'Marketing', href: '/marketing/influencers' }, { label: 'Marketing Sends' }]} />
+        <Breadcrumbs items={[{ label: 'Marketing', href: '/marketing/influencers' }, { label: 'Marketing sends' }]} />
 
         <div className="flex flex-col justify-between gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-center">
           <div>
-            <h1 className="flex items-center gap-1.5 text-2xl font-bold tracking-tight text-slate-900">Marketing Sends
+            <h1 className="flex items-center gap-1.5 text-2xl font-bold tracking-tight text-slate-900">Marketing sends
 <InfoTip label="About this page">History of products sent to influencers. Never counted in orders, sales or delivery numbers.</InfoTip></h1>
             
           </div>
@@ -92,7 +92,7 @@ export default function MarketingSendsPage() {
             <span><strong>{legacyOrders} earlier send{legacyOrders === 1 ? '' : 's'}</strong> still need moving out of orders. They are already excluded from every sales number.</span>
             {isSuperAdmin(db.getCurrentUser())
               ? <Link href="/settings?tab=upgrade" className="rounded-lg border border-amber-400 bg-white px-3 py-1.5 font-bold hover:bg-amber-100">Open data upgrade</Link>
-              : <span className="font-semibold">Ask a Super Admin to run Settings → Data Upgrade.</span>}
+              : <span className="font-semibold">Ask a Super Admin to run settings → Data upgrade.</span>}
           </div>
         )}
 
@@ -134,11 +134,11 @@ export default function MarketingSendsPage() {
                         <td className="whitespace-nowrap px-4 py-3 font-mono font-black text-slate-900">{displayDocumentId(send.sendNumber)}</td>
                         <td className="whitespace-nowrap px-3 py-3 text-slate-600">{formatDate(send.sentDateAd, send.sentDateBs)}</td>
                         <td className="px-3 py-3 font-bold text-blue-700">{send.influencerName}</td>
-                        <td className="px-3 py-3"><span className="flex flex-wrap gap-1">{send.brandCodes.map((code) => <span key={code} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">{brandName(code)}</span>)}</span></td>
+                        <td className="px-3 py-3"><span className="flex flex-wrap gap-1">{send.brandCodes.map((code) => <span key={code} className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">{brandName(code)}</span>)}</span></td>
                         <td className="max-w-xs px-3 py-3 text-slate-700">{send.items.map((item) => `${item.quantity}× ${item.productName}${item.isCombo ? " (combo)" : ""}`).join(', ')}</td>
                         <td className="whitespace-nowrap px-3 py-3 text-slate-600">{send.responsibleName || '—'}</td>
                         <td className="whitespace-nowrap px-3 py-3 text-slate-600">{send.expectedContentDateAd ? formatDate(send.expectedContentDateAd, send.expectedContentDateBs) : '—'}</td>
-                        <td className="whitespace-nowrap px-3 py-3"><span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLE[label]}`}>{label}</span></td>
+                        <td className="whitespace-nowrap px-3 py-3"><span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${STATUS_STYLE[label]}`}>{label}</span></td>
                         <td className="px-3 py-3 text-slate-300"><ChevronRight className="h-4 w-4" /></td>
                       </tr>
                     );

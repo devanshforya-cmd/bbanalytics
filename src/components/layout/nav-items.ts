@@ -1,6 +1,6 @@
 import type React from 'react';
 import {
-  ListChecks, ClipboardList, Download, LayoutDashboard, Compass, Store, Truck, Camera, Phone, CreditCard, FileText, Award, Sparkles,
+  ListChecks, ClipboardList, Download, LayoutDashboard, Compass, Store, Truck, Camera, Phone, CreditCard, FileText, Award, ScanText,
   ClipboardPen, ClipboardCheck, TruckIcon, MessageSquareHeart, RotateCcw, Tags, Users, PieChart, CheckSquare,
   History, FileSpreadsheet, BadgePercent, Navigation, Calendar, Settings, Package, Megaphone, Gift, PhoneOutgoing, PhoneCall,
 } from 'lucide-react';
@@ -21,7 +21,7 @@ export interface NavSection { title: string; items: NavItem[] }
 
 const ICONS: Partial<Record<PageKey, React.ComponentType<{ className?: string }>>> = {
   'p.dashboard': LayoutDashboard, 'p.products': Package,
-  'p.orders_extractor': Sparkles, 'p.orders_manual': ClipboardPen, 'p.orders_all': ListChecks, 'p.orders_daily': ClipboardCheck,
+  'p.orders_extractor': ScanText, 'p.orders_manual': ClipboardPen, 'p.orders_all': ListChecks, 'p.orders_daily': ClipboardCheck,
   'p.orders_monthly': FileSpreadsheet, 'p.sales_offers': BadgePercent, 'p.delivery_failures': TruckIcon, 'p.follow_ups': PhoneOutgoing, 'p.customer_calls': PhoneCall,
   'p.feedback': MessageSquareHeart, 'p.returns': RotateCcw, 'p.issue_categories': Tags,
   'p.customers': Users, 'p.customer_insights': PieChart,

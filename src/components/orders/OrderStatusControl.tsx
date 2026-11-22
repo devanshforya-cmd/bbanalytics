@@ -21,7 +21,7 @@ interface OrderStatusControlProps {
 }
 
 export function OrderStatusBadge({ status }: { status: Order['status'] }) {
-  return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${ORDER_STATUS_STYLE[status] || ORDER_STATUS_STYLE.PENDING}`}>{ORDER_STATUS_LABEL[status] || status}</span>;
+  return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold ${ORDER_STATUS_STYLE[status] || ORDER_STATUS_STYLE.PENDING}`}>{ORDER_STATUS_LABEL[status] || status}</span>;
 }
 
 const STEP_ICON: Record<string, React.ReactNode> = { DISPATCHED: <Truck className="h-3 w-3" />, DELIVERED: <Check className="h-3 w-3" /> };
@@ -70,7 +70,7 @@ export default function OrderStatusControl({ order, compact = false, onChanged }
         <OrderStatusBadge status={order.status} />
         {next && (
           <button type="button" disabled={isSubmitting} onClick={() => apply(next)} title={`Mark ${ORDER_STATUS_LABEL[next].toLowerCase()}`}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50">
+            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] font-bold text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50">
             {STEP_ICON[next]} {ORDER_STATUS_LABEL[next]}
           </button>
         )}

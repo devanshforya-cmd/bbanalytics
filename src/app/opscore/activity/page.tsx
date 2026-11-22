@@ -328,7 +328,7 @@ export default function ActivityTrailPage() {
       <Breadcrumbs
         items={[
           { label: 'OpsCore', href: '/opscore/activity' },
-          { label: 'Activity Trail' },
+          { label: 'Activity trail' },
         ]}
       />
 
@@ -337,7 +337,7 @@ export default function ActivityTrailPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-black tracking-tight text-slate-900">
-              System Activity Trail &amp; Audit Log
+              Activity trail
 <InfoTip label="About this page">Real-time chronological audit trail of all store visits, cheque custody transitions, order creations, and system overrides.</InfoTip></h1>
           </div>
           
@@ -348,11 +348,11 @@ export default function ActivityTrailPage() {
           <button
             onClick={handleExportCsv}
             disabled={filteredLogs.length === 0}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs transition"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs transition"
           >
             <Download className="h-3.5 w-3.5" />
             <span>Export to CSV</span>
-            <span className="rounded bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-300">
+            <span className="rounded bg-slate-800 px-1.5 py-0.2 text-[11px] text-slate-300">
               {filteredLogs.length}
             </span>
           </button>
@@ -385,8 +385,8 @@ export default function ActivityTrailPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
           {/* By User */}
           <div>
-            <label htmlFor="activity-by-team-member" className="text-[10px] font-bold text-slate-500 block mb-1">
-              By Team Member:
+            <label htmlFor="activity-by-team-member" className="text-[11px] font-bold text-slate-500 block mb-1">
+              By team member:
             </label>
             <select id="activity-by-team-member"
               value={selectedUser}
@@ -404,15 +404,15 @@ export default function ActivityTrailPage() {
 
           {/* By Action Type */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 block mb-1">
-              By Action Type:
+            <label className="text-[11px] font-bold text-slate-500 block mb-1">
+              By action type:
             </label>
-            <select aria-label="By Action Type:"
+            <select aria-label="By action type:"
               value={selectedAction}
               onChange={(e) => setSelectedAction(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50/60 p-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
             >
-              <option value="ALL">All Action Types</option>
+              <option value="ALL">All action types</option>
               {actionOptions.map(([code, label]) => (
                 <option key={code} value={code}>
                   {label}
@@ -423,15 +423,15 @@ export default function ActivityTrailPage() {
 
           {/* By Entity Type */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 block mb-1">
-              By Entity Type:
+            <label className="text-[11px] font-bold text-slate-500 block mb-1">
+              By entity type:
             </label>
-            <select aria-label="By Entity Type:"
+            <select aria-label="By entity type:"
               value={selectedEntity}
               onChange={(e) => setSelectedEntity(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50/60 p-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
             >
-              <option value="ALL">All Entities</option>
+              <option value="ALL">All entities</option>
               {entityOptions.map((ent) => (
                 <option key={ent} value={ent}>
                   {ent}
@@ -442,19 +442,19 @@ export default function ActivityTrailPage() {
 
           {/* By Date Range */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 block mb-1">
-              By Date Range:
+            <label className="text-[11px] font-bold text-slate-500 block mb-1">
+              By date range:
             </label>
-            <select aria-label="By Date Range:"
+            <select aria-label="By date range:"
               value={selectedDateFilter}
               onChange={(e) => setSelectedDateFilter(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50/60 p-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
             >
-              <option value="ALL">All Time History</option>
+              <option value="ALL">All time history</option>
               <option value="TODAY">Today</option>
               <option value="YESTERDAY">Yesterday</option>
-              <option value="THIS_WEEK">This Week</option>
-              <option value="CUSTOM">Custom Date Range (BS/AD)</option>
+              <option value="THIS_WEEK">This week</option>
+              <option value="CUSTOM">Custom date range (BS/AD)</option>
             </select>
           </div>
         </div>
@@ -503,9 +503,9 @@ export default function ActivityTrailPage() {
         {/* Toggle Pills */}
         <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200 w-fit">
           {[
-            { key: 'FLAT', label: 'Flat List' },
-            { key: 'BY_DAY', label: 'Grouped by Day' },
-            { key: 'BY_USER', label: 'Grouped by User' },
+            { key: 'FLAT', label: 'Flat list' },
+            { key: 'BY_DAY', label: 'Grouped by day' },
+            { key: 'BY_USER', label: 'Grouped by user' },
           ].map((mode) => (
             <button
               key={mode.key}
@@ -561,12 +561,12 @@ export default function ActivityTrailPage() {
         <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden text-xs">
           <div className="overflow-x-auto" tabIndex={0}>
             <table className="w-full text-left min-w-[700px]">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold ">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] font-bold ">
                 <tr>
-                  <th className="py-3 px-4">User &amp; Role</th>
-                  <th className="py-3 px-4">Action Badge</th>
-                  <th className="py-3 px-4">Entity Type</th>
-                  <th className="py-3 px-4">Details / Metadata Payload</th>
+                  <th className="py-3 px-4">User &amp; role</th>
+                  <th className="py-3 px-4">Action badge</th>
+                  <th className="py-3 px-4">Entity type</th>
+                  <th className="py-3 px-4">Details / metadata payload</th>
                   <th className="py-3 px-4 text-right">Timestamp (BS &amp; AD)</th>
                 </tr>
               </thead>
@@ -591,7 +591,7 @@ export default function ActivityTrailPage() {
                       <tr key={log.id} className="hover:bg-slate-50/80 transition">
                         <td className="py-3 px-4">
                           <div className="font-bold text-slate-900">{log.userName}</div>
-                          <div className="text-[10px] text-slate-500 font-medium">
+                          <div className="text-[11px] text-slate-500 font-medium">
                             {log.userRole ? log.userRole.replace(/_/g, ' ') : 'STAFF'}
                           </div>
                         </td>
@@ -604,14 +604,14 @@ export default function ActivityTrailPage() {
                               {formatActionLabel(log.action)}
                             </span>
                             {(log.action.includes('Summary') || log.entityType === 'STAFF_DUTY' || log.entityType === 'DAILY_REPORT') && (
-                              <span className="rounded-full bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 text-[9px] font-black ">
-                                Daily Report
+                              <span className="rounded-full bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 text-[11px] font-black ">
+                                Daily report
                               </span>
                             )}
                           </div>
                         </td>
                         <td className="py-3 px-4 font-semibold text-slate-700">
-                          <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                          <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
                             {log.entityType}
                           </span>
                         </td>
@@ -624,7 +624,7 @@ export default function ActivityTrailPage() {
                         </td>
                         <td className="py-3 px-4 text-right text-slate-600 text-[11px]">
                           <div className="font-bold text-slate-900">{bsDate}</div>
-                          <div className="text-[10px] text-slate-500 font-medium">
+                          <div className="text-[11px] text-slate-500 font-medium">
                             {new Date(log.createdAt).toLocaleDateString()} at {timeStr}
                           </div>
                         </td>
@@ -661,7 +661,7 @@ export default function ActivityTrailPage() {
                       {group.bsDate} ({dateKey})
                     </h3>
                   </div>
-                  <span className="rounded-full bg-blue-100 text-blue-800 font-black px-2.5 py-0.5 text-[10px] border border-blue-200">
+                  <span className="rounded-full bg-blue-100 text-blue-800 font-black px-2.5 py-0.5 text-[11px] border border-blue-200">
                     {group.items.length} actions logged
                   </span>
                 </div>
@@ -682,17 +682,17 @@ export default function ActivityTrailPage() {
                       >
                         <div className="flex items-start sm:items-center gap-3">
                           <span
-                            className={`rounded-md px-2 py-0.5 text-[10px] font-bold border shrink-0 ${actionBadge}`}
+                            className={`rounded-md px-2 py-0.5 text-[11px] font-bold border shrink-0 ${actionBadge}`}
                           >
                             {formatActionLabel(log.action)}
                           </span>
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-slate-900">{log.userName}</span>
-                              <span className="text-[10px] text-slate-500 font-medium">
+                              <span className="text-[11px] text-slate-500 font-medium">
                                 ({log.userRole ? log.userRole.replace(/_/g, ' ') : 'Staff'})
                               </span>
-                              <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[9px] font-bold text-slate-600">
+                              <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[11px] font-bold text-slate-600">
                                 {log.entityType}
                               </span>
                             </div>
@@ -738,12 +738,12 @@ export default function ActivityTrailPage() {
                     </div>
                     <div>
                       <h3 className="font-black text-slate-900 text-sm">{userName}</h3>
-                      <span className="text-[10px] text-slate-500 font-semibold ">
+                      <span className="text-[11px] text-slate-500 font-semibold ">
                         {group.role.replace(/_/g, ' ')}
                       </span>
                     </div>
                   </div>
-                  <span className="rounded-full bg-slate-200 text-slate-800 font-black px-2.5 py-0.5 text-[10px]">
+                  <span className="rounded-full bg-slate-200 text-slate-800 font-black px-2.5 py-0.5 text-[11px]">
                     {group.items.length} total actions
                   </span>
                 </div>
@@ -765,13 +765,13 @@ export default function ActivityTrailPage() {
                       >
                         <div className="flex items-start sm:items-center gap-3">
                           <span
-                            className={`rounded-md px-2 py-0.5 text-[10px] font-bold border shrink-0 ${actionBadge}`}
+                            className={`rounded-md px-2 py-0.5 text-[11px] font-bold border shrink-0 ${actionBadge}`}
                           >
                             {formatActionLabel(log.action)}
                           </span>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[9px] font-bold text-slate-600">
+                              <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[11px] font-bold text-slate-600">
                                 {log.entityType}
                               </span>
                               <span className="font-medium text-slate-700 font-mono text-[11px] truncate max-w-xl">

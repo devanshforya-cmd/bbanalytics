@@ -25,7 +25,7 @@ export default function StoreUpsellPanel({ analysis, promotions }: { analysis: A
         {analysis.opportunities.length === 0 && <p className="text-xs text-slate-500">No recommendation yet. Record delivered orders and fresh shelf counts to improve the evidence.</p>}
         {analysis.opportunities.slice(0, 5).map(item => <div key={item.productId} className="rounded-xl border border-slate-200 p-3 space-y-2">
           <div className="flex items-start justify-between gap-3"><p className="text-sm font-bold text-slate-900">{item.productName}</p><span className="text-xs font-bold text-blue-700 shrink-0">{item.score}/100</span></div>
-          <span className="inline-block rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">{item.kind === 'INTRODUCE' ? 'PITCH A TRIAL' : 'REVIEW REPLENISHMENT'}</span>
+          <span className="inline-block rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-600">{item.kind === 'INTRODUCE' ? 'PITCH A TRIAL' : 'REVIEW REPLENISHMENT'}</span>
           <p className="text-xs leading-relaxed text-slate-600">{item.reason}</p>
         </div>)}
       </section>

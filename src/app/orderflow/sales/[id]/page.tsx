@@ -44,13 +44,13 @@ function SaleDetail() {
   const campaign = useMemo(() => db.getCampaign(params.id), [params.id, revision]); // eslint-disable-line react-hooks/exhaustive-deps
   const now = nepalNow();
   const results = useMemo(() => campaign && !campaign.isTemplate ? saleResults(campaign, db.getOrders('ALL'), { today: now.slice(0, 10), failures: db.getDeliveryFailures('ALL'), returns: db.getReturns('ALL'), comboIds: db.getCombos('ALL').map((combo) => combo.id) }) : null, [campaign, revision]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!campaign) return <div className="mx-auto max-w-5xl p-6"><Link href="/orderflow/sales" className="text-sm text-blue-700">← Sales &amp; Offers</Link><h1 className="mt-4 text-lg font-semibold text-slate-900">This sale no longer exists</h1><p className="mt-1 text-sm text-slate-600">It may have been deleted. Go back to Sales &amp; offers to see the others.</p></div>;
+  if (!campaign) return <div className="mx-auto max-w-5xl p-6"><Link href="/orderflow/sales" className="text-sm text-blue-700">← Sales &amp; offers</Link><h1 className="mt-4 text-lg font-semibold text-slate-900">This sale no longer exists</h1><p className="mt-1 text-sm text-slate-600">It may have been deleted. Go back to Sales &amp; offers to see the others.</p></div>;
   const state = campaignState(campaign, now);
   const giftName = (id: string) => db.getProducts('ALL').find((product) => product.id === id)?.name || 'gift';
   const row = (pick: (stats: PeriodStats) => string) => results ? { during: pick(results.during), before: pick(results.before), ...(results.after ? { after: pick(results.after) } : {}) } : { during: '', before: '' };
   return (
     <div className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
-      <Link href="/orderflow/sales" className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700"><ArrowLeft className="h-3.5 w-3.5" /> Sales &amp; Offers</Link>
+      <Link href="/orderflow/sales" className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700"><ArrowLeft className="h-3.5 w-3.5" /> Sales &amp; offers</Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{campaign.name}</h1>

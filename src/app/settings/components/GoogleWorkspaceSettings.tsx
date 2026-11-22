@@ -71,7 +71,7 @@ export default function GoogleWorkspaceSettings({ showExport = false }: { showEx
 
   return <section className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-xs" aria-label="Google Workspace integration">
     <div>
-      <h2 className="text-base font-bold text-slate-900">Google Workspace</h2>
+      <h2 className="text-base font-bold text-slate-900">Google workspace</h2>
       <p className="text-sm text-slate-600 mt-1">Supabase stores business records. Drive stores documents and photos; Sheets receives reports when an administrator exports them.</p>
     </div>
     {error && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
