@@ -168,7 +168,7 @@ export default function DashboardPage() {
               </form>
             ) : (
               <button key={d.id} role="tab" type="button" aria-selected={d.id === dashboard.id} onClick={() => setActive(d.id)} onDoubleClick={() => setRenaming(d.id)}
-                className={`h-8 shrink-0 whitespace-nowrap rounded-lg px-3 text-[13px] transition-colors ${d.id === dashboard.id ? 'bg-black/[0.05] font-medium text-slate-900 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]' : 'text-slate-600 hover:bg-black/[0.03] hover:text-slate-900'}`}>{d.name}</button>
+                className={`h-8 shrink-0 whitespace-nowrap rounded-lg px-3 text-[13px] transition-colors ${d.id === dashboard.id ? 'bg-blue-50 font-medium text-blue-900 shadow-[inset_0_0_0_1px_rgba(12,121,181,0.12)]' : 'text-slate-600 hover:bg-black/[0.03] hover:text-slate-900'}`}>{d.name}</button>
             ))}
             <div className="relative">
               <button type="button" onClick={() => setMenu(menu === 'new' ? null : 'new')} aria-expanded={menu === 'new'} className="btn btn-quiet"><Plus aria-hidden="true" /> New dashboard</button>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Copy, Info, Maximize2, Pencil, Trash2, GripVertical } from 'lucide-react';
 import { formatValue, change as changeOf, isDated } from '@/lib/metrics/engine';
 import { computeWidget, hasNoBase, type WidgetData } from '@/lib/metrics/widget-data';
@@ -10,7 +10,30 @@ import { BarList, ColumnChart, Donut, LineChart, StackedChart } from './charts';
 import RecordsDialog from './RecordsDialog';
 
 const SPAN: Record<Widget['size'], string> = { S: 'col-span-1', M: 'col-span-1 md:col-span-2', L: 'col-span-1 md:col-span-2 xl:col-span-4' };
-const TONE = { good: 'text-emerald-700', bad: 'text-rose-700', flat: 'text-slate-500' };
+const TONE = { good: 'bg-emerald-50 text-emerald-700', bad: 'bg-rose-50 text-rose-700', flat: 'text-slate-500' };
+
+/** A number that counts up to its value when it first appears or changes. */
+function CountUp({ value, render }: { value: number | null; render: (v: number | null) => string }) {
+  const [shown, setShown] = useState<number | null>(value === null ? null : 0);
+  const from = useRef(0);
+  useEffect(() => {
+    if (value === null || !Number.isFinite(value)) { setShown(value); return; }
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { setShown(value); from.current = value; return; }
+    const start = performance.now(), a = from.current, b = value, ms = 900;
+    let frame = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / ms);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setShown(t >= 1 ? b : a + (b - a) * eased);
+      if (t < 1) frame = requestAnimationFrame(tick); else from.current = b;
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+  // While counting, whole numbers stay whole so the figure never flickers through decimals.
+  const display = shown !== null && value !== null && shown !== value && Number.isInteger(value) ? Math.round(shown) : shown;
+  return <>{render(display)}</>;
+}
 
 export interface CardActions { onEdit: () => void; onDuplicate: () => void; onRemove: () => void; onMove: (step: -1 | 1) => void; onResize: () => void }
 
@@ -29,7 +52,7 @@ export default function WidgetCard({ prepared, widget, filters, extraWhere, edit
   const subtitle = isSnapshot ? 'Right now' : data.range.label;
 
   return (
-    <section className={`${preview ? '' : SPAN[widget.size]} flex min-w-0 flex-col rounded-xl border border-slate-200 bg-white p-4 ${editing ? 'ring-1 ring-blue-200' : ''}`} aria-label={data.title} {...dragProps}>
+    <section className={`${preview ? '' : SPAN[widget.size]} bb-card flex min-w-0 flex-col rounded-2xl border border-black/[0.08] bg-white p-4 ${editing ? 'ring-1 ring-blue-200' : ''}`} aria-label={data.title} {...dragProps}>
       <header className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="flex items-center gap-1 text-[13px] font-semibold leading-snug text-slate-800">
@@ -73,9 +96,9 @@ function Body({ data, widget, onAll, onGroup, onBucket }: { data: WidgetData; wi
   if (widget.view === 'number') {
     return (
       <div className="flex flex-1 flex-col justify-end">
-        <button type="button" onClick={onAll} className="w-fit rounded text-left text-[28px] leading-none font-medium tabular-nums text-slate-900 hover:text-blue-700" title="See the records behind this number">{formatValue(data.value, unit, { compact: true })}</button>
+        <button type="button" onClick={onAll} className="w-fit rounded text-left text-[28px] leading-none font-medium tabular-nums text-slate-900 hover:text-blue-700" title="See the records behind this number"><CountUp value={data.value} render={(v) => formatValue(v, unit, { compact: true })} /></button>
         <div className="mt-1 flex min-h-[20px] items-center gap-2 text-[11px]">
-          {data.delta && <span className={`font-medium tabular-nums ${TONE[data.delta.tone]}`}>{data.delta.text}</span>}
+          {data.delta && <span className={`inline-flex items-center rounded-full px-1.5 py-px font-medium tabular-nums ${TONE[data.delta.tone]}`}>{data.delta.text}</span>}
           {data.previousRange && <span className="text-slate-500">vs {formatValue(data.previous, unit, { compact: true })}</span>}
         </div>
       </div>
@@ -90,11 +113,11 @@ function Body({ data, widget, onAll, onGroup, onBucket }: { data: WidgetData; wi
     return (
       <div className="flex flex-1 flex-col justify-end">
         <div className="flex items-baseline justify-between gap-2">
-          <button type="button" onClick={onAll} className="text-[28px] leading-none font-medium tabular-nums text-slate-900 hover:text-blue-700">{formatValue(data.value, unit, { compact: true })}</button>
+          <button type="button" onClick={onAll} className="text-[28px] leading-none font-medium tabular-nums text-slate-900 hover:text-blue-700"><CountUp value={data.value} render={(v) => formatValue(v, unit, { compact: true })} /></button>
           <span className="text-xs text-slate-500">{target ? `${lower ? 'limit' : 'target'} ${formatValue(target, unit, { compact: true })}` : 'No target set'}</span>
         </div>
-        <div className="mt-2 h-2.5 rounded-full bg-slate-100" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.min(1, share) * 100)} aria-label="Progress towards the target">
-          <div className={`h-2.5 rounded-full ${lower ? (share > 1 ? 'bg-rose-500' : 'bg-emerald-500') : share >= 1 ? 'bg-emerald-500' : onPace === false ? 'bg-amber-500' : 'bg-blue-600'}`} style={{ width: `${Math.min(100, share * 100)}%` }} />
+        <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.min(1, share) * 100)} aria-label="Progress towards the target">
+          <div className={`bb-grow-x h-2.5 rounded-full ${lower ? (share > 1 ? 'bg-rose-500' : 'bg-emerald-500') : share >= 1 ? 'bg-emerald-500' : onPace === false ? 'bg-amber-500' : 'bg-blue-600'}`} style={{ width: `${Math.min(100, share * 100)}%` }} />
         </div>
         <p className="mt-1.5 text-[11px] text-slate-600">
           {!target ? 'Edit the chart to set a target.' : lower ? (share > 1 ? 'Over the limit.' : `${Math.round(share * 100)}% of the limit used.`)
