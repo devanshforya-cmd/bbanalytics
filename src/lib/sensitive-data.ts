@@ -28,6 +28,7 @@ const RULES: Record<string, Rule[]> = {
   customers: [{ key: 's.customers', phones: ['phone'], texts: ['address', 'email'] }],
   returns: [{ key: 's.customers', phones: ['customerPhone'] }],
   feedbackEntries: [{ key: 's.customers', phones: ['customerPhone'] }],
+  customerCalls: [{ key: 's.customers', phones: ['customerPhone'] }],
   deliveryFailures: [{ key: 's.customers', phones: ['customerPhone'], texts: ['address'] }],
   influencers: [{ key: 's.influencers', phones: ['phone'], texts: ['email', 'address'] }],
   marketingSends: [{ key: 's.influencers', phones: ['deliveryPhone'], texts: ['deliveryAddress'] }],

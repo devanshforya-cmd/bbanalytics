@@ -18,8 +18,8 @@ type Side = 'ONLINE' | 'OFFLINE' | 'TEAM';
 /** Online and offline data are never mixed in one file: each side has its own data sets and quick picks. */
 const SIDES: { key: Side; label: string; description: string; datasets: DatasetKey[]; quick: { name: string; datasets: DatasetKey[] }[]; start: DatasetKey[] }[] = [
   { key: 'ONLINE', label: 'Online (D2C)', description: 'Website, WhatsApp and social orders, returns, reviews, customers',
-    datasets: ['orders', 'order_lines', 'returns', 'feedback', 'delivery_failures', 'customers', 'products'],
-    quick: [{ name: 'Sales', datasets: ['orders', 'order_lines'] }, { name: 'After-sales', datasets: ['returns', 'feedback', 'delivery_failures'] }, { name: 'Customers', datasets: ['customers'] }],
+    datasets: ['orders', 'order_lines', 'returns', 'feedback', 'delivery_failures', 'customer_calls', 'customers', 'products'],
+    quick: [{ name: 'Sales', datasets: ['orders', 'order_lines'] }, { name: 'After-sales', datasets: ['returns', 'feedback', 'delivery_failures', 'customer_calls'] }, { name: 'Customers', datasets: ['customers', 'customer_calls'] }],
     start: ['orders', 'order_lines'] },
   { key: 'OFFLINE', label: 'Offline (stores)', description: 'MT, SAMT, distributors and retail: orders, dispatch, stock, visits, cheques',
     datasets: ['store_orders', 'store_order_lines', 'dispatch_orders', 'dispatch_lines', 'store_ledger', 'stock_counts', 'visits', 'cheques', 'calls', 'documents', 'shelf_photos', 'shelf_share', 'stores', 'products'],

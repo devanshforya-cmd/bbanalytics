@@ -10,7 +10,7 @@ import type { FeatureKey } from './permissions';
 export type PageKey =
   | 'p.dashboard' | 'p.products'
   | 'p.orders_extractor' | 'p.orders_manual' | 'p.orders_all' | 'p.orders_daily' | 'p.orders_monthly'
-  | 'p.sales_offers' | 'p.delivery_failures'
+  | 'p.sales_offers' | 'p.delivery_failures' | 'p.follow_ups' | 'p.customer_calls'
   | 'p.feedback' | 'p.returns' | 'p.issue_categories'
   | 'p.customers' | 'p.customer_insights'
   | 'p.beat_plan' | 'p.stores' | 'p.distributors' | 'p.dispatch' | 'p.live_tracking' | 'p.shelf_photos' | 'p.stock_counts'
@@ -20,7 +20,7 @@ export type PageKey =
   | 'p.settings_brands' | 'p.settings_channels' | 'p.settings_lists' | 'p.settings_promotions'
   | 'p.settings_shared_links' | 'p.settings_alerts' | 'p.settings_beats' | 'p.settings_holidays'
   | 'p.settings_task_templates' | 'p.settings_google' | 'p.settings_import' | 'p.settings_upgrade'
-  | 'p.settings_experiments';
+  | 'p.settings_experiments' | 'p.settings_follow_ups';
 
 export type SensitiveKey = 's.money' | 's.customers' | 's.influencers' | 's.download';
 
@@ -83,6 +83,8 @@ export const PAGES: PageDefinition[] = [
   page('p.orders_monthly', 'Monthly sales sheet', 'online', 'orderflow', 'Month totals by brand, product and channel', { href: '/orderflow/monthly-sales', actions: VIEW_ONLY }),
   page('p.sales_offers', 'Sales & offers', 'online', 'orderflow', 'Schedule sales, discounts and free gifts', { href: '/orderflow/sales', answers: ['orderflow', 'order_desk', 'marketing'], scoped: false }),
   page('p.delivery_failures', 'Delivery failures', 'online', 'orderflow', 'Failed deliveries and re-attempts', { href: '/orderflow/delivery-failures', actions: NO_DELETE }),
+  page('p.follow_ups', 'Follow-up calls', 'online', 'customer_calls', 'Calls due to customers after they order, and logging how each went', { href: '/orderflow/follow-ups', actions: NO_DELETE, needs: ['s.customers'] }),
+  page('p.customer_calls', 'Customer call log', 'online', 'customer_calls', 'Every call to online customers, follow-ups and others. Separate from store calls', { href: '/orderflow/customer-calls', actions: NO_DELETE, needs: ['s.customers'] }),
 
   page('p.feedback', 'Feedback & complaints', 'reviews', 'reviews', 'Customer reviews and complaints', { href: '/reviews/feedback' }),
   page('p.returns', 'Returns', 'reviews', 'reviews', 'Logged returns and their outcome', { href: '/reviews/returns', answers: ['reviews', 'order_desk'] }),
@@ -118,6 +120,7 @@ export const PAGES: PageDefinition[] = [
   settings('p.settings_promotions', 'Promotions', 'PROMOTIONS', 'Trade promotions for stores'),
   settings('p.settings_shared_links', 'Shared links', 'SHARED_ACCESS', 'Read-only links for people outside the team'),
   settings('p.settings_alerts', 'Alerts & notifications', 'RULES', 'Who gets which alerts'),
+  settings('p.settings_follow_ups', 'Follow-up calls', 'FOLLOW_UPS', 'How many follow-up calls, and how many days after an order'),
   settings('p.settings_beats', 'Beats & visits', 'FIELD_SALES', 'Visit rules for field staff'),
   settings('p.settings_holidays', 'Holidays', 'HOLIDAYS', 'Holiday calendar'),
   settings('p.settings_task_templates', 'Task templates', 'TEMPLATES', 'Ready-made task checklists'),

@@ -11,7 +11,7 @@ export function exportSourceFrom(store: DatabaseService): ExportSource {
     brands: store.getBrands('ALL'), products: store.getProducts('ALL'), combos: store.getCombos('ALL'),
     orders: store.getOrders('ALL'), returns: store.getReturns('ALL'), feedback: store.getFeedback('ALL'), deliveryFailures: store.getDeliveryFailures('ALL'), customers: store.getCustomers(),
     secondaryOrders: store.getSecondaryOrders({ allBrands: true }), dispatches: store.getDispatches(), stockCounts: store.getStockCounts(), visits: store.getVisits(), cheques: store.getCheques(), shelfPhotos: store.getShelfPhotos(),
-    callLogs: store.getCalls(), documents: store.getDocuments(), facingAudits: store.getFacingAudits(),
+    callLogs: store.getCalls(), customerCalls: store.getCustomerCalls(), documents: store.getDocuments(), facingAudits: store.getFacingAudits(),
     retailers: store.getRetailers(), branches: store.getBranches(), distributors: store.getDistributors(),
     tasks: store.getTasks(), influencers: store.getInfluencers(), marketingSends: store.getMarketingSends(),
   };
