@@ -22,6 +22,7 @@ import { DEFAULT_CONTENT_PLATFORMS, DEFAULT_FAILURE_REASONS, DEFAULT_REACH_OUT_P
 const ANONYMOUS_USER: User = { id: '', fullName: '', email: '', phone: '', role: 'OFFICE_STAFF', active: false, isSuperAdmin: false, dutyStatus: 'OFFLINE', assignedBrands: [], permissions: {}, customPermissions: {} };
 
 import { DEFAULT_FOLLOW_UP_PLAN, validateFollowUpPlan } from '../follow-ups';
+import { cleanTemplates, type PublishedTemplate } from '../metrics/dashboards';
 import {
   User,
   CustomerCall,
@@ -164,6 +165,7 @@ export class DatabaseService {
   private campaigns: SaleCampaign[] = [];
   private customerCalls: CustomerCall[] = [];
   private followUpPlan: FollowUpPlan | null = null;
+  private dashboardTemplates: PublishedTemplate[] = [];
   private userPreferences: UserPreferenceRecord[] = [];
   private brandPrefixes: Record<string, string> = {};
   private workspaceLoaded = false;
@@ -256,7 +258,7 @@ export class DatabaseService {
   public exportSnapshot(): WorkspaceSnapshot {
     const snapshot: WorkspaceSnapshot = {};
     for (const collection of WORKSPACE_COLLECTIONS) {
-      if (collection === 'workspaceConfig') snapshot[collection] = [{ id: 'workspace', requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn, alertRules: this.alertRules, ...(this.orderOptions ? { orderOptions: this.orderOptions } : {}), ...(Object.keys(this.brandPrefixes).length ? { brandPrefixes: this.brandPrefixes } : {}), ...(this.followUpPlan ? { followUpPlan: this.followUpPlan } : {}) }];
+      if (collection === 'workspaceConfig') snapshot[collection] = [{ id: 'workspace', requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn, alertRules: this.alertRules, ...(this.orderOptions ? { orderOptions: this.orderOptions } : {}), ...(Object.keys(this.brandPrefixes).length ? { brandPrefixes: this.brandPrefixes } : {}), ...(this.followUpPlan ? { followUpPlan: this.followUpPlan } : {}), ...(this.dashboardTemplates.length ? { dashboardTemplates: this.dashboardTemplates } : {}) }];
       else snapshot[collection] = ((this as any)[collection] || []).map((row: any) => JSON.parse(JSON.stringify({ ...row, id: row.id || (collection === 'staffLiveLocations' ? row.officerId : undefined) })));
     }
     return snapshot;
@@ -271,6 +273,7 @@ export class DatabaseService {
         this.alertRules = config?.alertRules ? validateAlertRules(config.alertRules) : { ...DEFAULT_ALERT_RULES };
         this.brandPrefixes = config?.brandPrefixes && typeof config.brandPrefixes === 'object' ? { ...config.brandPrefixes } : {};
         try { this.followUpPlan = config?.followUpPlan ? validateFollowUpPlan(config.followUpPlan) : null; } catch { this.followUpPlan = null; }
+        try { this.dashboardTemplates = config?.dashboardTemplates ? cleanTemplates(config.dashboardTemplates) : []; } catch { this.dashboardTemplates = []; }
       }
       else (this as any)[collection] = JSON.parse(JSON.stringify(snapshot[collection] || []));
     }
@@ -488,6 +491,7 @@ export class DatabaseService {
         for (const key of ['marketingSends', 'influencerNiches', 'marketingOptions', 'failureReasons', 'userPreferences', 'campaigns', 'customerCalls'] as const) if (Array.isArray(parsed[key])) (this as any)[key] = parsed[key];
         if (parsed.brandPrefixes && typeof parsed.brandPrefixes === 'object') this.brandPrefixes = parsed.brandPrefixes;
         if (parsed.followUpPlan) { try { this.followUpPlan = validateFollowUpPlan(parsed.followUpPlan); } catch { /* keep default */ } }
+        if (Array.isArray(parsed.dashboardTemplates)) { try { this.dashboardTemplates = cleanTemplates(parsed.dashboardTemplates); } catch { /* ignore an old copy */ } }
         if (parsed.sharedAccessLinks) this.sharedAccessLinks = parsed.sharedAccessLinks;
         if (parsed.salesMode) this.salesMode = parsed.salesMode;
         if (parsed.documentTypes) this.documentTypes = parsed.documentTypes;
@@ -650,6 +654,7 @@ export class DatabaseService {
         campaigns: this.campaigns,
         customerCalls: this.customerCalls,
         followUpPlan: this.followUpPlan,
+        dashboardTemplates: this.dashboardTemplates,
         brandPrefixes: this.brandPrefixes,
         sharedAccessLinks: this.sharedAccessLinks,
         salesMode: this.salesMode,
@@ -2871,6 +2876,13 @@ export class DatabaseService {
 
   /** Reasons staff can pick when a delivery fails. The built-in list is used until an admin saves their own. */
   // ------------------------------------------------------------------ Customer calls (online, separate from store calls)
+  /** Dashboards a Super Admin shared with everyone. */
+  public getDashboardTemplates(): PublishedTemplate[] { return structuredClone(this.dashboardTemplates); }
+  public setDashboardTemplates(list: PublishedTemplate[]): void {
+    if (!(this.currentUser.isSuperAdmin || this.currentUser.is_super_admin)) throw new Error('Only Super Admins share dashboards with everyone.');
+    this.dashboardTemplates = cleanTemplates(list); this.persistState();
+  }
+
   public getFollowUpPlan(): FollowUpPlan { return structuredClone(this.followUpPlan || DEFAULT_FOLLOW_UP_PLAN); }
   public isFollowUpPlanSaved(): boolean { return !!this.followUpPlan; }
   public setFollowUpPlan(plan: FollowUpPlan): void { this.followUpPlan = validateFollowUpPlan(plan); this.persistState(); }
@@ -4443,6 +4455,9 @@ export class DatabaseService {
     const yesterdayOrders = onYesterday(filteredOrders);
     const yesterdayFeedback = onYesterday(filteredFeedback);
     const upcomingHoliday = this.getUpcomingHolidayTomorrow();
+    // Dispatched 4+ days ago and still not marked delivered: delivery numbers stay wrong until someone confirms them.
+    const confirmBefore = new Date(Date.parse(`${today}T00:00:00Z`) - 4 * 86400000).toISOString().slice(0, 10);
+    const unconfirmedDeliveries = isOfficer ? 0 : filteredOrders.filter((o) => o.status === 'DISPATCHED' && (o.dispatchedDateAd || o.orderDateAd) <= confirmBefore).length;
 
     return {
       user: activeUser,
@@ -4469,6 +4484,7 @@ export class DatabaseService {
         unresolvedComplaints: unresolvedComplaints.slice(0, 2),
         todayBeatCount: todayBeats.length,
         todayOfficers: new Set(todayBeats.map((b) => b.officerId)).size,
+        unconfirmedDeliveries,
         upcomingHoliday,
       },
     };

@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -204,6 +205,16 @@ export default function MorningBriefCard() {
                 <span>
                   <strong>{briefData.todayAttention.overdueChequeCount} {briefData.todayAttention.overdueChequeCount === 1 ? 'cheque is' : 'cheques are'} past their date</strong>{' '}
                   (NPR {briefData.todayAttention.overdueChequeTotal.toLocaleString()} in all). Largest: {briefData.todayAttention.overdueCheques[0].storeName}, NPR {briefData.todayAttention.overdueCheques[0].amount.toLocaleString()}.
+                </span>
+              </div>
+            )}
+
+            {briefData.todayAttention.unconfirmedDeliveries > 0 && (hasAccess(user, 'orderflow') || hasAccess(user, 'order_desk')) && (
+              <div className="flex items-start gap-2 text-amber-800 bg-amber-50 p-2 rounded-xl border border-amber-200">
+                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 mt-1.5" />
+                <span>
+                  <strong>{briefData.todayAttention.unconfirmedDeliveries} {briefData.todayAttention.unconfirmedDeliveries === 1 ? 'order was' : 'orders were'} dispatched 4+ days ago and not marked delivered.</strong>{' '}
+                  <Link href="/orderflow/orders?status=unconfirmed" className="font-semibold underline">Confirm them</Link> so delivery and return numbers stay right.
                 </span>
               </div>
             )}

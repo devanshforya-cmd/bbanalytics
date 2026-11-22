@@ -1043,6 +1043,8 @@ export interface FeedbackEntry {
   screenshotUrls: string[];
   issueCategories: string[];
   sentiment: Sentiment;
+  /** How the customer rated us, 1 to 5, when they gave a rating. */
+  rating?: 1 | 2 | 3 | 4 | 5;
   hasScreenshot: boolean;
   usedInDesign: boolean;
   postedOnWebsite: boolean;
@@ -1528,6 +1530,8 @@ export interface UserPreferenceRecord {
   setupGuideDismissedAt?: string;
   /** Saved report-builder setups, newest first. */
   reportPresets?: ReportPreset[];
+  /** Personal dashboards (see lib/metrics/dashboards). */
+  dashboards?: import('./metrics/dashboards').DashboardPrefs;
   updatedAt?: string;
 }
 

@@ -28,7 +28,10 @@ import ExchangePanel from '@/components/orders/ExchangePanel';
 import LogFailureForm from '@/app/orderflow/delivery-failures/components/LogFailureForm';
 import LogReturnForm from '@/app/reviews/returns/components/LogReturnForm';
 
-type StatusFilter = 'OPEN' | 'ALL' | Order['status'];
+type StatusFilter = 'OPEN' | 'ALL' | 'UNCONFIRMED' | Order['status'];
+/** Dispatched this many days ago and still not marked delivered: probably delivered, needs confirming. */
+const CONFIRM_AFTER_DAYS = 4;
+const needsConfirming = (order: Order, before: string) => order.status === 'DISPATCHED' && (order.dispatchedDateAd || order.orderDateAd) <= before;
 const RANGES = [['7', 'Last 7 days'], ['30', 'Last 30 days'], ['90', 'Last 90 days'], ['ALL', 'All time']] as const;
 const PAGE = 50;
 
@@ -62,6 +65,10 @@ export default function AllOrdersPage() {
     return () => window.removeEventListener('bb-db-updated', refresh);
   }, []);
   useEffect(() => { setLimit(PAGE); setSelected([]); }, [query, status, range, brand]);
+  // A link from the dashboard or morning brief (?status=unconfirmed) opens the orders to confirm.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('status') === 'unconfirmed') { setStatus('UNCONFIRMED'); setRange('ALL'); }
+  }, []);
 
   const canWork = canWorkOrders(user);
   const canFail = canPerform(user, 'orderflow', 'CREATE') || canPerform(user, 'order_desk', 'CREATE');
@@ -71,6 +78,7 @@ export default function AllOrdersPage() {
   const returns = db.getReturns('ALL');
   const failures = db.getDeliveryFailures('ALL');
 
+  const confirmBefore = shiftAdDate(getTodayAd(), -CONFIRM_AFTER_DAYS);
   // A search looks at every date; without one, the date range applies.
   const term = query.trim();
   const inRange = (order: Order) => term || range === 'ALL' || order.orderDateAd >= shiftAdDate(getTodayAd(), -Number(range));
@@ -86,12 +94,12 @@ export default function AllOrdersPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
     [orders, brand, range, term]);
   const counts = useMemo(() => {
-    const result: Record<string, number> = { OPEN: 0, ALL: base.length };
-    for (const order of base) { result[order.status] = (result[order.status] || 0) + 1; if (isOpenOrder(order.status)) result.OPEN += 1; }
+    const result: Record<string, number> = { OPEN: 0, ALL: base.length, UNCONFIRMED: 0 };
+    for (const order of base) { result[order.status] = (result[order.status] || 0) + 1; if (isOpenOrder(order.status)) result.OPEN += 1; if (needsConfirming(order, confirmBefore)) result.UNCONFIRMED += 1; }
     return result;
-  }, [base]);
-  const list = useMemo(() => base.filter((order) => status === 'ALL' || (status === 'OPEN' ? isOpenOrder(order.status) : order.status === status))
-    .sort((a, b) => b.orderDateAd.localeCompare(a.orderDateAd) || b.createdAt.localeCompare(a.createdAt)), [base, status]);
+  }, [base, confirmBefore]);
+  const list = useMemo(() => base.filter((order) => status === 'ALL' || (status === 'OPEN' ? isOpenOrder(order.status) : status === 'UNCONFIRMED' ? needsConfirming(order, confirmBefore) : order.status === status))
+    .sort((a, b) => b.orderDateAd.localeCompare(a.orderDateAd) || b.createdAt.localeCompare(a.createdAt)), [base, status, confirmBefore]);
   const shown = list.slice(0, limit);
   const brandName = (code: string) => brands.find((entry) => entry.code === code)?.name || code;
 
@@ -111,7 +119,7 @@ export default function AllOrdersPage() {
   });
 
   const chips: { key: StatusFilter; label: string }[] = [
-    { key: 'OPEN', label: 'To deliver' }, { key: 'PENDING', label: 'Pending' }, { key: 'DISPATCHED', label: 'Dispatched' }, { key: 'FAILED', label: 'Failed' },
+    { key: 'OPEN', label: 'To deliver' }, { key: 'UNCONFIRMED', label: `Delivered? (sent ${CONFIRM_AFTER_DAYS}+ days ago)` }, { key: 'PENDING', label: 'Pending' }, { key: 'DISPATCHED', label: 'Dispatched' }, { key: 'FAILED', label: 'Failed' },
     { key: 'DELIVERED', label: 'Delivered' }, { key: 'RETURNED', label: 'Returned' }, { key: 'EXCHANGED', label: 'Exchanged' }, { key: 'CANCELLED', label: 'Cancelled' }, { key: 'ALL', label: 'All' },
   ];
 

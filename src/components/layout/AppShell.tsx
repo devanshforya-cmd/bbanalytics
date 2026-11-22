@@ -111,11 +111,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="relative flex h-dvh w-full overflow-hidden bg-slate-50 pt-[env(safe-area-inset-top)] text-slate-900 antialiased">
+    <div className="app-frame relative flex h-dvh w-full overflow-hidden bg-slate-50 pt-[env(safe-area-inset-top)] text-slate-900 antialiased">
       <a href="#main-content" className="skip-link">Skip to main content</a>
-      <Sidebar pending={!confirmed} />
-      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Header />
+      <div className="app-chrome contents"><Sidebar pending={!confirmed} /></div>
+      <div className="app-body relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="app-chrome contents"><Header /></div>
         <main id="main-content" tabIndex={-1} className="relative flex-1 overflow-y-auto focus:outline-none p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-8">
           <FieldGpsTracker />
           {confirmed && pageAllowed ? children : (
@@ -124,7 +124,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           )}
         </main>
-        <MobileNav pending={!confirmed} />
+        <div className="app-chrome contents"><MobileNav pending={!confirmed} /></div>
       </div>
       <PWAInstallBanner />
       <OfflineBar />

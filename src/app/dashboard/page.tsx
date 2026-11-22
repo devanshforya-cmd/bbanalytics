@@ -1,1106 +1,302 @@
 'use client';
 
-import Money from '@/components/common/Money';
-import React, { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { db } from '@/lib/db/db-service';
-import { compareWindows, inWindow, changeLabel, COMPARE_LABEL, type CompareMode, type DateWindow } from '@/lib/period-compare';
-import { countsAsSale } from '@/lib/order-status';
-import { FilterCriteria, BrandCode, FeedbackEntry, ComparisonMode, DashboardSalesMode } from '@/lib/types';
-import AdvancedFilterBar from '@/components/common/AdvancedFilterBar';
-import { getTodayAd, matchesDateCriteria } from '@/lib/nepali-calendar';
-import MetricSparkline from './components/MetricSparkline';
-import type { DrillDownType } from './components/MetricDrillDownModal';
-import ProductPerformanceTable from './components/ProductPerformanceTable';
-import SalesChannelPerformance from './components/SalesChannelPerformance';
-import BrandComparisonView from './components/BrandComparisonView';
-import RegionalPerformanceView from './components/RegionalPerformanceView';
-import DistributorHealthSection from './components/DistributorHealthSection';
-import ThirtyDayTrendCharts from './components/ThirtyDayTrendCharts';
-import MorningBriefCard from './components/MorningBriefCard';
-import SeasonalInsightsSection from './components/SeasonalInsightsSection';
-import StoreNetworkOverviewSection from './components/StoreNetworkOverviewSection';
+import { Check, ChevronDown, Download, LayoutDashboard, MoreHorizontal, Pencil, Plus, Printer, Sparkles, X } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
+import { toast } from '@/components/common/Toast';
+import MorningBriefCard from './components/MorningBriefCard';
+import WidgetCard from '@/components/dashboards/WidgetCard';
+import { useMetricData } from '@/components/dashboards/useMetricData';
+import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
-import { FeatureKey, hasAccess, isSuperAdmin } from '@/lib/permissions';
+import { hasAccess, isSuperAdmin } from '@/lib/permissions';
+import { canDownload } from '@/lib/download-access';
+import { downloadWorkbook } from '@/lib/export/xlsx';
+import { RANGE_LABELS, type RangePreset } from '@/lib/metrics/dates';
+import { DIMENSIONS, type DimensionKey } from '@/lib/metrics/sources';
+import { formatValue } from '@/lib/metrics/engine';
+import { computeWidget } from '@/lib/metrics/widget-data';
 import {
-  ShoppingBag,
-  RotateCcw,
-  TruckIcon,
-  MessageSquareWarning,
-  Compass,
-  CreditCard,
-  Store,
-  Building2,
-  TrendingUp,
-  Award,
-  ArrowUpRight,
-  ShieldCheck,
-  Gift,
-  ArrowUp,
-  AlertTriangle,
-  Star,
-  Sparkles,
-  Globe,
-} from 'lucide-react';
+  TEMPLATES, cleanPrefs, fromPublished, fromTemplate, newId, templateFor,
+  type Dashboard, type DashboardFilters, type DashboardPrefs, type Widget,
+} from '@/lib/metrics/dashboards';
 
-function DashboardFeature({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
-  return allowed ? <>{children}</> : null;
-}
-
-// Opened on demand: loaded the first time someone opens them, not with the dashboard.
-const MetricDrillDownModal = dynamic(() => import('./components/MetricDrillDownModal'));
-const IssueChipDrillDownModal = dynamic(() => import('./components/IssueChipDrillDownModal'));
-const ReviewListModal = dynamic(() => import('./components/ReviewListModal'));
+// Opened on demand only.
+const WidgetEditor = dynamic(() => import('@/components/dashboards/WidgetEditor'));
 const SetupWizard = dynamic(() => import('@/components/dashboard/SetupWizard'));
 
+const SIZES: Widget['size'][] = ['S', 'M', 'L'];
+
+/** Each person's own dashboards: tabs, shared dates and brand, charts they choose. */
 export default function DashboardPage() {
-  const currentUser = getSessionUser() || db.getCurrentUser();
-  const canSee = (feature: FeatureKey) => hasAccess(currentUser, feature);
-  const globalBrand = db.getActiveBrandFilter();
-  const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({
-    calendarMode: 'BS',
-    brand: globalBrand,
-  });
+  const user = getSessionUser() || db.getCurrentUser();
+  const { prepared, version } = useMetricData();
+  const loaded = db.isWorkspaceLoaded();
+  const [prefs, setPrefs] = useState<DashboardPrefs | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editor, setEditor] = useState<{ widget?: Widget } | null>(null);
+  const [menu, setMenu] = useState<'new' | 'more' | null>(null);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const dirty = useRef(false);
+  const saveTimer = useRef<number | undefined>(undefined);
+  const dragId = useRef<string | null>(null);
 
-  // Drill-down and modal states
-  const [activeDrillDown, setActiveDrillDown] = useState<DrillDownType | null>(null);
-  const [activeIssueChip, setActiveIssueChip] = useState<string | null>(null);
-  const [reviewModalFilter, setReviewModalFilter] = useState<'ALL' | 'USED_IN_DESIGN' | 'POSTED_ON_WEB' | null>(null);
-  const [selectedReview, setSelectedReview] = useState<FeedbackEntry | null>(null);
-  const [channelFilter, setChannelFilter] = useState<string>('');
-  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>('OFF');
-  const [showSetupWizard, setShowSetupWizard] = useState(false);
-  const [salesMode, setSalesMode] = useState<DashboardSalesMode>(() =>
-    hasAccess(getSessionUser() || db.getCurrentUser(), 'orderflow') ? 'D2C' : 'B2B'
-  );
-  const [dbVersion, setDbVersion] = useState(0);
-
+  // Load saved dashboards once the workspace is in. Until someone changes something, nothing is saved,
+  // so a starting dashboard never overwrites one saved from another device.
   useEffect(() => {
-    db.syncWithSupabase().catch(() => {});
-    const handleUpdate = () => setDbVersion((v) => v + 1);
-    window.addEventListener('bb-db-updated', handleUpdate);
-    return () => window.removeEventListener('bb-db-updated', handleUpdate);
+    if (dirty.current) return;
+    const saved = db.getMyPreferences().dashboards;
+    let next: DashboardPrefs | null = null;
+    try { next = saved?.list?.length ? cleanPrefs(saved) : null; } catch { next = null; }
+    if (!next) {
+      const first = fromTemplate(templateFor(user), user, db.getCalendarMode());
+      next = { list: [first], activeId: first.id };
+    }
+    setPrefs(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, version, user.id]);
+
+  const update = useCallback((change: (draft: DashboardPrefs) => void) => {
+    setPrefs((current) => {
+      if (!current) return current;
+      const draft = structuredClone(current);
+      change(draft);
+      dirty.current = true;
+      window.clearTimeout(saveTimer.current);
+      saveTimer.current = window.setTimeout(() => {
+        try { db.setMyPreferences({ dashboards: cleanPrefs(draft) }); } catch (error) { toast.error(error instanceof Error ? error.message : 'Your dashboard was not saved.'); }
+      }, 600);
+      return draft;
+    });
   }, []);
+  useEffect(() => () => window.clearTimeout(saveTimer.current), []);
 
-  const activeBrand = filterCriteria.brand && filterCriteria.brand !== 'ALL' ? filterCriteria.brand : globalBrand;
-  const rawOrders = db.getOrders(activeBrand);
-  const rawDeliveryFailures = db.getDeliveryFailures(activeBrand);
-  const rawReturns = db.getReturns(activeBrand);
-  const rawFeedback = db.getFeedback(activeBrand);
-  const rawCheques = db.getCheques();
-  const scorecards = db.getScorecards();
-  const rankedScorecards = [...scorecards].sort((a, b) =>
-    b.beatCompliancePct - a.beatCompliancePct
-    || b.callToOrderRatioPct - a.callToOrderRatioPct
-    || b.storesVisited - a.storesVisited
-  );
-  const categories = db.getReviewCategories();
-  const rawBeatItems = db.getTodayBeat();
-  const rawSecondaryOrders = db.getSecondaryOrders();
-  const products = db.getProducts(activeBrand);
-  const distributors = db.getDistributors();
-  const branches = db.getBranches();
-  const retailers = db.getRetailers();
+  // First-time setup guide for a brand-new workspace.
+  const setupDue = loaded && isSuperAdmin(user) && db.getBrands('ALL').length === 0 && !db.getMyPreferences().setupGuideDismissedAt;
+  const [showSetup, setShowSetup] = useState(false);
+  useEffect(() => { setShowSetup(setupDue); }, [setupDue]);
+  const closeSetup = () => { setShowSetup(false); db.setMyPreferences({ setupGuideDismissedAt: new Date().toISOString() }); };
 
-  // First-time setup guide. It shows only when all of these hold:
-  //   the first server refresh has finished (so an unloaded screen is never mistaken for an empty one),
-  //   the user is the Super Admin, no brand exists yet, and this account has not dismissed it.
-  // Dismissal is saved on the account, so it survives reloads, other devices and new logins.
-  const setupUser = getSessionUser() || db.getCurrentUser();
-  const setupGuideDue = db.isWorkspaceLoaded() && isSuperAdmin(setupUser) && db.getBrands('ALL').length === 0 && !db.getMyPreferences().setupGuideDismissedAt;
-  useEffect(() => { setShowSetupWizard(setupGuideDue); }, [setupGuideDue]);
-  const closeSetupWizard = () => { setShowSetupWizard(false); db.setMyPreferences({ setupGuideDismissedAt: new Date().toISOString() }); };
+  // The brand chosen in the top bar also narrows every chart.
+  const headerBrand = db.getActiveBrandFilter();
+  const headerSub = db.getActiveSubBrandFilter();
+  const dashboard = prefs?.list.find((d) => d.id === prefs.activeId) || prefs?.list[0];
+  const extraWhere = useMemo(() => {
+    const where: Partial<Record<DimensionKey, string[]>> = {};
+    const brands = [headerBrand !== 'ALL' ? headerBrand : null, dashboard?.filters.brand || null].filter(Boolean) as string[];
+    if (brands.length) where.brand = brands.length === 2 && brands[0] !== brands[1] ? ['__none__'] : [brands[0].toUpperCase()];
+    if (headerSub) where.subBrand = [headerSub];
+    return where;
+  }, [headerBrand, headerSub, dashboard?.filters.brand]);
 
-  // Apply Territorial, Channel, D2C/B2B & Marketing Filters
-  const keepOrder = (o: (typeof rawOrders)[number], checkDate = true) => {
-    // Fix 62: Segment D2C vs B2B
-    if (salesMode === 'D2C') {
-      const d2cPlatforms = ['Instagram', 'Messenger', 'WhatsApp', 'Website', 'TikTok', 'Pathao Bazaar', 'YouTube', 'Facebook'];
-      if (!d2cPlatforms.includes(o.platform)) return false;
-    } else if (salesMode === 'B2B') {
-      const b2bPlatforms = ['Field Order', 'Walk-in', 'Phone Call', 'Distributor'];
-      if (!b2bPlatforms.includes(o.platform)) return false;
-    }
+  if (!prefs || !dashboard) return <PageGuard feature="dashboard"><div className="h-64" /></PageGuard>;
 
-    if (channelFilter && o.platform !== channelFilter) return false;
-    if (filterCriteria.province && o.province !== filterCriteria.province) return false;
-    if (filterCriteria.city && !o.district.toLowerCase().includes(filterCriteria.city.toLowerCase())) return false;
-    if (filterCriteria.valley && filterCriteria.valley !== 'ALL') {
-      const isInside = ['kathmandu', 'lalitpur', 'bhaktapur'].includes(o.district.toLowerCase());
-      if (filterCriteria.valley === 'Inside' && !isInside) return false;
-      if (filterCriteria.valley === 'Outside' && isInside) return false;
-    }
-    if (checkDate && !matchesDateCriteria(o.orderDateAd, o.orderDateBs, filterCriteria)) return false;
-    return true;
+  const setActive = (id: string) => update((draft) => { draft.activeId = id; });
+  const editDashboard = (change: (d: Dashboard) => void) => update((draft) => { const target = draft.list.find((d) => d.id === dashboard.id); if (target) change(target); });
+  const setFilters = (patch: Partial<DashboardFilters>) => editDashboard((d) => { d.filters = { ...d.filters, ...patch }; });
+  const addDashboard = (next: Dashboard) => {
+    if (prefs.list.length >= 12) { toast.error('You can keep up to 12 dashboards. Delete one first.'); return; }
+    update((draft) => { draft.list.push(next); draft.activeId = next.id; });
+    setMenu(null);
   };
-  const orders = rawOrders.filter((o) => keepOrder(o));
-
-  const keepFailure = (df: (typeof rawDeliveryFailures)[number], checkDate = true) => {
-    if (salesMode === 'B2B') return false; // Courier failures are online/D2C specific
-    if (filterCriteria.valley && filterCriteria.valley !== 'ALL' && df.valley !== filterCriteria.valley) return false;
-    if (checkDate && !matchesDateCriteria(df.dateAd, df.dateBs, filterCriteria)) return false;
-    return true;
+  const saveWidget = (widget: Widget) => {
+    editDashboard((d) => {
+      const at = d.widgets.findIndex((w) => w.id === widget.id);
+      if (at >= 0) d.widgets[at] = widget; else d.widgets.push(widget);
+    });
+    setEditor(null);
   };
-  const deliveryFailures = rawDeliveryFailures.filter((df) => keepFailure(df));
-
-  const keepReturn = (r: (typeof rawReturns)[number], checkDate = true) => {
-    if (salesMode === 'D2C' && ['Field Order', 'Distributor'].includes(r.platform)) return false;
-    if (salesMode === 'B2B' && !['Field Order', 'Distributor', 'Walk-in'].includes(r.platform)) return false;
-    if (channelFilter && r.platform !== channelFilter) return false;
-    if (filterCriteria.valley && filterCriteria.valley !== 'ALL' && r.valley !== filterCriteria.valley) return false;
-    if (checkDate && !matchesDateCriteria(r.dateAd, r.dateBs, filterCriteria)) return false;
-    return true;
-  };
-  const returns = rawReturns.filter((r) => keepReturn(r));
-
-  const cheques = rawCheques.filter((c) => {
-    if (filterCriteria.officerId && c.officerId !== filterCriteria.officerId) return false;
-    if (!matchesDateCriteria(c.receivedDateAd, c.receivedDateBs, filterCriteria)) return false;
-    return true;
+  const moveWidget = (id: string, step: -1 | 1) => editDashboard((d) => {
+    const at = d.widgets.findIndex((w) => w.id === id), to = at + step;
+    if (at < 0 || to < 0 || to >= d.widgets.length) return;
+    [d.widgets[at], d.widgets[to]] = [d.widgets[to], d.widgets[at]];
   });
-
-  const feedback = rawFeedback.filter((f) => {
-    if (!matchesDateCriteria(f.dateReceivedAd, f.dateReceivedBs, filterCriteria)) return false;
-    return true;
-  });
-
-  const beatItems = rawBeatItems.filter((b) => {
-    if (filterCriteria.officerId && b.officerId !== filterCriteria.officerId) return false;
-    if (!matchesDateCriteria(b.dateAd, b.dateBs, filterCriteria)) return false;
-    return true;
-  });
-
-  const visitedStoresToday = beatItems.filter((b) => b.status === 'VISITED').length;
-  const pendingCheques = cheques.filter(
-    (c) => c.status === 'COLLECTED_IN_FIELD' || c.status === 'PENDING' || c.status === 'HANDED_OVER_AT_OFFICE'
-  );
-  const overdueCheques = cheques.filter((c) => c.status === 'DELAYED' || c.status === 'BOUNCED');
-
-  // Orders that count as sales: cancelled orders, exchanges and marketing sends are left out.
-  const totalOrders = orders.filter(countsAsSale).length;
-  const deliveryFailureCount = deliveryFailures.length;
-  const returnCount = returns.length;
-  const complaintCount = feedback.filter((f) => f.type === 'COMPLAINT').length;
-  const unresolvedComplaintsCount = feedback.filter(
-    (f) => f.type === 'COMPLAINT' && f.complaintStatus !== 'RESOLVED' && f.complaintStatus !== 'CLOSED'
-  ).length;
-  const reviewsCount = feedback.filter((f) => f.type === 'REVIEW' || f.type === 'FEEDBACK').length;
-
-  const deliveryFailureRate =
-    totalOrders > 0 ? ((deliveryFailureCount / totalOrders) * 100).toFixed(1) : '0.0';
-  const returnRate =
-    totalOrders > 0 ? ((returnCount / totalOrders) * 100).toFixed(1) : '0.0';
-
-  // "Compare with": the last 30 days against the same 30 days a month or a year earlier.
-  const compareMode: CompareMode = comparisonMode === 'LAST_MONTH' || comparisonMode === 'SAME_MONTH_LAST_YEAR' ? comparisonMode : 'OFF';
-  const windows = compareWindows(compareMode, new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kathmandu' }));
-  const periodFigures = (window: DateWindow) => {
-    const periodOrders = rawOrders.filter((o) => keepOrder(o, false) && countsAsSale(o) && inWindow(o.orderDateAd, window)).length;
-    const periodFailures = rawDeliveryFailures.filter((df) => keepFailure(df, false) && inWindow(df.dateAd, window)).length;
-    const periodReturns = rawReturns.filter((r) => keepReturn(r, false) && inWindow(r.dateAd, window)).length;
-    const periodComplaints = rawFeedback.filter((f) => f.type === 'COMPLAINT' && inWindow(f.dateReceivedAd, window)).length;
-    return {
-      orders: periodOrders,
-      failureRate: periodOrders ? Math.round((periodFailures / periodOrders) * 1000) / 10 : 0,
-      returnRate: periodOrders ? Math.round((periodReturns / periodOrders) * 1000) / 10 : 0,
-      complaints: periodComplaints,
-    };
-  };
-  const nowFigures = windows ? periodFigures(windows.current) : null;
-  const beforeFigures = windows ? periodFigures(windows.previous) : null;
-  const compareLine = (key: 'orders' | 'failureRate' | 'returnRate' | 'complaints', lowerIsBetter: boolean) => {
-    if (!nowFigures || !beforeFigures || compareMode === 'OFF') return null;
-    const now = nowFigures[key], before = beforeFigures[key];
-    const isRate = key === 'failureRate' || key === 'returnRate';
-    const change = isRate
-      ? { text: now === before ? 'No change' : `${now > before ? '+' : ''}${(Math.round((now - before) * 10) / 10)} pts`, direction: now > before ? 'up' : now < before ? 'down' : 'flat' }
-      : changeLabel(now, before);
-    const good = change.direction === 'flat' ? null : (change.direction === 'down') === lowerIsBetter;
-    return (
-      <div className="mt-1 space-y-0.5">
-        <div className="text-[11px] text-slate-600 font-medium">Last 30 days: <strong>{isRate ? `${now}%` : now}</strong></div>
-        <div className="text-[11px] text-slate-500">{isRate ? `${before}%` : before} in {COMPARE_LABEL[compareMode]}</div>
-        <div className={`text-[11px] font-bold ${good === null ? 'text-slate-500' : good ? 'text-emerald-700' : 'text-rose-700'}`}>{change.text}</div>
-      </div>
-    );
+  const dropOn = (targetId: string) => {
+    const from = dragId.current; dragId.current = null;
+    if (!from || from === targetId) return;
+    editDashboard((d) => {
+      const moving = d.widgets.find((w) => w.id === from); if (!moving) return;
+      d.widgets = d.widgets.filter((w) => w.id !== from);
+      d.widgets.splice(d.widgets.findIndex((w) => w.id === targetId), 0, moving);
+    });
   };
 
-  const secondaryOrders = rawSecondaryOrders.filter((so) => {
-    if (so.status === 'CANCELLED') return false;
-    if (filterCriteria.officerId && so.officerId !== filterCriteria.officerId) return false;
-    if (!matchesDateCriteria(so.orderDateAd, so.orderDateBs, filterCriteria)) return false;
-    return true;
-  });
+  const brands = db.getBrands('ACTIVE').filter((b) => isSuperAdmin(user) || !user.assignedBrands?.length || user.assignedBrands.includes('ALL') || user.assignedBrands.includes(b.code));
+  const published = db.getDashboardTemplates();
+  const visibleTemplates = TEMPLATES.filter((t) => t.key === 'owner' || fromTemplate(t.key, user).widgets.length >= 4);
 
-  const secondaryOrdersVolume = secondaryOrders.reduce((sum, so) => sum + so.totalAmount, 0);
-  const secondaryOrdersUnits = secondaryOrders.reduce((sum, so) => sum + (so.totalUnits || 0), 0);
-  const totalSecondaryOrdersCount = secondaryOrders.length;
-  const activeStoresStockedCount = retailers.length + branches.length;
-  const totalBeatScheduled = beatItems.length;
-  const beatCompliancePct = totalBeatScheduled > 0 ? Math.round((visitedStoresToday / totalBeatScheduled) * 100) : 0;
-
-  const pendingChequesAmount = pendingCheques.reduce((sum, c) => sum + c.amount, 0);
-  const overdueChequesAmount = overdueCheques.reduce((sum, c) => sum + c.amount, 0);
-
-  // 30-Day Dynamic Sparkline Arrays (Zero tolerance for fake arrays)
-  const now = new Date();
-  const last30Dates = Array.from({ length: 30 }, (_, idx) => {
-    const d = new Date(now.getTime() - (29 - idx) * 24 * 60 * 60 * 1000);
-    return d.toISOString().split('T')[0];
-  });
-
-  const ordersSparkline = last30Dates.map((dateStr) =>
-    orders.filter((o) => (o.orderDateAd || (o.createdAt ? o.createdAt.split('T')[0] : '')) === dateStr).length
-  );
-  const failuresSparkline = last30Dates.map((dateStr) =>
-    deliveryFailures.filter((f) => (f.dateAd || (f.createdAt ? f.createdAt.split('T')[0] : '')) === dateStr).length
-  );
-  const returnsSparkline = last30Dates.map((dateStr) =>
-    returns.filter((r) => (r.dateAd || (r.createdAt ? r.createdAt.split('T')[0] : '')) === dateStr).length
-  );
-  const complaintsSparkline = last30Dates.map((dateStr) =>
-    feedback.filter((f) => f.type === 'COMPLAINT' && (f.dateReceivedAd || (f.createdAt ? f.createdAt.split('T')[0] : '')) === dateStr).length
-  );
-  const visitsSparkline = last30Dates.map((dateStr) =>
-    beatItems.filter((b) => b.status === 'VISITED' && b.dateAd === dateStr).length
-  );
-  const chequesSparkline = last30Dates.map((dateStr) =>
-    cheques.filter((c) => (c.receivedDateAd || (c.createdAt ? c.createdAt.split('T')[0] : '')) === dateStr).length
-  );
-
-  // Latest 3 reviews for Section 5
-  const latestReviews = feedback.filter((f) => f.type === 'REVIEW' || f.type === 'FEEDBACK').slice(0, 3);
+  const downloadExcel = () => {
+    const used = new Set<string>();
+    const sheets = dashboard.widgets.map((widget) => {
+      const data = computeWidget(prepared, widget, dashboard.filters, extraWhere);
+      let name = data.title.replace(/[\\/?*[\]:]/g, '').slice(0, 28) || 'Chart';
+      while (used.has(name)) name = `${name.slice(0, 26)}_${used.size}`;
+      used.add(name);
+      const value = (v: number | null | undefined) => (v === null || v === undefined || !Number.isFinite(v) ? null : Math.round(v * 100) / 100);
+      const intro: [string, string][] = [['Number', data.title], ['Dates', data.range.label === RANGE_LABELS.custom ? `${data.range.fromAd} to ${data.range.toAd}` : `${data.range.label} (${data.range.fromAd} to ${data.range.toAd})`], ['How it is worked out', data.metric?.description || '']];
+      if (data.groups.length && widget.split) return { name, intro, columns: [{ header: DIMENSIONS[widget.split], width: 30 }, { header: data.title, type: 'number' as const }, ...(data.previousRange ? [{ header: 'Earlier period', type: 'number' as const }] : []), ...data.columns.map((c) => ({ header: c.metric.label, type: 'number' as const }))],
+        rows: data.groups.map((g) => [g.label, value(g.value), ...(data.previousRange ? [value(data.previousGroups.get(g.key))] : []), ...data.columns.map((c) => value(c.values.get(g.key)))]) };
+      if (data.buckets.length) return { name, intro, columns: [{ header: 'Period', width: 20 }, ...(data.series.length ? data.series.map((s) => ({ header: s.label, type: 'number' as const })) : [{ header: data.title, type: 'number' as const }])],
+        rows: data.buckets.map((b, i) => [b.label, ...(data.series.length ? data.series.map((s) => value(s.values[i])) : [value(b.value)])]) };
+      return { name, intro, columns: [{ header: 'Number', width: 40 }, { header: 'Value', type: 'number' as const }, { header: 'Earlier period', type: 'number' as const }], rows: [[data.title, value(data.value), value(data.previous)]] };
+    });
+    if (!sheets.length) { toast.error('Add a chart first.'); return; }
+    downloadWorkbook(sheets, `${dashboard.name.replace(/[^\w -]+/g, '').trim() || 'dashboard'}.xlsx`, { title: dashboard.name });
+  };
 
   return (
     <PageGuard feature="dashboard">
-      <div className="space-y-6">
-        {/* Fix 31: Daily Morning Brief Card */}
-        <MorningBriefCard />
+      <div className="space-y-5">
+        <div className="print:hidden"><MorningBriefCard /></div>
 
-        {/* Fix 1d: Prompt when brands table is empty */}
-        {canSee('settings') && db.getBrands('ACTIVE').length === 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-blue-50 border border-blue-200 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">Add your first brand in Settings to get started</h2>
-                <p className="text-xs text-slate-600 mt-0.5">
-                  Configure your brand portfolio in Settings. Once added, brands appear dynamically across all dropdowns, header tabs, and product forms.
-                </p>
-              </div>
-            </div>
-            <Link
-              href="/settings"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs whitespace-nowrap"
-            >
-              <span>+ Add Brands in Settings</span>
-            </Link>
+        {hasAccess(user, 'settings') && db.getBrands('ACTIVE').length === 0 && loaded && (
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 print:hidden">
+            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-blue-600" aria-hidden="true" /> Add your first brand in Settings to start seeing numbers.</p>
+            <Link href="/settings?tab=brands" className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700">Open Settings</Link>
           </div>
         )}
 
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p suppressHydrationWarning className="text-[13px] font-medium text-slate-500">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-            <h1 suppressHydrationWarning className="mt-0.5 text-[28px] font-semibold leading-tight text-slate-900">
-              {(() => { const hour = new Date().getHours(); return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'; })()}{currentUser.fullName ? `, ${currentUser.fullName.split(' ')[0]}` : ''}
-            </h1>
+        {/* Dashboards as tabs */}
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <div role="tablist" aria-label="Your dashboards" className="flex min-w-0 flex-1 flex-wrap gap-1">
+            {prefs.list.map((d) => renaming === d.id ? (
+              <form key={d.id} onSubmit={(e) => { e.preventDefault(); const name = new FormData(e.currentTarget).get('name')?.toString().trim(); if (name) update((draft) => { const t = draft.list.find((x) => x.id === d.id); if (t) t.name = name.slice(0, 60); }); setRenaming(null); }} className="flex items-center gap-1">
+                <label className="sr-only" htmlFor={`rename-${d.id}`}>Dashboard name</label>
+                <input id={`rename-${d.id}`} name="name" defaultValue={d.name} autoFocus maxLength={60} onBlur={(e) => e.currentTarget.form?.requestSubmit()} className="w-44 rounded-lg border border-blue-400 px-2 py-1.5 text-sm" />
+              </form>
+            ) : (
+              <button key={d.id} role="tab" type="button" aria-selected={d.id === dashboard.id} onClick={() => setActive(d.id)} onDoubleClick={() => setRenaming(d.id)}
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${d.id === dashboard.id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-200/70'}`}>{d.name}</button>
+            ))}
+            <div className="relative">
+              <button type="button" onClick={() => setMenu(menu === 'new' ? null : 'new')} aria-expanded={menu === 'new'} className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-200/70"><Plus className="h-4 w-4" aria-hidden="true" /> New dashboard</button>
+              {menu === 'new' && (
+                <Menu onClose={() => setMenu(null)}>
+                  <MenuItem onClick={() => addDashboard({ id: newId('dash'), name: 'New dashboard', widgets: [], filters: { range: 'thisMonth', compare: 'previous', calendar: db.getCalendarMode() } })}>Start blank</MenuItem>
+                  <p className="px-3 pb-1 pt-2 text-[11px] font-bold text-slate-500">Start from a ready-made one</p>
+                  {visibleTemplates.map((t) => <MenuItem key={t.key} hint={t.description} onClick={() => addDashboard(fromTemplate(t.key, user, db.getCalendarMode()))}>{t.name}</MenuItem>)}
+                  {published.length > 0 && <p className="px-3 pb-1 pt-2 text-[11px] font-bold text-slate-500">Shared by your admin</p>}
+                  {published.map((t) => (
+                    <div key={t.id} className="flex items-center">
+                      <MenuItem hint={t.description} onClick={() => addDashboard(fromPublished(t, user))}>{t.name}</MenuItem>
+                      {isSuperAdmin(user) && <button type="button" aria-label={`Stop sharing ${t.name}`} onClick={() => { db.setDashboardTemplates(published.filter((p) => p.id !== t.id)); toast.success(`${t.name} is no longer shared.`); setMenu(null); }} className="mr-2 rounded p-1 text-slate-400 hover:text-rose-600"><X className="h-3.5 w-3.5" /></button>}
+                    </div>
+                  ))}
+                </Menu>
+              )}
+            </div>
           </div>
-          {activeBrand !== 'ALL' && <span className="rounded-full bg-white px-3 py-1 text-[13px] font-medium text-slate-600 shadow-xs ring-1 ring-black/[0.06]">{activeBrand}</span>}
+          <div className="flex items-center gap-1.5">
+            <button type="button" onClick={() => setEditor({})} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700"><Plus className="h-4 w-4" aria-hidden="true" /> Add chart</button>
+            <button type="button" onClick={() => setEditing((v) => !v)} aria-pressed={editing} className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${editing ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>{editing ? <><Check className="h-4 w-4" aria-hidden="true" /> Done</> : <><Pencil className="h-4 w-4" aria-hidden="true" /> Arrange</>}</button>
+            <div className="relative">
+              <button type="button" onClick={() => setMenu(menu === 'more' ? null : 'more')} aria-expanded={menu === 'more'} aria-label="More dashboard options" className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-50"><MoreHorizontal className="h-4 w-4" /></button>
+              {menu === 'more' && (
+                <Menu onClose={() => setMenu(null)} align="right">
+                  <MenuItem onClick={() => { setRenaming(dashboard.id); setMenu(null); }}>Rename</MenuItem>
+                  <MenuItem onClick={() => addDashboard({ ...structuredClone(dashboard), id: newId('dash'), name: `${dashboard.name} (copy)`.slice(0, 60), widgets: dashboard.widgets.map((w) => ({ ...w, id: newId('w') })) })}>Duplicate</MenuItem>
+                  {dashboard.template && TEMPLATES.some((t) => t.key === dashboard.template) && (
+                    <MenuItem onClick={() => { if (window.confirm('Put back the ready-made charts? Your changes to this dashboard will be replaced.')) { const fresh = fromTemplate(dashboard.template!, user, dashboard.filters.calendar); editDashboard((d) => { d.widgets = fresh.widgets; }); } setMenu(null); }}>Start again from “{TEMPLATES.find((t) => t.key === dashboard.template)!.name}”</MenuItem>
+                  )}
+                  {canDownload(user) && <MenuItem onClick={() => { downloadExcel(); setMenu(null); }}><Download className="mr-1.5 inline h-3.5 w-3.5" aria-hidden="true" />Download as Excel</MenuItem>}
+                  <MenuItem onClick={() => { setMenu(null); window.setTimeout(() => window.print(), 50); }}><Printer className="mr-1.5 inline h-3.5 w-3.5" aria-hidden="true" />Print or save as PDF</MenuItem>
+                  {isSuperAdmin(user) && (
+                    <MenuItem hint="Everyone can then start a dashboard from it. They only see the charts their access allows." onClick={() => {
+                      const existing = published.find((t) => t.name === dashboard.name);
+                      const entry = { id: existing?.id || newId('tpl'), name: dashboard.name, dashboard: structuredClone(dashboard), publishedBy: user.fullName, publishedAt: new Date().toISOString() };
+                      try { db.setDashboardTemplates([...published.filter((t) => t.id !== entry.id), entry]); toast.success(`${dashboard.name} is shared. Others find it under New dashboard.`); } catch (error) { toast.error(error instanceof Error ? error.message : 'Not shared.'); }
+                      setMenu(null);
+                    }}>Share with everyone</MenuItem>
+                  )}
+                  {prefs.list.length > 1 && <MenuItem danger onClick={() => { if (window.confirm(`Delete the dashboard “${dashboard.name}”?`)) update((draft) => { draft.list = draft.list.filter((d) => d.id !== dashboard.id); draft.activeId = draft.list[0]?.id; }); setMenu(null); }}>Delete dashboard</MenuItem>}
+                </Menu>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Advanced Filter Bar with Slide-Out Drawer Mode */}
-        <AdvancedFilterBar
-          criteria={filterCriteria}
-          onChange={setFilterCriteria}
-          title="Filters"
-          drawerMode={true}
-        />
-
-        {/* Which sales to show: a segmented control, as on iOS */}
-        {(() => {
-          const options = [
-            canSee('orderflow') && { id: 'D2C' as const, label: 'Online' },
-            (canSee('beat_plans') || canSee('stores')) && { id: 'B2B' as const, label: 'Offline' },
-            canSee('orderflow') && (canSee('beat_plans') || canSee('stores')) && { id: 'ALL' as const, label: 'All' },
-          ].filter(Boolean) as { id: DashboardSalesMode; label: string }[];
-          if (options.length < 2) return null;
-          return (
-            <div role="tablist" aria-label="Sales to show" className="inline-flex rounded-[10px] bg-black/[0.06] p-0.5">
-              {options.map((option) => (
-                <button key={option.id} type="button" role="tab" aria-selected={salesMode === option.id} onClick={() => setSalesMode(option.id)}
-                  className={`min-w-[84px] rounded-[8px] px-4 py-1.5 text-[13px] font-medium transition ${salesMode === option.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          );
-        })()}
-
-        {/* Fix 36a: Comparison Mode Toggle */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs font-bold text-slate-700">Compare with:</span>
-            <div className="inline-flex rounded-xl bg-slate-100 p-0.5 text-xs font-medium">
-              {(['OFF', 'LAST_MONTH', 'SAME_MONTH_LAST_YEAR'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setComparisonMode(mode)}
-                  className={`px-3 py-1 rounded-lg transition ${
-                    comparisonMode === mode
-                      ? 'bg-white text-blue-700 font-bold shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {mode === 'OFF'
-                    ? 'Off'
-                    : mode === 'LAST_MONTH'
-                    ? 'Last Month'
-                    : mode === 'SAME_MONTH_LAST_YEAR'
-                    ? 'Same Month Last Year'
-                    : 'Custom'}
-                </button>
-              ))}
-            </div>
-          </div>
-          {comparisonMode !== 'OFF' && (
-            <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
-              Last 30 days vs {compareMode === 'OFF' ? '' : COMPARE_LABEL[compareMode]}
-            </span>
+        {/* Shared filters */}
+        <div className="flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs print:border-0 print:p-0">
+          <h1 className="mr-auto self-center text-base font-bold text-slate-900"><LayoutDashboard className="mr-1.5 inline h-4 w-4 text-blue-600" aria-hidden="true" />{dashboard.name}</h1>
+          <Select label="Dates" value={dashboard.filters.range} onChange={(range) => setFilters({ range: range as RangePreset, ...(range === 'custom' && !dashboard.filters.fromAd ? { fromAd: prepared.data.today.slice(0, 8) + '01', toAd: prepared.data.today } : {}) })}
+            options={(Object.keys(RANGE_LABELS) as RangePreset[]).map((key) => ({ value: key, label: RANGE_LABELS[key] }))} />
+          {dashboard.filters.range === 'custom' && (
+            <>
+              <label className="font-semibold text-slate-600">From<input type="date" value={dashboard.filters.fromAd || ''} max={dashboard.filters.toAd} onChange={(e) => setFilters({ fromAd: e.target.value })} className="ml-1 block rounded-lg border border-slate-200 px-2 py-1.5 font-normal" /></label>
+              <label className="font-semibold text-slate-600">To<input type="date" value={dashboard.filters.toAd || ''} min={dashboard.filters.fromAd} onChange={(e) => setFilters({ toAd: e.target.value })} className="ml-1 block rounded-lg border border-slate-200 px-2 py-1.5 font-normal" /></label>
+            </>
+          )}
+          <Select label="Compare with" value={dashboard.filters.compare} onChange={(compare) => setFilters({ compare: compare as DashboardFilters['compare'] })}
+            options={[{ value: 'previous', label: 'The period before' }, { value: 'year', label: 'Same dates last year' }, { value: 'off', label: 'Don’t compare' }]} />
+          <Select label="Calendar" value={dashboard.filters.calendar} onChange={(calendar) => setFilters({ calendar: calendar as 'BS' | 'AD' })} options={[{ value: 'BS', label: 'Nepali (BS)' }, { value: 'AD', label: 'English (AD)' }]} />
+          {brands.length > 1 && (
+            <Select label="Brand" value={dashboard.filters.brand || 'ALL'} onChange={(brand) => setFilters({ brand: brand === 'ALL' ? undefined : brand })}
+              options={[{ value: 'ALL', label: headerBrand !== 'ALL' ? `As in the top bar (${db.getBrands('ALL').find((b) => b.code === headerBrand)?.name || headerBrand})` : 'All brands' }, ...brands.map((b) => ({ value: b.code.toUpperCase(), label: b.name }))]} />
           )}
         </div>
+        {editing && <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800 print:hidden">Drag charts to reorder them, or use the arrows. Click <strong>Done</strong> when you finish. Double-click a tab to rename it.</p>}
 
-        {/* Dedicated KPI Cards for D2C Online Dashboard */}
-        {salesMode === 'D2C' && canSee('orderflow') && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-            {/* 1. D2C Total Orders */}
-            <DashboardFeature allowed={canSee('orderflow')}>
-            <div
-              onClick={() => setActiveDrillDown('ORDERS')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-slate-500">
-                  <span className="font-bold text-[10px] text-slate-600">Online D2C Orders</span>
-                  <ShoppingBag className="h-4 w-4 text-blue-600" />
-                </div>
-                <div className="text-2xl font-black text-slate-900 mt-2">{totalOrders}</div>
-                {compareLine('orders', false) ?? (
-                  <div className="text-[10px] text-slate-500 mt-0.5">Social (IG, WA, TikTok) &amp; Web</div>
-                )}
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={ordersSparkline} color="#2563eb" fillColor="#3b82f6" height={22} />
-                <div className="text-[9px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-
-            {/* 2. D2C Delivery Failure Rate */}
-            <DashboardFeature allowed={canSee('orderflow')}>
-            <div
-              onClick={() => setActiveDrillDown('DELIVERY_FAILURES')}
-              className={`rounded-2xl border p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between ${
-                Number(deliveryFailureRate) > 15
-                  ? 'border-rose-200 bg-rose-50/50'
-                  : Number(deliveryFailureRate) > 5
-                  ? 'border-amber-200 bg-amber-50/50'
-                  : 'border-slate-200 bg-white'
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between text-rose-800">
-                  <span className="font-bold text-[10px] text-rose-900">Courier Delivery Failures</span>
-                  <TruckIcon className="h-4 w-4 text-rose-600" />
-                </div>
-                <div className="text-2xl font-black text-rose-900 mt-2">{deliveryFailureRate}%</div>
-                {compareLine('failureRate', true) ?? (
-                  <div className="text-[10px] text-rose-700 mt-0.5">{deliveryFailureCount} failed deliveries</div>
-                )}
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={failuresSparkline} color="#e11d48" fillColor="#f43f5e" height={22} />
-                <div className="text-[9px] text-rose-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-
-            {/* 3. D2C Actual Return Rate */}
-            <DashboardFeature allowed={canSee('reviews')}>
-            <div
-              onClick={() => setActiveDrillDown('RETURNS')}
-              className={`rounded-2xl border p-4 shadow-sm hover:border-amber-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between ${
-                Number(returnRate) > 10
-                  ? 'border-rose-200 bg-rose-50/50'
-                  : Number(returnRate) > 5
-                  ? 'border-amber-200 bg-amber-50/50'
-                  : 'border-slate-200 bg-white'
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between text-amber-800">
-                  <span className="font-bold text-[10px] text-amber-900">Customer Return Rate</span>
-                  <RotateCcw className="h-4 w-4 text-amber-600" />
-                </div>
-                <div className="text-2xl font-black text-amber-900 mt-2">{returnRate}%</div>
-                {compareLine('returnRate', true) ?? (
-                  <div className="text-[10px] text-amber-700 mt-0.5">{returnCount} verified return requests</div>
-                )}
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={returnsSparkline} color="#d97706" fillColor="#f59e0b" height={22} />
-                <div className="text-[9px] text-amber-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-
-            {/* 4. D2C Unresolved Complaints */}
-            <DashboardFeature allowed={canSee('reviews')}>
-            <div
-              onClick={() => setActiveDrillDown('COMPLAINTS')}
-              className={`rounded-2xl border p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between ${
-                unresolvedComplaintsCount > 0 ? 'border-rose-200 bg-rose-50/30' : 'border-slate-200 bg-white'
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between text-slate-500">
-                  <span className="font-bold text-[10px] text-slate-600">Online Complaints</span>
-                  <MessageSquareWarning className="h-4 w-4 text-rose-600" />
-                </div>
-                <div className="text-2xl font-black text-slate-900 mt-2">{complaintCount}</div>
-                {compareLine('complaints', true) ?? (
-                  <div className="text-[10px] text-rose-700 font-semibold mt-0.5">
-                    {unresolvedComplaintsCount} requiring resolution
-                  </div>
-                )}
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={complaintsSparkline} color="#dc2626" fillColor="#ef4444" height={22} />
-                <div className="text-[9px] text-rose-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
+        {dashboard.widgets.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+            <LayoutDashboard className="mx-auto h-8 w-8 text-slate-300" aria-hidden="true" />
+            <h2 className="mt-3 text-base font-bold text-slate-900">Add your first chart</h2>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">Pick any number the app tracks, then choose how to show it. Or start from a ready-made dashboard under New dashboard.</p>
+            <button type="button" onClick={() => setEditor({})} className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"><Plus className="h-4 w-4" aria-hidden="true" /> Add chart</button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {dashboard.widgets.map((widget) => (
+              <WidgetCard key={widget.id} prepared={prepared} widget={widget} filters={dashboard.filters} extraWhere={extraWhere} editing={editing}
+                dragProps={editing ? { draggable: true, onDragStart: () => { dragId.current = widget.id; }, onDragOver: (e) => e.preventDefault(), onDrop: (e) => { e.preventDefault(); dropOn(widget.id); } } : undefined}
+                actions={{
+                  onEdit: () => setEditor({ widget }),
+                  onDuplicate: () => editDashboard((d) => { const at = d.widgets.findIndex((w) => w.id === widget.id); d.widgets.splice(at + 1, 0, { ...structuredClone(widget), id: newId('w') }); }),
+                  onRemove: () => editDashboard((d) => { d.widgets = d.widgets.filter((w) => w.id !== widget.id); }),
+                  onMove: (step) => moveWidget(widget.id, step),
+                  onResize: () => editDashboard((d) => { const t = d.widgets.find((w) => w.id === widget.id); if (t) t.size = SIZES[(SIZES.indexOf(t.size) + 1) % SIZES.length]; }),
+                }} />
+            ))}
           </div>
         )}
-
-        {/* Dedicated KPI Cards for Offline Retail Dashboard */}
-        {salesMode === 'B2B' && (canSee('beat_plans') || canSee('stores') || canSee('cheque_tracker')) && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-            {/* 1. Secondary Orders Booked */}
-            <DashboardFeature allowed={canSee('orderflow')}>
-            <div
-              onClick={() => setActiveDrillDown('ORDERS')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-slate-500">
-                  <span className="font-bold text-[10px] text-slate-600">Secondary Orders Booked</span>
-                  <ShoppingBag className="h-4 w-4 text-blue-600" />
-                </div>
-                <div className="text-2xl font-black text-blue-700 mt-2">
-                  {secondaryOrdersVolume > 0 ? `Rs. ${secondaryOrdersVolume.toLocaleString()}` : `${totalOrders} orders`}
-                </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
-                  {totalSecondaryOrdersCount > 0 ? `${totalSecondaryOrdersCount} orders • ${secondaryOrdersUnits} units` : 'Direct retail field orders'}
-                </div>
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={ordersSparkline} color="#2563eb" fillColor="#3b82f6" height={22} />
-                <div className="text-[9px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-
-            {/* 2. Store Visits & Beat Compliance */}
-            <DashboardFeature allowed={canSee('beat_plans')}>
-            <div
-              onClick={() => setActiveDrillDown('STORES_VISITED')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-emerald-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-slate-500">
-                  <span className="font-bold text-[10px] text-slate-600">Beat Visits &amp; Compliance</span>
-                  <Compass className="h-4 w-4 text-emerald-600" />
-                </div>
-                <div className="text-2xl font-black text-emerald-700 mt-2">
-                  {beatCompliancePct}%
-                </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
-                  {visitedStoresToday} of {beatItems.length} planned stores visited today
-                </div>
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={visitsSparkline} color="#059669" fillColor="#10b981" height={22} />
-                <div className="text-[9px] text-emerald-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-
-            {/* 3. Cheques in Custody / Pending */}
-            <DashboardFeature allowed={canSee('cheque_tracker')}>
-            <div
-              onClick={() => setActiveDrillDown('CHEQUES')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-purple-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-slate-500">
-                  <span className="font-bold text-[10px] text-slate-600">Cheques in Field</span>
-                  <CreditCard className="h-4 w-4 text-purple-600" />
-                </div>
-                <div className="text-2xl font-black text-slate-900 mt-2">
-                  <Money prefix="Rs. ">{pendingChequesAmount.toLocaleString()}</Money>
-                </div>
-                <div className="text-[10px] text-purple-700 font-semibold mt-0.5">
-                  {pendingCheques.length} pending • {overdueCheques.length} overdue
-                </div>
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={chequesSparkline} color="#7c3aed" fillColor="#8b5cf6" height={22} />
-                <div className="text-[9px] text-purple-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-
-            {/* 4. Active Retail Outlets Stocked */}
-            <DashboardFeature allowed={canSee('stores')}>
-            <div
-              onClick={() => setActiveDrillDown('STORES_VISITED')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-indigo-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-slate-500">
-                  <span className="font-bold text-[10px] text-slate-600">Active Outlets Stocked</span>
-                  <Store className="h-4 w-4 text-indigo-600" />
-                </div>
-                <div className="text-2xl font-black text-slate-900 mt-2">
-                  {activeStoresStockedCount}
-                </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
-                  {retailers.length} retailers + {branches.length} distributor branches
-                </div>
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={visitsSparkline} color="#4f46e5" fillColor="#6366f1" height={22} />
-                <div className="text-[9px] text-indigo-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  View store network
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-          </div>
-        )}
-
-        {/* Combined 6-KPI View for 'ALL' mode */}
-        {salesMode === 'ALL' && (
-          <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
-            {/* 1. Total Orders Card */}
-            <DashboardFeature allowed={canSee('orderflow')}>
-            <div
-              onClick={() => setActiveDrillDown('ORDERS')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-slate-500">
-                  <span className="font-bold text-[10px] text-slate-600">Orders</span>
-                  <ShoppingBag className="h-4 w-4 text-blue-600" />
-                </div>
-                <div className="text-2xl font-black text-slate-900 mt-2">{totalOrders}</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">D2C &amp; Field</div>
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={ordersSparkline} color="#2563eb" fillColor="#3b82f6" height={22} />
-                <div className="text-[9px] text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-
-            {/* 2. Delivery Failure Rate Card */}
-            <DashboardFeature allowed={canSee('orderflow')}>
-            <div
-              onClick={() => setActiveDrillDown('DELIVERY_FAILURES')}
-              className="rounded-2xl border border-rose-200 bg-white p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-rose-800">
-                  <span className="font-bold text-[10px] text-rose-900">Delivery Failures</span>
-                  <TruckIcon className="h-4 w-4 text-rose-600" />
-                </div>
-                <div className="text-2xl font-black text-rose-900 mt-2">{deliveryFailureRate}%</div>
-                <div className="text-[10px] text-rose-700 mt-0.5">Call not received</div>
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={failuresSparkline} color="#e11d48" fillColor="#f43f5e" height={22} />
-                <div className="text-[9px] text-rose-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-
-            {/* 3. Actual Return Rate Card */}
-            <DashboardFeature allowed={canSee('reviews')}>
-            <div
-              onClick={() => setActiveDrillDown('RETURNS')}
-              className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm hover:border-amber-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-amber-800">
-                  <span className="font-bold text-[10px] text-amber-900">Actual Returns</span>
-                  <RotateCcw className="h-4 w-4 text-amber-600" />
-                </div>
-                <div className="text-2xl font-black text-amber-900 mt-2">{returnRate}%</div>
-                <div className="text-[10px] text-amber-700 mt-0.5">Product quality only</div>
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={returnsSparkline} color="#d97706" fillColor="#f59e0b" height={22} />
-                <div className="text-[9px] text-amber-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-
-            {/* 4. Complaints Card */}
-            <DashboardFeature allowed={canSee('reviews')}>
-            <div
-              onClick={() => setActiveDrillDown('COMPLAINTS')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-rose-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-slate-500">
-                  <span className="font-bold text-[10px] text-slate-600">Complaints</span>
-                  <MessageSquareWarning className="h-4 w-4 text-rose-600" />
-                </div>
-                <div className="text-2xl font-black text-slate-900 mt-2">{complaintCount}</div>
-                <div className="text-[10px] text-rose-700 font-semibold mt-0.5">
-                  {unresolvedComplaintsCount} requiring action
-                </div>
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={complaintsSparkline} color="#dc2626" fillColor="#ef4444" height={22} />
-                <div className="text-[9px] text-rose-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-
-            {/* 5. Store Visits Today Card */}
-            <DashboardFeature allowed={canSee('beat_plans')}>
-            <div
-              onClick={() => setActiveDrillDown('STORES_VISITED')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-emerald-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-slate-500">
-                  <span className="font-bold text-[10px] text-slate-600">Stores Visited</span>
-                  <Compass className="h-4 w-4 text-emerald-600" />
-                </div>
-                <div className="text-2xl font-black text-slate-900 mt-2">{visitedStoresToday}</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
-                  {visitedStoresToday}/{beatItems.length} stores covered
-                </div>
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={visitsSparkline} color="#059669" fillColor="#10b981" height={22} />
-                <div className="text-[9px] text-emerald-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-
-            {/* 6. Cheques Pending Card */}
-            <DashboardFeature allowed={canSee('cheque_tracker')}>
-            <div
-              onClick={() => setActiveDrillDown('CHEQUES')}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-purple-400 hover:shadow-md cursor-pointer transition group flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between text-slate-500">
-                  <span className="font-bold text-[10px] text-slate-600">Cheques Pending</span>
-                  <CreditCard className="h-4 w-4 text-purple-600" />
-                </div>
-                <div className="text-2xl font-black text-slate-900 mt-2">{pendingCheques.length}</div>
-                <div className="text-[10px] text-purple-700 font-semibold mt-0.5">
-                  {overdueCheques.length} overdue/delayed
-                </div>
-              </div>
-              <div className="mt-3">
-                <MetricSparkline data={chequesSparkline} color="#7c3aed" fillColor="#8b5cf6" height={22} />
-                <div className="text-[9px] text-purple-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                  Click to drill down
-                </div>
-              </div>
-            </div>
-            </DashboardFeature>
-          </div>
-        )}
-
-        {/* SECTION 2.1: PRODUCT PERFORMANCE TABLE */}
-        <DashboardFeature allowed={canSee('products')}>
-        <ProductPerformanceTable
-          products={products}
-          orders={orders}
-          returns={returns}
-          deliveryFailures={deliveryFailures}
-          feedback={feedback}
-          calendarMode={filterCriteria.calendarMode || 'BS'}
-          comparisonMode={comparisonMode}
-        />
-        </DashboardFeature>
-
-      {/* SECTION 2.2: SALES CHANNEL PERFORMANCE (D2C / All Sales) */}
-      {canSee('orderflow') && salesMode !== 'B2B' && (
-        <SalesChannelPerformance
-          orders={rawOrders}
-          returns={rawReturns}
-          feedback={rawFeedback}
-          selectedChannel={channelFilter}
-          onSelectChannel={setChannelFilter}
-        />
-      )}
-
-      {/* SECTION 2.3: BRAND COMPARISON VIEW (Visible when ALL Brands selected) */}
-      {canSee('orderflow') && canSee('reviews') && canSee('products') && (!filterCriteria.brand || filterCriteria.brand === 'ALL') && (
-        <BrandComparisonView
-          orders={rawOrders}
-          returns={rawReturns}
-          deliveryFailures={rawDeliveryFailures}
-          feedback={rawFeedback}
-          branches={branches}
-          retailers={retailers}
-          products={products}
-        />
-      )}
-
-      {/* SECTION 2.4: REGIONAL BREAKDOWN */}
-      {canSee('orderflow') && canSee('reviews') && <RegionalPerformanceView
-        orders={orders}
-        returns={returns}
-        deliveryFailures={deliveryFailures}
-        feedback={feedback}
-      />}
-
-      {/* SECTION 2.5: DISTRIBUTOR HEALTH (GT/MT Summary - B2B / All Sales) */}
-      {canSee('distributors') && canSee('cheque_tracker') && salesMode !== 'D2C' && (
-        <DistributorHealthSection
-          distributors={distributors}
-          branches={branches}
-          retailers={retailers}
-          cheques={cheques}
-        />
-      )}
-
-      {/* OPERATIONAL HEALTH & ISSUE BREAKDOWN (Dynamic Checkbox Chips) */}
-      <div className={`grid grid-cols-1 ${salesMode === 'B2B' ? '' : 'lg:grid-cols-2'} gap-6 text-xs`}>
-        {/* Operational Health: Clickable Dynamic Issue Chips */}
-        <DashboardFeature allowed={canSee('reviews') && canSee('orderflow')}>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="font-bold text-slate-900 text-sm">
-              Operational Health & Issue Breakdown
-            </div>
-            <span className="text-[11px] text-blue-600 font-semibold">
-              Click chip to view matching complaints
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            <div>
-              <div className="flex justify-between text-[11px] font-bold text-slate-700 mb-1.5">
-                <span>Dynamic Issue Categories (Top Ticks)</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {categories.slice(0, 8).map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveIssueChip(cat.name)}
-                    className="rounded-lg bg-slate-100 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 px-2.5 py-1.5 text-[11px] text-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer group"
-                  >
-                    <span className="group-hover:text-blue-700 font-medium">{cat.name}</span>
-                    <strong className="text-blue-600 font-bold">({cat.tickCount})</strong>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div
-                onClick={() => setActiveDrillDown('DELIVERY_FAILURES')}
-                className="rounded-xl border border-rose-200 bg-rose-50/50 p-3 cursor-pointer hover:bg-rose-50 hover:border-rose-300 transition-colors"
-              >
-                <div className="font-bold text-rose-900 text-[11px] ">Delivery Failures</div>
-                <div className="text-lg font-black text-rose-900 mt-1">{deliveryFailureCount}</div>
-                <div className="text-[10px] text-rose-700">Call not received & address issues</div>
-              </div>
-              <div
-                onClick={() => setActiveDrillDown('RETURNS')}
-                className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition-colors"
-              >
-                <div className="font-bold text-amber-900 text-[11px] ">Actual Product Returns</div>
-                <div className="text-lg font-black text-amber-900 mt-1">{returnCount}</div>
-                <div className="text-[10px] text-amber-700">Damages & shade mismatch</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        </DashboardFeature>
-
-        {/* Customer Reviews & Marketing Intelligence (D2C / All Sales) */}
-        {canSee('reviews') && salesMode !== 'B2B' && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="font-bold text-slate-900 text-sm">
-                {canSee('marketing') ? 'Customer Feedback & Marketing Assets' : 'Customer Feedback'}
-              </div>
-              {canSee('customers') && (
-            <Link
-              href="/customers"
-              className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
-            >
-              Customer 360 <ArrowUpRight className="h-3 w-3" />
-            </Link>
-              )}
-          </div>
-
-          {/* Clickable Counters */}
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div
-              onClick={() => setReviewModalFilter('ALL')}
-              className="rounded-xl bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 border border-slate-100 p-3 cursor-pointer transition-colors group"
-            >
-              <div className="text-lg font-bold text-emerald-600 group-hover:scale-105 transition-transform">
-                {reviewsCount}
-              </div>
-              <div className="text-[11px] text-slate-500 mt-0.5 font-medium">Reviews Collected</div>
-            </div>
-            <div
-              onClick={() => setReviewModalFilter('USED_IN_DESIGN')}
-              className="rounded-xl bg-slate-50 hover:bg-purple-50 hover:border-purple-200 border border-slate-100 p-3 cursor-pointer transition-colors group"
-            >
-              <div className="text-lg font-bold text-purple-600 group-hover:scale-105 transition-transform">
-                {feedback.filter((f) => f.usedInDesign).length}
-              </div>
-              <div className="text-[11px] text-slate-500 mt-0.5 font-medium">Used in Designs</div>
-            </div>
-            <div
-              onClick={() => setReviewModalFilter('POSTED_ON_WEB')}
-              className="rounded-xl bg-slate-50 hover:bg-blue-50 hover:border-blue-200 border border-slate-100 p-3 cursor-pointer transition-colors group"
-            >
-              <div className="text-lg font-bold text-blue-600 group-hover:scale-105 transition-transform">
-                {feedback.filter((f) => f.postedOnWebsite).length}
-              </div>
-              <div className="text-[11px] text-slate-500 mt-0.5 font-medium">Posted on Web</div>
-            </div>
-          </div>
-
-          {/* Latest 3 Reviews Preview Cards */}
-          <div className="space-y-2 pt-1">
-            <div className="text-[11px] font-bold text-slate-600 ">
-              Latest Reviews (Click to Inspect)
-            </div>
-            <div className="space-y-2">
-              {latestReviews.map((rev) => (
-                <div
-                  key={rev.id}
-                  onClick={() => setSelectedReview(rev)}
-                  className="p-2.5 rounded-xl border border-slate-200/80 bg-slate-50/60 hover:bg-white hover:shadow-xs cursor-pointer transition"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-900">{rev.customerName}</span>
-                    <span
-                      className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                        rev.sentiment === 'POSITIVE'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-rose-100 text-rose-800'
-                      }`}
-                    >
-                      {rev.sentiment}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                    {rev.productName}
-                  </div>
-                  <p className="text-[11px] text-slate-600 italic truncate mt-1">
-                    &ldquo;{rev.fullText}&rdquo;
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {canSee('customers') && <div className="rounded-xl bg-slate-50 p-3 border border-slate-200/60 flex items-center justify-between">
-            <div>
-              <div className="font-bold text-slate-800">Omnichannel Customer 360</div>
-              <div className="text-[11px] text-slate-500">Phone-indexed profile with 70-base Karma scores</div>
-            </div>
-            <Link
-              href="/customers"
-              className="rounded-lg bg-blue-600 text-white font-bold px-3 py-1.5 text-xs shadow hover:bg-blue-700"
-            >
-              Explore 360
-            </Link>
-          </div>}
-        </div>
-      )}
+        <p className="text-[11px] text-slate-400 print:block">Numbers follow the same definitions on every page. Click <span className="font-semibold">ⓘ</span> on a chart to see how it is worked out, or click a number to see the records behind it. {formatValue(prepared.data.orders.length, 'count')} online orders and {formatValue(prepared.data.storeOrders.length, 'count')} store orders loaded.</p>
       </div>
 
-      {/* SECTION 6: FIELD SALES FORCE PERFORMANCE (B2B / All Sales) */}
-      {canSee('staff_scorecards') && salesMode !== 'D2C' && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
-              <Award className="h-4 w-4 text-blue-600" />
-              Field Sales Force Performance (Live Rankings)
-            </div>
-            <Link
-              href="/offline-sales/scorecard"
-              className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
-            >
-              Full Scorecards <ArrowUpRight className="h-3 w-3" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-            {rankedScorecards.map((sc, i) => {
-              const overdueCount = sc.chequesOverdue || 0;
-              const stopsToday = rawBeatItems.filter(
-                (beat) => beat.officerId === sc.officerId && beat.dateAd === getTodayAd()
-              );
-              const visitedToday = stopsToday.filter((beat) => beat.status === 'VISITED').length;
-
-              return (
-                <Link
-                  key={sc.officerId}
-                  href="/offline-sales/scorecard"
-                  className="rounded-xl border border-slate-200 p-4 space-y-3 bg-slate-50/50 hover:bg-white hover:border-blue-300 hover:shadow-md transition cursor-pointer block group"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">
-                        {sc.officerName}
-                      </div>
-                      <div className="text-[11px] text-slate-500">{sc.area}</div>
-                    </div>
-                    <span className="rounded-full bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 text-[10px]">
-                      Rank #{i + 1}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5 pt-1">
-                    <div className="flex justify-between text-[11px] items-center">
-                      <span className="text-slate-500">Beat Compliance:</span>
-                      <strong className="text-blue-600 text-xs">{sc.beatCompliancePct}%</strong>
-                    </div>
-
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-slate-500">Call-to-Order Conversion:</span>
-                      <strong className="text-emerald-600 font-bold">{sc.callToOrderRatioPct}%</strong>
-                    </div>
-
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-slate-500">Avg Cheque Handover:</span>
-                      <strong className="text-amber-700">{sc.avgChequeHandoverDays} days</strong>
-                    </div>
-
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-slate-500">Stores Visited Today:</span>
-                      <strong className="text-slate-900 font-bold">{visitedToday}/{stopsToday.length} stores</strong>
-                    </div>
-
-                    <div className="flex justify-between text-[11px] border-t border-slate-100 pt-1.5">
-                      <span className="text-slate-500">Open Tasks:</span>
-                      <strong className="text-slate-700">{sc.pendingTasks} tasks</strong>
-                    </div>
-
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-slate-500">Overdue Items:</span>
-                      <span
-                        className={`px-1.5 py-0.2 rounded font-bold text-[10px] ${
-                          overdueCount > 0 ? 'bg-rose-100 text-rose-800' : 'text-slate-500'
-                        }`}
-                      >
-                        {overdueCount} items
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* SECTION 2.6: 30-DAY TRENDS (2x2 GRID) */}
-      {canSee('staff_scorecards') && canSee('orderflow') && canSee('reviews') && (
-        <ThirtyDayTrendCharts comparisonMode={comparisonMode} />
-      )}
-
-      {/* Fix 35: Seasonal Pattern Insights */}
-      {canSee('orderflow') && <SeasonalInsightsSection />}
-
-      {/* Fix 34b & 47: Store Network Overview & Vendor Comparison (B2B / All Sales) */}
-      {canSee('stores') && canSee('distributors') && salesMode !== 'D2C' && <StoreNetworkOverviewSection />}
-
-      {/* DRILL-DOWN MODALS */}
-      {activeDrillDown && <MetricDrillDownModal
-        type={activeDrillDown}
-        onClose={() => setActiveDrillDown(null)}
-        orders={canSee('orderflow') ? orders : []}
-        deliveryFailures={canSee('orderflow') ? deliveryFailures : []}
-        returns={canSee('reviews') ? returns : []}
-        feedback={canSee('reviews') ? feedback : []}
-        cheques={canSee('cheque_tracker') ? cheques : []}
-        beatItems={canSee('beat_plans') ? beatItems : []}
-        scorecards={canSee('staff_scorecards') ? scorecards : []}
-        activeBrand={activeBrand}
-        calendarMode={filterCriteria.calendarMode || 'BS'}
-      />}
-
-      {activeIssueChip && <IssueChipDrillDownModal
-        categoryName={activeIssueChip}
-        onClose={() => setActiveIssueChip(null)}
-        feedback={canSee('reviews') ? feedback : []}
-        returns={canSee('reviews') ? returns : []}
-        calendarMode={filterCriteria.calendarMode || 'BS'}
-      />}
-
-      {(reviewModalFilter || selectedReview) && <ReviewListModal
-        filterType={reviewModalFilter}
-        selectedReview={selectedReview}
-        onClose={() => {
-          setReviewModalFilter(null);
-          setSelectedReview(null);
-        }}
-        feedback={canSee('reviews') ? feedback : []}
-        calendarMode={filterCriteria.calendarMode || 'BS'}
-      />}
-
-      {showSetupWizard && setupGuideDue && (
-        <SetupWizard onComplete={closeSetupWizard} onDismiss={closeSetupWizard} />
-      )}
-      </div>
+      {editor && <WidgetEditor prepared={prepared} filters={dashboard.filters} initial={editor.widget} onSave={saveWidget} onClose={() => setEditor(null)} />}
+      {showSetup && setupDue && <SetupWizard onComplete={closeSetup} onDismiss={closeSetup} />}
     </PageGuard>
+  );
+}
+
+function Select({ label, value, options, onChange }: { label: string; value: string; options: { value: string; label: string }[]; onChange: (value: string) => void }) {
+  return (
+    <label className="font-semibold text-slate-600"><span aria-hidden="true">{label}</span>
+      <span className="relative mt-0.5 block">
+        <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} className="appearance-none rounded-lg border border-slate-200 bg-white py-1.5 pl-2.5 pr-7 font-normal text-slate-800">
+          {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+      </span>
+    </label>
+  );
+}
+
+function Menu({ children, onClose, align = 'left' }: { children: React.ReactNode; onClose: () => void; align?: 'left' | 'right' }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onDown = (event: MouseEvent) => { if (ref.current && !ref.current.contains(event.target as Node)) onClose(); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('mousedown', onDown); window.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); window.removeEventListener('keydown', onKey); };
+  }, [onClose]);
+  return <div ref={ref} role="menu" className={`absolute top-full z-40 mt-1 w-72 rounded-xl border border-slate-200 bg-white py-1 shadow-lg ${align === 'right' ? 'right-0' : 'left-0'}`}>{children}</div>;
+}
+
+function MenuItem({ children, hint, onClick, danger }: { children: React.ReactNode; hint?: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button type="button" role="menuitem" onClick={onClick} className={`block w-full px-3 py-2 text-left text-xs hover:bg-slate-50 ${danger ? 'text-rose-600' : 'text-slate-800'}`}>
+      <span className="font-semibold">{children}</span>{hint && <span className="block text-[11px] font-normal text-slate-500">{hint}</span>}
+    </button>
   );
 }
