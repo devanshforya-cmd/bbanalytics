@@ -27,7 +27,7 @@ test('every app page belongs to exactly one permission', () => {
   const exempt = ['/', '/login', '/shared/[token]', '/about', '/privacy', '/terms', '/settings', ...OPEN_PATHS];
   const missing = routes.filter((route) => !exempt.includes(route) && !route.startsWith('/zz-') && !OPEN_PREFIXES.some((prefix) => `${route}/`.startsWith(prefix)) && !pageForPath(route.replace(/\[[^\]]+\]/g, 'x')));
   assert.deepEqual(missing, []);
-  for (const tab of ['BRANDS', 'CHANNELS', 'LISTS', 'PROMOTIONS', 'SHARED_ACCESS', 'RULES', 'FIELD_SALES', 'HOLIDAYS', 'TEMPLATES', 'GOOGLE', 'IMPORT', 'UPGRADE', 'FEATURE_FLAGS']) assert.ok(pageForSettingsTab(tab), tab);
+  for (const tab of ['BRANDS', 'CHANNELS', 'LISTS', 'PROMOTIONS', 'SHARED_ACCESS', 'RULES', 'FIELD_SALES', 'HOLIDAYS', 'TEMPLATES', 'GOOGLE', 'IMPORT', 'UPGRADE', 'FOLLOW_UPS']) assert.ok(pageForSettingsTab(tab), tab);
   assert.equal(pageForSettingsTab('STAFF'), undefined, 'Staff & roles is never grantable');
 });
 

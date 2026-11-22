@@ -143,10 +143,3 @@ export function getRedirectPathForUser(user: any): string {
   return firstAllowedPath(user);
 }
 
-export function getRedirectPathForRole(role?: any, user?: any): string {
-  if (user) return getRedirectPathForUser(user);
-  if (typeof role === 'object' && role !== null) return getRedirectPathForUser(role);
-  if (role === 'SALES_OFFICER') return '/offline-sales/beat-plan';
-  if (role === 'DATA_ENTRY') return '/orderflow/manual-entry';
-  return '/dashboard';
-}

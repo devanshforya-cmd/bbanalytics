@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { google } from 'googleapis';
+import { drive as googleDrive } from '@googleapis/drive';
 import { requireAuth } from '@/lib/auth-guard';
 import { getTeamMemberIds, getScope } from '@/lib/permissions';
 import { supabaseAdmin } from '@/lib/db/supabase-server';
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   if (!/^[a-zA-Z0-9_-]{10,200}$/.test(id)) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   try {
     const workspace = await getGoogleWorkspace();
-    const drive = google.drive({ version: 'v3', auth: workspace.auth });
+    const drive = googleDrive({ version: 'v3', auth: workspace.auth });
     const metadata = await drive.files.get({ fileId: id, fields: 'id,name,mimeType,size,appProperties,trashed', supportsAllDrives: true });
     const properties = metadata.data.appProperties;
     let teamIds: string[] = [];

@@ -86,8 +86,9 @@ export class FakeDatabase {
   }
 
   /** Mirrors public.commit_workspace_mutations: all-or-nothing with version checks. */
-  async rpc(name: string, args: { p_mutations: Row[] }) {
+  async rpc(name: string, args: { p_mutations: Row[] } = { p_mutations: [] }) {
     await pause();
+    if (name === 'workspace_fingerprint') return { data: JSON.stringify([this.tables.workspace_records.map((row) => [row.collection, row.id, row.version, row.last_mutation_id]), this.tables.users, this.tables.brands]), error: null };
     if (name !== 'commit_workspace_mutations') return { data: null, error: { code: 'PGRST202' } };
     this.rpcCalls++;
     const draft: Row[] = this.tables.workspace_records.map((row) => ({ ...row, data: structuredClone(row.data) }));

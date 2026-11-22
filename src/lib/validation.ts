@@ -71,25 +71,6 @@ export function validateQuantity(
 }
 
 /**
- * Validates that a date (YYYY-MM-DD or parseable string) is not in the future
- */
-export function validateNotFutureDate(
-  dateStr: string,
-  fieldName: string = 'Date'
-): string | null {
-  if (!dateStr || dateStr.trim() === '') {
-    return `${fieldName} is required`;
-  }
-
-  const todayStr = new Date().toISOString().split('T')[0];
-  // Simple YYYY-MM-DD string comparison
-  if (dateStr > todayStr) {
-    return `${fieldName} cannot be in the future`;
-  }
-  return null;
-}
-
-/**
  * Validates that a cheque number is unique within existing cheques
  */
 export function validateUniqueChequeNumber(

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { google } from 'googleapis';
+import { drive as googleDrive } from '@googleapis/drive';
 import { requireAuth } from '@/lib/auth-guard';
 import { getGoogleWorkspace, logGoogleFailure } from '@/lib/google-workspace';
 import { DRIVE_UPLOAD_LIMIT, detectGoogleUploadType, driveUploadFeature, isDriveFeature, isSameOriginGoogleMutation } from '@/lib/google-workspace-security';
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (!workspace.folderId) return NextResponse.json({ error: 'Google Drive folder is not configured. Ask an administrator to finish Google Workspace setup.' }, { status: 503 });
     const stamp = new Date(Date.now() + 345 * 60_000).toISOString().slice(0, 16).replace(/[-:T]/g, '');
     const name = `${stamp}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`.slice(-180) || 'upload';
-    const drive = google.drive({ version: 'v3', auth: workspace.auth });
+    const drive = googleDrive({ version: 'v3', auth: workspace.auth });
     // Filed under BB Analytics → Photos → <kind>, e.g. Photos → Cheques.
     const result = await savePhotoToDrive(drive, workspace.folderId, feature, { name, mimeType, bytes, uploaderId: session.user.id });
     if (!result.data.id) throw new Error('Missing uploaded file id.');

@@ -8,7 +8,7 @@
  */
 import { Readable } from 'node:stream';
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { google, type drive_v3 } from 'googleapis';
+import { drive as googleDrive, type drive_v3 } from '@googleapis/drive';
 import { supabaseAdmin } from './db/supabase-server';
 import { getGoogleWorkspace, logGoogleFailure } from './google-workspace';
 import { buildSheets, DATASETS } from './export/datasets';
@@ -102,7 +102,7 @@ export async function runDriveBackup(store: DatabaseService, trigger: BackupRun[
   try {
     const workspace = await getGoogleWorkspace();
     if (!workspace.folderId) throw new Error('Google Drive is connected but its BB Analytics folder is not ready. Open Settings → Google Workspace and prepare it.');
-    const drive = google.drive({ version: 'v3', auth: workspace.auth });
+    const drive = googleDrive({ version: 'v3', auth: workspace.auth });
     const folderId = await backupFolder(drive, workspace.folderId, status.folderId);
     status.folderId = folderId;
 

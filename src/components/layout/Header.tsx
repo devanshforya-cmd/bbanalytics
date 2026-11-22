@@ -16,7 +16,6 @@ import NotificationHistoryModal from '@/components/common/NotificationHistoryMod
 import GlobalSearchModal from '@/components/common/GlobalSearchModal';
 import { getSessionUser } from '@/lib/auth';
 import { getTodayBs } from '@/lib/nepali-calendar';
-import { useExperiment } from '@/hooks/useExperiment';
 import { canPerform, isSuperAdmin } from '@/lib/permissions';
 import { isMessage, notificationTarget } from '@/lib/notification-open';
 import MessageModal from '@/components/notifications/MessageModal';
@@ -45,7 +44,6 @@ import {
 
 export default function Header() {
   const router = useRouter();
-  const { variant: navVariant } = useExperiment('premium-nav-style');
   const [todayBs, setTodayBs] = useState(() => getTodayBs());
   const [currentUser, setCurrentUser] = useState<User>(() => getSessionUser() || db.getCurrentUser());
   const [brandFilter, setBrandFilter] = useState<BrandCode>(db.getActiveBrandFilter());
@@ -161,16 +159,11 @@ export default function Header() {
   const unreadNotifs = notifications.filter((n) => !n.read);
   const displayedNotifs = notifTab === 'UNREAD' ? unreadNotifs : notifications;
   const duty = currentUser.dutyStatus || 'ONLINE';
-  const isGlassVariant = navVariant === 'glass_premium';
 
   return (
     <>
       <header
-        className={`sticky top-0 z-30 flex h-14 sm:h-16 w-full items-center justify-between gap-2 border-b px-2.5 sm:px-6 transition duration-200 ${
-          isGlassVariant
-            ? 'border-black/[0.06] bg-white/70 backdrop-blur-xl backdrop-saturate-150'
-            : 'border-black/[0.06] bg-white/80 backdrop-blur-xl backdrop-saturate-150'
-        }`}
+        className={`sticky top-0 z-30 flex h-14 sm:h-16 w-full items-center justify-between gap-2 border-b px-2.5 sm:px-6 transition duration-200 border-black/[0.06] bg-white/80 backdrop-blur-xl backdrop-saturate-150`}
       >
         <SavingBar />
         {/* Left: Hamburger (mobile/tablet) + Clean Brand Dropdown */}

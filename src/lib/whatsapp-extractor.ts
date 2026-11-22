@@ -436,8 +436,3 @@ export function extractSingleOrder(blockText: string, options: DynamicExtractorO
 export function extractOrdersDynamically(rawText: string, options: DynamicExtractorOptions): ExtractedOrderResult[] {
   return splitMessageBlocks(rawText, options.customSeparator).map(block => extractSingleOrder(block, options));
 }
-export function extractOrderFromChat(rawText: string): ExtractedOrderResult {
-  const { db } = require('./db/db-service');
-  const products = db.getProducts().filter((p: Product) => p.active !== false);
-  return extractSingleOrder(rawText, { products, combos: db.getCombos(), brands: db.getBrands().filter((b: Brand) => b.status !== 'ARCHIVED') });
-}

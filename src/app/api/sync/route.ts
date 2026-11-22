@@ -1,4 +1,5 @@
 import { isSameOriginRequest } from '@/lib/request-origin';
+import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-guard';
 import { readWorkspaceContext, readDeletedProductIds, readDeletedStoreIds, visibleWorkspace, saveWorkspaceMutation, WorkspaceError } from '@/lib/db/server-workspace';
@@ -15,14 +16,24 @@ function failure(error: unknown) {
   }, { status: error instanceof WorkspaceError ? error.status : 503, headers: { 'Cache-Control': 'private, no-store' } });
 }
 
+/** Changes whenever anything this person could be sent changes; also on every deploy. Null if it cannot be worked out. */
+async function workspaceTag(userId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin.rpc('workspace_fingerprint');
+  if (error || typeof data !== 'string') return null;
+  return createHash('sha256').update(`${data}:${userId}:${process.env.VERCEL_GIT_COMMIT_SHA || 'local'}`).digest('hex');
+}
+
 export async function GET(request: Request) {
   const auth = await requireAuth(request);
   if (auth.response) return auth.response;
   if (request.headers.has('x-workspace-user') && request.headers.get('x-workspace-user') !== auth.user.id) return NextResponse.json({ success: false, error: 'The signed-in account changed. Sign in again before syncing.' }, { status: 409 });
   try {
+    // Most refreshes find nothing new: answer from a 12 ms hash instead of reading and sending everything.
+    const tag = await workspaceTag(auth.user.id);
+    if (tag && request.headers.get('x-workspace-tag') === tag) return NextResponse.json({ success: true, unchanged: true, tag }, { headers: { 'Cache-Control': 'private, no-store' } });
     const [context, deletedProductIds, deletedStoreIds] = await Promise.all([readWorkspaceContext(), readDeletedProductIds(auth.user), readDeletedStoreIds(auth.user)]);
     const view = visibleWorkspace(auth.user, context);
-    return NextResponse.json({ success: true, data: view.data, versions: view.versions, deletedProductIds, deletedStoreIds, errors: [] }, { headers: { 'Cache-Control': 'private, no-store' } });
+    return NextResponse.json({ success: true, data: view.data, versions: view.versions, deletedProductIds, deletedStoreIds, errors: [], ...(tag ? { tag } : {}) }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) { return failure(error); }
 }
 

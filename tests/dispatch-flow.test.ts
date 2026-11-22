@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeDatabase } from './fake-supabase.ts';
-import { useTestDatabaseClient } from '../src/lib/db/supabase-server.ts';
+import { setTestDatabaseClient } from '../src/lib/db/supabase-server.ts';
 import { saveWorkspaceMutation } from '../src/lib/db/server-workspace.ts';
 import { canCorrect, canMoveTo, dispatchFromOrder, dispatchStatus, nextSteps, orderStatusFor, paymentDueDate } from '../src/lib/dispatch-flow.ts';
 import { DATASETS } from '../src/lib/export/datasets.ts';
@@ -22,7 +22,7 @@ function database() {
   db.seed('products', { id: 'p1', name: 'Roll-On Peach', sku: 'ROP', brandCode: 'FORYA', mrp: 500, caseSize: 24, active: true });
   db.seed('distributors', { id: 'fewa', name: 'Fewa Trade', type: 'Distributor', storeType: 'DISTRIBUTOR', brandsCarried: ['FORYA'], contacts: [] });
   db.seed('retailers', { id: 'r1', name: 'Shrestha Kirana', brandsStocked: ['FORYA'], assignedOfficerId: 'rider', distributorId: 'fewa', distributorName: 'Fewa Trade', contacts: [] });
-  useTestDatabaseClient(db as any);
+  setTestDatabaseClient(db as any);
   return db;
 }
 const storeOrder = (extra: Record<string, unknown> = {}) => ({ id: 'so1', orderNumber: 'PENDING-SO1', officerId: 'rider', officerName: 'Rajan', entityType: 'RETAILER', entityId: 'r1', storeName: 'Shrestha Kirana',

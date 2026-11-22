@@ -217,21 +217,3 @@ export async function uploadImage(file: File, folder: string = 'beat_plans', com
   return { ...base, size: offlineCopy.size, url: await readAsDataUrl(offlineCopy), savedToDrive: false };
 }
 
-/** Save one photo and get back what to store on the record. */
-export async function savePhoto(file: File, feature: PhotoFeature): Promise<string> {
-  return (await uploadImage(file, feature, true)).url;
-}
-
-/**
- * Batch upload multiple verified files.
- */
-export async function uploadMultipleImages(
-  files: File[],
-  folder: string = 'uploads',
-  compress: boolean = true
-): Promise<UploadResult[]> {
-  const results = await Promise.all(
-    files.map((file) => uploadImage(file, folder, compress))
-  );
-  return results;
-}

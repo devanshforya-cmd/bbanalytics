@@ -20,7 +20,7 @@ export type PageKey =
   | 'p.settings_brands' | 'p.settings_channels' | 'p.settings_lists' | 'p.settings_promotions'
   | 'p.settings_shared_links' | 'p.settings_alerts' | 'p.settings_beats' | 'p.settings_holidays'
   | 'p.settings_task_templates' | 'p.settings_google' | 'p.settings_import' | 'p.settings_upgrade'
-  | 'p.settings_experiments' | 'p.settings_follow_ups';
+  | 'p.settings_follow_ups';
 
 export type SensitiveKey = 's.money' | 's.customers' | 's.influencers' | 's.download';
 
@@ -127,7 +127,6 @@ export const PAGES: PageDefinition[] = [
   settings('p.settings_google', 'Google Sheets & Drive', 'GOOGLE', 'Google account connection'),
   settings('p.settings_import', 'Import data', 'IMPORT', 'Bring in data from spreadsheets'),
   settings('p.settings_upgrade', 'Data upgrade', 'UPGRADE', 'One-off data repairs'),
-  settings('p.settings_experiments', 'Experiments', 'FEATURE_FLAGS', 'Try features before everyone gets them'),
 ];
 
 export const SENSITIVE: { key: SensitiveKey; label: string; description: string }[] = [
@@ -137,10 +136,6 @@ export const SENSITIVE: { key: SensitiveKey; label: string; description: string 
   { key: 's.download', label: 'Download data', description: 'Excel downloads on every list, store and order, and the Reports & downloads page. Leave off for field staff' },
 ];
 
-/** Staff & roles is never grantable: only Super Admins manage people and access. */
-export const STAFF_SETTINGS_TAB = 'STAFF';
-
-export const PAGE_KEYS = PAGES.map((entry) => entry.key);
 export const SENSITIVE_KEYS = SENSITIVE.map((entry) => entry.key);
 const BY_KEY = new Map(PAGES.map((entry) => [entry.key, entry]));
 

@@ -9,12 +9,6 @@ async function request(method: string, body?: unknown) {
   return payload.data;
 }
 export async function fetchUsersFromSupabase(): Promise<User[]> { users = await request('GET'); return users; }
-export function getUsers(): User[] { return users; }
-export function getUserById(id: string) { return users.find((user) => user.id === id); }
-export function getUserByEmailOrPhone(value: string) {
-  const clean = value.trim().toLowerCase();
-  return users.find((user) => user.email?.toLowerCase() === clean || user.phone?.replace(/\D/g, '') === clean.replace(/\D/g, ''));
-}
 export async function createUser(user: User): Promise<User> {
   const saved = await request('POST', user) as User;
   users = [...users.filter((entry) => entry.id !== saved.id), saved];
@@ -25,4 +19,3 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
   users = [...users.filter((entry) => entry.id !== id), saved];
   return saved;
 }
-export async function deactivateUser(id: string) { return updateUser(id, { active: false }); }

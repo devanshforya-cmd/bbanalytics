@@ -63,14 +63,6 @@ export function getBrands(status?: 'ACTIVE' | 'ALL'): Brand[] {
   return source;
 }
 
-export function getBrandByCode(code: string): Brand | undefined {
-  return getBrands('ALL').find((b) => b.code.toUpperCase() === code.toUpperCase());
-}
-
-export function getBrandById(id: string): Brand | undefined {
-  return getBrands('ALL').find((b) => b.id === id);
-}
-
 export async function addBrand(brand: Brand): Promise<Brand> {
   const payload = await requestBrands('POST', brand as unknown as Record<string, unknown>);
   if (payload.localPreviewOnly) {
