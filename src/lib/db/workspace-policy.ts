@@ -28,10 +28,11 @@ const FEATURES: Record<WorkspaceCollection, AccessKey[]> = {
   promotions: ['p.settings_promotions'], dailySummaries: ['beat_plans', 'staff_scorecards'], importHistory: ['p.settings_import'],
   influencers: ['marketing'], influencerContent: ['marketing'], sharedAccessLinks: ['p.settings_shared_links'],
   documentTypes: ['p.settings_lists'], storeCategories: ['p.settings_lists'], recurringSchedules: ['beat_plans'],
-  workspaceConfig: ['p.settings_channels', 'p.settings_brands', 'p.settings_alerts', 'p.settings_beats'],
+  workspaceConfig: ['p.settings_channels', 'p.settings_brands', 'p.settings_alerts', 'p.settings_beats', 'p.settings_follow_ups'],
   marketingSends: ['marketing'], influencerNiches: ['marketing', 'p.settings_lists'], marketingOptions: ['marketing', 'p.settings_lists'],
   failureReasons: ['orderflow', 'order_desk', 'p.settings_lists'], userPreferences: [],
   campaigns: ['p.sales_offers'],
+  customerCalls: ['customer_calls'],
 };
 
 const GLOBAL_CATALOG = new Set<WorkspaceCollection>([
@@ -43,7 +44,9 @@ const GLOBAL_CATALOG = new Set<WorkspaceCollection>([
 export function collectionFeatures(collection: WorkspaceCollection, read = false): AccessKey[] {
   if (read && (collection === 'products' || collection === 'combos')) return ['products', 'beat_plans', 'orderflow', 'order_desk', 'dispatches', 'stock_counts'];
   if (read && collection === 'reviewCategories') return ['reviews', 'order_desk'];
-  if (read && ['documentTypes', 'storeCategories', 'workspaceConfig', 'promotions'].includes(collection)) return ['settings', 'beat_plans', 'stores', 'document_handover', 'orderflow', 'order_desk'];
+  if (read && ['documentTypes', 'storeCategories', 'workspaceConfig', 'promotions'].includes(collection)) return ['settings', 'beat_plans', 'stores', 'document_handover', 'orderflow', 'order_desk', 'customer_calls'];
+  // Callers need the orders and customers they phone about.
+  if (read && (collection === 'orders' || collection === 'customers')) return [...FEATURES[collection], 'customer_calls'];
   if (read && collection === 'holidays') return ['settings', 'beat_plans', 'tasks'];
   // Everyone who takes or reviews online orders sees the running sales; the Sales & offers page manages them.
   if (read && collection === 'campaigns') return ['p.sales_offers', 'settings', 'marketing', 'orderflow', 'order_desk', 'dashboard'];

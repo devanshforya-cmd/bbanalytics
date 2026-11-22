@@ -21,8 +21,11 @@ import { DEFAULT_CONTENT_PLATFORMS, DEFAULT_FAILURE_REASONS, DEFAULT_REACH_OUT_P
 
 const ANONYMOUS_USER: User = { id: '', fullName: '', email: '', phone: '', role: 'OFFICE_STAFF', active: false, isSuperAdmin: false, dutyStatus: 'OFFLINE', assignedBrands: [], permissions: {}, customPermissions: {} };
 
+import { DEFAULT_FOLLOW_UP_PLAN, validateFollowUpPlan } from '../follow-ups';
 import {
   User,
+  CustomerCall,
+  FollowUpPlan,
   Brand,
   Product,
   Distributor,
@@ -159,6 +162,8 @@ export class DatabaseService {
   private marketingOptions: MarketingOption[] = [];
   private failureReasons: FailureReason[] = [];
   private campaigns: SaleCampaign[] = [];
+  private customerCalls: CustomerCall[] = [];
+  private followUpPlan: FollowUpPlan | null = null;
   private userPreferences: UserPreferenceRecord[] = [];
   private brandPrefixes: Record<string, string> = {};
   private workspaceLoaded = false;
@@ -251,7 +256,7 @@ export class DatabaseService {
   public exportSnapshot(): WorkspaceSnapshot {
     const snapshot: WorkspaceSnapshot = {};
     for (const collection of WORKSPACE_COLLECTIONS) {
-      if (collection === 'workspaceConfig') snapshot[collection] = [{ id: 'workspace', requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn, alertRules: this.alertRules, ...(this.orderOptions ? { orderOptions: this.orderOptions } : {}), ...(Object.keys(this.brandPrefixes).length ? { brandPrefixes: this.brandPrefixes } : {}) }];
+      if (collection === 'workspaceConfig') snapshot[collection] = [{ id: 'workspace', requireStorePhotoAtCheckIn: this.requireStorePhotoAtCheckIn, alertRules: this.alertRules, ...(this.orderOptions ? { orderOptions: this.orderOptions } : {}), ...(Object.keys(this.brandPrefixes).length ? { brandPrefixes: this.brandPrefixes } : {}), ...(this.followUpPlan ? { followUpPlan: this.followUpPlan } : {}) }];
       else snapshot[collection] = ((this as any)[collection] || []).map((row: any) => JSON.parse(JSON.stringify({ ...row, id: row.id || (collection === 'staffLiveLocations' ? row.officerId : undefined) })));
     }
     return snapshot;
@@ -265,6 +270,7 @@ export class DatabaseService {
         this.orderOptions = config?.orderOptions ? validateOrderOptions(config.orderOptions) : null;
         this.alertRules = config?.alertRules ? validateAlertRules(config.alertRules) : { ...DEFAULT_ALERT_RULES };
         this.brandPrefixes = config?.brandPrefixes && typeof config.brandPrefixes === 'object' ? { ...config.brandPrefixes } : {};
+        try { this.followUpPlan = config?.followUpPlan ? validateFollowUpPlan(config.followUpPlan) : null; } catch { this.followUpPlan = null; }
       }
       else (this as any)[collection] = JSON.parse(JSON.stringify(snapshot[collection] || []));
     }
@@ -469,8 +475,9 @@ export class DatabaseService {
         if (parsed.comparisonMode) this.comparisonMode = parsed.comparisonMode;
         if (parsed.influencers) this.influencers = parsed.influencers;
         if (parsed.influencerContent) this.influencerContent = parsed.influencerContent;
-        for (const key of ['marketingSends', 'influencerNiches', 'marketingOptions', 'failureReasons', 'userPreferences', 'campaigns'] as const) if (Array.isArray(parsed[key])) (this as any)[key] = parsed[key];
+        for (const key of ['marketingSends', 'influencerNiches', 'marketingOptions', 'failureReasons', 'userPreferences', 'campaigns', 'customerCalls'] as const) if (Array.isArray(parsed[key])) (this as any)[key] = parsed[key];
         if (parsed.brandPrefixes && typeof parsed.brandPrefixes === 'object') this.brandPrefixes = parsed.brandPrefixes;
+        if (parsed.followUpPlan) { try { this.followUpPlan = validateFollowUpPlan(parsed.followUpPlan); } catch { /* keep default */ } }
         if (parsed.sharedAccessLinks) this.sharedAccessLinks = parsed.sharedAccessLinks;
         if (parsed.salesMode) this.salesMode = parsed.salesMode;
         if (parsed.documentTypes) this.documentTypes = parsed.documentTypes;
@@ -631,6 +638,8 @@ export class DatabaseService {
         failureReasons: this.failureReasons,
         userPreferences: this.userPreferences,
         campaigns: this.campaigns,
+        customerCalls: this.customerCalls,
+        followUpPlan: this.followUpPlan,
         brandPrefixes: this.brandPrefixes,
         sharedAccessLinks: this.sharedAccessLinks,
         salesMode: this.salesMode,
@@ -2851,6 +2860,33 @@ export class DatabaseService {
   }
 
   /** Reasons staff can pick when a delivery fails. The built-in list is used until an admin saves their own. */
+  // ------------------------------------------------------------------ Customer calls (online, separate from store calls)
+  public getFollowUpPlan(): FollowUpPlan { return structuredClone(this.followUpPlan || DEFAULT_FOLLOW_UP_PLAN); }
+  public isFollowUpPlanSaved(): boolean { return !!this.followUpPlan; }
+  public setFollowUpPlan(plan: FollowUpPlan): void { this.followUpPlan = validateFollowUpPlan(plan); this.persistState(); }
+
+  public getCustomerCalls(): CustomerCall[] {
+    return [...this.customerCalls].sort((a, b) => (b.createdAt || b.dateAd).localeCompare(a.createdAt || a.dateAd));
+  }
+
+  public logCustomerCall(input: Omit<CustomerCall, 'id' | 'createdAt' | 'officerId' | 'officerName' | 'dateAd' | 'dateBs'> & { dateAd?: string }): CustomerCall {
+    const name = String(input.customerName || '').trim();
+    const phone = String(input.customerPhone || '').trim();
+    if (!name && !phone) throw new Error('Enter the customer’s name or phone number.');
+    if (input.outcome === 'CALL_BACK' && !input.callbackDateAd) throw new Error('Choose when to call back.');
+    const dateAd = input.dateAd || getTodayAd();
+    const call: CustomerCall = {
+      ...input, customerName: name || phone, customerPhone: phone,
+      notes: input.notes?.trim() ? input.notes.trim().slice(0, 1000) : undefined,
+      id: this.generateId('ccall'), officerId: this.currentUser.id, officerName: this.currentUser.fullName,
+      dateAd, dateBs: dateAd === getTodayAd() ? getTodayBs() : adToBs(`${dateAd}T12:00:00`).formatted, createdAt: new Date().toISOString(),
+    };
+    for (const key of Object.keys(call) as (keyof CustomerCall)[]) if (call[key] === undefined) delete call[key];
+    this.customerCalls.unshift(call);
+    this.persistState();
+    return call;
+  }
+
   // ------------------------------------------------------------------ Sales and offers (online campaigns)
   public getCampaigns(): SaleCampaign[] {
     return [...this.campaigns].sort((a, b) => b.startsAt.localeCompare(a.startsAt));

@@ -37,7 +37,8 @@ import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
 import { hasAccess, isSuperAdmin, setActivePage } from '@/lib/permissions';
 import { pageForSettingsTab } from '@/lib/access-catalog';
-import { Compass, Sliders, ListChecks, DatabaseZap, Sparkles, Truck, Link2, FlaskConical } from 'lucide-react';
+import FollowUpSettings from './components/FollowUpSettings';
+import { PhoneCall, Compass, Sliders, ListChecks, DatabaseZap, Sparkles, Truck, Link2, FlaskConical } from 'lucide-react';
 
 export type SettingsTab =
   | 'STAFF'
@@ -54,7 +55,8 @@ export type SettingsTab =
   | 'GOOGLE'
   | 'LISTS'
   | 'UPGRADE'
-  | 'TEST_DATA';
+  | 'TEST_DATA'
+  | 'FOLLOW_UPS';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('STAFF');
@@ -81,6 +83,7 @@ export default function SettingsPage() {
       lists: 'LISTS',
       upgrade: 'UPGRADE',
       'test-data': 'TEST_DATA',
+      'follow-ups': 'FOLLOW_UPS',
     };
     if (tab && tabByQuery[tab]) setActiveTab(tabByQuery[tab]);
   }, []);
@@ -92,6 +95,7 @@ export default function SettingsPage() {
       { id: 'CHANNELS', label: 'Sales channels & delivery', icon: Truck, tile: 'bg-emerald-500' },
       { id: 'LISTS', label: 'Lists & categories', icon: ListChecks, tile: 'bg-amber-500' },
       { id: 'PROMOTIONS', label: 'Promotions', icon: Flame, tile: 'bg-rose-500' },
+      { id: 'FOLLOW_UPS', label: 'Follow-up calls', icon: PhoneCall, tile: 'bg-teal-600' },
     ] },
     { title: 'People & access', items: [
       { id: 'STAFF', label: 'Staff & roles', icon: Users, tile: 'bg-blue-900' },
@@ -125,7 +129,7 @@ export default function SettingsPage() {
   }, [activeTabAllowed]);
   const queryByTab: Record<SettingsTab, string> = {
     GOOGLE: 'google', STAFF: 'staff', FIELD_SALES: 'field-sales', BRANDS: 'brands', CHANNELS: 'channels', RULES: 'rules', HOLIDAYS: 'holidays',
-    TEMPLATES: 'templates', PROMOTIONS: 'promotions', IMPORT: 'import', SHARED_ACCESS: 'shared-access', FEATURE_FLAGS: 'feature-flags', LISTS: 'lists', UPGRADE: 'upgrade', TEST_DATA: 'test-data',
+    TEMPLATES: 'templates', PROMOTIONS: 'promotions', IMPORT: 'import', SHARED_ACCESS: 'shared-access', FEATURE_FLAGS: 'feature-flags', LISTS: 'lists', UPGRADE: 'upgrade', TEST_DATA: 'test-data', FOLLOW_UPS: 'follow-ups',
   };
   const choose = (id: SettingsTab) => {
     setActiveTab(id);
@@ -196,6 +200,7 @@ export default function SettingsPage() {
           {activeTab === 'GOOGLE' && <GoogleWorkspaceSettings />}
           {activeTab === 'STAFF' && <StaffManagement />}
           {activeTab === 'FIELD_SALES' && <FieldSalesSettings />}
+          {activeTab === 'FOLLOW_UPS' && <FollowUpSettings />}
           {activeTab === 'BRANDS' && <div className="space-y-6"><BrandSettings /><OrderIdPrefixes /></div>}
           {activeTab === 'CHANNELS' && <ChannelSettings />}
           {activeTab === 'RULES' && <div className="space-y-6"><NotificationSettings /><NotificationRules /></div>}

@@ -13,6 +13,8 @@ export const WORKSPACE_COLLECTIONS = [
   'marketingSends', 'influencerNiches', 'marketingOptions', 'failureReasons', 'userPreferences',
   // Online sales and offers: each record is a scheduled campaign holding its offers.
   'campaigns',
+  // Calls to online customers: planned follow-ups and any other call. Separate from store calls.
+  'customerCalls',
 ] as const;
 
 /** Shared pick-lists that staff can extend inline and admins manage in Settings. */

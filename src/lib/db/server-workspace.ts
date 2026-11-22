@@ -5,6 +5,7 @@ import { STORE_COLLECTIONS, storeDeletionPlan } from '../store-deletion';
 import { readWorkspaceResetState } from './workspace-reset-server';
 import { createHash, randomUUID } from 'node:crypto';
 import { validateAlertRules } from '../alert-rules';
+import { CALL_PURPOSES, outcomeInfo, validateFollowUpPlan } from '../follow-ups';
 import { defaultOrderOptions, validateOrderOptions, requiredOrderOptionActions, assertActiveOrderOption } from '../order-options';
 import { DatabaseService } from './db-service';
 import { supabaseAdmin } from './supabase-server';
@@ -131,6 +132,7 @@ async function readMutationContext(mutation: WorkspaceMutation, prior: StoredWor
   const config = ['orders', 'deliveryFailures'].includes(mutation.collection) ? await related(['workspaceConfig'], ['workspace']) : [];
   const influencer = ['marketingSends', 'influencerContent'].includes(mutation.collection) && typeof data.influencerId === 'string' ? await related(['influencers'], [data.influencerId]) : [];
   const send = mutation.collection === 'influencerContent' && typeof data.sendId === 'string' && data.sendId ? await related(['marketingSends'], [data.sendId]) : [];
+  const calledOrder = mutation.collection === 'customerCalls' && typeof data.orderId === 'string' && data.orderId ? await related(['orders'], [data.orderId]) : [];
   const exchangeReturn = mutation.collection === 'orders' && typeof data.exchangeReturnId === 'string' && data.exchangeReturnId ? await related(['returns'], [data.exchangeReturnId]) : [];
   let lookups: StoredWorkspaceRecord[] = [];
   if (isLookupCollection(mutation.collection)) {
@@ -142,7 +144,7 @@ async function readMutationContext(mutation: WorkspaceMutation, prior: StoredWor
   }
   const componentIds = products.filter(row => row.collection === 'combos').flatMap(row => (row.data.items || []).map((item: any) => item.productId)).filter((id: unknown): id is string => typeof id === 'string');
   const components = await related(['products'], componentIds);
-  return { users, brands, records: [...(prior ? [prior] : []), ...stores, ...products, ...components, ...config, ...influencer, ...send, ...exchangeReturn, ...lookups.filter(row => !(prior && row.collection === prior.collection && row.id === prior.id))] };
+  return { users, brands, records: [...(prior ? [prior] : []), ...stores, ...products, ...components, ...config, ...influencer, ...send, ...calledOrder, ...exchangeReturn, ...lookups.filter(row => !(prior && row.collection === prior.collection && row.id === prior.id))] };
 }
 
 export function visibleWorkspace(user: User, context: WorkspaceContext) {
@@ -257,6 +259,23 @@ export function validateWorkspaceMutation(value: unknown): asserts value is Work
   if (m.collection === 'sharedAccessLinks' && m.data && !/^bb_[A-Za-z0-9_-]{43,128}$/.test(m.data.token || '')) throw new WorkspaceError(400, 'Regenerate this legacy sharing link before saving it.');
   if (m.collection === 'workspaceConfig' && m.data?.orderOptions !== undefined) {
     try { validateOrderOptions(m.data.orderOptions); } catch (error) { throw new WorkspaceError(400, error instanceof Error ? error.message : 'Invalid channel options.'); }
+  }
+  if (m.collection === 'workspaceConfig' && m.data?.followUpPlan !== undefined) {
+    try { m.data.followUpPlan = validateFollowUpPlan(m.data.followUpPlan); } catch (error) { throw new WorkspaceError(400, error instanceof Error ? error.message : 'Invalid follow-up settings.'); }
+  }
+  if (m.collection === 'customerCalls' && m.data) {
+    const d = m.data;
+    const day = /^\d{4}-\d{2}-\d{2}$/;
+    if (!outcomeInfo(d.outcome)) throw new WorkspaceError(400, 'Choose how the call went.');
+    if (!String(d.customerName || '').trim() && !String(d.customerPhone || '').trim()) throw new WorkspaceError(400, 'A call needs the customer’s name or phone number.');
+    if (!(CALL_PURPOSES as readonly string[]).includes(d.purpose)) throw new WorkspaceError(400, 'Choose what the call was about.');
+    if (!day.test(d.dateAd || '')) throw new WorkspaceError(400, 'A call needs a date.');
+    if (d.outcome === 'CALL_BACK' && !day.test(d.callbackDateAd || '')) throw new WorkspaceError(400, 'Choose when to call back.');
+    if (d.callbackDateAd !== undefined && (!day.test(d.callbackDateAd) || d.callbackDateAd < d.dateAd)) throw new WorkspaceError(400, 'The call-back date cannot be before the call.');
+    if (d.durationMinutes !== undefined && (!Number.isFinite(d.durationMinutes) || d.durationMinutes < 0 || d.durationMinutes > 600)) throw new WorkspaceError(400, 'Call length must be 0 to 600 minutes.');
+    for (const [field, max] of [['notes', 1000], ['customerName', 120], ['customerPhone', 30], ['followUpStepLabel', 60], ['followUpStepId', 40]] as const) {
+      if (d[field] !== undefined && (typeof d[field] !== 'string' || d[field].length > max)) throw new WorkspaceError(400, 'A call detail is too long.');
+    }
   }
   if (m.collection === 'workspaceConfig' && m.data?.alertRules !== undefined) {
     try { validateAlertRules(m.data.alertRules); } catch { throw new WorkspaceError(400, 'Enter valid alert thresholds.'); }
@@ -400,10 +419,23 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
     data.isArchived = data.isArchived === true;
     if (!prior) { data.createdBy = user.fullName; data.createdAt = data.createdAt || new Date().toISOString(); }
   }
+  if (mutation.collection === 'workspaceConfig' && JSON.stringify(data.followUpPlan) !== JSON.stringify(prior?.data.followUpPlan) && data.followUpPlan !== undefined
+    && !canPerform(user, 'p.settings_follow_ups', prior?.data.followUpPlan ? 'EDIT' : 'CREATE') && !isSuperAdmin(user)) throw new WorkspaceError(403, 'Changing follow-up calls needs the Follow-up calls settings.');
+  if (mutation.collection === 'customerCalls') {
+    // A call is logged by the person who made it; the order decides its number and brand.
+    data.officerId = prior?.data.officerId || user.id;
+    if (data.orderId) {
+      const order = context.records.find((row) => row.collection === 'orders' && row.id === data.orderId);
+      if (!order) throw new WorkspaceError(400, 'That order no longer exists.');
+      data.orderNumber = order.data.orderNumber;
+      data.brandCode = order.data.brandCode;
+    }
+  }
   if (mutation.collection === 'userPreferences' && mutation.id !== user.id) throw new WorkspaceError(403, 'Preferences belong to the signed-in account.');
   if (mutation.collection === 'workspaceConfig' && mutation.id === 'workspace' && prior) {
     // A browser running an older build must not drop settings it does not know about.
     if (data.brandPrefixes === undefined && prior.data.brandPrefixes !== undefined) data.brandPrefixes = prior.data.brandPrefixes;
+    if (data.followUpPlan === undefined && prior.data.followUpPlan !== undefined) data.followUpPlan = prior.data.followUpPlan;
   }
   if (mutation.collection === 'orders' && typeof data.orderNumber === 'string') data.orderNumber = data.orderNumber.trim().toUpperCase();
   if (mutation.collection === 'products') {

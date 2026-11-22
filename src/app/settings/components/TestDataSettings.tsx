@@ -9,7 +9,7 @@ type Counts = { byCollection: Record<string, number>; staff: number; total: numb
 const LABELS: Record<string, string> = {
   distributors: 'Chains and distributors', branches: 'Chain branches', retailers: 'Retail stores', visits: 'Store visits', beatItems: 'Beat plan stops',
   recurringSchedules: 'Visit schedules', secondaryOrders: 'Store orders', stockCounts: 'Stock counts', shelfPhotos: 'Shelf photos', facingAudits: 'Shelf share checks',
-  callLogs: 'Store calls', cheques: 'Cheques', dispatches: 'Dispatches', documents: 'Store documents', tasks: 'Tasks', staffLiveLocations: 'Live locations',
+  callLogs: 'Store calls', customerCalls: 'Customer calls', cheques: 'Cheques', dispatches: 'Dispatches', documents: 'Store documents', tasks: 'Tasks', staffLiveLocations: 'Live locations',
   promotions: 'Trade promotions', reviewCategories: 'Issue categories', feedbackEntries: 'Reviews and complaints', influencers: 'Influencers',
   marketingSends: 'Marketing sends', influencerContent: 'Influencer content', campaigns: 'Offer campaigns (not live)',
 };

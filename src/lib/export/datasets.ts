@@ -10,19 +10,22 @@ import { adToBs } from '../nepali-calendar';
 import { allSubBrands, lineSubBrandId, productLabel } from '../sub-brands';
 import type { Column, Sheet } from './xlsx';
 import type {
-  Brand, CallLog, Cheque, Combo, Customer, DeliveryFailure, Dispatch, FacingAudit, FeedbackEntry, HandoverDocument, Influencer,
+  Brand, CallLog, CustomerCall, Cheque, Combo, Customer, DeliveryFailure, Dispatch, FacingAudit, FeedbackEntry, HandoverDocument, Influencer,
   MarketingSend, Order, Product, ReturnEntry, SecondaryOrder, ShelfPhoto, StockCount, Visit, Retailer, Branch, Distributor, Task,
 } from '../types';
 import { PHOTO_COLUMNS, photoCells, photoLink } from '../photo-links';
 import { channelLabel, channelOfDistributor, channelOfRetailer, missingDistributor } from '../store-channels';
 import { destinationName, dispatchStatus, statusLabel } from '../dispatch-flow';
 import { buildStoreLedger, type LedgerStore } from '../store-ledger';
+import { outcomeInfo } from '../follow-ups';
+
+const outcomeLabel = (key: string) => outcomeInfo(key)?.label || key;
 
 export interface ExportSource {
   brands: Brand[]; products: Product[]; combos: Combo[];
   orders: Order[]; returns: ReturnEntry[]; feedback: FeedbackEntry[]; deliveryFailures: DeliveryFailure[]; customers: Customer[];
   secondaryOrders: SecondaryOrder[]; dispatches: Dispatch[]; stockCounts: StockCount[]; visits: Visit[]; cheques: Cheque[]; shelfPhotos: ShelfPhoto[];
-  callLogs: CallLog[]; documents: HandoverDocument[]; facingAudits: FacingAudit[];
+  callLogs: CallLog[]; customerCalls?: CustomerCall[]; documents: HandoverDocument[]; facingAudits: FacingAudit[];
   retailers: Retailer[]; branches: Branch[]; distributors: Distributor[];
   tasks: Task[]; influencers: Influencer[]; marketingSends: MarketingSend[];
 }
@@ -30,7 +33,7 @@ export interface ExportSource {
 export interface ExportFilters { fromAd?: string; toAd?: string; brandCode?: string; subBrandId?: string; storeId?: string; officerId?: string }
 
 export type DatasetKey =
-  | 'orders' | 'order_lines' | 'returns' | 'feedback' | 'delivery_failures' | 'customers'
+  | 'orders' | 'order_lines' | 'returns' | 'feedback' | 'delivery_failures' | 'customers' | 'customer_calls'
   | 'store_orders' | 'store_order_lines' | 'dispatch_orders' | 'dispatch_lines' | 'store_ledger' | 'stock_counts' | 'visits' | 'cheques' | 'calls' | 'documents' | 'shelf_photos' | 'shelf_share'
   | 'stores' | 'products' | 'tasks' | 'influencers' | 'marketing_sends';
 
@@ -235,6 +238,12 @@ export const DATASETS: DatasetDefinition[] = [
     build: (s, f) => ({ name: 'Cheques', columns: [col('Received (AD)'), col('Received (BS)'), col('Store'), col('Officer'), col('Cheque number'), col('Bank'), col('Amount (NPR)', 'money'), col('Cash date (AD)'), col('Status'), col('Handed to'), col('Notes'), photoCol('Cheque photo')],
       rows: s.cheques.filter((c) => inRange(c.receivedDateAd, f) && storeMatch(f, c.entityId) && officerMatch(f, c.officerId) && (!f.brandCode || f.brandCode === 'ALL' || !c.brandCodes?.length || c.brandCodes.includes(f.brandCode)))
         .map((c) => [day(c.receivedDateAd), bs(c.receivedDateAd, c.receivedDateBs), c.storeName, c.officerName, c.chequeNumber, c.bankName, c.amount, day(c.cashDateAd), c.status, c.handedOverTo || '', c.notes || '', photoLink(c.photoUrl)]) }),
+  },
+  {
+    key: 'customer_calls', label: 'Customer calls (online, incl. follow-ups)', group: 'Online (D2C)', dated: true, page: 'p.customer_calls',
+    build: (s, f) => ({ name: 'Customer calls', columns: [col('Date (AD)'), col('Date (BS)'), col('Customer'), col('Phone'), col('Order'), col('Brand'), col('About'), col('Follow-up call'), col('Outcome'), col('Call back on'), col('Minutes', 'number'), col('Called by'), col('Notes')],
+      rows: (s.customerCalls || []).filter((c) => inRange(c.dateAd, f) && officerMatch(f, c.officerId) && (!f.brandCode || f.brandCode === 'ALL' || c.brandCode === f.brandCode))
+        .map((c) => [day(c.dateAd), bs(c.dateAd, c.dateBs), c.customerName, c.customerPhone, c.orderNumber || '', brandOf(s, c.brandCode), c.purpose, c.followUpStepLabel || '', outcomeLabel(c.outcome), day(c.callbackDateAd), c.durationMinutes ?? '', c.officerName, c.notes || '']) }),
   },
   {
     key: 'calls', label: 'Store calls', group: 'Stores (B2B)', dated: true, page: 'p.calls',

@@ -26,6 +26,7 @@ import DualDateField, { bsLabel } from '@/components/common/DualDateField';
 import { toast } from '@/components/common/Toast';
 import OrderStatusControl from '@/components/orders/OrderStatusControl';
 import ExchangePanel from '@/components/orders/ExchangePanel';
+import OrderFollowUps from '@/components/customer-calls/OrderFollowUps';
 import LogFailureForm from '@/app/orderflow/delivery-failures/components/LogFailureForm';
 import LogReturnForm from '@/app/reviews/returns/components/LogReturnForm';
 import { AlertCircle, AlertTriangle, ArrowLeft, ArrowRight, Check, History, Layers, Minus, PackageX, Plus, Search, Trash2, Undo2, X } from 'lucide-react';
@@ -411,6 +412,7 @@ export default function OrderPage() {
           </fieldset>
 
           <aside className="space-y-5">
+            <OrderFollowUps order={order} />
             <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs" aria-labelledby="order-history">
               <h2 id="order-history" className="flex items-center gap-2 text-sm font-bold text-slate-900"><History className="h-4 w-4 text-slate-500" /> Edit history</h2>
               <p className="mt-0.5 text-[11px] text-slate-500">Recorded by the system on every save. It cannot be edited.</p>

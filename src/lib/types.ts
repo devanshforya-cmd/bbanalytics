@@ -617,6 +617,57 @@ export interface CallLog {
   createdOrderId?: string;
 }
 
+/** How an online customer call went. The follow-up plan decides what each one means. */
+export type CustomerCallOutcome =
+  | 'HAPPY' | 'ISSUE' | 'REORDER' | 'SPOKE'
+  | 'CALL_BACK' | 'NO_ANSWER' | 'SWITCHED_OFF'
+  | 'WRONG_NUMBER' | 'DO_NOT_CALL';
+
+/** A call to an online (D2C) customer. Kept apart from store calls (CallLog). */
+export interface CustomerCall {
+  id: string;
+  orderId?: string;
+  orderNumber?: string;
+  brandCode?: string;
+  customerName: string;
+  customerPhone: string;
+  /** Set when the call was a planned follow-up. */
+  followUpStepId?: string;
+  followUpStepLabel?: string;
+  purpose: string;
+  outcome: CustomerCallOutcome;
+  /** When the customer asked to be called again (AD). */
+  callbackDateAd?: string;
+  durationMinutes?: number;
+  notes?: string;
+  officerId: string;
+  officerName: string;
+  dateAd: string;
+  dateBs: string;
+  createdAt: string;
+}
+
+/** One planned call: N days after the order is placed, or after it is delivered. */
+export interface FollowUpStep {
+  id: string;
+  label: string;
+  daysAfter: number;
+  from: 'ORDER' | 'DELIVERY';
+  /** What to talk about, shown to the caller. */
+  script?: string;
+}
+
+export interface FollowUpPlan {
+  enabled: boolean;
+  steps: FollowUpStep[];
+  /** Unanswered tries (no answer, switched off) before a call is marked not reached. */
+  maxTries: number;
+  /** Only orders placed on or after this date (AD) get follow-ups. */
+  startFromAd: string;
+  /** Brands that get follow-ups. Empty means every brand. */
+  brandCodes: string[];
+}
+
 export type ChequeStatus =
   | 'COLLECTED_IN_FIELD'
   | 'HANDED_OVER_AT_OFFICE'
