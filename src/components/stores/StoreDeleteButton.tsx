@@ -46,7 +46,7 @@ export default function StoreDeleteButton({ id, name, onDeleted }: { id: string;
           {impact.children.length ? <><p>Delete these linked stores first:</p><ul className="list-inside list-disc">{impact.children.map(child => <li key={child.id}>{child.name}</li>)}</ul></> : <>
             <p>This permanently removes the store from the directory and cancels {impact.pendingCount} pending route assignments. Completed visits, orders and payment history remain available.</p>
             <label className="block space-y-2 font-semibold">Type DELETE to confirm<input value={confirmation} onChange={event => setConfirmation(event.target.value)} autoComplete="off" placeholder="DELETE" className="block w-full rounded-xl border border-slate-300 px-3 py-2 font-mono" /></label>
-            <button type="button" disabled={busy || !!error || confirmation !== 'DELETE'} onClick={remove} className="min-h-[44px] rounded-xl bg-rose-700 px-4 font-semibold text-white disabled:opacity-50">Delete store permanently</button>
+            <button type="button" disabled={busy || !!error || confirmation !== 'DELETE'} onClick={remove} className="min-h-[44px] rounded-lg bg-rose-700 px-4 font-semibold text-white disabled:opacity-50">Delete store permanently</button>
           </>}
         </>}
         <button type="button" disabled={busy} onClick={() => setOpen(false)} className="min-h-[44px] rounded-xl border border-slate-300 px-4 font-semibold">Cancel</button>

@@ -6,11 +6,11 @@ import { formatValue, change as changeOf, isDated } from '@/lib/metrics/engine';
 import { computeWidget, hasNoBase, type WidgetData } from '@/lib/metrics/widget-data';
 import type { DashboardFilters, Widget } from '@/lib/metrics/dashboards';
 import { DIMENSIONS, type DimensionKey, type Prepared } from '@/lib/metrics/sources';
-import { BarList, ColumnChart, Donut, LineChart, Sparkline, StackedChart } from './charts';
+import { BarList, ColumnChart, Donut, LineChart, StackedChart } from './charts';
 import RecordsDialog from './RecordsDialog';
 
 const SPAN: Record<Widget['size'], string> = { S: 'col-span-1', M: 'col-span-1 md:col-span-2', L: 'col-span-1 md:col-span-2 xl:col-span-4' };
-const TONE = { good: 'bg-emerald-50 text-emerald-700', bad: 'bg-rose-50 text-rose-700', flat: 'bg-slate-100 text-slate-600' };
+const TONE = { good: 'text-emerald-700', bad: 'text-rose-700', flat: 'text-slate-500' };
 
 export interface CardActions { onEdit: () => void; onDuplicate: () => void; onRemove: () => void; onMove: (step: -1 | 1) => void; onResize: () => void }
 
@@ -73,12 +73,11 @@ function Body({ data, widget, onAll, onGroup, onBucket }: { data: WidgetData; wi
   if (widget.view === 'number') {
     return (
       <div className="flex flex-1 flex-col justify-end">
-        <button type="button" onClick={onAll} className="w-fit rounded text-left text-2xl font-bold tabular-nums text-slate-900 hover:text-blue-700" title="See the records behind this number">{formatValue(data.value, unit, { compact: true })}</button>
+        <button type="button" onClick={onAll} className="w-fit rounded text-left text-[28px] leading-none font-medium tabular-nums text-slate-900 hover:text-blue-700" title="See the records behind this number">{formatValue(data.value, unit, { compact: true })}</button>
         <div className="mt-1 flex min-h-[20px] items-center gap-2 text-[11px]">
-          {data.delta && <span className={`rounded-full px-2 py-0.5 font-semibold ${TONE[data.delta.tone]}`}>{data.delta.text}</span>}
+          {data.delta && <span className={`font-medium tabular-nums ${TONE[data.delta.tone]}`}>{data.delta.text}</span>}
           {data.previousRange && <span className="text-slate-500">vs {formatValue(data.previous, unit, { compact: true })}</span>}
         </div>
-        {data.buckets.length > 1 && <Sparkline points={data.buckets} color={data.delta?.tone === 'bad' ? '#e11d48' : '#2563eb'} />}
       </div>
     );
   }
@@ -91,7 +90,7 @@ function Body({ data, widget, onAll, onGroup, onBucket }: { data: WidgetData; wi
     return (
       <div className="flex flex-1 flex-col justify-end">
         <div className="flex items-baseline justify-between gap-2">
-          <button type="button" onClick={onAll} className="text-2xl font-bold tabular-nums text-slate-900 hover:text-blue-700">{formatValue(data.value, unit, { compact: true })}</button>
+          <button type="button" onClick={onAll} className="text-[28px] leading-none font-medium tabular-nums text-slate-900 hover:text-blue-700">{formatValue(data.value, unit, { compact: true })}</button>
           <span className="text-xs text-slate-500">{target ? `${lower ? 'limit' : 'target'} ${formatValue(target, unit, { compact: true })}` : 'No target set'}</span>
         </div>
         <div className="mt-2 h-2.5 rounded-full bg-slate-100" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.min(1, share) * 100)} aria-label="Progress towards the target">

@@ -275,10 +275,10 @@ export default function BrandSettings() {
         <button
           type="button"
           onClick={openAddModal}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+          className="btn btn-primary"
         >
           <Plus className="w-4 h-4" />
-          <span>+ Add Brand</span>
+          <span>+ Add brand</span>
         </button>
       </div>
 
@@ -310,10 +310,10 @@ export default function BrandSettings() {
             <button
               type="button"
               onClick={openAddModal}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+              className="btn btn-primary"
             >
               <Plus className="w-4 h-4" />
-              <span>Add First Brand</span>
+              <span>Add first brand</span>
             </button>
           )}
         </div>
@@ -355,7 +355,7 @@ export default function BrandSettings() {
                   </div>
 
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
                       isActive
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : 'bg-slate-200 text-slate-600 border-slate-300'
@@ -452,7 +452,7 @@ export default function BrandSettings() {
 
             <div className="space-y-4 pt-4 text-xs">
               <div>
-                <label htmlFor="brandsettings-brand-name" className="block font-bold text-slate-700 mb-1">Brand Name *</label>
+                <label htmlFor="brandsettings-brand-name" className="block font-bold text-slate-700 mb-1">Brand name *</label>
                 <input id="brandsettings-brand-name"
                   type="text"
                   required
@@ -501,22 +501,22 @@ export default function BrandSettings() {
                     className="flex-1 px-3 py-2 rounded-xl text-center font-bold text-white text-xs shadow-2xs"
                     style={{ backgroundColor: brandColor }}
                   >
-                    Badge Preview
+                    Badge preview
                   </div>
                 </div>
               </div>
 
               <div>
-                <label htmlFor="brandsettings-category-optional" className="block font-bold text-slate-700 mb-1">Category (Optional)</label>
+                <label htmlFor="brandsettings-category-optional" className="block font-bold text-slate-700 mb-1">Category (optional)</label>
                 <select id="brandsettings-category-optional"
                   value={brandCategory}
                   onChange={(e) => setBrandCategory(e.target.value as BrandCategory)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 bg-white"
                 >
-                  <option value="Personal Care">Personal Care</option>
+                  <option value="Personal Care">Personal care</option>
                   <option value="Cosmetics">Cosmetics</option>
                   <option value="Hygiene">Hygiene</option>
-                  <option value="Baby Care">Baby Care</option>
+                  <option value="Baby Care">Baby care</option>
                   <option value="Wellness">Wellness</option>
                 </select>
               </div>
@@ -545,7 +545,7 @@ export default function BrandSettings() {
                   <input aria-label="New sub-brand name" value={newSubBrand} maxLength={60} placeholder="Sub-brand name"
                     onChange={(e) => setNewSubBrand(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSubBrand(); } }}
                     className="min-w-0 flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs" />
-                  <button type="button" onClick={addSubBrand} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50"><Plus className="h-3.5 w-3.5" /> Add</button>
+                  <button type="button" onClick={addSubBrand} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-50"><Plus className="h-3.5 w-3.5" /> Add</button>
                 </div>
                 <p className="mt-1.5 text-[11px] text-slate-500">Saved sub-brands can be archived, not deleted, so past reports keep their names.</p>
               </div>
@@ -623,7 +623,7 @@ export default function BrandSettings() {
                 }}
                 className="px-4 py-2 font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs shadow-xs transition cursor-pointer"
               >
-                Deactivate Instead
+                Deactivate instead
               </button>
             </div>
           </div>
@@ -676,7 +676,7 @@ export default function BrandSettings() {
               </button>
               <SubmitButton
                 onClick={handlePermanentDelete}
-                label="Delete Forever"
+                label="Delete forever"
                 loadingLabel="Deleting…"
                 variant="danger"
                 disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}

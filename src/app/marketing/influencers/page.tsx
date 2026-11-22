@@ -95,10 +95,10 @@ export default function InfluencerDirectoryPage() {
 <InfoTip label="About this page">Open a profile to send products or add content. Every send starts from an influencer.</InfoTip></h1>
             
           </div>
-          <DownloadButton datasets={['influencers']} records={{ influencers: filtered.map((row) => row.influencer) } as any} />
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/marketing/sends" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><History className="h-3.5 w-3.5" /> Send history</Link>
-            {canCreate && <button type="button" onClick={() => setShowAdd(true)} className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 active:scale-95"><Plus className="h-4 w-4" /> Add influencer</button>}
+            <DownloadButton datasets={['influencers']} records={{ influencers: filtered.map((row) => row.influencer) } as any} />
+            <Link href="/marketing/sends" className="btn btn-secondary"><History className="h-3.5 w-3.5" /> Send history</Link>
+            {canCreate && <button type="button" onClick={() => setShowAdd(true)} className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md transition hover:bg-blue-700 active:scale-95"><Plus className="h-4 w-4" /> Add influencer</button>}
           </div>
         </div>
 
@@ -167,13 +167,13 @@ export default function InfluencerDirectoryPage() {
                     <div className="flex min-w-0 items-center gap-3">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-100 font-bold text-purple-700" aria-hidden>{influencer.name.charAt(0).toUpperCase()}</span>
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-bold text-slate-900">{influencer.name}{influencer.isActive === false && <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">Archived</span>}</span>
+                        <span className="block truncate text-sm font-bold text-slate-900">{influencer.name}{influencer.isActive === false && <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-[11px] font-bold text-slate-600">Archived</span>}</span>
                         <span className="block truncate text-[11px] text-slate-500">{[(influencer.platforms || []).map((entry) => `${entry.platform} ${entry.handle}`).join(' · '), influencer.city].filter(Boolean).join(' · ') || 'No platforms added'}</span>
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-1">{nicheNames.length ? nicheNames.slice(0, 4).map((name) => <span key={name} className="rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[10px] font-bold text-purple-700">{name}</span>) : <span className="text-slate-300">—</span>}{nicheNames.length > 4 && <span className="text-[10px] font-bold text-slate-500">+{nicheNames.length - 4}</span>}</div>
+                    <div className="flex flex-wrap gap-1">{nicheNames.length ? nicheNames.slice(0, 4).map((name) => <span key={name} className="rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700">{name}</span>) : <span className="text-slate-300">—</span>}{nicheNames.length > 4 && <span className="text-[11px] font-bold text-slate-500">+{nicheNames.length - 4}</span>}</div>
                     <div><span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${RATING[influencer.qualityRating].style}`}>{RATING[influencer.qualityRating].label}</span></div>
-                    <div className="font-bold text-slate-900 lg:text-right"><span className="font-medium text-slate-500 lg:hidden">Sends </span>{stats.totalSends}{overdue > 0 && <span className="ml-1.5 rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">{overdue} overdue</span>}</div>
+                    <div className="font-bold text-slate-900 lg:text-right"><span className="font-medium text-slate-500 lg:hidden">Sends </span>{stats.totalSends}{overdue > 0 && <span className="ml-1.5 rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-900">{overdue} overdue</span>}</div>
                     <div className="font-bold text-slate-900 lg:text-right"><span className="font-medium text-slate-500 lg:hidden">Content </span>{contentCount}</div>
                     <div className="text-slate-600">{stats.lastSendDate ? formatDate(stats.lastSendDate, stats.lastSendDateBs) : <span className="text-slate-500">No sends yet</span>}</div>
                     <div className="flex items-center justify-end gap-1 lg:w-28">

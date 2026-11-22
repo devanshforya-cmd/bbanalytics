@@ -3,64 +3,99 @@
 @config "../../tailwind.config.js";
 
 /*
- * Brand Bucket design tokens: Apple-style neutrals and system status colours, with the accent
- * taken from the Brand Bucket logo (#1470B0, navy #233F70). Overriding Tailwind's palette here
- * restyles every screen without touching each component.
+ * Brand Bucket design tokens (unslop pass, Nov 2026).
+ * World: a distributor's dispatch counter, with challan books, cheque ledgers and route sheets.
+ * Quiet graphite surfaces, one accent (the Brand Bucket blue from the logo), IBM Plex Sans for the
+ * interface and IBM Plex Mono for reference numbers and figures. Tailwind's palette is overridden
+ * here so every screen follows without touching each component: decorative hues (purple, pink,
+ * teal, sky...) fold into the neutral ramp or the accent, so colour only appears where it means
+ * something (status, a chart series, the one primary action).
  */
 @theme {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: "IBM Plex Sans Variable", "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  /* Neutrals (Apple greys) */
-  --color-slate-50: #fafafc;  --color-slate-100: #f5f5f7; --color-slate-200: #e5e5ea; --color-slate-300: #d2d2d7;
-  --color-slate-400: #aeaeb2; --color-slate-500: #6e6e73; --color-slate-600: #5b5b60; --color-slate-700: #48484a;
-  --color-slate-800: #2c2c2e; --color-slate-900: #1c1c1e; --color-slate-950: #000000;
-  --color-gray-50: #fafafc;   --color-gray-100: #f5f5f7;  --color-gray-200: #e5e5ea;  --color-gray-300: #d2d2d7;
-  --color-gray-400: #aeaeb2;  --color-gray-500: #6e6e73;  --color-gray-600: #5b5b60;  --color-gray-700: #48484a;
-  --color-gray-800: #2c2c2e;  --color-gray-900: #1c1c1e;
+  /* Graphite ramp, light */
+  --color-slate-50: #fafafa;  --color-slate-100: #f4f4f5; --color-slate-200: #e7e7e9; --color-slate-300: #d4d4d8;
+  --color-slate-400: #a1a1a6; --color-slate-500: #737378; --color-slate-600: #525256; --color-slate-700: #3f3f43;
+  --color-slate-800: #27272a; --color-slate-900: #171717; --color-slate-950: #0f0f10;
+  --color-gray-50: #fafafa;   --color-gray-100: #f4f4f5;  --color-gray-200: #e7e7e9;  --color-gray-300: #d4d4d8;
+  --color-gray-400: #a1a1a6;  --color-gray-500: #737378;  --color-gray-600: #525256;  --color-gray-700: #3f3f43;
+  --color-gray-800: #27272a;  --color-gray-900: #171717;
+  --color-zinc-50: #fafafa; --color-zinc-100: #f4f4f5; --color-zinc-200: #e7e7e9; --color-zinc-300: #d4d4d8; --color-zinc-400: #a1a1a6;
+  --color-zinc-500: #737378; --color-zinc-600: #525256; --color-zinc-700: #3f3f43; --color-zinc-800: #27272a; --color-zinc-900: #171717;
+  --color-neutral-50: #fafafa; --color-neutral-100: #f4f4f5; --color-neutral-200: #e7e7e9; --color-neutral-300: #d4d4d8; --color-neutral-400: #a1a1a6;
+  --color-neutral-500: #737378; --color-neutral-600: #525256; --color-neutral-700: #3f3f43; --color-neutral-800: #27272a; --color-neutral-900: #171717;
 
-  /* Accent: Brand Bucket blue from the logo */
-  --color-blue-50: #eef5fb;  --color-blue-100: #dcebf7; --color-blue-200: #b9d6ee; --color-blue-300: #8bbbe2;
-  --color-blue-400: #4f98d0; --color-blue-500: #1e80c2; --color-blue-600: #1470b0; --color-blue-700: #125e95;
+  /* The one accent: Brand Bucket blue from the logo */
+  --color-blue-50: #f1f6fb;  --color-blue-100: #e1ecf6; --color-blue-200: #c3d9ee; --color-blue-300: #93bbe0;
+  --color-blue-400: #4f93cc; --color-blue-500: #1e7cbd; --color-blue-600: #1470b0; --color-blue-700: #125e95;
   --color-blue-800: #1b4a7a; --color-blue-900: #233f70; --color-blue-950: #172a4d;
-  --color-brand-50: #eef5fb; --color-brand-100: #dcebf7; --color-brand-200: #b9d6ee; --color-brand-500: #1e80c2;
+  --color-brand-50: #f1f6fb; --color-brand-100: #e1ecf6; --color-brand-200: #c3d9ee; --color-brand-500: #1e7cbd;
   --color-brand-600: #1470b0; --color-brand-700: #125e95;
 
-  /* Status colours (Apple system green, red, orange, purple) */
-  --color-emerald-50: #edfaf1; --color-emerald-100: #d3f3dd; --color-emerald-200: #a8e7bb; --color-emerald-300: #7bd996;
-  --color-emerald-400: #4fcd73; --color-emerald-500: #34c759; --color-emerald-600: #188038; --color-emerald-700: #137333;
-  --color-emerald-800: #0f5c28; --color-emerald-900: #154f24;
-  --color-rose-50: #fff0ef;  --color-rose-100: #ffdcd9; --color-rose-200: #ffb9b4; --color-rose-300: #ff8f87;
-  --color-rose-400: #ff6259; --color-rose-500: #ff453a; --color-rose-600: #d70015; --color-rose-700: #b3000f;
-  --color-rose-800: #8c000c; --color-rose-900: #73000c;
-  --color-amber-50: #fff7eb; --color-amber-100: #ffebcc; --color-amber-200: #ffd699; --color-amber-300: #ffc266;
-  --color-amber-400: #ffad33; --color-amber-500: #ff9f0a; --color-amber-600: #a15500; --color-amber-700: #8a4700;
-  --color-amber-800: #6e3a00; --color-amber-900: #663a00;
-  --color-purple-50: #f8effd; --color-purple-100: #eedcfa; --color-purple-200: #ddb9f5; --color-purple-500: #bf5af2;
-  --color-purple-600: #8e3fb8; --color-purple-700: #7a35a0; --color-purple-800: #5f2a80;
+  /* Decorative hues fold into the accent ramp (indigo, sky, violet, purple) so nothing competes with it */
+  --color-indigo-50: #f1f6fb; --color-indigo-100: #e1ecf6; --color-indigo-200: #c3d9ee; --color-indigo-300: #93bbe0; --color-indigo-400: #4f93cc;
+  --color-indigo-500: #1e7cbd; --color-indigo-600: #1470b0; --color-indigo-700: #125e95; --color-indigo-800: #1b4a7a; --color-indigo-900: #233f70;
+  --color-sky-50: #f1f6fb; --color-sky-100: #e1ecf6; --color-sky-200: #c3d9ee; --color-sky-300: #93bbe0; --color-sky-400: #4f93cc;
+  --color-sky-500: #1e7cbd; --color-sky-600: #1470b0; --color-sky-700: #125e95; --color-sky-800: #1b4a7a; --color-sky-900: #233f70;
+  --color-violet-50: #f4f4f5; --color-violet-100: #e7e7e9; --color-violet-200: #d4d4d8; --color-violet-300: #a1a1a6; --color-violet-400: #737378;
+  --color-violet-500: #525256; --color-violet-600: #3f3f43; --color-violet-700: #3f3f43; --color-violet-800: #27272a; --color-violet-900: #171717;
+  --color-purple-50: #f4f4f5; --color-purple-100: #e7e7e9; --color-purple-200: #d4d4d8; --color-purple-300: #a1a1a6; --color-purple-400: #737378;
+  --color-purple-500: #525256; --color-purple-600: #3f3f43; --color-purple-700: #3f3f43; --color-purple-800: #27272a; --color-purple-900: #171717;
+  --color-fuchsia-50: #f4f4f5; --color-fuchsia-100: #e7e7e9; --color-fuchsia-200: #d4d4d8; --color-fuchsia-500: #525256; --color-fuchsia-600: #3f3f43; --color-fuchsia-700: #3f3f43;
+  --color-pink-50: #f4f4f5; --color-pink-100: #e7e7e9; --color-pink-200: #d4d4d8; --color-pink-500: #525256; --color-pink-600: #3f3f43; --color-pink-700: #3f3f43;
+  /* Teal and cyan read as "good" in this app, so they join the positive green; lime too */
+  --color-teal-50: #eef8f2; --color-teal-100: #d5efdf; --color-teal-200: #a9dcbc; --color-teal-500: #2f9e5f; --color-teal-600: #1d7a44; --color-teal-700: #176238; --color-teal-800: #124d2c;
+  --color-cyan-50: #eef8f2; --color-cyan-100: #d5efdf; --color-cyan-200: #a9dcbc; --color-cyan-500: #2f9e5f; --color-cyan-600: #1d7a44; --color-cyan-700: #176238; --color-cyan-800: #124d2c;
+  --color-lime-50: #eef8f2; --color-lime-100: #d5efdf; --color-lime-500: #2f9e5f; --color-lime-600: #1d7a44; --color-lime-700: #176238;
+  /* Orange and yellow mean "needs attention", same as amber */
+  --color-orange-50: #fdf6ec; --color-orange-100: #faeacf; --color-orange-200: #f3d29c; --color-orange-300: #e9b664; --color-orange-400: #db9a37;
+  --color-orange-500: #c9811a; --color-orange-600: #9a5b0b; --color-orange-700: #7f4a0a; --color-orange-800: #643a0b; --color-orange-900: #55320c;
+  --color-yellow-50: #fdf6ec; --color-yellow-100: #faeacf; --color-yellow-200: #f3d29c; --color-yellow-300: #e9b664; --color-yellow-400: #db9a37;
+  --color-yellow-500: #c9811a; --color-yellow-600: #9a5b0b; --color-yellow-700: #7f4a0a; --color-yellow-800: #643a0b;
 
-  /* Softer, more diffuse shadows */
+  /* Status colours, toned down to sit inside the ramp */
+  --color-emerald-50: #eef8f2; --color-emerald-100: #d5efdf; --color-emerald-200: #a9dcbc; --color-emerald-300: #79c597;
+  --color-emerald-400: #4cae74; --color-emerald-500: #2f9e5f; --color-emerald-600: #1d7a44; --color-emerald-700: #176238;
+  --color-emerald-800: #124d2c; --color-emerald-900: #0f3f25;
+  --color-green-50: #eef8f2; --color-green-100: #d5efdf; --color-green-200: #a9dcbc; --color-green-500: #2f9e5f; --color-green-600: #1d7a44; --color-green-700: #176238; --color-green-800: #124d2c;
+  --color-rose-50: #fdf1f1;  --color-rose-100: #fadede; --color-rose-200: #f4bcbd; --color-rose-300: #ea9294;
+  --color-rose-400: #e06266; --color-rose-500: #d9373d; --color-rose-600: #c2272d; --color-rose-700: #a01f24;
+  --color-rose-800: #801b1f; --color-rose-900: #6a191c;
+  --color-red-50: #fdf1f1; --color-red-100: #fadede; --color-red-200: #f4bcbd; --color-red-500: #d9373d; --color-red-600: #c2272d; --color-red-700: #a01f24; --color-red-800: #801b1f;
+  --color-amber-50: #fdf6ec; --color-amber-100: #faeacf; --color-amber-200: #f3d29c; --color-amber-300: #e9b664;
+  --color-amber-400: #db9a37; --color-amber-500: #c9811a; --color-amber-600: #9a5b0b; --color-amber-700: #7f4a0a;
+  --color-amber-800: #643a0b; --color-amber-900: #55320c;
+
+  /* Light theme depth: neutral, soft and small */
   --shadow-2xs: 0 1px 1px rgb(0 0 0 / 0.03);
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.04);
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.04);
-  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
-  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.08), 0 2px 6px rgb(0 0 0 / 0.04);
-  --shadow-xl: 0 16px 40px rgb(0 0 0 / 0.10), 0 4px 10px rgb(0 0 0 / 0.04);
-  --shadow-2xl: 0 24px 64px rgb(0 0 0 / 0.14);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-md: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 8px 24px rgb(0 0 0 / 0.08);
+  --shadow-2xl: 0 16px 48px rgb(0 0 0 / 0.12);
 
-  /* Apple type uses semibold where most apps use bold or black */
-  --font-weight-bold: 600;
-  --font-weight-extrabold: 650;
-  --font-weight-black: 700;
+  /* Two working weights: 400 and 500, with 600 for rare emphasis */
+  --font-weight-semibold: 500;
+  --font-weight-bold: 500;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 600;
 
-  --radius-2xl: 1.125rem;
-  --radius-3xl: 1.5rem;
+  /* Radius by size: controls 8-10, cards 12-14, panels 16 */
+  --radius-2xl: 0.875rem;
+  --radius-3xl: 1rem;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 :root {
-  --foreground-rgb: 28, 28, 30;
-  --background-rgb: 245, 245, 247;
+  --foreground-rgb: 23, 23, 23;
+  --background-rgb: 250, 250, 250;
   --bb-accent: #1470b0;
+  --bb-hairline: rgb(23 23 23 / 0.08);
+  --bb-ease: cubic-bezier(0.22, 1, 0.36, 1);
   color-scheme: light;
 }
 
@@ -73,12 +108,13 @@ body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
   font-family: var(--font-sans);
-  font-feature-settings: "kern", "liga", "tnum" 0;
+  font-feature-settings: "kern", "liga";
+  font-size: 14px;
+  line-height: 1.45;
   -webkit-tap-highlight-color: transparent;
 }
 
-h1, h2, h3 { letter-spacing: -0.015em; }
-h1 { letter-spacing: -0.022em; }
+h1 { letter-spacing: -0.01em; }
 h1, h2, h3 { text-wrap: balance; }
 p { text-wrap: pretty; }
 table { font-variant-numeric: tabular-nums; }
@@ -87,17 +123,42 @@ td span[class*="rounded"][class*="px-"]:not([class*="flex"]):not([class*="block"
 button, a, [role="button"], input, select, textarea, label { touch-action: manipulation; }
 button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, label[for] { cursor: pointer; }
 .tabular-nums, .font-mono { font-variant-numeric: tabular-nums; }
+/* Buttons: one height, one radius, three roles */
+@layer components {
+  .btn { display: inline-flex; height: 2.25rem; align-items: center; justify-content: center; gap: 0.375rem; border-radius: 0.5rem; padding: 0 0.75rem; font-size: 13px; font-weight: 500; white-space: nowrap; transition: background-color 150ms var(--bb-ease), border-color 150ms var(--bb-ease), color 150ms var(--bb-ease), transform 120ms var(--bb-ease); }
+  .btn svg { width: 1rem; height: 1rem; flex: none; }
+  .btn-primary { background: var(--color-blue-600); color: #fff; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12); }
+  .btn-primary:hover { background: var(--color-blue-700); }
+  .btn-secondary { background: #fff; color: var(--color-slate-800); border: 1px solid var(--bb-hairline); }
+  .btn-secondary:hover { background: var(--color-slate-50); border-color: rgb(23 23 23 / 0.14); }
+  .btn-secondary svg { color: var(--color-slate-400); }
+  .btn-quiet { color: var(--color-slate-600); }
+  .btn-quiet:hover { background: rgb(23 23 23 / 0.04); color: var(--color-slate-900); }
+}
+
+/* Page titles: one size and weight on every screen, hierarchy from size not weight */
+#main-content h1 { font-size: 1.375rem; line-height: 1.75rem; font-weight: 500; letter-spacing: -0.01em; color: var(--color-slate-900); }
+@media (min-width: 640px) { #main-content h1 { font-size: 1.625rem; line-height: 2rem; } }
+#main-content h1 > svg:not(.lucide-info), #main-content h1 > span > svg:not(.lucide-info) { display: none; }
+
+/* Signature: reference numbers (order IDs, challans, cheques, SKUs) set like a stamped ledger number */
+.ref-no { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+/* Enum values stored in capitals (HIGH, PENDING_HANDOVER) read in sentence case on screen */
+.enum-label { display: inline-block; text-transform: lowercase; }
+.enum-label::first-letter { text-transform: uppercase; }
+/* No italic for emphasis */
+.italic { font-style: normal; }
 
 /* Sentence case everywhere: no shouty all-caps labels. Unlayered, so it wins over utility classes. */
 .uppercase { text-transform: none; }
 .tracking-wide, .tracking-wider, .tracking-widest { letter-spacing: 0; }
 
 /* Icons drawn slightly finer, closer to SF Symbols */
-svg.lucide { stroke-width: 1.75; }
+svg.lucide { stroke-width: 1.5; }
 
 /* Every button answers a tap: a small press, and a busy cursor while it works */
-button, [role="button"], a.rounded-xl, a.rounded-lg { transition: transform 120ms ease, background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, opacity 150ms ease; }
-button:not(:disabled):active, [role="button"]:active { transform: scale(0.97); }
+button, [role="button"], a.rounded-xl, a.rounded-lg { transition: transform 120ms var(--bb-ease), background-color 150ms var(--bb-ease), color 150ms var(--bb-ease), border-color 150ms var(--bb-ease), box-shadow 150ms var(--bb-ease), opacity 150ms var(--bb-ease); }
+button:not(:disabled):active, [role="button"]:active { transform: scale(0.98); }
 button:disabled { cursor: not-allowed; }
 [aria-busy="true"] { cursor: progress; }
 /* A pressed button that is still saving shows a spinner, unless it already draws its own */
@@ -156,18 +217,14 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab
   0% { background-position: -400px 0; }
   100% { background-position: 400px 0; }
 }
-.skeleton-shimmer {
-  background: linear-gradient(90deg, var(--color-slate-100) 25%, var(--color-slate-200) 50%, var(--color-slate-100) 75%);
-  background-size: 800px 100%;
-  animation: shimmer 1.5s infinite linear;
-}
+.skeleton-shimmer { background: var(--color-slate-100); }
 
 /* ── Slide in from right (SlideOverPanel / Toasts) ── */
 @keyframes slideInRight {
   from { transform: translateX(100%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
 }
-.animate-slide-in-right { animation: slideInRight 0.35s ease-out forwards; }
+.animate-slide-in-right { animation: slideInRight 0.3s var(--bb-ease) forwards; }
 
 /* ── Slide down (OfflineBar) ─────────────────────── */
 @keyframes slideDownBar {
@@ -225,14 +282,14 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
 }
-.animate-slide-up { animation: slideUpSheet 0.35s ease-out forwards; }
+.animate-slide-up { animation: slideUpSheet 0.3s var(--bb-ease) forwards; }
 
 /* ── Page fade-in transition ─────────────────────── */
 @keyframes pageFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.page-enter { animation: pageFadeIn 0.2s ease-out forwards; }
+.page-enter { animation: pageFadeIn 0.3s var(--bb-ease) forwards; }
 @keyframes bbFadeIn { from { opacity: 0; } to { opacity: 1; } }
 .animate-fade-in { animation: bbFadeIn 0.18s ease-out both; }
 .animate-spin-slow { animation: bb-spin 12s linear infinite; }
@@ -240,14 +297,14 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab
 /* Progress ring: the browser animates the stroke; nothing runs per frame in JavaScript. */
 .bb-ring-progress { transition-property: stroke-dashoffset; transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
 @keyframes bbBreathe { 0%, 100% { transform: scale(0.92); opacity: 0.85; } 50% { transform: scale(1); opacity: 1; } }
-.bb-mark-breathe { animation: bbBreathe 1.6s ease-in-out infinite; }
+.bb-mark-breathe { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .bb-ring-progress { transition-duration: 0ms !important; }
   .bb-mark-breathe { animation: none; }
 }
 
 /* Skip link: hidden until focused from the keyboard */
-.skip-link { position: fixed; left: 12px; top: -100px; z-index: 100; padding: 10px 16px; border-radius: 12px; background: var(--bb-accent); color: #fff; font-weight: 600; font-size: 14px; }
+.skip-link { position: fixed; left: 12px; top: -100px; z-index: 100; padding: 10px 16px; border-radius: 8px; background: var(--bb-accent); color: #fff; font-weight: 500; font-size: 14px; }
 .skip-link:focus { top: 12px; }
 
 /* ── Confetti burst (small particles) ───────────── */

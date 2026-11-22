@@ -934,7 +934,7 @@ export default function SheetsExportPage() {
         <ChevronRight className="h-3 w-3 text-slate-400" />
         <span className="text-slate-500">OpsCore</span>
         <ChevronRight className="h-3 w-3 text-slate-400" />
-        <span className="font-semibold text-slate-800">Google Sheets Export</span>
+        <span className="font-semibold text-slate-800">Google Sheets export</span>
       </nav>
 
       {/* Header & Main Actions */}
@@ -944,7 +944,7 @@ export default function SheetsExportPage() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
               <FileSpreadsheet className="h-5 w-5" />
             </span>
-            Reports & Exports
+            Reports & exports
 <InfoTip label="About this page">Export saved operational records to Google Sheets or download CSV and Excel files.</InfoTip></h1>
           
         </div>
@@ -1009,7 +1009,7 @@ export default function SheetsExportPage() {
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-slate-600 flex items-center gap-1">
             <Calendar className="h-3.5 w-3.5 text-slate-400" />
-            Target Month:
+            Target month:
           </span>
           <select
             value={selectedMonth}
@@ -1031,7 +1031,7 @@ export default function SheetsExportPage() {
             </h2>
             <p className="text-[11px] text-slate-500">Fixed master worksheets updated in-place on every export.</p>
           </div>
-          <span className="text-[11px] font-semibold text-slate-500">PRD Part 10.1</span>
+          <span className="text-[11px] font-semibold text-slate-500">PRD part 10.1</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -1064,7 +1064,7 @@ export default function SheetsExportPage() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-slate-900">{tab.name}</span>
-                        <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-800">
+                        <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[11px] font-bold text-blue-800">
                           Permanent
                         </span>
                       </div>
@@ -1078,12 +1078,12 @@ export default function SheetsExportPage() {
                     {/* Column chips preview */}
                     <div className="flex flex-wrap gap-1 mt-2.5">
                       {tab.columns.slice(0, 4).map((col) => (
-                        <span key={col} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600 font-mono">
+                        <span key={col} className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600 font-mono">
                           {col}
                         </span>
                       ))}
                       {tab.columns.length > 4 && (
-                        <span className="text-[10px] text-slate-500 font-mono">+{tab.columns.length - 4} more</span>
+                        <span className="text-[11px] text-slate-500 font-mono">+{tab.columns.length - 4} more</span>
                       )}
                     </div>
 
@@ -1095,7 +1095,7 @@ export default function SheetsExportPage() {
                         className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-blue-600"
                       >
                         <Eye className="h-3 w-3" />
-                        Preview Data
+                        Preview data
                       </button>
 
                       <div className="flex items-center gap-2">
@@ -1135,7 +1135,7 @@ export default function SheetsExportPage() {
             </h2>
             <p className="text-[11px] text-slate-500">Auto-created tabs tagged with the target operational month.</p>
           </div>
-          <span className="text-[11px] font-semibold text-slate-500">PRD Part 10.2</span>
+          <span className="text-[11px] font-semibold text-slate-500">PRD part 10.2</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -1179,12 +1179,12 @@ export default function SheetsExportPage() {
                   {/* Columns list */}
                   <div className="flex flex-wrap gap-1 mt-3 pl-7">
                     {tab.columns.slice(0, 3).map((col) => (
-                      <span key={col} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600 font-mono">
+                      <span key={col} className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600 font-mono">
                         {col}
                       </span>
                     ))}
                     {tab.columns.length > 3 && (
-                      <span className="text-[10px] text-slate-500 font-mono">+{tab.columns.length - 3} more</span>
+                      <span className="text-[11px] text-slate-500 font-mono">+{tab.columns.length - 3} more</span>
                     )}
                   </div>
                 </div>
@@ -1250,7 +1250,7 @@ export default function SheetsExportPage() {
             {/* Preview table */}
             <div className="flex-1 overflow-auto border border-slate-200 rounded-xl">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[10px] font-bold sticky top-0">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 text-[11px] font-bold sticky top-0">
                   <tr>
                     {previewTab.columns.map((col) => (
                       <th key={col} className="py-2.5 px-3 whitespace-nowrap">

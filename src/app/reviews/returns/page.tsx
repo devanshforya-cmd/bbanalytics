@@ -176,7 +176,7 @@ export default function ReturnsPage() {
       {/* 7f: Breadcrumbs */}
       <Breadcrumbs
         items={[
-          { label: 'Reviews & Returns', href: '/reviews/feedback' },
+          { label: 'Reviews & returns', href: '/reviews/feedback' },
           { label: 'Returns' },
         ]}
       />
@@ -208,7 +208,7 @@ export default function ReturnsPage() {
         ].map((tile) => {
           const body = (
             <>
-              <p className="text-[10px] font-bold text-slate-500">{tile.label}</p>
+              <p className="text-[11px] font-bold text-slate-500">{tile.label}</p>
               <p className={`mt-1 text-2xl font-black tabular-nums ${tile.tone || 'text-slate-900'}`}>{tile.value}</p>
               <p className="mt-0.5 truncate text-[11px] text-slate-500">{tile.hint}</p>
             </>
@@ -234,7 +234,7 @@ export default function ReturnsPage() {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
               <CheckCircle className="h-5 w-5 text-emerald-600" />
-              <span>Return Registered Successfully • Karma Penalized (-3 Points)</span>
+              <span>Return registered successfully • Karma penalized (-3 points)</span>
             </div>
             <button
               onClick={() => setSaveSuccess(null)}
@@ -259,7 +259,7 @@ export default function ReturnsPage() {
               className="font-bold text-blue-700 hover:underline flex items-center gap-1"
             >
               <User className="h-3.5 w-3.5" />
-              View Customer in Customer 360 ↗
+              View customer in Customer 360 ↗
             </Link>
             <span className="text-slate-300">|</span>
             <Link
@@ -267,7 +267,7 @@ export default function ReturnsPage() {
               className="font-bold text-blue-700 hover:underline flex items-center gap-1"
             >
               <Package className="h-3.5 w-3.5" />
-              View Product Quality Analytics ↗
+              View product quality analytics ↗
             </Link>
           </div>
         </div>
@@ -293,7 +293,7 @@ export default function ReturnsPage() {
               onChange={(e) => setBrandFilter(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none"
             >
-              <option value="ALL">All Brands</option>
+              <option value="ALL">All brands</option>
               {activeBrands.map((b) => (
                 <option key={b.code} value={b.code}>
                   {b.name}
@@ -308,7 +308,7 @@ export default function ReturnsPage() {
               onChange={(e) => setReasonFilter(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none"
             >
-              <option value="ALL">All Return Reasons</option>
+              <option value="ALL">All return reasons</option>
               {ACTUAL_RETURN_REASONS.map((r) => (
                 <option key={r} value={r}>
                   {r}
@@ -323,7 +323,7 @@ export default function ReturnsPage() {
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden text-xs">
         <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full text-left min-w-[850px]">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold ">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] font-bold ">
               <tr>
                 <th className="py-3 px-4 w-10">
                   <span className="sr-only">Select</span>
@@ -416,7 +416,7 @@ export default function ReturnsPage() {
 
                       {/* Return Reason Category */}
                       <td className="py-3.5 px-4">
-                        <span className="rounded-full bg-rose-50 border border-rose-200 px-2.5 py-0.5 text-[10px] font-bold text-rose-800 inline-block">
+                        <span className="rounded-full bg-rose-50 border border-rose-200 px-2.5 py-0.5 text-[11px] font-bold text-rose-800 inline-block">
                           {ret.reasonCategory}
                         </span>
                       </td>
@@ -472,7 +472,7 @@ export default function ReturnsPage() {
                             <img
                               src={ret.evidenceUrl}
                               alt="Defect Proof"
-                              className="h-full w-full object-cover group-hover:scale-110 transition-transform"
+                              className="h-full w-full object-cover transition-transform"
                             />
                             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white">
                               <Eye className="h-3 w-3" />
@@ -489,7 +489,7 @@ export default function ReturnsPage() {
                           {ret.issueCategories.map((cat, i) => (
                             <span
                               key={i}
-                              className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600"
+                              className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600"
                             >
                               {cat}
                             </span>
@@ -544,7 +544,7 @@ export default function ReturnsPage() {
         onSelectAll={handleSelectAll}
       >
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-300 font-medium">Set Resolution:</span>
+          <span className="text-xs text-slate-300 font-medium">Set resolution:</span>
           <select aria-label="Set resolution for selected returns"
             defaultValue=""
             onChange={(e) => {

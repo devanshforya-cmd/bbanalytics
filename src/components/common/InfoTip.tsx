@@ -38,7 +38,7 @@ export default function InfoTip({ children, label = 'More information', align = 
       </button>
       {open && (
         <span id={id} role="tooltip"
-          className={`absolute top-full z-50 mt-1.5 w-max max-w-[300px] rounded-xl bg-slate-900/95 px-3 py-2 text-left text-[12px] font-normal leading-snug text-white shadow-lg backdrop-blur ${position}`}>
+          className={`absolute top-full z-50 mt-1.5 w-max max-w-[300px] rounded-xl bg-slate-900/95 px-3 py-2 text-left text-xs font-normal leading-snug text-white shadow-lg backdrop-blur ${position}`}>
           {children}
         </span>
       )}

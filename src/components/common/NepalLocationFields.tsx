@@ -77,7 +77,7 @@ function SearchableSelect({ id, label, value, options, placeholder, required, al
       {matching.length > shown.length && <p className="border-t border-slate-100 px-3 py-2 text-slate-500">Type more to narrow {matching.length} matches.</p>}
       {showCustom && (customMessage ? <p className="border-t border-slate-100 px-3 py-2 text-amber-700">{customMessage}</p> : <button type="button" onPointerDown={event => event.preventDefault()} onClick={() => choose(typed)} className="w-full border-t border-slate-100 px-3 py-2 text-left font-semibold text-blue-700 hover:bg-blue-50">Use “{typed}” as entered</button>)}
       {value && <button type="button" onPointerDown={event => event.preventDefault()} onClick={() => choose('')} className="w-full border-t border-slate-100 px-3 py-2 text-left text-slate-600 hover:bg-slate-50">Clear selection</button>}
-      {showSource && <p className="border-t border-slate-100 px-3 py-1.5 text-[10px] text-slate-500">Locations: <a className="underline" href="https://github.com/ritushishir/nepali-canonical" target="_blank" rel="noreferrer">nepali-canonical</a> · <a className="underline" href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a></p>}
+      {showSource && <p className="border-t border-slate-100 px-3 py-1.5 text-[11px] text-slate-500">Locations: <a className="underline" href="https://github.com/ritushishir/nepali-canonical" target="_blank" rel="noreferrer">nepali-canonical</a> · <a className="underline" href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a></p>}
     </div>}
   </div>;
 }
@@ -105,8 +105,8 @@ export default function NepalLocationFields({ idPrefix, province, city, onChange
     <div className="min-w-0">
       <SearchableSelect id={`${idPrefix}-city`} label="City / district" value={city} options={options} placeholder={province && !matchedProvince ? 'Choose a province first' : 'Search cities or districts'} required={required} allowCustom showSource customError={knownElsewhere}
         onSelect={(next, option) => onChange({ province: !province && option?.province ? option.province : province, city: next })} />
-      {knownElsewhere(city) && <p className="mt-1 text-[10px] text-amber-700">The saved location may not match this province. Please review it.</p>}
-      {province && !matchedProvince && <p className="mt-1 text-[10px] text-slate-500">Choose a listed province to filter locations.</p>}
+      {knownElsewhere(city) && <p className="mt-1 text-[11px] text-amber-700">The saved location may not match this province. Please review it.</p>}
+      {province && !matchedProvince && <p className="mt-1 text-[11px] text-slate-500">Choose a listed province to filter locations.</p>}
     </div>
   </>;
 }

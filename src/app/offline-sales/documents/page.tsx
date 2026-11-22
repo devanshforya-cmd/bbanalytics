@@ -34,7 +34,7 @@ import {
   Calendar,
   ChevronRight,
   Download,
-  Sparkles,
+  Lightbulb,
   RefreshCw,
   FolderCheck,
   Check,
@@ -360,8 +360,8 @@ export default function DocumentsPage() {
       <div className="space-y-6 pb-20">
       <Breadcrumbs
         items={[
-          { label: 'Offline Sales', href: '/offline-sales/stores' },
-          { label: 'Physical Document Handover' },
+          { label: 'Offline sales', href: '/offline-sales/stores' },
+          { label: 'Physical document handover' },
         ]}
       />
 
@@ -371,7 +371,7 @@ export default function DocumentsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="rounded-lg bg-amber-200/70 p-2 text-amber-800">
-                <AlertTriangle className="h-5 w-5 animate-pulse" />
+                <AlertTriangle className="h-5 w-5" />
               </div>
               <div>
                 <h3 className="font-bold text-amber-900 text-sm flex items-center gap-2">
@@ -404,7 +404,7 @@ export default function DocumentsPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              Document Handover & Chain of Custody
+              Document handover
             </h1>
             <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-800">
               {documents.length} Tracked
@@ -430,7 +430,7 @@ export default function DocumentsPage() {
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
-            Upload Document
+            Upload document
           </button>
         </div>
       </div>
@@ -438,13 +438,13 @@ export default function DocumentsPage() {
       {/* KPI Counters */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500">Field Custody</span>
+          <span className="text-[11px] font-semibold text-slate-500">Field custody</span>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-bold text-amber-600">
               {documents.filter((d) => d.status === 'COLLECTED').length}
             </span>
             {overdueDocs.length > 0 && (
-              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">
                 {overdueDocs.length} overdue
               </span>
             )}
@@ -452,9 +452,9 @@ export default function DocumentsPage() {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500">Handed to Office</span>
+          <span className="text-[11px] font-semibold text-slate-500">Handed to office</span>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-2xl font-bold text-blue-600">
+            <span className="text-2xl font-bold text-slate-900">
               {documents.filter((d) => d.status === 'HANDED_OVER').length}
             </span>
             <span className="text-[11px] text-slate-500">Pending filing</span>
@@ -462,9 +462,9 @@ export default function DocumentsPage() {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500">Filed in Archive</span>
+          <span className="text-[11px] font-semibold text-slate-500">Filed in archive</span>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-2xl font-bold text-emerald-600">
+            <span className="text-2xl font-bold text-slate-900">
               {documents.filter((d) => d.status === 'FILED').length}
             </span>
             <span className="text-[11px] text-emerald-700 font-medium">Archived ✓</span>
@@ -472,13 +472,13 @@ export default function DocumentsPage() {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <span className="text-[11px] font-semibold text-slate-500">Missing / Audit</span>
+          <span className="text-[11px] font-semibold text-slate-500">Missing / audit</span>
           <div className="flex items-baseline justify-between mt-1">
             <span className={`text-2xl font-bold ${missingDocsCount > 0 ? 'text-rose-600' : 'text-slate-500'}`}>
               {missingDocsCount}
             </span>
             {missingDocsCount > 0 ? (
-              <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800">
+              <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[11px] font-bold text-rose-800">
                 Action required
               </span>
             ) : (
@@ -493,9 +493,9 @@ export default function DocumentsPage() {
         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-blue-600" />
-            <h2 className="font-bold text-slate-900 text-xs">Filter Document Archive</h2>
+            <h2 className="font-bold text-slate-900 text-xs">Filter document archive</h2>
             {activeFiltersCount > 0 && (
-              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-bold text-blue-700">
                 {activeFiltersCount} active
               </span>
             )}
@@ -505,7 +505,7 @@ export default function DocumentsPage() {
               onClick={handleResetFilters}
               className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline"
             >
-              Reset All
+              Reset all
             </button>
           )}
         </div>
@@ -530,7 +530,7 @@ export default function DocumentsPage() {
               onChange={(e) => setFilterStore(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
-              <option value="ALL">All Stores / Accounts</option>
+              <option value="ALL">All stores / accounts</option>
               {Array.from(new Set(documents.map((d) => d.storeName))).map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -546,14 +546,14 @@ export default function DocumentsPage() {
               onChange={(e) => setFilterDocType(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
-              <option value="ALL">All Document Types</option>
-              <option value="Purchase Order">Purchase Order</option>
-              <option value="Signed Delivery Challan">Signed Delivery Challan</option>
-              <option value="Tax Invoice Copy">Tax Invoice Copy</option>
-              <option value="Stock Acknowledgment">Stock Acknowledgment</option>
-              <option value="Return Authorization (RMA)">Return Authorization (RMA)</option>
-              <option value="Credit Note">Credit Note</option>
-              <option value="Store Agreement">Store Agreement</option>
+              <option value="ALL">All document types</option>
+              <option value="Purchase Order">Purchase order</option>
+              <option value="Signed Delivery Challan">Signed delivery challan</option>
+              <option value="Tax Invoice Copy">Tax invoice copy</option>
+              <option value="Stock Acknowledgment">Stock acknowledgment</option>
+              <option value="Return Authorization (RMA)">Return authorization (RMA)</option>
+              <option value="Credit Note">Credit note</option>
+              <option value="Store Agreement">Store agreement</option>
             </select>
           </div>
 
@@ -564,7 +564,7 @@ export default function DocumentsPage() {
               onChange={(e) => setFilterOfficer(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
-              <option value="ALL">All Officers</option>
+              <option value="ALL">All officers</option>
               {allStaff.map((u) => (
                 <option key={u.id} value={u.fullName}>
                   {u.fullName}
@@ -580,11 +580,11 @@ export default function DocumentsPage() {
               onChange={(e) => setFilterStatus(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
-              <option value="ALL">All Statuses</option>
-              <option value="COLLECTED">Collected in Field</option>
-              <option value="HANDED_OVER">Handed Over to Office</option>
-              <option value="FILED">Filed in Archive</option>
-              <option value="MISSING">Flagged Missing</option>
+              <option value="ALL">All statuses</option>
+              <option value="COLLECTED">Collected in field</option>
+              <option value="HANDED_OVER">Handed over to office</option>
+              <option value="FILED">Filed in archive</option>
+              <option value="MISSING">Flagged missing</option>
             </select>
           </div>
         </div>
@@ -593,15 +593,15 @@ export default function DocumentsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
           {/* Who Holds It Now */}
           <div>
-            <label className="block text-[10px] font-semibold text-slate-500 mb-1">
-              Who Holds It Now (Custodian)
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+              Who holds it now (custodian)
             </label>
-            <select aria-label="Who Holds It Now (Custodian)"
+            <select aria-label="Who holds it now (custodian)"
               value={filterHolder}
               onChange={(e) => setFilterHolder(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
-              <option value="ALL">All Current Holders</option>
+              <option value="ALL">All current holders</option>
               {uniqueHolders.map((h) => (
                 <option key={h} value={h}>
                   {h}
@@ -612,16 +612,16 @@ export default function DocumentsPage() {
 
           {/* Date Range Preset */}
           <div>
-            <label className="block text-[10px] font-semibold text-slate-500 mb-1">Date Range</label>
-            <select aria-label="Date Range"
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Date range</label>
+            <select aria-label="Date range"
               value={filterDateRange}
               onChange={(e) => setFilterDateRange(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
-              <option value="ALL">All Time</option>
+              <option value="ALL">All time</option>
               <option value="TODAY">Today</option>
-              <option value="LAST_7_DAYS">Last 7 Days</option>
-              <option value="LAST_30_DAYS">Last 30 Days</option>
+              <option value="LAST_7_DAYS">Last 7 days</option>
+              <option value="LAST_30_DAYS">Last 30 days</option>
             </select>
           </div>
 
@@ -652,10 +652,10 @@ export default function DocumentsPage() {
         {filteredDocs.length === 0 ? (
           <EmptyState
             type="documents"
-            title="No Documents Found"
+            title="No documents found"
             description="No physical custody documents match your filter criteria or officer assignment."
             action={{
-              label: 'Reset Filters',
+              label: 'Reset filters',
               onClick: handleResetFilters,
             }}
           />
@@ -729,7 +729,7 @@ export default function DocumentsPage() {
                           : doc.status === 'HANDED_OVER'
                           ? 'bg-blue-100 text-blue-800 border border-blue-200'
                           : doc.status === 'MISSING'
-                          ? 'bg-rose-100 text-rose-800 border border-rose-200 animate-pulse'
+                          ? 'bg-rose-100 text-rose-800 border border-rose-200'
                           : 'bg-amber-100 text-amber-800 border border-amber-200'
                       }`}
                     >
@@ -760,14 +760,14 @@ export default function DocumentsPage() {
                         <img
                           src={doc.photoUrls[0]}
                           alt={doc.documentType}
-                          className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                          className="h-full w-full object-cover object-center transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[1px]">
                           <Eye className="h-4 w-4" />
-                          <span>View Full Res</span>
+                          <span>View full res</span>
                         </div>
                         {doc.photoUrls.length > 1 && (
-                          <span className="absolute bottom-1.5 right-1.5 rounded-md bg-slate-900/80 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                          <span className="absolute bottom-1.5 right-1.5 rounded-md bg-slate-900/80 px-1.5 py-0.5 text-[11px] font-bold text-white backdrop-blur-sm">
                             +{doc.photoUrls.length - 1} page{doc.photoUrls.length > 2 ? 's' : ''}
                           </span>
                         )}
@@ -783,13 +783,13 @@ export default function DocumentsPage() {
                   <div className="md:col-span-6 space-y-2">
                     <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
                       <div className="flex items-center justify-between text-xs mb-1.5">
-                        <span className="text-slate-500 font-medium">Current Custody:</span>
+                        <span className="text-slate-500 font-medium">Current custody:</span>
                         <span className="font-bold text-slate-800 flex items-center gap-1">
                           {doc.currentHolder || doc.handedToUserName || `${doc.officerName} (Field)`}
                         </span>
                       </div>
                       {doc.notes && (
-                        <div className="text-[11px] text-slate-600 italic bg-white p-2 rounded border border-slate-200/60 mt-1">
+                        <div className="text-[11px] text-slate-600 bg-white p-2 rounded border border-slate-200/60 mt-1">
                           &quot;{doc.notes}&quot;
                         </div>
                       )}
@@ -798,7 +798,7 @@ export default function DocumentsPage() {
                     {/* Custody Timeline (5d) */}
                     <div className="pt-1">
                       <span className="text-[11px] font-bold text-slate-500 block mb-2">
-                        Chain of Custody Timeline:
+                        Chain of custody timeline:
                       </span>
                       <div className="relative pl-5 space-y-2.5 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                         {doc.timeline && doc.timeline.length > 0 ? (
@@ -874,8 +874,8 @@ export default function DocumentsPage() {
                   {/* 5c. Status Change Action Controls */}
                   <div className="md:col-span-3 flex flex-col justify-between gap-3 bg-slate-50/70 p-3 rounded-xl border border-slate-100">
                     <div>
-                      <span className="text-[10px] font-bold text-slate-500 block mb-1">
-                        Custody Actions
+                      <span className="text-[11px] font-bold text-slate-500 block mb-1">
+                        Custody actions
                       </span>
 
                       <div className="space-y-2 mt-2">
@@ -890,7 +890,7 @@ export default function DocumentsPage() {
                             className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition-colors"
                           >
                             <UserCheck className="h-3.5 w-3.5" />
-                            Handover to Office Now
+                            Handover to office now
                           </button>
                         )}
 
@@ -905,7 +905,7 @@ export default function DocumentsPage() {
                             className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition-colors"
                           >
                             <Archive className="h-3.5 w-3.5" />
-                            Mark as Filed
+                            Mark as filed
                           </button>
                         )}
 
@@ -928,7 +928,7 @@ export default function DocumentsPage() {
                             className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
                           >
                             <RefreshCw className="h-3.5 w-3.5" />
-                            Recover / Accounted For
+                            Recover / accounted for
                           </button>
                         )}
 
@@ -942,7 +942,7 @@ export default function DocumentsPage() {
                             className="w-full flex items-center justify-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
                           >
                             <ShieldAlert className="h-3 w-3" />
-                            Mark as Missing
+                            Mark as missing
                           </button>
                         )}
                       </div>
@@ -976,7 +976,7 @@ export default function DocumentsPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-white text-sm">{lightboxDoc.storeName}</h3>
-                  <span className="rounded bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-400 border border-blue-500/30">
+                  <span className="rounded bg-blue-500/20 px-2 py-0.5 text-[11px] font-bold text-blue-400 border border-blue-500/30">
                     {lightboxDoc.documentType}
                   </span>
                   {lightboxDoc.referenceNumber && (
@@ -994,7 +994,7 @@ export default function DocumentsPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setLightboxZoom((z) => Math.max(0.5, z - 0.25))}
-                  title="Zoom Out"
+                  title="Zoom out"
                   className="rounded-lg bg-slate-700 p-1.5 text-slate-200 hover:bg-slate-600 hover:text-white transition-colors"
                 >
                   <ZoomOut className="h-4 w-4" />
@@ -1004,7 +1004,7 @@ export default function DocumentsPage() {
                 </span>
                 <button
                   onClick={() => setLightboxZoom((z) => Math.min(3, z + 0.25))}
-                  title="Zoom In"
+                  title="Zoom in"
                   className="rounded-lg bg-slate-700 p-1.5 text-slate-200 hover:bg-slate-600 hover:text-white transition-colors"
                 >
                   <ZoomIn className="h-4 w-4" />
@@ -1014,7 +1014,7 @@ export default function DocumentsPage() {
                     setLightboxZoom(1);
                     setLightboxRotation(0);
                   }}
-                  title="Reset Zoom"
+                  title="Reset zoom"
                   className="rounded-lg bg-slate-700 px-2 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-600 hover:text-white transition-colors"
                 >
                   Reset
@@ -1030,14 +1030,14 @@ export default function DocumentsPage() {
                   href={lightboxDoc.photoUrls[lightboxImgIndex]}
                   target="_blank"
                   rel="noreferrer"
-                  title="Open Original in New Tab"
+                  title="Open original in new Tab"
                   className="rounded-lg bg-slate-700 p-1.5 text-slate-200 hover:bg-slate-600 hover:text-white transition-colors"
                 >
                   <ExternalLink className="h-4 w-4" />
                 </a>
                 <button
                   onClick={closeLightbox}
-                  title="Close Modal"
+                  title="Close modal"
                   className="rounded-lg bg-rose-600/80 p-1.5 text-white hover:bg-rose-600 transition-colors ml-2"
                 >
                   <X className="h-4 w-4" />
@@ -1108,7 +1108,7 @@ export default function DocumentsPage() {
               <div>
                 <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
                   <UserCheck className="h-5 w-5 text-blue-600" />
-                  Confirm Office Handover
+                  Confirm office handover
                 </h3>
                 <p className="text-slate-500 text-xs mt-0.5">
                   Transfer document custody from field officer to office reception.
@@ -1149,16 +1149,16 @@ export default function DocumentsPage() {
                     </option>
                   ))
                 ) : (
-                  <option value="Operations Desk">Operations Desk</option>
+                  <option value="Operations Desk">Operations desk</option>
                 )}
               </select>
             </div>
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">
-                Handover Notes / Verification Remarks
+                Handover notes / verification remarks
               </label>
-              <textarea aria-label="Handover Notes / Verification Remarks"
+              <textarea aria-label="Handover notes / verification remarks"
                 rows={2}
                 placeholder="e.g. Physical store stamp and signature verified. Retained for invoice reconciliation."
                 value={handoverNotes}
@@ -1176,9 +1176,9 @@ export default function DocumentsPage() {
               </button>
               <button
                 onClick={handleConfirmHandover}
-                className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow-sm"
+                className="btn btn-primary"
               >
-                Confirm Handover
+                Confirm handover
               </button>
             </div>
           </div>
@@ -1193,7 +1193,7 @@ export default function DocumentsPage() {
               <div>
                 <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
                   <Archive className="h-5 w-5 text-emerald-600" />
-                  Permanently File Document
+                  Permanently file document
                 </h3>
                 <p className="text-slate-500 text-xs mt-0.5">
                   Record permanent physical archive location in office folders.
@@ -1216,23 +1216,23 @@ export default function DocumentsPage() {
 
             <div>
               <label htmlFor="documents-filing-cabinet-archive-folde" className="block font-bold text-slate-700 mb-1">
-                Filing Cabinet / Archive Folder *
+                Filing cabinet / archive folder *
               </label>
               <select id="documents-filing-cabinet-archive-folde"
                 value={filingFolder}
                 onChange={(e) => setFilingFolder(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-emerald-500 font-medium"
               >
-                <option value="Accounts Cabinet B-12 / Sep 2026">Accounts Cabinet B-12 / Sep 2026</option>
-                <option value="VAT Invoices Binder 2083/84 (Q2)">VAT Invoices Binder 2083/84 (Q2)</option>
-                <option value="Signed Challan Archival Box #4">Signed Challan Archival Box #4</option>
-                <option value="Store Agreements Safe Drawer #1">Store Agreements Safe Drawer #1</option>
-                <option value="Audit Compliance Binder - North Zone">Audit Compliance Binder - North Zone</option>
+                <option value="Accounts Cabinet B-12 / Sep 2026">Accounts cabinet B-12 / sep 2026</option>
+                <option value="VAT Invoices Binder 2083/84 (Q2)">VAT invoices binder 2083/84 (Q2)</option>
+                <option value="Signed Challan Archival Box #4">Signed challan archival box #4</option>
+                <option value="Store Agreements Safe Drawer #1">Store agreements Safe drawer #1</option>
+                <option value="Audit Compliance Binder - North Zone">Audit compliance binder - north zone</option>
               </select>
             </div>
 
             <div>
-              <label htmlFor="documents-filing-notes" className="block font-bold text-slate-700 mb-1">Filing Notes</label>
+              <label htmlFor="documents-filing-notes" className="block font-bold text-slate-700 mb-1">Filing notes</label>
               <textarea id="documents-filing-notes"
                 rows={2}
                 placeholder="e.g. Scanned into ERP and filed in alphabetical index."
@@ -1253,7 +1253,7 @@ export default function DocumentsPage() {
                 onClick={handleConfirmFiling}
                 className="rounded-lg bg-emerald-600 px-5 py-2 font-semibold text-white hover:bg-emerald-700 shadow-sm"
               >
-                Confirm Permanent Filing
+                Confirm permanent filing
               </button>
             </div>
           </div>
@@ -1268,7 +1268,7 @@ export default function DocumentsPage() {
               <div>
                 <h3 className="font-bold text-rose-700 text-base flex items-center gap-2">
                   <ShieldAlert className="h-5 w-5 text-rose-600" />
-                  Flag Document as MISSING
+                  Flag document as MISSING
                 </h3>
                 <p className="text-slate-500 text-xs mt-0.5">
                   Triggers immediate admin alert and compliance investigation.
@@ -1294,7 +1294,7 @@ export default function DocumentsPage() {
 
             <div>
               <label htmlFor="documents-reason-discrepancy-circumsta" className="block font-bold text-slate-700 mb-1">
-                Reason / Discrepancy Circumstances *
+                Reason / discrepancy circumstances *
               </label>
               <textarea id="documents-reason-discrepancy-circumsta"
                 rows={3}
@@ -1316,7 +1316,7 @@ export default function DocumentsPage() {
                 onClick={handleConfirmMissing}
                 className="rounded-lg bg-rose-600 px-5 py-2 font-semibold text-white hover:bg-rose-700 shadow-sm"
               >
-                Flag as Missing
+                Flag as missing
               </button>
             </div>
           </div>
@@ -1334,7 +1334,7 @@ export default function DocumentsPage() {
               <div>
                 <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
                   <FileText className="h-5 w-5 text-blue-600" />
-                  Upload Vendor Document
+                  Upload vendor document
                 </h3>
                 <p className="text-slate-500 text-xs mt-0.5">
                   Record physical document collection into the verified custody trail.
@@ -1352,7 +1352,7 @@ export default function DocumentsPage() {
             {/* 5e: Searchable Store Dropdown */}
             <div className="relative">
               <label className="block font-bold text-slate-700 mb-1">
-                Store / Retailer / Branch *
+                Store / retailer / branch *
               </label>
 
               <div className="relative">
@@ -1393,9 +1393,9 @@ export default function DocumentsPage() {
                       >
                         <div>
                           <div className="font-bold text-slate-900">{store.name}</div>
-                          {store.area && <div className="text-[10px] text-slate-500">{store.area}</div>}
+                          {store.area && <div className="text-[11px] text-slate-500">{store.area}</div>}
                         </div>
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-600">
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-600">
                           {store.type}
                         </span>
                       </div>
@@ -1407,8 +1407,8 @@ export default function DocumentsPage() {
             {/* Document Type and Ref Number (5e: clean refNumber) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Document Type *</label>
-                <select aria-label="Document Type"
+                <label className="block font-bold text-slate-700 mb-1">Document type *</label>
+                <select aria-label="Document type"
                   value={formDocType}
                   onChange={(e) => setFormDocType(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500"
@@ -1421,22 +1421,22 @@ export default function DocumentsPage() {
                     ))
                   ) : (
                     <>
-                      <option value="Purchase Order">Purchase Order</option>
-                      <option value="Signed Delivery Challan">Signed Delivery Challan</option>
-                      <option value="Tax Invoice Copy">Tax Invoice Copy</option>
-                      <option value="Stock Acknowledgment">Stock Acknowledgment</option>
-                      <option value="Return Authorization (RMA)">Return Authorization (RMA)</option>
-                      <option value="Credit Note">Credit Note</option>
-                      <option value="Store Agreement">Store Agreement</option>
-                      <option value="Other">Other Document</option>
+                      <option value="Purchase Order">Purchase order</option>
+                      <option value="Signed Delivery Challan">Signed delivery challan</option>
+                      <option value="Tax Invoice Copy">Tax invoice copy</option>
+                      <option value="Stock Acknowledgment">Stock acknowledgment</option>
+                      <option value="Return Authorization (RMA)">Return authorization (RMA)</option>
+                      <option value="Credit Note">Credit note</option>
+                      <option value="Store Agreement">Store agreement</option>
+                      <option value="Other">Other document</option>
                     </>
                   )}
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Reference Number</label>
-                <input aria-label="Reference Number"
+                <label className="block font-bold text-slate-700 mb-1">Reference number</label>
+                <input aria-label="Reference number"
                   type="text"
                   placeholder="e.g. PO-2083-9941, DC-8841"
                   value={formRefNumber}
@@ -1449,7 +1449,7 @@ export default function DocumentsPage() {
             {/* Officer and Custody Status */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label htmlFor="documents-collected-by-officer" className="block font-bold text-slate-700 mb-1">Collected By (Officer) *</label>
+                <label htmlFor="documents-collected-by-officer" className="block font-bold text-slate-700 mb-1">Collected by (officer) *</label>
                 <select id="documents-collected-by-officer"
                   value={formOfficerName}
                   onChange={(e) => setFormOfficerName(e.target.value)}
@@ -1462,20 +1462,20 @@ export default function DocumentsPage() {
                       </option>
                     ))
                   ) : (
-                    <option value="Field Representative">Field Representative</option>
+                    <option value="Field Representative">Field representative</option>
                   )}
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Initial Custody Status *</label>
-                <select aria-label="Initial Custody Status"
+                <label className="block font-bold text-slate-700 mb-1">Initial custody status *</label>
+                <select aria-label="Initial custody status"
                   value={formInitialHolder}
                   onChange={(e) => setFormInitialHolder(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500 font-medium"
                 >
-                  <option value="FIELD">Collected in Field (Pending Office Handover)</option>
-                  <option value="OFFICE">Immediate Office Handover</option>
+                  <option value="FIELD">Collected in field (pending office handover)</option>
+                  <option value="OFFICE">Immediate office handover</option>
                 </select>
               </div>
             </div>
@@ -1483,8 +1483,8 @@ export default function DocumentsPage() {
             {/* If direct office handover */}
             {formInitialHolder === 'OFFICE' && (
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Handed Over To</label>
-                <select aria-label="Handed Over To"
+                <label className="block font-bold text-slate-700 mb-1">Handed over to</label>
+                <select aria-label="Handed over to"
                   value={formHandedTo}
                   onChange={(e) => setFormHandedTo(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500 font-medium"
@@ -1496,7 +1496,7 @@ export default function DocumentsPage() {
                       </option>
                     ))
                   ) : (
-                    <option value="Operations Desk">Operations Desk</option>
+                    <option value="Operations Desk">Operations desk</option>
                   )}
                 </select>
               </div>
@@ -1506,7 +1506,7 @@ export default function DocumentsPage() {
             <div className="space-y-3">
               <CameraCapture
                 folder="document_handover"
-                label="Photograph Document Pages"
+                label="Photograph document pages"
                 sublabel="Capture tax invoices, delivery challans, receipt vouchers, or stamped agreements"
                 maxFiles={8}
                 existingUrls={formPhotoUrls}
@@ -1519,8 +1519,8 @@ export default function DocumentsPage() {
 
             {/* Notes */}
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Notes / Verification Remarks</label>
-              <textarea aria-label="Notes / Verification Remarks"
+              <label className="block font-bold text-slate-700 mb-1">Notes / verification remarks</label>
+              <textarea aria-label="Notes / verification remarks"
                 rows={2}
                 placeholder="Add any specific context or remarks regarding this document…"
                 value={formNotes}
@@ -1540,9 +1540,9 @@ export default function DocumentsPage() {
               </button>
               <button
                 type="submit"
-                className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow-sm"
+                className="btn btn-primary"
               >
-                Save Document to Custody Trail
+                Save document to custody trail
               </button>
             </div>
           </form>

@@ -592,7 +592,7 @@ export default function InteractiveMap({
                 <Store className="w-3.5 h-3.5" />
               )}
             </div>
-            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-slate-900/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30">
+            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-slate-900/90 text-white text-[11px] font-semibold px-2 py-0.5 rounded shadow whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30">
               {store.storeName}
             </div>
           </div>
@@ -648,7 +648,7 @@ export default function InteractiveMap({
               </div>
 
               {/* Name Tag Pill */}
-              <div className="absolute top-9 bg-slate-950/90 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded-full border border-slate-800 shadow-md whitespace-nowrap flex items-center gap-1">
+              <div className="absolute top-9 bg-slate-950/90 backdrop-blur-xs text-white text-[11px] font-semibold px-2 py-0.5 rounded-full border border-slate-800 shadow-md whitespace-nowrap flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 <span>{(rep.officerName || 'Officer').split(' ')[0]}</span>
                 {rep.status === 'AT_STORE' && (
@@ -694,13 +694,13 @@ export default function InteractiveMap({
 
               <div className="space-y-1.5 text-xs text-slate-600">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500">Telemetry Status:</span>
+                  <span className="text-[11px] text-slate-500">Telemetry status:</span>
                   <span
-                    className={`font-semibold px-1.5 py-0.5 rounded text-[10px] ${
+                    className={`font-semibold px-1.5 py-0.5 rounded text-[11px] ${
                       activePopup.rep.status === 'AT_STORE'
                         ? 'bg-emerald-100 text-emerald-800'
                         : 'bg-blue-100 text-blue-800'
-                    }`}
+                    } enum-label`}
                   >
                     {activePopup.rep.status.replace('_', ' ')}
                   </span>
@@ -708,7 +708,7 @@ export default function InteractiveMap({
 
                 {activePopup.rep.currentStoreName && (
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">Current Store:</span>
+                    <span className="text-[11px] text-slate-500">Current store:</span>
                     <span className="font-semibold text-slate-900 truncate max-w-[120px]">
                       {activePopup.rep.currentStoreName}
                     </span>
@@ -734,7 +734,7 @@ export default function InteractiveMap({
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500">Distance Today:</span>
+                  <span className="text-[11px] text-slate-500">Distance today:</span>
                   <span className="font-semibold text-slate-700 font-mono">
                     {activePopup.rep.todayDistanceKm || 0} km
                   </span>
@@ -745,7 +745,7 @@ export default function InteractiveMap({
                 <span className="text-slate-500 font-mono">
                   {activePopup.rep.currentLat.toFixed(4)}, {activePopup.rep.currentLng.toFixed(4)}
                 </span>
-                <span className="font-semibold text-emerald-600">GPS Ping Active</span>
+                <span className="font-semibold text-emerald-600">GPS ping active</span>
               </div>
             </div>
           )}
@@ -768,23 +768,23 @@ export default function InteractiveMap({
                 {activePopup.store.address}
               </p>
               <div className="mt-2 flex items-center justify-between text-xs">
-                <span className="text-[10px] font-bold text-slate-500">
-                  Beat Status
+                <span className="text-[11px] font-bold text-slate-500">
+                  Beat status
                 </span>
                 <span
-                  className={`font-semibold px-2 py-0.5 rounded text-[10px] ${
+                  className={`font-semibold px-2 py-0.5 rounded text-[11px] ${
                     activePopup.store.status === 'VISITED'
                       ? 'bg-emerald-100 text-emerald-800'
                       : activePopup.store.status === 'SKIPPED'
                       ? 'bg-rose-100 text-rose-800'
                       : 'bg-amber-100 text-amber-800'
-                  }`}
+                  } enum-label`}
                 >
                   {activePopup.store.status}
                 </span>
               </div>
               {activePopup.store.checkedInAt && (
-                <div className="mt-1 text-[10px] text-slate-500">
+                <div className="mt-1 text-[11px] text-slate-500">
                   Checked in at: {new Date(activePopup.store.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               )}
@@ -848,7 +848,7 @@ export default function InteractiveMap({
             handleZoomIn();
           }}
           className="w-8 h-8 rounded-lg bg-white/95 backdrop-blur-xs text-slate-700 hover:text-slate-950 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
-          title="Zoom In"
+          title="Zoom in"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
@@ -859,7 +859,7 @@ export default function InteractiveMap({
             handleZoomOut();
           }}
           className="w-8 h-8 rounded-lg bg-white/95 backdrop-blur-xs text-slate-700 hover:text-slate-950 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
-          title="Zoom Out"
+          title="Zoom out"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
@@ -870,7 +870,7 @@ export default function InteractiveMap({
             handleFitAll();
           }}
           className="w-8 h-8 rounded-lg bg-white/95 backdrop-blur-xs text-blue-600 hover:text-blue-700 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
-          title="Fit All Reps &amp; Stores"
+          title="Fit all reps &amp; stores"
         >
           <Maximize2 className="w-4 h-4" />
         </button>
@@ -881,7 +881,7 @@ export default function InteractiveMap({
             handleLocateMe();
           }}
           className="w-8 h-8 rounded-lg bg-white/95 backdrop-blur-xs text-indigo-600 hover:text-indigo-700 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
-          title="Locate My GPS"
+          title="Locate my GPS"
         >
           <Navigation className="w-4 h-4" />
         </button>
@@ -892,7 +892,7 @@ export default function InteractiveMap({
             handleResetToReps();
           }}
           className="w-8 h-8 rounded-lg bg-white/95 backdrop-blur-xs text-emerald-600 hover:text-emerald-700 hover:bg-white flex items-center justify-center border border-slate-200 active:scale-95 transition"
-          title="Center on Sales Reps"
+          title="Center on sales reps"
         >
           <Crosshair className="w-4 h-4" />
         </button>
@@ -900,10 +900,10 @@ export default function InteractiveMap({
 
       {/* Map Legend & Attribution */}
       <div className="absolute bottom-2 left-2 right-2 z-20 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-3 bg-slate-900/85 backdrop-blur-xs px-3 py-1.5 rounded-xl text-[10px] text-white shadow-lg pointer-events-auto">
+        <div className="flex items-center gap-3 bg-slate-900/85 backdrop-blur-xs px-3 py-1.5 rounded-xl text-[11px] text-white shadow-lg pointer-events-auto">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-            <span className="font-medium">Active Rep</span>
+            <span className="font-medium">Active rep</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Store className="w-3 h-3 text-emerald-400" />
@@ -915,7 +915,7 @@ export default function InteractiveMap({
           </div>
         </div>
 
-        <div className="text-[9px] text-slate-500 bg-white/80 px-2 py-0.5 rounded shadow pointer-events-auto">
+        <div className="text-[11px] text-slate-500 bg-white/80 px-2 py-0.5 rounded shadow pointer-events-auto">
           &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors{mapStyle === 'SATELLITE' ? <> &bull; Esri</> : mapStyle === 'TOPO' ? <> &bull; OpenTopoMap</> : null}
         </div>
       </div>

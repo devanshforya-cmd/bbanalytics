@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       (f) => f.type === 'COMPLAINT' && f.priority === 'URGENT' && !f.assignedTo && f.complaintStatus !== 'RESOLVED'
     );
     if (urgentUnassigned.length > 0) {
-      redAlerts.push(`${urgentUnassigned.length} URGENT complaint(s) with no assigned handler!`);
+      redAlerts.push(`${urgentUnassigned.length} urgent complaint(s) with no one assigned`);
     }
 
     // 4. Cheque overdue 3+ days

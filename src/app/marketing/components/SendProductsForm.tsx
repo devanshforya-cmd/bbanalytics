@@ -20,7 +20,7 @@ import { displayDocumentId } from '@/lib/document-ids';
 interface CatalogueEntry { id: string; name: string; sku: string; brandCode: string; isCombo: boolean; contents: string }
 
 function ComboBadge() {
-  return <span className="ml-1.5 inline-block rounded-full bg-amber-100 px-1.5 py-px align-middle text-[9px] font-bold text-amber-800">Combo</span>;
+  return <span className="ml-1.5 inline-block rounded-full bg-amber-100 px-1.5 py-px align-middle text-[11px] font-bold text-amber-800">Combo</span>;
 }
 
 interface SendProductsFormProps {
@@ -128,14 +128,14 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
     <div className="flex items-center justify-between gap-2">
       <span className="text-[11px] text-slate-500">{items.length ? `${items.length} product${items.length === 1 ? '' : 's'} · ${totalUnits} unit${totalUnits === 1 ? '' : 's'}` : 'No products added'}</span>
       <div className="flex gap-2">
-        <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button type="button" onClick={review} className="rounded-xl bg-purple-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700">Review send</button>
+        <button type="button" onClick={onClose} className="btn btn-secondary">Cancel</button>
+        <button type="button" onClick={review} className="rounded-lg bg-purple-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700">Review send</button>
       </div>
     </div>
   ) : (
     <div className="flex items-center justify-end gap-2">
       <button type="button" onClick={() => setStep('FORM')} disabled={isSubmitting} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Back to edit</button>
-      <button type="button" onClick={save} disabled={isSubmitting} className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-300">
+      <button type="button" onClick={save} disabled={isSubmitting} className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-300">
         <Check className="h-3.5 w-3.5" /> {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Confirm and save send'}
       </button>
     </div>
@@ -236,7 +236,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
                 <ul className="max-h-52 overflow-y-auto">
                   {brandCodes.map((code) => { const list = available.filter((product) => product.brandCode === code); if (!list.length) return null; return (
                     <li key={code}>
-                      <p className="sticky top-0 bg-slate-50 px-3 py-1 text-[10px] font-bold text-slate-500">{brandName(code)}</p>
+                      <p className="sticky top-0 bg-slate-50 px-3 py-1 text-[11px] font-bold text-slate-500">{brandName(code)}</p>
                       <ul>
                         {list.map((product) => { const added = items.some((row) => row.productId === product.id); return (
                           <li key={product.id}>
@@ -244,7 +244,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
                               className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-purple-50 disabled:cursor-default disabled:bg-white disabled:text-slate-400">
                               <span className="min-w-0">
                                 <span className="block truncate font-medium">{product.name}{product.isCombo && <ComboBadge />}</span>
-                                {product.isCombo && product.contents && <span className="block truncate text-[10px] text-slate-500">{product.contents}</span>}
+                                {product.isCombo && product.contents && <span className="block truncate text-[11px] text-slate-500">{product.contents}</span>}
                               </span>
                               <span className={`inline-flex shrink-0 items-center gap-1 text-[11px] font-bold ${added ? 'text-emerald-600' : 'text-purple-700'}`}>{added ? <><Check className="h-3 w-3" /> Added</> : <><PackagePlus className="h-3 w-3" /> Add</>}</span>
                             </button>

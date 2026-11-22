@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Phone, CheckCircle, AlertCircle, Sparkles, UserCheck } from 'lucide-react';
+import { Phone, CheckCircle, AlertCircle, Lightbulb, UserCheck } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
 import { Customer } from '@/lib/types';
 
@@ -72,7 +72,7 @@ export default function InlinePhoneInput({
         </div>
       );
     } else {
-      statusMessage = <span className="text-[11px] text-emerald-700 font-medium">✓ Valid Nepali number (New Customer)</span>;
+      statusMessage = <span className="text-[11px] text-emerald-700 font-medium">Valid Nepali number (new customer)</span>;
     }
   } else if (isPartialValid) {
     borderColor = 'border-emerald-400/80 focus-within:border-emerald-500';

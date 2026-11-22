@@ -37,7 +37,7 @@ import {
   CheckCircle,
   Plus,
   Trash2,
-  Sparkles,
+  Lightbulb,
   ArrowRight,
   ExternalLink,
   RotateCcw,
@@ -369,7 +369,7 @@ export default function ManualOrderEntryPage() {
       });
 
       if (pending) toast.info('Order saved on this device', 'It gets its order ID when the connection returns. Check Sync status.');
-      else toast.success(`Order ${orderNumber} saved successfully!`);
+      else toast.success(`Order ${orderNumber} saved`);
       clearDraft();
       setIsReviewing(false);
     });
@@ -396,8 +396,8 @@ export default function ManualOrderEntryPage() {
       {/* 7f: Breadcrumbs */}
       <Breadcrumbs
         items={[
-          { label: 'Orderflow', href: '/orderflow/manual-entry' },
-          { label: 'Manual Order Entry' },
+          { label: 'Online orders', href: '/orderflow/manual-entry' },
+          { label: 'Manual order entry' },
         ]}
       />
 
@@ -406,7 +406,7 @@ export default function ManualOrderEntryPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              Manual Order Entry
+              Manual order entry
 <InfoTip label="About this page">Book omnichannel direct customer orders across Instagram, TikTok, WhatsApp, Walk-in, and Phone Calls with instant Customer 360 sync.</InfoTip></h1>
           </div>
           
@@ -415,10 +415,10 @@ export default function ManualOrderEntryPage() {
         {savedOrder && (
           <button
             onClick={handleResetForNewOrder}
-            className="self-start sm:self-center flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-blue-700"
+            className="btn btn-primary self-start sm:self-center"
           >
             <Plus className="h-4 w-4" />
-            Add Another Order
+            Add another order
           </button>
         )}
       </div>
@@ -432,7 +432,7 @@ export default function ManualOrderEntryPage() {
                 <Check className="h-6 w-6 stroke-[3]" />
               </div>
               <div>
-                <span className="rounded bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 text-[10px] ">
+                <span className="rounded bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 text-[11px] ">
                   {savedOrder.pending ? 'Order pending sync' : 'Order successfully saved'}
                 </span>
                 <h2 className="text-xl font-black text-slate-900 mt-1">
@@ -451,7 +451,7 @@ export default function ManualOrderEntryPage() {
           <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-emerald-200/60">
             <Link
               href={`/orderflow/orders/${savedOrder.orderId}`}
-              className="rounded-xl bg-white border border-emerald-300 px-4 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 shadow-sm flex items-center gap-1.5"
+              className="rounded-lg bg-white border border-emerald-300 px-4 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 shadow-sm flex items-center gap-1.5"
             >
               <FileText className="h-4 w-4" />
               Open or edit this order
@@ -461,21 +461,21 @@ export default function ManualOrderEntryPage() {
               className="rounded-xl bg-white border border-emerald-300 px-4 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 shadow-sm flex items-center gap-1.5"
             >
               <Package className="h-4 w-4" />
-              View Order Invoice
+              View order invoice
             </button>
             {hasAccess(currentUser, 'customers') && <Link
               href={`/customers/${savedOrder.customerPhone}`}
               className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-sm flex items-center gap-1.5"
             >
               <User className="h-4 w-4" />
-              View Customer 360 Profile ↗
+              View Customer 360 profile ↗
             </Link>}
             <button
               onClick={handleResetForNewOrder}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm flex items-center gap-1.5"
+              className="btn btn-secondary"
             >
               <Plus className="h-4 w-4" />
-              Add Another Order
+              Add another order
             </button>
           </div>
         </div>
@@ -490,12 +490,12 @@ export default function ManualOrderEntryPage() {
                 <ClipboardPen className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-bold text-slate-900 text-base">Order Review & Confirmation</h2>
+                <h2 className="font-bold text-slate-900 text-base">Order review & confirmation</h2>
                 <p className="text-xs text-slate-500">Please verify all order details before committing to database</p>
               </div>
             </div>
             <span className="rounded-full bg-blue-50 text-blue-700 font-bold px-3 py-1 text-xs border border-blue-200">
-              Ready to Save
+              Ready to save
             </span>
           </div>
 
@@ -513,12 +513,12 @@ export default function ManualOrderEntryPage() {
                 <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <span>{customerName}</span>
                   {existingCustomer ? (
-                    <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5">
+                    <span className="rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5">
                       Returning — Karma {existingCustomer.karmaScore}
                     </span>
                   ) : (
-                    <span className="rounded-full bg-slate-200 text-slate-700 text-[10px] font-medium px-2 py-0.5">
-                      New Customer
+                    <span className="rounded-full bg-slate-200 text-slate-700 text-[11px] font-medium px-2 py-0.5">
+                      New customer
                     </span>
                   )}
                 </div>
@@ -559,21 +559,21 @@ export default function ManualOrderEntryPage() {
             )}
             {appliedCombo && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-[11px] text-amber-900 flex items-center justify-between">
-                <span>Promotional Combo Applied: <strong>{appliedCombo.name}</strong></span>
+                <span>Promotional combo applied: <strong>{appliedCombo.name}</strong></span>
                 <span className="font-bold text-amber-800">Saves <Money>{appliedCombo.savings.toLocaleString()}</Money></span>
               </div>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-200 pt-3">
               <div>
-                <span className="text-[11px] font-semibold text-slate-500 block">Delivery & Payment:</span>
+                <span className="text-[11px] font-semibold text-slate-500 block">Delivery & payment:</span>
                   <strong className="text-slate-900">{deliveryMethod}</strong> • {paymentTerms}
                 <div className="text-slate-600 text-[11px] mt-0.5">
                   {address || district}, {district}, {province}
                 </div>
               </div>
               <div>
-                <span className="text-[11px] font-semibold text-slate-500 block">Platform & Date:</span>
+                <span className="text-[11px] font-semibold text-slate-500 block">Platform & date:</span>
                 <strong className="text-slate-900">{platform}</strong>
                 <div className="text-slate-600 text-[11px] mt-0.5">
                   {orderDateAd}
@@ -584,12 +584,12 @@ export default function ManualOrderEntryPage() {
             {remarks && (
               <div className="border-t border-slate-200 pt-2 text-[11px]">
                 <span className="font-semibold text-slate-500">Remarks:</span>{' '}
-                <span className="text-slate-700 italic">{remarks}</span>
+                <span className="text-slate-700 ">{remarks}</span>
               </div>
             )}
 
             <div className="border-t-2 border-slate-300 pt-3 flex justify-between items-center">
-              <span className="font-bold text-slate-900 text-sm">Total Order Value:</span>
+              <span className="font-bold text-slate-900 text-sm">Total order value:</span>
               <span className="font-mono font-black text-xl text-slate-900">
                 <Money>{totalAmount.toLocaleString()}</Money>
               </span>
@@ -609,14 +609,14 @@ export default function ManualOrderEntryPage() {
               type="button"
               onClick={handleConfirmAndSave}
               disabled={isSubmitting}
-              className="rounded-xl bg-emerald-600 px-7 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-emerald-700 disabled:bg-emerald-300 active:scale-[0.99] flex items-center gap-2"
+              className="rounded-lg bg-emerald-600 px-7 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-emerald-700 disabled:bg-emerald-300 active:scale-[0.99] flex items-center gap-2"
             >
               {isSubmitting ? (
                 <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
               ) : (
                 <Check className="h-4 w-4 stroke-[3]" />
               )}
-              {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving Order…</> : 'Confirm & Save'}
+              {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving order…</> : 'Confirm & Save'}
             </button>
           </div>
         </div>
@@ -653,7 +653,7 @@ export default function ManualOrderEntryPage() {
                     </option>
                   ))}
                 </select>
-                <span className="text-[10px] text-slate-500 mt-1 block">
+                <span className="text-[11px] text-slate-500 mt-1 block">
                   Determines catalog filter
                 </span>
               </div>
@@ -663,7 +663,7 @@ export default function ManualOrderEntryPage() {
                 <label className="block font-bold text-slate-700 mb-1">
                   Platform Channel <span className="text-rose-600">*</span>
                 </label>
-                <select aria-label="Platform Channel"
+                <select aria-label="Platform channel"
                   value={platform}
                   onChange={(e) => setPlatform(e.target.value as OrderPlatform)}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-semibold text-slate-900 focus:border-blue-500"
@@ -674,7 +674,7 @@ export default function ManualOrderEntryPage() {
                     </option>
                   ))}
                 </select>
-                <span className="text-[10px] text-slate-500 mt-1 block">
+                <span className="text-[11px] text-slate-500 mt-1 block">
                   Origin of customer inquiry
                 </span>
               </div>
@@ -685,7 +685,7 @@ export default function ManualOrderEntryPage() {
                 <label className="block font-bold text-slate-700 mb-1">
                   Order Date <span className="text-rose-600">*</span>
                 </label>
-                <input aria-label="Order Date"
+                <input aria-label="Order date"
                   type="date"
                   value={orderDateAd}
                   onChange={(e) => handleAdDateChange(e.target.value)}
@@ -700,7 +700,7 @@ export default function ManualOrderEntryPage() {
               <div className="flex items-center justify-between">
                 <span className="font-bold text-[11px] text-slate-700 flex items-center gap-1.5">
                   <User className="h-3.5 w-3.5 text-slate-500" />
-                  Customer Details & Karma Check
+                  Customer details & Karma check
                 </span>
 
                 {/* 10a: Karma badge based on existing phone */}
@@ -709,11 +709,11 @@ export default function ManualOrderEntryPage() {
                     Returning customer — Karma: {existingCustomer.karmaScore}
                   </span>
                 ) : customerPhone.length >= 8 ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 text-blue-800 font-semibold px-2.5 py-0.5 text-[10px]">
-                    New Customer (First Order)
+                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 text-blue-800 font-semibold px-2.5 py-0.5 text-[11px]">
+                    New customer (first order)
                   </span>
                 ) : (
-                  <span className="text-[10px] text-slate-500">
+                  <span className="text-[11px] text-slate-500">
                     Enter phone to auto-verify customer karma
                   </span>
                 )}
@@ -751,7 +751,7 @@ export default function ManualOrderEntryPage() {
                       if (c.province) setProvince(c.province);
                       if (c.city) setDistrict(c.city);
                     }}
-                    label="Phone Number"
+                    label="Phone number"
                     required
                   />
                   {formErrors.customerPhone && (
@@ -765,7 +765,7 @@ export default function ManualOrderEntryPage() {
 
                 <div>
                   <label htmlFor="manual-entry-street-landmark-address" className="block font-bold text-slate-700 mb-1">
-                    Street / Landmark Address
+                    Street / landmark address
                   </label>
                   <input id="manual-entry-street-landmark-address"
                     type="text"
@@ -792,7 +792,7 @@ export default function ManualOrderEntryPage() {
                   className="flex items-center gap-1 rounded-lg bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 shadow-xs"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Add Product SKU
+                  Add product SKU
                 </button>
               </div>
 
@@ -809,8 +809,8 @@ export default function ManualOrderEntryPage() {
                       className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs"
                     >
                       <div className="flex-1">
-                        <label className="block sm:hidden text-[10px] font-semibold text-slate-500 mb-0.5">
-                          Select Product SKU
+                        <label className="block sm:hidden text-[11px] font-semibold text-slate-500 mb-0.5">
+                          Select product SKU
                         </label>
                         <SmartDropdown
                           items={filteredProducts.map((p) => ({
@@ -885,7 +885,7 @@ export default function ManualOrderEntryPage() {
               {detectedCombo && !appliedCombo && (
                 <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 shadow-xs animate-in fade-in">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-amber-600 shrink-0" />
+                    <Lightbulb className="h-5 w-5 text-amber-600 shrink-0" />
                     <span className="text-xs">
                       These items form the <strong>{detectedCombo.name}</strong> — apply combo price of{' '}
                       <strong><Money>{detectedCombo.comboPrice.toLocaleString()}</Money></strong> (saves NPR{' '}
@@ -897,7 +897,7 @@ export default function ManualOrderEntryPage() {
                     onClick={handleApplyCombo}
                     className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700 shadow-sm shrink-0"
                   >
-                    Apply Combo Price ✓
+                    Apply combo price ✓
                   </button>
                 </div>
               )}
@@ -905,7 +905,7 @@ export default function ManualOrderEntryPage() {
               {appliedCombo && (
                 <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-2.5 text-emerald-900 text-xs flex items-center justify-between">
                   <span>
-                    ✓ Combo pricing applied: <strong>{appliedCombo.name}</strong> (NPR{' '}
+                    Combo pricing applied: <strong>{appliedCombo.name}</strong> (NPR{' '}
                     {appliedCombo.comboPrice.toLocaleString()})
                   </span>
                   <button
@@ -942,22 +942,22 @@ export default function ManualOrderEntryPage() {
                 <label className="block font-bold text-slate-700 mb-1">
                   Payment Terms <span className="text-rose-600">*</span>
                 </label>
-                <select aria-label="Payment Terms"
+                <select aria-label="Payment terms"
                   value={paymentTerms}
                   onChange={(e) => setPaymentTerms(e.target.value as any)}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none font-semibold text-slate-900 focus:border-blue-500"
                 >
-                  <option value="COD">Cash on Delivery (COD)</option>
-                  <option value="Prepaid">Prepaid (eSewa / Khalti / FonePay)</option>
+                  <option value="COD">Cash on delivery (COD)</option>
+                  <option value="Prepaid">Prepaid (eSewa / khalti / FonePay)</option>
                 </select>
               </div>
             </div>
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">
-                Remarks & Delivery Instructions
+                Remarks & delivery instructions
               </label>
-              <textarea aria-label="Remarks & Delivery Instructions"
+              <textarea aria-label="Remarks & delivery instructions"
                 rows={3}
                 placeholder="e.g. Call before delivery, delicate packaging, gift wrapping requested…"
                 value={remarks}
@@ -969,7 +969,7 @@ export default function ManualOrderEntryPage() {
             {/* Order Action Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-slate-200 pt-5">
               <div>
-                <span className="text-slate-500 text-xs">Calculated Total:</span>{' '}
+                <span className="text-slate-500 text-xs">Calculated total:</span>{' '}
                 <strong className="text-xl font-mono font-black text-slate-900 block sm:inline sm:ml-1">
                   <Money>{totalAmount.toLocaleString()}</Money>
                 </strong>
@@ -977,9 +977,9 @@ export default function ManualOrderEntryPage() {
               </div>
               {canPerform(currentUser, 'orderflow', 'CREATE') && <button
                 type="submit"
-                className="rounded-xl bg-blue-600 px-8 py-3 text-xs font-bold text-white shadow-md hover:bg-blue-700 active:scale-[0.99] flex items-center justify-center gap-2"
+                className="btn btn-primary active:scale-[0.99]"
               >
-                Proceed to Review
+                Proceed to review
                 <ArrowRight className="h-4 w-4" />
               </button>}
             </div>
@@ -1010,7 +1010,7 @@ export default function ManualOrderEntryPage() {
                 <strong className="text-slate-900">{savedOrder.customerName} ({savedOrder.customerPhone})</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Brand & Courier:</span>
+                <span className="text-slate-500">Brand & courier:</span>
                 <strong className="text-slate-900">{savedOrder.brandCode} • {savedOrder.deliveryMethod} ({savedOrder.paymentTerms})</strong>
               </div>
               <div className="border-t border-slate-200 pt-2 space-y-1">
@@ -1023,15 +1023,15 @@ export default function ManualOrderEntryPage() {
                 ))}
               </div>
               <div className="border-t border-slate-200 pt-2 flex justify-between items-center">
-                <span className="font-bold text-slate-800 text-sm">Amount Payable:</span>
-                <span className="font-mono font-black text-lg text-emerald-700"><Money>{savedOrder.totalAmount.toLocaleString()}</Money></span>
+                <span className="font-bold text-slate-800 text-sm">Amount payable:</span>
+                <span className="font-mono font-black text-lg text-slate-900"><Money>{savedOrder.totalAmount.toLocaleString()}</Money></span>
               </div>
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-2">
               {hasAccess(currentUser, 'customers') && <Link
                 href={`/customers/${savedOrder.customerPhone}`}
-                className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                className="btn btn-primary"
               >
                 Open in Customer 360 ↗
               </Link>}

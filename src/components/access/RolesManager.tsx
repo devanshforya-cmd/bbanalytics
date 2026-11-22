@@ -71,7 +71,7 @@ export default function RolesManager({ roles, people, onChanged }: { roles: Staf
         </div>
         <div className="flex flex-wrap gap-2">
           {roles.length < STARTER_ROLES.length && (
-            <button type="button" onClick={addStarters} disabled={creatingStarters} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">
+            <button type="button" onClick={addStarters} disabled={creatingStarters} className="btn btn-secondary text-slate-800">
               {creatingStarters ? 'Adding…' : 'Add starter roles'}
             </button>
           )}
@@ -148,7 +148,7 @@ export default function RolesManager({ roles, people, onChanged }: { roles: Staf
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-white px-5 py-3 sm:rounded-b-3xl">
               {draft.id && membersOf(draft.id).length > 0 && <p className="mr-auto text-xs text-slate-600">Changes apply to {membersOf(draft.id).length} {membersOf(draft.id).length === 1 ? 'person' : 'people'}.</p>}
               <button type="button" onClick={() => setDraft(null)} className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Cancel</button>
-              <button type="button" onClick={save} disabled={saving} className="whitespace-nowrap rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? 'Saving…' : draft.id ? 'Save role' : 'Create role'}</button>
+              <button type="button" onClick={save} disabled={saving} className="btn btn-primary disabled:opacity-60">{saving ? 'Saving…' : draft.id ? 'Save role' : 'Create role'}</button>
             </div>
           </div>
         </div>

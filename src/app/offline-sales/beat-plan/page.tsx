@@ -10,7 +10,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Calendar,
-  Sparkles,
+  Lightbulb,
   Camera,
   CreditCard,
   X,
@@ -202,7 +202,7 @@ export default function BeatPlanPage() {
     setRouteNotes('');
     reloadBeatData();
     toast.success(
-      `✓ Successfully assigned beat route with ${selectedStoreIds.size} stops to ${targetUser?.fullName || 'Sales Staff'}!`
+      `Assigned beat route with ${selectedStoreIds.size} stops to ${targetUser?.fullName || 'Sales Staff'}!`
     );
   };
 
@@ -229,7 +229,7 @@ export default function BeatPlanPage() {
     reloadBeatData();
     refreshTasks();
     toast.success(
-      `✓ Leave registered for ${fromUser?.fullName || 'Staff'}! Reassigned ${result.reassignedBeatsCount} beat stops and ${result.reassignedTasksCount} tasks to ${toUser?.fullName || 'Covering Staff'}.`
+      `Leave registered for ${fromUser?.fullName || 'Staff'}. Reassigned ${result.reassignedBeatsCount} beat stops and ${result.reassignedTasksCount} tasks to ${toUser?.fullName || 'Covering Staff'}.`
     );
   };
 
@@ -517,119 +517,56 @@ export default function BeatPlanPage() {
         {gpsError && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{gpsError}</p>}
         <Breadcrumbs
           items={[
-            { label: 'Offline Sales', href: '/offline-sales/stores' },
-            { label: 'Beat Plan & Field Tasks' },
+            { label: 'Offline sales', href: '/offline-sales/stores' },
+            { label: 'Beat plan' },
           ]}
         />
 
-        {/* Top Header Card */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Page header */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-black text-slate-900">
-                Namaste,{' '}
-                {hasAccess(currentUser, 'staff_scorecards') ? <Link
-                  href={`/offline-sales/scorecard?officer=${encodeURIComponent(
-                    currentUser.fullName
-                  )}`}
-                  className="hover:text-blue-600 hover:underline"
-                >
-                  {currentUser.fullName}
-                </Link> : <span>{currentUser.fullName}</span>}
-                !
-              </h1>
-              <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-700">
-                {currentUser.territory || 'Kathmandu Central Beat'}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Your daily field action dashboard • Stores, task directives, and cheque collections
+            <h1>Beat plan</h1>
+            <p className="mt-1 text-[13px] text-slate-500">
+              {hasAccess(currentUser, 'staff_scorecards') ? <Link href={`/offline-sales/scorecard?officer=${encodeURIComponent(currentUser.fullName)}`} className="text-slate-700 hover:underline">{currentUser.fullName}</Link> : <span className="text-slate-700">{currentUser.fullName}</span>}
+              {' · '}{currentUser.territory || 'Kathmandu Central Beat'}{' · '}stores, tasks and cheques for today
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2">
             {isAdmin && (
               <>
-                <button
-                  type="button"
-                  onClick={() => setShowAssignRouteModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition shadow-xs"
-                >
-                  <Navigation className="w-3.5 h-3.5" />
-                  <span>+ Assign Beat Route</span>
+                <button type="button" onClick={() => setShowLeaveModal(true)} className="btn btn-secondary">
+                  <UserCheck />Staff leave
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowLeaveModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100 transition shadow-2xs"
-                >
-                  <UserCheck className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Staff Leave & Reassign</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
+                <button type="button" onClick={() => {
                     const stores = db.getStoresUnified();
                     if (stores[0]) setOverrideStoreId(stores[0].id);
                     setShowOverrideModal(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold hover:bg-slate-100 transition shadow-2xs"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                  <span>+ One-Time Stop</span>
+                  }} className="btn btn-secondary">
+                  <MapPin />Add one-time stop
+                </button>
+                <button type="button" onClick={() => setShowAssignRouteModal(true)} className="btn btn-primary">
+                  <Navigation />Assign beat route
                 </button>
               </>
             )}
 
-            <button
-              type="button"
-              onClick={handleToggleDuty}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition shadow-2xs ${
-                officerDuty === 'ONLINE'
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                  : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
-              }`}
-            >
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  officerDuty === 'ONLINE' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
-                }`}
-              />
-              <span>Duty: {officerDuty}</span>
+            <button type="button" onClick={handleToggleDuty} className="btn btn-secondary" aria-pressed={officerDuty === 'ONLINE'}>
+              <span aria-hidden="true" className={`h-2 w-2 rounded-full ${officerDuty === 'ONLINE' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+              {officerDuty === 'ONLINE' ? 'On duty' : 'Off duty'}
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setShowEndDayModal(true);
-              }}
-              className={`rounded-xl px-4 py-2 text-xs font-bold shadow-xs transition ${
-                officerDuty === 'OFFLINE'
-                  ? 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
-                  : pendingBeatCount === 0
-                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                  : 'bg-slate-900 text-white hover:bg-slate-800'
-              }`}
-            >
-              {officerDuty === 'OFFLINE'
-                ? 'Shift Concluded (Offline)'
-                : pendingBeatCount === 0
-                ? '✓ Conclude Shift & End Day'
-                : 'End My Day'}
+            <button type="button" onClick={() => setShowEndDayModal(true)} disabled={officerDuty === 'OFFLINE'} className={`btn ${officerDuty === 'OFFLINE' ? 'btn-secondary opacity-60' : pendingBeatCount === 0 ? 'btn-primary' : 'btn-secondary'}`}>
+              {officerDuty === 'OFFLINE' ? 'Shift ended' : 'End my day'}
             </button>
           </div>
         </div>
 
         {/* Manager/Admin Staff Filter Banner */}
         {isAdmin && db.getUsers().length > 1 && (
-          <div className="flex items-center justify-between flex-wrap gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs shadow-2xs">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <div className="flex items-center gap-1.5 font-bold text-slate-700">
-                <Users className="w-4 h-4 text-blue-600" />
-                <span>Viewing Beat Plan for:</span>
-              </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-[13px]">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <label htmlFor="beat-staff" className="text-slate-500">Showing</label>
               <select
                 value={selectedStaffFilter}
                 onChange={(e) => {
@@ -637,9 +574,10 @@ export default function BeatPlanPage() {
                   setSelectedStaffFilter(val);
                   reloadBeatData(val);
                 }}
-                className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                id="beat-staff"
+                className="h-9 rounded-lg border border-black/[0.08] bg-white px-3 text-slate-800"
               >
-                <option value="ALL">All Active Field Staff (Unified View)</option>
+                <option value="ALL">All field staff</option>
                 {db.getUsers().map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.fullName} ({u.territory || u.role})
@@ -654,26 +592,15 @@ export default function BeatPlanPage() {
         )}
 
         {/* Assigned Directives & Tasks */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-3.5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="rounded-2xl border border-black/[0.08] bg-white p-4 sm:p-5 space-y-3.5">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600 font-bold">
-                <CheckSquare className="h-4 w-4" />
-              </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-bold text-slate-900">
-                    Today&apos;s Assigned Directives &amp; To-Do List
-                  </h2>
-                  {pendingTasksCount > 0 && (
-                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
-                      {pendingTasksCount} Pending
-                    </span>
-                  )}
+                  <h2 className="text-[15px] font-medium text-slate-900">Today&apos;s tasks</h2>
+                  {pendingTasksCount > 0 && <span className="font-mono text-xs text-slate-500">{pendingTasksCount} open</span>}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Priority directives dispatched by HQ Admin for your beat today
-                </p>
+                <p className="mt-0.5 text-[13px] text-slate-500">Assigned to you by the office for today</p>
               </div>
             </div>
           </div>
@@ -787,7 +714,7 @@ export default function BeatPlanPage() {
                     <CreditCard className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">Collect Physical Cheque</h2>
+                    <h2 className="text-base font-bold text-slate-900">Collect physical cheque</h2>
                     <p className="text-xs text-slate-500">{targetBeat.storeName}</p>
                   </div>
                 </div>
@@ -803,7 +730,7 @@ export default function BeatPlanPage() {
               <div className="p-5 space-y-4 text-xs overflow-y-auto">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="beat-plan-cheque-number" className="block font-semibold text-slate-700 mb-1">Cheque Number *</label>
+                    <label htmlFor="beat-plan-cheque-number" className="block font-semibold text-slate-700 mb-1">Cheque number *</label>
                     <input id="beat-plan-cheque-number"
                       type="text"
                       placeholder="e.g. 0049281"
@@ -814,7 +741,7 @@ export default function BeatPlanPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="beat-plan-cheque-amount-npr" className="block font-semibold text-slate-700 mb-1">Cheque Amount (NPR) *</label>
+                    <label htmlFor="beat-plan-cheque-amount-npr" className="block font-semibold text-slate-700 mb-1">Cheque amount (NPR) *</label>
                     <input id="beat-plan-cheque-amount-npr"
                       type="number"
                       placeholder="25000"
@@ -828,23 +755,23 @@ export default function BeatPlanPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="beat-plan-bank-name" className="block font-semibold text-slate-700 mb-1">Bank Name *</label>
+                    <label htmlFor="beat-plan-bank-name" className="block font-semibold text-slate-700 mb-1">Bank name *</label>
                     <select id="beat-plan-bank-name"
                       value={chequeBank}
                       onChange={(e) => setChequeBank(e.target.value)}
                       className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="Nabil Bank">Nabil Bank</option>
-                      <option value="Global IME Bank">Global IME Bank</option>
-                      <option value="NIC Asia Bank">NIC Asia Bank</option>
-                      <option value="Nepal Investment Mega Bank">Nepal Investment Mega Bank</option>
-                      <option value="Standard Chartered">Standard Chartered</option>
-                      <option value="Siddhartha Bank">Siddhartha Bank</option>
-                      <option value="Other Commercial Bank">Other Commercial Bank</option>
+                      <option value="Nabil Bank">Nabil bank</option>
+                      <option value="Global IME Bank">Global IME bank</option>
+                      <option value="NIC Asia Bank">NIC asia bank</option>
+                      <option value="Nepal Investment Mega Bank">Nepal investment mega bank</option>
+                      <option value="Standard Chartered">Standard chartered</option>
+                      <option value="Siddhartha Bank">Siddhartha bank</option>
+                      <option value="Other Commercial Bank">Other commercial bank</option>
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="beat-plan-deposit-date" className="block font-semibold text-slate-700 mb-1">Deposit Date *</label>
+                    <label htmlFor="beat-plan-deposit-date" className="block font-semibold text-slate-700 mb-1">Deposit date *</label>
                     <input id="beat-plan-deposit-date"
                       type="date"
                       value={chequeCashDate}
@@ -857,7 +784,7 @@ export default function BeatPlanPage() {
 
                 {/* Photo upload */}
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Cheque Photo (Front Face)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Cheque photo (front face)</label>
                   {chequePhotoUrl ? (
                     <div className="relative rounded-xl border border-slate-200 p-2 bg-slate-50 flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -879,7 +806,7 @@ export default function BeatPlanPage() {
                   ) : (
                     <label className="flex items-center justify-center gap-2 w-full p-3 border border-dashed border-slate-300 hover:border-amber-500 hover:bg-amber-50/40 rounded-xl cursor-pointer transition text-slate-600 font-medium text-xs">
                       <Camera className="w-4 h-4 text-amber-600" />
-                      <span>Take Photo of Cheque</span>
+                      <span>Take photo of cheque</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -892,7 +819,7 @@ export default function BeatPlanPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="beat-plan-notes-remarks" className="block font-semibold text-slate-700 mb-1">Notes / Remarks</label>
+                  <label htmlFor="beat-plan-notes-remarks" className="block font-semibold text-slate-700 mb-1">Notes / remarks</label>
                   <input id="beat-plan-notes-remarks"
                     type="text"
                     placeholder="e.g. Against Invoice #9022"
@@ -914,9 +841,9 @@ export default function BeatPlanPage() {
                 <button
                   type="button"
                   onClick={handleSaveCheque}
-                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition"
+                  className="px-5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition"
                 >
-                  Save &amp; Queue Cheque
+                  Save &amp; queue cheque
                 </button>
               </div>
             </div>
@@ -933,7 +860,7 @@ export default function BeatPlanPage() {
                     <Camera className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">Capture Shelf Photos</h2>
+                    <h2 className="text-base font-bold text-slate-900">Capture shelf photos</h2>
                     <p className="text-xs text-slate-500">{targetBeat.storeName}</p>
                   </div>
                 </div>
@@ -948,7 +875,7 @@ export default function BeatPlanPage() {
 
               <div className="p-5 space-y-4 text-xs overflow-y-auto">
                 <div>
-                  <label htmlFor="beat-plan-rack-gondola-section" className="block font-semibold text-slate-700 mb-1">Rack / Gondola Section</label>
+                  <label htmlFor="beat-plan-rack-gondola-section" className="block font-semibold text-slate-700 mb-1">Rack / gondola section</label>
                   <input id="beat-plan-rack-gondola-section"
                     type="text"
                     value={shelfRackSection}
@@ -960,7 +887,7 @@ export default function BeatPlanPage() {
 
                 {/* Before Photos */}
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Before Arranging Photo</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Before arranging photo</label>
                   <div className="flex items-center gap-2 flex-wrap">
                     {beforePhotoUrls.map((url, idx) => (
                       <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200">
@@ -974,7 +901,7 @@ export default function BeatPlanPage() {
                         </button>
                       </div>
                     ))}
-                    <label className="w-20 h-20 flex flex-col items-center justify-center border border-dashed border-slate-300 hover:border-blue-500 rounded-xl cursor-pointer text-slate-500 text-[10px] gap-1 hover:bg-blue-50/30">
+                    <label className="w-20 h-20 flex flex-col items-center justify-center border border-dashed border-slate-300 hover:border-blue-500 rounded-xl cursor-pointer text-slate-500 text-[11px] gap-1 hover:bg-blue-50/30">
                       <Camera className="w-4 h-4 text-blue-600" />
                       <span>+ Before</span>
                       <input
@@ -990,7 +917,7 @@ export default function BeatPlanPage() {
 
                 {/* After Photos */}
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">After Merchandising Photo</label>
+                  <label className="block font-semibold text-slate-700 mb-1">After merchandising photo</label>
                   <div className="flex items-center gap-2 flex-wrap">
                     {afterPhotoUrls.map((url, idx) => (
                       <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200">
@@ -1004,7 +931,7 @@ export default function BeatPlanPage() {
                         </button>
                       </div>
                     ))}
-                    <label className="w-20 h-20 flex flex-col items-center justify-center border border-dashed border-slate-300 hover:border-emerald-500 rounded-xl cursor-pointer text-slate-500 text-[10px] gap-1 hover:bg-emerald-50/30">
+                    <label className="w-20 h-20 flex flex-col items-center justify-center border border-dashed border-slate-300 hover:border-emerald-500 rounded-xl cursor-pointer text-slate-500 text-[11px] gap-1 hover:bg-emerald-50/30">
                       <Camera className="w-4 h-4 text-emerald-600" />
                       <span>+ After</span>
                       <input
@@ -1030,9 +957,9 @@ export default function BeatPlanPage() {
                 <button
                   type="button"
                   onClick={handleSaveShelfPhotos}
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition"
+                  className="btn btn-primary"
                 >
-                  Save Shelf Photos
+                  Save shelf photos
                 </button>
               </div>
             </div>
@@ -1045,8 +972,8 @@ export default function BeatPlanPage() {
             <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-blue-600" />
-                  <h2 className="font-bold text-slate-900 text-base">Add One-Time Beat Stop</h2>
+                  <Lightbulb className="w-5 h-5 text-blue-600" />
+                  <h2 className="font-bold text-slate-900 text-base">Add one-time beat stop</h2>
                 </div>
                 <button
                   onClick={() => setShowOverrideModal(false)}
@@ -1058,7 +985,7 @@ export default function BeatPlanPage() {
 
               <form onSubmit={handleSaveOverride} className="space-y-3.5 text-xs">
                 <div>
-                  <label htmlFor="beat-plan-assign-to-officer" className="block font-bold text-slate-700 mb-1">Assign to Officer</label>
+                  <label htmlFor="beat-plan-assign-to-officer" className="block font-bold text-slate-700 mb-1">Assign to officer</label>
                   <select id="beat-plan-assign-to-officer"
                     value={overrideOfficerId}
                     onChange={(e) => setOverrideOfficerId(e.target.value)}
@@ -1073,8 +1000,8 @@ export default function BeatPlanPage() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Target Store</label>
-                  <select aria-label="Target Store"
+                  <label className="block font-bold text-slate-700 mb-1">Target store</label>
+                  <select aria-label="Target store"
                     value={overrideStoreId}
                     onChange={(e) => setOverrideStoreId(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
@@ -1088,21 +1015,21 @@ export default function BeatPlanPage() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Stop Priority</label>
-                  <select aria-label="Stop Priority"
+                  <label className="block font-bold text-slate-700 mb-1">Stop priority</label>
+                  <select aria-label="Stop priority"
                     value={overridePriority}
                     onChange={(e) => setOverridePriority(e.target.value as any)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
-                    <option value="HIGH">★★★ High Priority (Must Visit Today)</option>
-                    <option value="MEDIUM">★★ Medium Priority</option>
-                    <option value="ROUTINE">★ Routine Check</option>
+                    <option value="HIGH">High (visit today)</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="ROUTINE">Routine</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Manager Note / Instructions</label>
-                  <input aria-label="Manager Note / Instructions"
+                  <label className="block font-bold text-slate-700 mb-1">Manager note / instructions</label>
+                  <input aria-label="Manager note / instructions"
                     type="text"
                     value={overrideNote}
                     onChange={(e) => setOverrideNote(e.target.value)}
@@ -1121,9 +1048,9 @@ export default function BeatPlanPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-2xs"
+                    className="btn btn-primary"
                   >
-                    Add to Today&apos;s Beat
+                    Add to today&apos;s beat
                   </button>
                 </div>
               </form>
@@ -1141,7 +1068,7 @@ export default function BeatPlanPage() {
                     <Navigation className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-slate-900 text-base">Create &amp; Assign Beat Route</h2>
+                    <h2 className="font-bold text-slate-900 text-base">Create &amp; assign beat route</h2>
                     <p className="text-xs text-slate-500">Assign targeted store visits and priorities to sales officers</p>
                   </div>
                 </div>
@@ -1157,7 +1084,7 @@ export default function BeatPlanPage() {
               <form onSubmit={handleAssignBeatRoute} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label htmlFor="beat-plan-assign-to-sales-staff" className="block font-bold text-slate-700 mb-1">Assign to Sales Staff</label>
+                    <label htmlFor="beat-plan-assign-to-sales-staff" className="block font-bold text-slate-700 mb-1">Assign to sales staff</label>
                     <select id="beat-plan-assign-to-sales-staff"
                       value={routeOfficerId}
                       onChange={(e) => setRouteOfficerId(e.target.value)}
@@ -1172,8 +1099,8 @@ export default function BeatPlanPage() {
                   </div>
 
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Beat Route Date</label>
-                    <input aria-label="Beat Route Date"
+                    <label className="block font-bold text-slate-700 mb-1">Beat route date</label>
+                    <input aria-label="Beat route date"
                       type="date"
                       value={routeDate}
                       onChange={(e) => setRouteDate(e.target.value)}
@@ -1184,20 +1111,20 @@ export default function BeatPlanPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Route Priority</label>
-                    <select aria-label="Route Priority"
+                    <label className="block font-bold text-slate-700 mb-1">Route priority</label>
+                    <select aria-label="Route priority"
                       value={routePriority}
                       onChange={(e) => setRoutePriority(e.target.value as any)}
                       className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                     >
-                      <option value="HIGH">★★★ High Priority</option>
-                      <option value="MEDIUM">★★ Medium Priority</option>
-                      <option value="ROUTINE">★ Routine Check</option>
+                      <option value="HIGH">High</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="ROUTINE">Routine</option>
                     </select>
                   </div>
 
                   <div>
-                    <label htmlFor="beat-plan-manager-directives-note-opti" className="block font-bold text-slate-700 mb-1">Manager Directives / Note (Optional)</label>
+                    <label htmlFor="beat-plan-manager-directives-note-opti" className="block font-bold text-slate-700 mb-1">Manager directives / note (optional)</label>
                     <input id="beat-plan-manager-directives-note-opti"
                       type="text"
                       value={routeNotes}
@@ -1224,7 +1151,7 @@ export default function BeatPlanPage() {
                         }}
                         className="text-[11px] font-bold text-blue-600 hover:underline"
                       >
-                        Select All Filtered
+                        Select all filtered
                       </button>
                       <span className="text-slate-300">•</span>
                       <button
@@ -1232,7 +1159,7 @@ export default function BeatPlanPage() {
                         onClick={() => setSelectedStoreIds(new Set())}
                         className="text-[11px] font-bold text-slate-500 hover:underline"
                       >
-                        Clear All
+                        Clear all
                       </button>
                     </div>
                   </div>
@@ -1254,7 +1181,7 @@ export default function BeatPlanPage() {
                         onChange={(e) => setStoreAreaFilter(e.target.value)}
                         className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
                       >
-                        <option value="ALL">All Areas / Zones</option>
+                        <option value="ALL">All areas / zones</option>
                         {availableAreas.map((area) => (
                           <option key={area} value={area}>
                             {area}
@@ -1299,7 +1226,7 @@ export default function BeatPlanPage() {
                                 {store.address} {store.area ? `• ${store.area}` : ''}
                               </p>
                             </div>
-                            <span className="text-[10px] font-semibold text-slate-500 px-1.5 py-0.5 bg-slate-100 rounded-md">
+                            <span className="text-[11px] font-semibold text-slate-500 px-1.5 py-0.5 bg-slate-100 rounded-md">
                               {store.storeType || store.category || 'STORE'}
                             </span>
                           </label>
@@ -1324,9 +1251,9 @@ export default function BeatPlanPage() {
                     <button
                       type="submit"
                       disabled={selectedStoreIds.size === 0}
-                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold shadow-xs transition"
+                      className="btn btn-primary disabled:opacity-50"
                     >
-                      Assign Beat Plan
+                      Assign beat plan
                     </button>
                   </div>
                 </div>
@@ -1345,7 +1272,7 @@ export default function BeatPlanPage() {
                     <UserCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-slate-900 text-base">Staff Leave &amp; Relief Coverage</h2>
+                    <h2 className="font-bold text-slate-900 text-base">Staff leave &amp; relief coverage</h2>
                     <p className="text-xs text-slate-500">Reassign pending beat stops &amp; tasks to covering sales staff</p>
                   </div>
                 </div>
@@ -1360,7 +1287,7 @@ export default function BeatPlanPage() {
 
               <form onSubmit={handleConfirmLeaveReassign} className="p-5 space-y-4 text-xs">
                 <div>
-                  <label htmlFor="beat-plan-staff-officer-taking-leave" className="block font-bold text-slate-700 mb-1">Staff Officer Taking Leave</label>
+                  <label htmlFor="beat-plan-staff-officer-taking-leave" className="block font-bold text-slate-700 mb-1">Staff officer taking leave</label>
                   <select id="beat-plan-staff-officer-taking-leave"
                     value={leaveFromOfficerId}
                     onChange={(e) => setLeaveFromOfficerId(e.target.value)}
@@ -1376,8 +1303,8 @@ export default function BeatPlanPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Leave Start Date</label>
-                    <input aria-label="Leave Start Date"
+                    <label className="block font-bold text-slate-700 mb-1">Leave start date</label>
+                    <input aria-label="Leave start date"
                       type="date"
                       value={leaveStartDate}
                       onChange={(e) => setLeaveStartDate(e.target.value)}
@@ -1386,8 +1313,8 @@ export default function BeatPlanPage() {
                   </div>
 
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Leave End Date</label>
-                    <input aria-label="Leave End Date"
+                    <label className="block font-bold text-slate-700 mb-1">Leave end date</label>
+                    <input aria-label="Leave end date"
                       type="date"
                       value={leaveEndDate}
                       onChange={(e) => setLeaveEndDate(e.target.value)}
@@ -1403,18 +1330,18 @@ export default function BeatPlanPage() {
                     onChange={(e) => setLeaveReason(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
-                    <option value="Sick Leave">Sick Leave</option>
-                    <option value="Emergency Leave">Emergency Leave</option>
-                    <option value="Annual Leave">Annual Leave</option>
-                    <option value="Casual Leave">Casual Leave</option>
-                    <option value="Festival / Holiday Leave">Festival / Holiday Leave</option>
-                    <option value="Official Off-Duty / Travel">Official Off-Duty / Travel</option>
+                    <option value="Sick Leave">Sick leave</option>
+                    <option value="Emergency Leave">Emergency leave</option>
+                    <option value="Annual Leave">Annual leave</option>
+                    <option value="Casual Leave">Casual leave</option>
+                    <option value="Festival / Holiday Leave">Festival / holiday leave</option>
+                    <option value="Official Off-Duty / Travel">Official off-duty / travel</option>
                   </select>
                 </div>
 
                 <div>
                   <label htmlFor="beat-plan-select-covering-reliever-sal" className="block font-bold text-slate-700 mb-1">
-                    Select Covering / Reliever Sales Staff
+                    Select covering / reliever sales staff
                   </label>
                   <select id="beat-plan-select-covering-reliever-sal"
                     value={leaveToOfficerId}
@@ -1422,7 +1349,7 @@ export default function BeatPlanPage() {
                     className="w-full p-2.5 bg-amber-50/50 border border-amber-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-amber-500"
                     required
                   >
-                    <option value="">-- Choose Covering Staff Member --</option>
+                    <option value="">-- Choose covering staff member --</option>
                     {db
                       .getUsers()
                       .filter((u) => u.id !== leaveFromOfficerId)
@@ -1440,7 +1367,7 @@ export default function BeatPlanPage() {
                 {/* Live Preview Box */}
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
                   <div>
-                    <span className="font-bold text-slate-700 block">Pending Assignments Impacted:</span>
+                    <span className="font-bold text-slate-700 block">Pending assignments impacted:</span>
                     <span className="text-slate-500 text-[11px]">
                       {beatItems.filter((b) => b.officerId === leaveFromOfficerId && b.status === 'PENDING').length} store stops •{' '}
                       {db.getTasks().filter((t) => t.assignedTo === leaveFromOfficerId && t.status !== 'COMPLETED').length} active tasks
@@ -1461,9 +1388,9 @@ export default function BeatPlanPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-xs transition"
+                    className="px-5 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-xs transition"
                   >
-                    Confirm Leave &amp; Reassign
+                    Confirm leave &amp; reassign
                   </button>
                 </div>
               </form>

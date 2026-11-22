@@ -126,10 +126,10 @@ export default function AllOrdersPage() {
   return (
     <PageGuard feature={['orderflow', 'order_desk']}>
       <div className="mx-auto max-w-7xl space-y-4 pb-28">
-        <Breadcrumbs items={[{ label: 'Orderflow', href: '/orderflow/orders' }, { label: 'All Orders' }]} />
+        <Breadcrumbs items={[{ label: 'Online orders', href: '/orderflow/orders' }, { label: 'All orders' }]} />
         <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
           <div>
-            <h1 className="flex items-center gap-1.5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">All Orders
+            <h1 className="flex items-center gap-1.5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">All orders
 <InfoTip label="About this page">Find any order, then mark it dispatched or delivered, or log a failed delivery, a return or an exchange.</InfoTip></h1>
             
           </div>
@@ -173,7 +173,7 @@ export default function AllOrdersPage() {
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
             <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full min-w-[860px] text-left text-xs">
-                <thead className="bg-slate-50 text-[10px] text-slate-500">
+                <thead className="bg-slate-50 text-[11px] text-slate-500">
                   <tr>
                     {canWork && <th className="w-8 px-3 py-2.5"><input type="checkbox" aria-label="Select all shown" checked={shown.length > 0 && shown.every((order) => selected.includes(order.id))} onChange={(event) => setSelected(event.target.checked ? shown.map((order) => order.id) : [])} /></th>}
                     <th className="px-3 py-2.5 font-bold">Order</th>
@@ -195,7 +195,7 @@ export default function AllOrdersPage() {
                         <td className="px-3 py-3 align-top">
                           <Link href={`/orderflow/orders/${order.id}`} className="font-mono text-[13px] font-bold text-slate-900 hover:text-blue-700 hover:underline">{displayDocumentId(order.orderNumber)}</Link>
                           <span className="block text-[11px] text-slate-500">{formatDate(order.orderDateAd, order.orderDateBs)}{brands.length > 1 ? ` · ${brandName(order.brandCode)}` : ''}</span>
-                          {isExchangeOrder(order) && <span className="mt-0.5 inline-block rounded-full bg-purple-100 px-1.5 text-[9px] font-bold text-purple-800">{exchangeAwaitingReturn(order) ? 'Exchange · return not logged' : 'Exchange'}</span>}
+                          {isExchangeOrder(order) && <span className="mt-0.5 inline-block rounded-full bg-purple-100 px-1.5 text-[11px] font-bold text-purple-800">{exchangeAwaitingReturn(order) ? 'Exchange · return not logged' : 'Exchange'}</span>}
                         </td>
                         <td className="px-3 py-3 align-top">
                           <span className="block max-w-[180px] truncate font-semibold text-slate-900">{order.customerName}</span>
@@ -210,8 +210,8 @@ export default function AllOrdersPage() {
                         </td>
                         <td className="px-3 py-3 align-top">
                           <OrderStatusControl order={order} compact />
-                          {openFailure && <span className="mt-1 block text-[10px] font-semibold text-rose-700">Attempt {openFailure.attempts || 1} failed{openFailure.reattemptDateAd ? ` · retry ${formatDate(openFailure.reattemptDateAd, openFailure.reattemptDateBs)}` : ''}</span>}
-                          {orderReturns.length > 0 && <span className="mt-1 block text-[10px] font-semibold text-amber-700">{orderReturns.length} return{orderReturns.length === 1 ? '' : 's'}{unlinked ? ' · exchange not linked' : ''}</span>}
+                          {openFailure && <span className="mt-1 block text-[11px] font-semibold text-rose-700">Attempt {openFailure.attempts || 1} failed{openFailure.reattemptDateAd ? ` · retry ${formatDate(openFailure.reattemptDateAd, openFailure.reattemptDateBs)}` : ''}</span>}
+                          {orderReturns.length > 0 && <span className="mt-1 block text-[11px] font-semibold text-amber-700">{orderReturns.length} return{orderReturns.length === 1 ? '' : 's'}{unlinked ? ' · exchange not linked' : ''}</span>}
                         </td>
                         <td className="relative px-3 py-3 text-right align-top">
                           <button type="button" aria-haspopup="menu" aria-expanded={menuFor === order.id} aria-label={`More actions for ${displayDocumentId(order.orderNumber)}`} onClick={() => setMenuFor(menuFor === order.id ? null : order.id)}

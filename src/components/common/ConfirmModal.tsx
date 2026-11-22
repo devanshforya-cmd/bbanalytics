@@ -107,14 +107,14 @@ export default function ConfirmModal({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-xl border border-slate-200 px-4 py-2.5 font-semibold text-xs text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+            className="rounded-lg border border-slate-200 px-4 py-2.5 font-semibold text-xs text-slate-600 hover:bg-slate-100 transition cursor-pointer"
           >
             {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`rounded-xl px-5 py-2.5 font-bold text-xs text-white shadow transition cursor-pointer ${cfg.confirmCls}`}
+            className={`rounded-lg px-5 py-2.5 font-bold text-xs text-white shadow transition cursor-pointer ${cfg.confirmCls}`}
           >
             {confirmLabel}
           </button>

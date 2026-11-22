@@ -7,14 +7,16 @@
 import { formatValue, type Point } from '@/lib/metrics/engine';
 import type { Unit } from '@/lib/metrics/catalog';
 
-export const PALETTE = ['#2563eb', '#0d9488', '#d97706', '#7c3aed', '#e11d48', '#059669', '#0284c7', '#64748b'];
-const OTHER = '#cbd5e1';
+// Ledger inks: the Brand Bucket blue leads, the rest are quiet earth tones that stay apart from each other.
+export const PALETTE = ['#1470b0', '#c98a2b', '#4e8f6a', '#b5524a', '#5b7f99', '#8c7a5b', '#7a7a80', '#a1a1a6'];
+const OTHER = '#d4d4d8';
 
 type Pick = (key: string) => void;
 
 const finite = (values: (number | null | undefined)[]) => values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
 function niceMax(max: number) {
-  if (max <= 0) return 1;
+  // Never below 2, so the half-way gridline is a whole number and labels never repeat.
+  if (max <= 2) return 2;
   const step = 10 ** Math.floor(Math.log10(max));
   for (const m of [1, 2, 2.5, 5, 10]) if (max <= m * step) return m * step;
   return 10 * step;
@@ -22,16 +24,6 @@ function niceMax(max: number) {
 const short = (value: number, unit: Unit) => formatValue(value, unit, { compact: true }).replace('NPR ', '');
 const summary = (points: Point[], unit: Unit) => points.slice(0, 12).map((p) => `${p.label}: ${formatValue(p.value, unit)}`).join('; ');
 
-export function Sparkline({ points, color = PALETTE[0] }: { points: Point[]; color?: string }) {
-  const values = points.map((p) => p.value ?? 0);
-  if (values.length < 2) return null;
-  const max = Math.max(...values, 0), min = Math.min(...values, 0);
-  const span = max - min || 1;
-  const d = values.map((v, i) => `${i ? 'L' : 'M'}${(i / (values.length - 1)) * 100},${28 - ((v - min) / span) * 26}`).join(' ');
-  return <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="h-8 w-full" aria-hidden="true"><path d={d} fill="none" stroke={color} strokeWidth="1.5" vectorEffect="non-scaling-stroke" /></svg>;
-}
-
-/** Lines over time: one line, or one per group. */
 export function LineChart({ buckets, series, unit, onPick }: { buckets: Point[]; series?: { key: string; label: string; values: (number | null)[] }[]; unit: Unit; onPick?: (bucket: string, group?: string) => void }) {
   const lines = series?.length ? series : [{ key: '__all__', label: 'Total', values: buckets.map((b) => b.value) }];
   const W = 600, H = 200, L = 44, B = 22, T = 8;
@@ -42,8 +34,8 @@ export function LineChart({ buckets, series, unit, onPick }: { buckets: Point[];
   return (
     <figure className="w-full">
       <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full" role="img" aria-label={`Line chart. ${summary(buckets, unit)}`}>
-        {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W} y1={y(max * f)} y2={y(max * f)} stroke="#e2e8f0" /><text x={L - 6} y={y(max * f) + 4} textAnchor="end" className="fill-slate-400 text-[10px]">{short(max * f, unit)}</text></g>)}
-        {buckets.map((b, i) => i % labelEvery === 0 || i === buckets.length - 1 ? <text key={b.key} x={x(i)} y={H - 6} textAnchor="middle" className="fill-slate-400 text-[10px]">{b.label.replace('Week of ', '')}</text> : null)}
+        {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W} y1={y(max * f)} y2={y(max * f)} stroke="#ececee" /><text x={L - 6} y={y(max * f) + 4} textAnchor="end" className="fill-slate-500 font-mono text-[11px]">{short(max * f, unit)}</text></g>)}
+        {buckets.map((b, i) => i % labelEvery === 0 || i === buckets.length - 1 ? <text key={b.key} x={x(i)} y={H - 6} textAnchor="middle" className="fill-slate-500 font-mono text-[11px]">{b.label.replace('Week of ', '')}</text> : null)}
         {lines.map((line, li) => {
           const color = line.key === '__other__' ? OTHER : PALETTE[li % PALETTE.length];
           const pts = line.values.map((v, i) => (v === null ? null : [x(i), y(v)] as const));
@@ -75,14 +67,14 @@ export function ColumnChart({ buckets, unit, onPick }: { buckets: Point[]; unit:
   const labelEvery = Math.max(1, Math.ceil(buckets.length / 6));
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full" role="img" aria-label={`Column chart. ${summary(buckets, unit)}`}>
-      {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W} y1={T + (H - T - B) * (1 - f)} y2={T + (H - T - B) * (1 - f)} stroke="#e2e8f0" /><text x={L - 6} y={T + (H - T - B) * (1 - f) + 4} textAnchor="end" className="fill-slate-400 text-[10px]">{short(max * f, unit)}</text></g>)}
+      {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W} y1={T + (H - T - B) * (1 - f)} y2={T + (H - T - B) * (1 - f)} stroke="#ececee" /><text x={L - 6} y={T + (H - T - B) * (1 - f) + 4} textAnchor="end" className="fill-slate-500 font-mono text-[11px]">{short(max * f, unit)}</text></g>)}
       {buckets.map((b, i) => {
         const h = ((b.value || 0) / max) * (H - T - B);
         const cx = L + slot * i + slot / 2;
         return (
           <g key={b.key} className={onPick ? 'cursor-pointer' : ''} onClick={() => onPick?.(b.key)}>
             <rect x={cx - bw / 2} y={H - B - h} width={bw} height={Math.max(0, h)} rx="2" fill={PALETTE[0]}><title>{`${b.label}: ${formatValue(b.value, unit)}`}</title></rect>
-            {(i % labelEvery === 0 || i === buckets.length - 1) && <text x={cx} y={H - 6} textAnchor="middle" className="fill-slate-400 text-[10px]">{b.label.replace('Week of ', '')}</text>}
+            {(i % labelEvery === 0 || i === buckets.length - 1) && <text x={cx} y={H - 6} textAnchor="middle" className="fill-slate-500 font-mono text-[11px]">{b.label.replace('Week of ', '')}</text>}
           </g>
         );
       })}
@@ -101,7 +93,7 @@ export function StackedChart({ buckets, series, unit, onPick }: { buckets: Point
   return (
     <figure className="w-full">
       <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full" role="img" aria-label={`Stacked column chart of ${series.map((s) => s.label).join(', ')}`}>
-        {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W} y1={T + (H - T - B) * (1 - f)} y2={T + (H - T - B) * (1 - f)} stroke="#e2e8f0" /><text x={L - 6} y={T + (H - T - B) * (1 - f) + 4} textAnchor="end" className="fill-slate-400 text-[10px]">{short(max * f, unit)}</text></g>)}
+        {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W} y1={T + (H - T - B) * (1 - f)} y2={T + (H - T - B) * (1 - f)} stroke="#ececee" /><text x={L - 6} y={T + (H - T - B) * (1 - f) + 4} textAnchor="end" className="fill-slate-500 font-mono text-[11px]">{short(max * f, unit)}</text></g>)}
         {buckets.map((b, i) => {
           let base = H - B;
           const cx = L + slot * i + slot / 2;
@@ -117,7 +109,7 @@ export function StackedChart({ buckets, series, unit, onPick }: { buckets: Point
                   </rect>
                 ) : null;
               })}
-              {(i % labelEvery === 0 || i === buckets.length - 1) && <text x={cx} y={H - 6} textAnchor="middle" className="fill-slate-400 text-[10px]">{b.label.replace('Week of ', '')}</text>}
+              {(i % labelEvery === 0 || i === buckets.length - 1) && <text x={cx} y={H - 6} textAnchor="middle" className="fill-slate-500 font-mono text-[11px]">{b.label.replace('Week of ', '')}</text>}
             </g>
           );
         })}

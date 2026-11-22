@@ -8,7 +8,8 @@ import {
   Store,
   CreditCard,
   Award,
-  Sparkles,
+  ScanText,
+  Lightbulb,
   Navigation,
   Phone,
   X,
@@ -39,9 +40,9 @@ interface MobileBottomTab {
 
 const CANDIDATE_BOTTOM_TABS: MobileBottomTab[] = [
   { label: 'Dashboard', href: '/dashboard', permKey: 'p.dashboard', icon: LayoutDashboard },
-  { label: 'My Day', href: '/offline-sales/beat-plan', permKey: 'p.beat_plan', icon: Compass },
+  { label: 'My day', href: '/offline-sales/beat-plan', permKey: 'p.beat_plan', icon: Compass },
   { label: 'Stores', href: '/offline-sales/stores', permKey: 'p.stores', icon: Store },
-  { label: 'Orders', href: '/orderflow/extractor', permKey: 'p.orders_extractor', icon: Sparkles },
+  { label: 'Orders', href: '/orderflow/extractor', permKey: 'p.orders_extractor', icon: ScanText },
   { label: 'Orders', href: '/orderflow/orders', permKey: 'p.orders_all', icon: ListChecks },
   { label: 'Cheques', href: '/offline-sales/cheques', permKey: 'p.cheques', icon: CreditCard },
   { label: 'Tasks', href: '/opscore/tasks', permKey: 'p.tasks', icon: CheckSquare },
@@ -85,7 +86,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <span className="font-bold text-slate-900 text-sm">
-                  Quick Actions
+                  Quick actions
                 </span>
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   {currentUser.fullName} ({isSuperAdmin(currentUser) ? 'Super Admin' : 'Authorized User'})
@@ -110,7 +111,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
                   className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                 >
                   <Compass className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Beat Check-in</span>
+                  <span>Beat check-in</span>
                 </Link>
               )}
 
@@ -121,7 +122,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
                   className="flex items-center gap-2.5 p-3 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                 >
                   <Store className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span>Stores &amp; Outlets</span>
+                  <span>Stores &amp; outlets</span>
                 </Link>
               )}
 
@@ -132,7 +133,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
                   className="flex items-center gap-2.5 p-3 rounded-xl bg-purple-50 text-purple-800 border border-purple-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                 >
                   <CreditCard className="w-4 h-4 text-purple-600 shrink-0" />
-                  <span>Cheque Custody</span>
+                  <span>Cheque custody</span>
                 </Link>
               )}
 
@@ -143,7 +144,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
                   className="flex items-center gap-2.5 p-3 rounded-xl bg-pink-50 text-pink-800 border border-pink-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                 >
                   <Camera className="w-4 h-4 text-pink-600 shrink-0" />
-                  <span>Shelf Photos</span>
+                  <span>Shelf photos</span>
                 </Link>
               )}
 
@@ -154,7 +155,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
                   className="flex items-center gap-2.5 p-3 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                 >
                   <Phone className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>Log Store Call</span>
+                  <span>Log store call</span>
                 </Link>
               )}
 
@@ -164,8 +165,8 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
                     onClick={() => setShowFabDrawer(false)}
                     className="flex items-center gap-2.5 p-3 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                   >
-                    <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span>WhatsApp Extractor</span>
+                    <ScanText className="w-4 h-4 text-slate-500 shrink-0" />
+                    <span>WhatsApp extractor</span>
                   </Link>
               )}
 
@@ -176,7 +177,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
                     className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                   >
                     <ClipboardPen className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Manual Order</span>
+                    <span>Manual order</span>
                   </Link>
               )}
 
@@ -187,7 +188,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
                   className="flex items-center gap-2.5 p-3 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                 >
                   <MessageSquareHeart className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>Log Feedback</span>
+                  <span>Log feedback</span>
                 </Link>
               )}
 
@@ -198,7 +199,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
                   className="flex items-center gap-2.5 p-3 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform"
                 >
                   <CheckSquare className="w-4 h-4 text-teal-600 shrink-0" />
-                  <span>My Tasks</span>
+                  <span>My tasks</span>
                 </Link>
               )}
 
@@ -209,7 +210,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
                   className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 text-slate-800 border border-slate-200 min-h-[48px] font-semibold text-xs active:scale-98 transition-transform col-span-2"
                 >
                   <Package className="w-4 h-4 text-slate-700 shrink-0" />
-                  <span>Products &amp; Pricing</span>
+                  <span>Products &amp; pricing</span>
                 </Link>
               )}
             </div>
@@ -229,7 +230,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[10px] font-medium transition ${
+              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[11px] font-medium transition ${
                 isActive ? 'text-blue-600 font-bold' : 'text-slate-500'
               }`}
             >

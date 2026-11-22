@@ -93,7 +93,7 @@ export default function FollowUpsPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            {canSettings && <Link href="/settings?tab=follow-ups" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"><Settings2 className="h-4 w-4" /> Change the plan</Link>}
+            {canSettings && <Link href="/settings?tab=follow-ups" className="btn btn-secondary"><Settings2 className="h-4 w-4" /> Change the plan</Link>}
             <DownloadButton datasets={['customer_calls']} records={{ customerCalls: calls.filter((call) => call.followUpStepId) } as any} />
           </div>
         </div>

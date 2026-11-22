@@ -20,7 +20,7 @@ import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
 import { hasAccess, isSuperAdmin, setActivePage } from '@/lib/permissions';
 import { pageForSettingsTab } from '@/lib/access-catalog';
-import { PhoneCall, Compass, ListChecks, DatabaseZap, Sparkles, Truck, Link2, FlaskConical } from 'lucide-react';
+import { PhoneCall, Compass, ListChecks, DatabaseZap, Truck, Link2, FlaskConical } from 'lucide-react';
 
 // Each tab loads only when it is opened, so Settings opens fast.
 const TabLoading = () => <p className="p-6 text-sm text-slate-500">Loading…</p>;
@@ -146,10 +146,10 @@ export default function SettingsPage() {
     <PageGuard>
       <div className="mx-auto max-w-7xl pb-20">
         <div className="mb-5 flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
+          <h1 className="text-[28px] font-medium leading-tight text-slate-900">Settings</h1>
           {isSuperAdmin(user) && (
-            <button type="button" onClick={() => setShowSetupGuide(true)} className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.08] bg-white px-3.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-xs hover:bg-slate-50">
-              <Sparkles className="h-3.5 w-3.5 text-blue-600" /> Setup guide
+            <button type="button" onClick={() => setShowSetupGuide(true)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-black/[0.08] bg-white px-3 text-[13px] font-medium text-slate-700 hover:bg-slate-50">
+              <ListChecks className="h-4 w-4 text-slate-400" /> Setup guide
             </button>
           )}
         </div>
@@ -169,22 +169,20 @@ export default function SettingsPage() {
           </label>
 
           {/* Desktop: grouped list, like System Settings */}
-          <nav aria-label="Settings sections" className="hidden space-y-5 lg:block">
+          <nav aria-label="Settings sections" className="hidden space-y-4 lg:block">
             {visibleGroups.map((group) => (
               <div key={group.title}>
-                <p className="mb-1.5 px-3 text-[12px] font-semibold text-slate-500">{group.title}</p>
-                <ul className="overflow-hidden rounded-xl bg-white shadow-xs ring-1 ring-black/[0.06]">
+                <p className="mb-1 px-2.5 text-xs text-slate-400">{group.title}</p>
+                <ul className="space-y-0.5">
                   {group.items.map((item) => {
                     const Icon = item.icon;
                     const active = item.id === activeTab;
                     return (
                       <li key={item.id}>
                         <button type="button" onClick={() => choose(item.id)} aria-current={active ? 'page' : undefined}
-                          className={`flex w-full items-center gap-3 px-3 py-2 text-left text-[13px] ${active ? 'bg-blue-600 text-white' : 'text-slate-800 hover:bg-black/[0.04]'}`}>
-                          <span className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px] ${active ? 'bg-white/20' : item.tile}`}>
-                            <Icon className="h-[15px] w-[15px] text-white" />
-                          </span>
-                          <span className="flex-1 truncate py-0.5">{item.label}</span>
+                          className={`group flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] transition-colors ${active ? 'bg-black/[0.05] font-medium text-slate-900 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]' : 'text-slate-600 hover:bg-black/[0.03] hover:text-slate-900'}`}>
+                          <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                          <span className="flex-1 truncate">{item.label}</span>
                         </button>
                       </li>
                     );

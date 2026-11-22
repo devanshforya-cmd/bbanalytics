@@ -23,7 +23,7 @@ import {
   UserCheck,
   ChevronRight,
   TrendingUp,
-  Sparkles,
+  Lightbulb,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useCalendarPreference } from '@/lib/hooks/useCalendarPreference';
@@ -42,7 +42,7 @@ const DUTY_STATUS_CONFIG: Record<
   { label: string; description: string; color: string; bg: string; border: string; icon: React.ComponentType<{ className?: string }> }
 > = {
   ONLINE: {
-    label: 'Online & Active',
+    label: 'Online & active',
     description: 'Actively visiting stores, GPS tracking active',
     color: 'text-emerald-700',
     bg: 'bg-emerald-50',
@@ -50,7 +50,7 @@ const DUTY_STATUS_CONFIG: Record<
     icon: CheckCircle2,
   },
   IN_FIELD: {
-    label: 'In Field / Beat',
+    label: 'In field / beat',
     description: 'On route to retail counters',
     color: 'text-blue-700',
     bg: 'bg-blue-50',
@@ -58,7 +58,7 @@ const DUTY_STATUS_CONFIG: Record<
     icon: TrendingUp,
   },
   ON_BREAK: {
-    label: 'On Break',
+    label: 'On break',
     description: 'Lunch, tea break or transit pause',
     color: 'text-amber-700',
     bg: 'bg-amber-50',
@@ -66,7 +66,7 @@ const DUTY_STATUS_CONFIG: Record<
     icon: Coffee,
   },
   OFFLINE: {
-    label: 'Offline (Day Concluded)',
+    label: 'Offline (day concluded)',
     description: 'Shift ended, GPS broadcast suspended',
     color: 'text-slate-600',
     bg: 'bg-slate-100',
@@ -74,7 +74,7 @@ const DUTY_STATUS_CONFIG: Record<
     icon: PowerOff,
   },
   ON_LEAVE: {
-    label: 'On Leave',
+    label: 'On leave',
     description: 'Scheduled leave / off duty today',
     color: 'text-rose-700',
     bg: 'bg-rose-50',
@@ -146,7 +146,7 @@ export default function UserProfileDrawer({
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/70">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-900">User Profile & Duty Control</span>
+              <span className="text-sm font-bold text-slate-900">User profile & duty control</span>
             </div>
             <button
               type="button"
@@ -229,7 +229,7 @@ export default function UserProfileDrawer({
                       {currentUser.assignedBrands.map((b) => (
                         <span
                           key={b}
-                          className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700"
+                          className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-700"
                         >
                           {b}
                         </span>
@@ -245,7 +245,7 @@ export default function UserProfileDrawer({
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-xs font-bold text-slate-500">
-                    Live Duty Status
+                    Live duty status
                   </h4>
                   <p className="text-[11px] text-slate-500">
                     Controls field tracking &amp; operational dispatch visibility
@@ -320,14 +320,14 @@ export default function UserProfileDrawer({
               <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-500">
-                    Today&apos;s Field Quick Stats
+                    Today&apos;s field quick stats
                   </span>
                   <Link
                     href="/offline-sales/scorecard"
                     onClick={onClose}
                     className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-0.5"
                   >
-                    <span>Full Scorecard</span>
+                    <span>Full scorecard</span>
                     <ChevronRight className="h-3 w-3" />
                   </Link>
                 </div>
@@ -336,15 +336,15 @@ export default function UserProfileDrawer({
                     <div className="text-base font-black text-slate-900">
                       {todayBeats.filter((beat) => beat.status === 'VISITED').length} / {todayBeats.length}
                     </div>
-                    <div className="text-[10px] font-semibold text-slate-500">Stores Visited</div>
+                    <div className="text-[11px] font-semibold text-slate-500">Stores visited</div>
                   </div>
                   <div className="rounded-lg bg-white p-2.5 border border-slate-200/80 shadow-xs">
                     <div className="text-base font-black text-emerald-600"><Money prefix="Rs ">{todayOrderAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Money></div>
-                    <div className="text-[10px] font-semibold text-slate-500">Orders Booked</div>
+                    <div className="text-[11px] font-semibold text-slate-500">Orders booked</div>
                   </div>
                   <div className="rounded-lg bg-white p-2.5 border border-slate-200/80 shadow-xs">
                     <div className="text-base font-black text-blue-600">{todayChequeCount}</div>
-                    <div className="text-[10px] font-semibold text-slate-500">Cheques Picked</div>
+                    <div className="text-[11px] font-semibold text-slate-500">Cheques picked</div>
                   </div>
                 </div>
               </div>
@@ -356,9 +356,9 @@ export default function UserProfileDrawer({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CalendarDays className="h-4 w-4 text-blue-600" />
-                  <span className="text-xs font-bold text-slate-900">Default Calendar</span>
+                  <span className="text-xs font-bold text-slate-900">Default calendar</span>
                 </div>
-                <span className="text-[10px] text-slate-500 font-medium">Saved on this device</span>
+                <span className="text-[11px] text-slate-500 font-medium">Saved on this device</span>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 {(['BS', 'AD', 'BOTH'] as const).map((pref) => (
@@ -390,8 +390,8 @@ export default function UserProfileDrawer({
                     <UserCheck className="h-4 w-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-900">Switch Persona</div>
-                    <div className="text-[10px] text-slate-500">
+                    <div className="text-xs font-bold text-slate-900">Switch persona</div>
+                    <div className="text-[11px] text-slate-500">
                       Simulate other staff roles &amp; permissions
                     </div>
                   </div>
@@ -418,7 +418,7 @@ export default function UserProfileDrawer({
                     >
                       <div>
                         <div className="font-semibold text-slate-900">{u.fullName}</div>
-                        <div className="text-[10px] text-slate-500">
+                        <div className="text-[11px] text-slate-500">
                           {u.is_super_admin || u.isSuperAdmin ? 'Super Admin' : (u.role ? u.role.replace('_', ' ') : 'Staff')} • {u.phone}
                         </div>
                       </div>
@@ -442,8 +442,8 @@ export default function UserProfileDrawer({
                   <Settings className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-slate-900">System Settings</div>
-                  <div className="text-[10px] text-slate-500">
+                  <div className="text-xs font-bold text-slate-900">System settings</div>
+                  <div className="text-[11px] text-slate-500">
                     Manage principal brands, staff users, rules
                   </div>
                 </div>

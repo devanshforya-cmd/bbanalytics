@@ -100,12 +100,12 @@ export async function GET(request: Request) {
       <div style="font-size: 12px; color: #b45309; font-weight: 600; margin-top: 4px;">Based on records saved in Supabase. Field and customer status show the current snapshot.</div>
     </div>
 
-    <div class="section-title">📦 Orders Overview</div>
+    <div class="section-title">Orders</div>
     <div class="stat-row"><span>Orders in period:</span><span class="stat-val">${totalOrders} (${brandSummary})</span></div>
     <div class="stat-row"><span>Top Channel:</span><span class="stat-val">${topChannelText}</span></div>
     <div class="stat-row"><span>Top Product:</span><span class="stat-val">${topProdText}</span></div>
 
-    <div class="section-title">🔴 Delivery Failures (Separated)</div>
+    <div class="section-title">Delivery failures</div>
     <div class="stat-row"><span>Failures in period:</span><span class="stat-val">${periodFailures.length} (${failureRate}% of orders)</span></div>
     <div class="stat-row"><span>Top Reason:</span><span class="stat-val">${topFailureText}</span></div>
 
@@ -113,20 +113,20 @@ export async function GET(request: Request) {
     <div class="stat-row"><span>Returns in period:</span><span class="stat-val">${periodReturns.length} (${returnRate}% of orders)</span></div>
     <div class="stat-row"><span>Top Issue:</span><span class="stat-val">${topReturnText}</span></div>
 
-    <div class="section-title">💬 Customer Complaints</div>
+    <div class="section-title">Customer complaints</div>
     <div class="stat-row"><span>New Complaints:</span><span class="stat-val">${newComplaints.length}</span></div>
     <div class="stat-row"><span>Resolved:</span><span class="stat-val">${resolvedComplaints.length} | Still Open: ${openComplaints.length}</span></div>
 
-    <div class="section-title">🏪 Current Field Sales Status</div>
+    <div class="section-title">Field sales</div>
     <div class="stat-row"><span>Beat Compliance:</span><span class="stat-val">${scorecardText}</span></div>
     <div class="stat-row"><span>Store Visits Completed:</span><span class="stat-val">${db.getBeatItems().filter(b => b.status === 'VISITED' && isInReportPeriod(b.dateAd)).length} visits across ${scorecards.length} officers</span></div>
     <div class="stat-row"><span>Current Cheque Status:</span><span class="stat-val">${cheques.filter(c => c.status === 'COLLECTED_IN_FIELD').length} Collected | ${cheques.filter(c => c.status === 'CASHED').length} Cashed | ${cheques.filter(c => c.status === 'DELAYED' || c.status === 'BOUNCED').length} Overdue/Delayed</span></div>
 
-    <div class="section-title">👥 Customer Intelligence</div>
+    <div class="section-title">Customers</div>
     <div class="stat-row"><span>Total Customers:</span><span class="stat-val">${customers.length} profiles</span></div>
     <div class="stat-row"><span>Customers at Risk (Karma &lt; 40):</span><span class="stat-val" style="color: #dc2626;">${customers.filter(c => c.karmaScore < 40).length} accounts</span></div>
 
-    <div class="section-title">📅 Current Operations Outlook</div>
+    <div class="section-title">Coming up</div>
     <div class="stat-row"><span>Pending Action Items:</span><span class="stat-val">${cheques.filter(c => c.status === 'DELAYED' || c.status === 'BOUNCED').length} overdue cheques, ${openComplaints.length} open complaints</span></div>
 
     <div class="footer">

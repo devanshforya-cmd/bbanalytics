@@ -84,8 +84,8 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
 
   const footer = (
     <div className="flex items-center justify-end gap-2">
-      <button type="button" onClick={onClose} disabled={isSubmitting} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Later</button>
-      <button type="button" onClick={save} disabled={isSubmitting} className="rounded-xl bg-purple-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700 disabled:bg-purple-300">
+      <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn-secondary disabled:opacity-50">Later</button>
+      <button type="button" onClick={save} disabled={isSubmitting} className="rounded-lg bg-purple-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700 disabled:bg-purple-300">
         {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : mode === 'CREATE' ? 'Create replacement order' : 'Link order'}
       </button>
     </div>
@@ -138,7 +138,7 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
                     <li key={entry.id}>
                       <button type="button" disabled={added} onClick={() => setItems((rows) => [...rows, { productId: entry.id, productName: entry.name, brandCode: entry.brandCode, quantity: 1 }])}
                         className="flex w-full items-center justify-between px-3 py-1.5 text-left hover:bg-purple-50 disabled:text-slate-400">
-                        <span className="truncate">{entry.name}{entry.combo && <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 text-[9px] font-bold text-amber-800">Combo</span>}</span>
+                        <span className="truncate">{entry.name}{entry.combo && <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 text-[11px] font-bold text-amber-800">Combo</span>}</span>
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700">{added ? 'Added' : <><PackagePlus className="h-3 w-3" /> Add</>}</span>
                       </button>
                     </li>
@@ -176,7 +176,7 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
                   <li key={order.id}>
                     <button type="button" role="radio" aria-checked={linkId === order.id} onClick={() => setLinkId(order.id)}
                       className={`w-full rounded-xl border px-3 py-2 text-left ${linkId === order.id ? 'border-purple-400 bg-purple-50 ring-2 ring-purple-100' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
-                      <span className="flex items-center justify-between gap-2"><span className="font-mono font-bold text-slate-900">{displayDocumentId(order.orderNumber)}{order.exchangeRequested && !order.exchangeReturnId && <span className="ml-1.5 rounded-full bg-purple-100 px-1.5 font-sans text-[9px] font-bold text-purple-800">Exchange from WhatsApp</span>}</span><OrderStatusBadge status={order.status} /></span>
+                      <span className="flex items-center justify-between gap-2"><span className="font-mono font-bold text-slate-900">{displayDocumentId(order.orderNumber)}{order.exchangeRequested && !order.exchangeReturnId && <span className="ml-1.5 rounded-full bg-purple-100 px-1.5 font-sans text-[11px] font-bold text-purple-800">Exchange from WhatsApp</span>}</span><OrderStatusBadge status={order.status} /></span>
                       <span className="block truncate text-[11px] text-slate-500">{formatDate(order.orderDateAd, order.orderDateBs)} · {order.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')} · <Money>{order.totalAmount.toLocaleString()}</Money></span>
                     </button>
                   </li>

@@ -29,6 +29,8 @@ export default function NavMenu({ user, pathname, query = '', onNavigate, compac
     .map((group) => ({ ...group, sections: group.sections.map((entry) => ({ ...entry, items: entry.items.filter((item) => !q || item.label.toLowerCase().includes(q)) })).filter((entry) => entry.items.length) }))
     .filter((group) => group.sections.length);
   const titled = groups.filter((group) => group.title);
+  // Only the closest match is active, so /customers/insights does not also light up /customers.
+  const activeHref = groups.flatMap((group) => group.sections.flatMap((entry) => entry.items.map((item) => item.href))).filter((href) => isActivePath(pathname, href)).sort((a, b) => b.length - a.length)[0];
   const holdsActive = (group: NavGroup) => group.sections.some((entry) => entry.items.some((item) => isActivePath(pathname, item.href)));
   const isOpen = (group: NavGroup) => !!q || titled.length <= 1 || holdsActive(group) || (open[group.key] ?? true);
   const toggle = (group: NavGroup) => {
@@ -40,8 +42,8 @@ export default function NavMenu({ user, pathname, query = '', onNavigate, compac
   if (!groups.length) return <p className="px-3 py-8 text-center text-xs text-slate-500">No page matches “{query}”.</p>;
 
   const link = compact
-    ? { base: 'flex items-center justify-between rounded-lg px-3 py-2 text-xs transition', active: 'bg-blue-50 font-semibold text-blue-700', idle: 'font-medium text-slate-700 hover:bg-slate-50', icon: 'h-4 w-4' }
-    : { base: 'group flex items-center justify-between rounded-lg px-2.5 py-[7px] text-[13px] transition-colors duration-150', active: 'bg-blue-600/10 font-semibold text-blue-700', idle: 'font-medium text-slate-700 hover:bg-black/[0.04]', icon: 'h-[18px] w-[18px]' };
+    ? { base: 'flex items-center justify-between rounded-lg px-3 py-2 text-xs transition', active: 'bg-black/[0.05] font-medium text-slate-900', idle: 'text-slate-600 hover:bg-slate-50', icon: 'h-4 w-4' }
+    : { base: 'group flex h-8 items-center justify-between rounded-lg px-2.5 text-[13px] transition-colors duration-150', active: 'bg-black/[0.05] font-medium text-slate-900 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]', idle: 'text-slate-600 hover:bg-black/[0.03] hover:text-slate-900', icon: 'h-4 w-4' };
 
   return (
     <div className="space-y-2">
@@ -51,21 +53,21 @@ export default function NavMenu({ user, pathname, query = '', onNavigate, compac
         const GroupIcon = group.icon;
         const count = group.sections.reduce((sum, entry) => sum + entry.items.length, 0);
         const body = (
-          <div id={panelId} className={group.title ? 'mt-1 space-y-3' : 'space-y-3'}>
+          <div id={panelId} className={group.title ? 'mt-1 space-y-2' : 'space-y-2'}>
             {group.sections.map((entry) => (
               <div key={entry.title || 'top'}>
-                {entry.title && group.sections.length > 1 && <p className="px-2.5 pb-0.5 pt-1 text-[11px] font-medium text-slate-500">{entry.title}</p>}
-                <div className="space-y-px">
+                {entry.title && group.sections.length > 1 && <p className="px-2.5 pb-1 pt-2 text-xs text-slate-400">{entry.title}</p>}
+                <div className="space-y-0.5">
                   {entry.items.map((item) => {
-                    const active = isActivePath(pathname, item.href);
+                    const active = item.href === activeHref;
                     const Icon = item.icon;
                     return (
                       <Link key={item.href} href={item.href} onClick={onNavigate} aria-current={active ? 'page' : undefined} className={`${link.base} ${active ? link.active : link.idle}`}>
                         <span className="flex items-center gap-2.5">
-                          <Icon className={`${link.icon} shrink-0 ${active ? 'text-blue-600' : 'text-slate-500'}`} />
+                          <Icon className={`${link.icon} shrink-0 ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
                           <span>{item.label}</span>
                         </span>
-                        {item.badge && <span className={`rounded-md border px-1.5 py-0.5 text-[9px] font-bold ${active ? 'border-blue-200/60 bg-blue-100/80 text-blue-700' : 'border-slate-200/50 bg-slate-100 text-slate-500'}`}>{item.badge}</span>}
+                        {item.badge && <span className="font-mono text-[11px] tabular-nums text-slate-500">{item.badge}</span>}
                       </Link>
                     );
                   })}
@@ -76,12 +78,12 @@ export default function NavMenu({ user, pathname, query = '', onNavigate, compac
         );
         if (!group.title) return <div key={group.key} className="pb-1">{body}</div>;
         return (
-          <div key={group.key} className="border-t border-black/[0.05] pt-2">
+          <div key={group.key} className="border-t border-black/[0.06] pt-3">
             <button type="button" onClick={() => toggle(group)} aria-expanded={expanded} aria-controls={panelId} disabled={!!q || titled.length <= 1}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition hover:bg-black/[0.04] disabled:cursor-default disabled:hover:bg-transparent">
-              {GroupIcon && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-900/[0.06] text-slate-700"><GroupIcon className="h-3.5 w-3.5" /></span>}
+              className="flex min-h-8 w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-black/[0.03] disabled:cursor-default disabled:hover:bg-transparent">
+              {GroupIcon && <GroupIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-400" />}
               <span className="min-w-0 flex-1">
-                <span className="block text-[13px] font-semibold text-slate-900">{group.title}</span>
+                <span className="block text-[13px] font-medium text-slate-900">{group.title}</span>
                 {!expanded && <span className="block truncate text-[11px] text-slate-500">{count} pages · {group.description}</span>}
               </span>
               {titled.length > 1 && !q && <ChevronRight aria-hidden="true" className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />}

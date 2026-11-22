@@ -36,7 +36,7 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
-  Sparkles,
+  Lightbulb,
   Share2,
   Globe,
   Camera,
@@ -307,7 +307,7 @@ function FeedbackContent() {
     selectedIds.forEach((id) => {
       db.updateComplaintStatus(id, newStatus, 'Bulk status update');
     });
-    toast.success(`✓ Updated status of ${selectedIds.length} feedback items to ${newStatus}.`);
+    toast.success(`Updated status of ${selectedIds.length} feedback items to ${newStatus}.`);
     setSelectedIds([]);
     refreshList();
   };
@@ -320,7 +320,7 @@ function FeedbackContent() {
     selectedIds.forEach((id) => {
       db.assignFeedback(id, officerId, officerName);
     });
-    toast.success(`✓ Assigned ${selectedIds.length} feedback items to ${officerName}.`);
+    toast.success(`Assigned ${selectedIds.length} feedback items to ${officerName}.`);
     setSelectedIds([]);
     refreshList();
   };
@@ -330,8 +330,8 @@ function FeedbackContent() {
       <div className="space-y-6 pb-20 max-w-7xl mx-auto">
       <Breadcrumbs
         items={[
-          { label: 'Reviews & Feedback', href: '/reviews/feedback' },
-          { label: 'Customer Reviews' },
+          { label: 'Reviews & feedback', href: '/reviews/feedback' },
+          { label: 'Customer reviews' },
         ]}
       />
 
@@ -339,7 +339,7 @@ function FeedbackContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            Feedback & Complaints
+            Feedback & complaints
 <InfoTip label="About this page">Omnichannel feedback stream with dynamic issue classification, marketing design tagging, and complaint resolution tracking.</InfoTip></h1>
           
         </div>
@@ -350,7 +350,7 @@ function FeedbackContent() {
           className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" />
-          Log Feedback / Review
+          Log feedback / review
         </button>
       </div>
 
@@ -473,7 +473,7 @@ function FeedbackContent() {
             className="text-blue-700 hover:text-blue-900 font-bold hover:underline flex items-center gap-1"
           >
             <X className="w-3.5 h-3.5" />
-            Clear Filter (Show All)
+            Clear filter (show all)
           </button>
         </div>
       )}
@@ -538,10 +538,10 @@ function FeedbackContent() {
                       ) : (
                         <span className="font-bold text-slate-900 text-sm truncate">{item.customerName}</span>
                       )}
-                      {item.customerLink === 'UNLINKED' && <span className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">Unlinked</span>}
+                      {item.customerLink === 'UNLINKED' && <span className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">Unlinked</span>}
                     </div>
                   </div>
-                  <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 shrink-0">
+                  <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600 shrink-0">
                     {item.channel}
                   </span>
                 </div>
@@ -557,7 +557,7 @@ function FeedbackContent() {
                   </Link>
                 </div>
 
-                <p className="text-slate-700 italic leading-relaxed line-clamp-3 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+                <p className="text-slate-700 leading-relaxed line-clamp-3 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
                   &quot;{item.fullText}&quot;
                 </p>
 
@@ -580,13 +580,13 @@ function FeedbackContent() {
                           alt="Customer proof"
                           className="h-full w-full object-cover group-hover/img:scale-105 transition-transform"
                         />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity text-white text-[9px] font-bold gap-0.5">
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity text-white text-[11px] font-bold gap-0.5">
                           <ZoomIn className="w-3 h-3" />
                           <span>Zoom</span>
                         </div>
                       </button>
                     ))}
-                    <span className="text-[10px] text-slate-500 font-medium">Proof Attached</span>
+                    <span className="text-[11px] text-slate-500 font-medium">Proof attached</span>
                   </div>
                 )}
 
@@ -596,7 +596,7 @@ function FeedbackContent() {
                     {item.issueCategories.map((cat, i) => (
                       <span
                         key={i}
-                        className="rounded bg-rose-50 border border-rose-200 text-rose-800 px-2 py-0.5 text-[10px] font-medium"
+                        className="rounded bg-rose-50 border border-rose-200 text-rose-800 px-2 py-0.5 text-[11px] font-medium"
                       >
                         {cat}
                       </span>
@@ -611,7 +611,7 @@ function FeedbackContent() {
                   {item.usedInDesign && (
                     <span
                       title="Used in social media marketing design"
-                      className="rounded bg-purple-100 text-purple-800 font-bold px-2 py-0.5 text-[10px] flex items-center gap-1"
+                      className="rounded bg-purple-100 text-purple-800 font-bold px-2 py-0.5 text-[11px] flex items-center gap-1"
                     >
                       <Share2 className="h-3 w-3" />
                       Design
@@ -620,21 +620,21 @@ function FeedbackContent() {
                   {item.postedOnWebsite && (
                     <span
                       title="Published on website for SEO"
-                      className="rounded bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[10px] flex items-center gap-1"
+                      className="rounded bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[11px] flex items-center gap-1"
                     >
                       <Globe className="h-3 w-3" />
                       Website
                     </span>
                   )}
                   {item.complaintStatus && (
-                    <span className="rounded-full bg-rose-100 text-rose-800 font-bold px-2 py-0.5 text-[10px]">
+                    <span className="rounded-full bg-rose-100 text-rose-800 font-bold px-2 py-0.5 text-[11px]">
                       {item.complaintStatus}
                     </span>
                   )}
                 </div>
 
                 <span className="text-blue-600 font-semibold group-hover:underline text-[11px]">
-                  View Details →
+                  View details →
                 </span>
               </div>
             </div>
@@ -695,7 +695,7 @@ function FeedbackContent() {
                   <p className="text-amber-800">This entry was saved with only a name or handle{selectedEntry.customerHandle ? <> (<strong>{selectedEntry.customerHandle}</strong>)</> : null}. Attach the customer once you have their number.</p>
                   <CustomerLookup value={linkLookup} onChange={setLinkLookup} />
                   <div className="flex justify-end">
-                    <button type="button" onClick={handleAttachCustomer} disabled={isSubmitting || !linkLookup.link} className="rounded-lg bg-blue-600 px-4 py-2 font-bold text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed">
+                    <button type="button" onClick={handleAttachCustomer} disabled={isSubmitting || !linkLookup.link} className="btn btn-primary disabled:bg-blue-300 disabled:cursor-not-allowed">
                       {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Attach customer'}
                     </button>
                   </div>
@@ -709,7 +709,7 @@ function FeedbackContent() {
               {/* Proof Photos Gallery with Click-to-Zoom (PRD v2.2) */}
               <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-800 text-[10px]  flex items-center gap-1.5">
+                  <span className="font-bold text-slate-800 text-[11px]  flex items-center gap-1.5">
                     <Camera className="w-3.5 h-3.5 text-blue-600" />
                     <span>Customer Proof &amp; Chat Evidence ({selectedEntry.screenshotUrls.length})</span>
                   </span>
@@ -737,7 +737,7 @@ function FeedbackContent() {
                       className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 flex items-center gap-1 shadow-2xs"
                     >
                       <Upload className="w-3 h-3 text-blue-600" />
-                      <span>Attach Photo</span>
+                      <span>Attach photo</span>
                     </button>
                     <button
                       type="button"
@@ -745,7 +745,7 @@ function FeedbackContent() {
                       className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 flex items-center gap-1 shadow-2xs"
                     >
                       <Camera className="w-3 h-3 text-emerald-600" />
-                      <span>Take Photo</span>
+                      <span>Take photo</span>
                     </button>
                   </div>
                 </div>
@@ -761,14 +761,14 @@ function FeedbackContent() {
                         <img
                           src={url}
                           alt={`Proof photo ${idx + 1}`}
-                          className="h-full w-full object-cover group-hover:scale-105 transition-transform"
+                          className="h-full w-full object-cover transition-transform"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                           <span className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full bg-white/90 text-slate-800 shadow transition-opacity">
                             <Maximize2 className="w-3.5 h-3.5" />
                           </span>
                         </div>
-                        <span className="absolute bottom-1 left-1.5 text-[9px] bg-black/60 text-white px-1.5 py-0.5 rounded font-mono">
+                        <span className="absolute bottom-1 left-1.5 text-[11px] bg-black/60 text-white px-1.5 py-0.5 rounded font-mono">
                           Photo #{idx + 1}
                         </span>
                       </div>
@@ -784,8 +784,8 @@ function FeedbackContent() {
 
               {/* Marketing Toggles */}
               <div className="rounded-xl border border-slate-200 p-4 space-y-2">
-                <div className="font-bold text-slate-800 text-[10px] ">
-                  Marketing & Brand Intelligence Flags:
+                <div className="font-bold text-slate-800 text-[11px] ">
+                  Marketing & brand intelligence flags:
                 </div>
                 <div className="flex flex-wrap items-center gap-4">
                   <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
@@ -795,7 +795,7 @@ function FeedbackContent() {
                       onChange={() => handleToggleFlag(selectedEntry.id, 'usedInDesign')}
                       className="h-4 w-4 rounded text-blue-600"
                     />
-                    Used in Social Media Design
+                    Used in social media design
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
                     <input
@@ -804,7 +804,7 @@ function FeedbackContent() {
                       onChange={() => handleToggleFlag(selectedEntry.id, 'postedOnWebsite')}
                       className="h-4 w-4 rounded text-blue-600"
                     />
-                    Posted on Website (SEO Review)
+                    Posted on website (SEO review)
                   </label>
                 </div>
               </div>
@@ -814,9 +814,9 @@ function FeedbackContent() {
                 <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-rose-950 text-xs ">
-                      Complaint Resolution Workflow
+                      Complaint resolution workflow
                     </span>
-                    <span className="rounded-full bg-rose-200 px-2.5 py-0.5 text-[10px] font-bold text-rose-900">
+                    <span className="rounded-full bg-rose-200 px-2.5 py-0.5 text-[11px] font-bold text-rose-900">
                       Current: {selectedEntry.complaintStatus}
                     </span>
                   </div>
@@ -841,14 +841,14 @@ function FeedbackContent() {
                         onClick={() => setShowEscalateModal(true)}
                         className="rounded-lg bg-rose-700 hover:bg-rose-800 text-white px-3 py-1 text-xs font-bold shadow-xs transition flex items-center gap-1"
                       >
-                        Escalate to Urgent
+                        Escalate to urgent
                       </button>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-rose-900 font-bold mb-1">Add Resolution Note:</label>
-                    <input aria-label="Add Resolution Note:"
+                    <label className="block text-rose-900 font-bold mb-1">Add resolution note:</label>
+                    <input aria-label="Add resolution note:"
                       type="text"
                       placeholder="e.g. Replacement unit sent via Pathao, customer satisfied"
                       value={resolutionNote}
@@ -862,8 +862,8 @@ function FeedbackContent() {
               {/* Timeline */}
               {selectedEntry.history && selectedEntry.history.length > 0 && (
                 <div className="space-y-2 border-t border-slate-100 pt-3">
-                  <div className="font-bold text-slate-500 text-[10px]">
-                    Status History
+                  <div className="font-bold text-slate-500 text-[11px]">
+                    Status history
                   </div>
                   {selectedEntry.history.map((h) => (
                     <div key={h.id} className="text-[11px] text-slate-600">
@@ -892,7 +892,7 @@ function FeedbackContent() {
           <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
-                <h3 className="font-bold text-slate-900 text-base">Log Customer Feedback / Review</h3>
+                <h3 className="font-bold text-slate-900 text-base">Log customer feedback / review</h3>
                 <p className="text-xs text-slate-500">Captures customer sentiment and issue tags</p>
               </div>
               <button onClick={() => setShowLogModal(false)} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100">
@@ -903,7 +903,7 @@ function FeedbackContent() {
             <form onSubmit={handleSaveFeedback} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
               {/* Type Selector (PRD 6.2 Step 2) */}
               <div>
-                <label className="block font-bold text-slate-700 mb-2">Entry Type *</label>
+                <label className="block font-bold text-slate-700 mb-2">Entry type *</label>
                 <div className="grid grid-cols-3 gap-3">
                   <button
                     type="button"
@@ -918,7 +918,7 @@ function FeedbackContent() {
                     }`}
                   >
                     
-                    Review (Positive)
+                    Review (positive)
                   </button>
 
                   <button
@@ -934,7 +934,7 @@ function FeedbackContent() {
                     }`}
                   >
                     
-                    Feedback (Suggestion)
+                    Feedback (suggestion)
                   </button>
 
                   <button
@@ -950,7 +950,7 @@ function FeedbackContent() {
                     }`}
                   >
                     
-                    Complaint (Action Req.)
+                    Complaint (action req.)
                   </button>
                 </div>
               </div>
@@ -1028,23 +1028,23 @@ function FeedbackContent() {
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
                   >
                     <option>Instagram DM</option>
-                    <option>Instagram Comment</option>
+                    <option>Instagram comment</option>
                     <option>WhatsApp</option>
                     <option>Messenger</option>
-                    <option>TikTok Comment</option>
-                    <option>Website Review</option>
-                    <option>Daraz Review</option>
-                    <option>Google Review</option>
+                    <option>TikTok comment</option>
+                    <option>Website review</option>
+                    <option>Daraz review</option>
+                    <option>Google review</option>
                     <option>In-Store</option>
-                    <option>Phone Call</option>
+                    <option>Phone call</option>
                   </select>
                 </div>
               </div>
 
               {/* Exact Text */}
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Full Text (Exact Message) *</label>
-                <textarea aria-label="Full Text (Exact Message)"
+                <label className="block font-bold text-slate-700 mb-1">Full text (exact message) *</label>
+                <textarea aria-label="Full text (exact message)"
                   rows={3}
                   required
                   placeholder="Paste the exact review or complaint received from the customer…"
@@ -1086,8 +1086,8 @@ function FeedbackContent() {
                   </label>
 
                   {hasScreenshot && (
-                    <span className="text-[10px] font-medium text-slate-500">
-                      Camera / Photo / Screenshot
+                    <span className="text-[11px] font-medium text-slate-500">
+                      Camera / photo / screenshot
                     </span>
                   )}
                 </div>
@@ -1096,7 +1096,7 @@ function FeedbackContent() {
                   <div className="space-y-3 pt-1">
                     <CameraCapture
                       folder="reviews"
-                      label="Capture / Attach Proof Photos"
+                      label="Capture / attach proof photos"
                       sublabel="Photograph defect, chat screenshots, or damaged packaging"
                       maxFiles={6}
                       existingUrls={uploadedPhotos}
@@ -1118,7 +1118,7 @@ function FeedbackContent() {
                     onChange={(e) => setUsedInDesign(e.target.checked)}
                     className="h-4 w-4 rounded text-blue-600"
                   />
-                  Used in Design
+                  Used in design
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-medium text-xs">
                   <input
@@ -1127,7 +1127,7 @@ function FeedbackContent() {
                     onChange={(e) => setPostedOnWebsite(e.target.checked)}
                     className="h-4 w-4 rounded text-blue-600"
                   />
-                  Posted on Website
+                  Posted on website
                 </label>
               </div>
 
@@ -1142,7 +1142,7 @@ function FeedbackContent() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow text-xs disabled:bg-blue-300 disabled:cursor-not-allowed"
+                  className="btn btn-primary disabled:bg-blue-300 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save Entry'}
                 </button>
@@ -1165,13 +1165,13 @@ function FeedbackContent() {
             <div className="w-full flex items-center justify-between text-white pb-3 px-1">
               <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
                 <Camera className="w-4 h-4 text-emerald-400" />
-                Customer Review Proof Evidence &bull; Full Resolution Zoom
+                Customer review proof evidence &bull; full resolution zoom
               </span>
               <button
                 type="button"
                 onClick={() => setLightboxImageUrl(null)}
                 className="p-1.5 rounded-full bg-white/20 hover:bg-white/40 text-white transition-colors"
-                title="Close Lightbox"
+                title="Close lightbox"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1205,9 +1205,9 @@ function FeedbackContent() {
             }}
             className="rounded-lg bg-slate-800 border border-slate-700 text-white text-xs px-2.5 py-1.5 outline-none font-medium cursor-pointer"
           >
-            <option value="" disabled>Set Status…</option>
+            <option value="" disabled>Set status…</option>
             <option value="OPEN">Open</option>
-            <option value="IN_PROGRESS">In Progress</option>
+            <option value="IN_PROGRESS">In progress</option>
             <option value="RESOLVED">Resolved</option>
             <option value="CLOSED">Closed</option>
           </select>
@@ -1239,15 +1239,15 @@ function FeedbackContent() {
       {/* FIX 50c: Context-Rich Complaint Escalation Modal */}
       <ConfirmModal
         isOpen={showEscalateModal}
-        title="Escalate Complaint to Urgent Priority?"
+        title="Escalate complaint to urgent priority?"
         variant="danger"
-        confirmLabel="Escalate Now"
+        confirmLabel="Escalate now"
         cancelLabel="Cancel"
         details={selectedEntry ? [
           { label: 'Customer', value: `${selectedEntry.customerName} (${selectedEntry.customerPhone})` },
           { label: 'Product', value: selectedEntry.productName },
-          { label: 'Issue Category', value: selectedEntry.issueCategories?.join(', ') || 'Quality / Delivery Issue' },
-          { label: 'Current Priority', value: `${selectedEntry.priority || 'MEDIUM'} → URGENT` },
+          { label: 'Issue category', value: selectedEntry.issueCategories?.join(', ') || 'Quality / Delivery Issue' },
+          { label: 'Current priority', value: `${selectedEntry.priority || 'MEDIUM'} → URGENT` },
         ] : []}
         consequences={[
           'Dispatch high-priority push notification to all Operations Admins',
@@ -1258,8 +1258,8 @@ function FeedbackContent() {
         onCancel={() => setShowEscalateModal(false)}
       >
         <div className="space-y-2 pt-1 text-xs">
-          <label className="block font-bold text-slate-700">Assign Operations Staff:</label>
-          <select aria-label="Assign Operations Staff:"
+          <label className="block font-bold text-slate-700">Assign operations staff:</label>
+          <select aria-label="Assign operations staff:"
             value={escalateAssignee}
             onChange={(e) => setEscalateAssignee(e.target.value)}
             className="w-full rounded-xl border border-slate-300 p-2.5 bg-white text-xs font-medium outline-none"
@@ -1271,8 +1271,8 @@ function FeedbackContent() {
             ))}
           </select>
 
-          <label className="block font-bold text-slate-700 pt-1">Escalation Rationale / Action Directives:</label>
-          <input aria-label="Escalation Rationale / Action Directives:"
+          <label className="block font-bold text-slate-700 pt-1">Escalation rationale / action directives:</label>
+          <input aria-label="Escalation rationale / action directives:"
             type="text"
             placeholder="e.g. Broken seal spilled on customer dress, immediate replacement required"
             value={escalateNote}

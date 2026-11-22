@@ -25,7 +25,7 @@ import {
   X,
   UserCheck,
   Workflow,
-  Sparkles,
+  Lightbulb,
   Navigation,
 } from 'lucide-react';
 
@@ -82,7 +82,7 @@ export default function TasksPage() {
     setShowLeaveModal(false);
     refreshTasks();
     toast.success(
-      `✓ Leave recorded for ${fromUser?.fullName || 'Staff'}! Reassigned ${result.reassignedTasksCount} tasks and ${result.reassignedBeatsCount} beat stops to ${toUser?.fullName || 'Reliever'}.`
+      `Leave recorded for ${fromUser?.fullName || 'Staff'}. Reassigned ${result.reassignedTasksCount} tasks and ${result.reassignedBeatsCount} beat stops to ${toUser?.fullName || 'Reliever'}.`
     );
   };
 
@@ -126,7 +126,7 @@ export default function TasksPage() {
     selectedIds.forEach((id) => {
       db.reassignTask(id, officerId, officerName);
     });
-    toast.success(`✓ Reassigned ${selectedIds.length} tasks to ${officerName}.`);
+    toast.success(`Reassigned ${selectedIds.length} tasks to ${officerName}.`);
     setSelectedIds([]);
     refreshTasks();
   };
@@ -137,7 +137,7 @@ export default function TasksPage() {
     selectedIds.forEach((id) => {
       db.updateTaskStatus(id, 'COMPLETED');
     });
-    toast.success(`✓ Marked ${selectedIds.length} tasks as Completed.`);
+    toast.success(`Marked ${selectedIds.length} tasks as Completed.`);
     setSelectedIds([]);
     refreshTasks();
   };
@@ -147,7 +147,7 @@ export default function TasksPage() {
     selectedIds.forEach((id) => {
       db.updateTaskPriority(id, newPriority);
     });
-    toast.success(`✓ Updated priority of ${selectedIds.length} tasks to ${newPriority}.`);
+    toast.success(`Updated priority of ${selectedIds.length} tasks to ${newPriority}.`);
     setSelectedIds([]);
     refreshTasks();
   };
@@ -195,7 +195,7 @@ export default function TasksPage() {
     setFormErrors({});
     setShowAddModal(false);
     refreshTasks();
-    toast.success(`✓ Task created and assigned to ${user.fullName}.`);
+    toast.success(`Task created and assigned to ${user.fullName}.`);
   };
 
   const handleInstantiateTemplate = (e: React.FormEvent) => {
@@ -209,7 +209,7 @@ export default function TasksPage() {
     setShowTemplateModal(false);
     setTemplateStoreName('');
     refreshTasks();
-    toast.success(`✓ Successfully generated ${created.length} sequential SOP tasks.`);
+    toast.success(`Generated ${created.length} sequential SOP tasks.`);
   };
 
   const visibleTasks = tasks.filter((t) => {
@@ -239,56 +239,59 @@ export default function TasksPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              Task Assignment & Work Management (OpsCore)
+              Task management
 <InfoTip label="About this page">Manual and auto-generated action items for field follow-ups, overdue cheques, and store visits.</InfoTip></h1>
             
           </div>
-          <DownloadButton datasets={['tasks']} records={{ tasks: filtered } as any} />
-
           <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+            <DownloadButton datasets={['tasks']} records={{ tasks: filtered } as any} />
             <Link
               href="/offline-sales/beat-plan"
-              className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+              className="btn btn-secondary"
             >
-              <Navigation className="h-3.5 w-3.5 text-blue-600" />
-              Beat Route Planner
+              <Navigation />
+              Beat plan
             </Link>
 
             <button
               onClick={() => setShowLeaveModal(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100 transition shadow-2xs"
+              type="button"
+              className="btn btn-secondary"
             >
-              <UserCheck className="h-3.5 w-3.5 text-amber-600" />
-              Staff Leave &amp; Reassign
+              <UserCheck />
+              Staff leave
             </button>
 
             <button
               onClick={() => setShowTemplateModal(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-blue-600 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition shadow-xs"
+              type="button"
+              className="btn btn-secondary"
             >
-              <Workflow className="h-4 w-4 text-blue-600" />
-              Create from Template
+              <Workflow />
+              From template
             </button>
 
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 transition"
+              type="button"
+              className="btn btn-primary"
             >
-              <Plus className="h-4 w-4" />
-              Create Task
+              <Plus />
+              Create task
             </button>
           </div>
         </div>
 
       {/* Search */}
-      <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm flex items-center gap-3">
+      <div className="flex h-10 items-center gap-2.5 rounded-lg border border-black/[0.08] bg-white px-3">
         <Search className="h-4 w-4 text-slate-400" />
         <input
           type="text"
-          placeholder="Search tasks…"
+          aria-label="Search tasks"
+          placeholder="Search"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full text-xs outline-none"
+          className="w-full bg-transparent text-[13px] outline-none"
         />
       </div>
 
@@ -341,7 +344,7 @@ export default function TasksPage() {
                 className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
                   isDone ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300 bg-white'
                 }`}
-                title={isDone ? 'Mark Pending' : 'Mark Completed'}
+                title={isDone ? 'Mark as open' : 'Mark as done'}
               >
                 {isDone && <CheckCircle className="h-3 w-3" />}
               </button>
@@ -349,33 +352,31 @@ export default function TasksPage() {
               <div className="flex-1 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span
-                    className={`font-bold text-sm ${
+                    className={`text-sm font-medium ${
                       isDone ? 'line-through text-slate-500' : 'text-slate-900'
                     }`}
                   >
                     {task.title}
                   </span>
                   {task.autoCreated && (
-                    <span className="rounded bg-blue-50 border border-blue-200 text-blue-700 px-2 py-0.2 text-[9px] font-bold ">
-                      Auto-Created
-                    </span>
+                    <span className="text-xs text-slate-500">Auto-created</span>
                   )}
                   <span
-                    className={`rounded-full px-2 py-0.2 text-[9px] font-bold  ${
+                    className={`rounded-full px-2 py-0.2 text-[11px] font-bold  ${
                       task.priority === 'HIGH' || task.priority === 'URGENT'
                         ? 'bg-rose-100 text-rose-800'
                         : 'bg-slate-100 text-slate-700'
-                    }`}
+                    } enum-label`}
                   >
                     {task.priority}
                   </span>
                 </div>
 
                 {task.description && (
-                  <p className="text-slate-600 text-[11px] leading-relaxed">{task.description}</p>
+                  <p className="text-[13px] leading-5 text-slate-600">{task.description}</p>
                 )}
 
-                <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-500 pt-1">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-xs text-slate-500">
                   <span>
                     Assigned to: <strong className="text-slate-700">{task.assignedToName}</strong>
                   </span>
@@ -393,7 +394,7 @@ export default function TasksPage() {
           <EmptyState
             type="tasks"
             action={{
-              label: 'Create Task',
+              label: 'Create task',
               onClick: () => setShowAddModal(true),
             }}
           />
@@ -407,7 +408,7 @@ export default function TasksPage() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Workflow className="h-5 w-5 text-blue-600" />
-                <h3 className="font-bold text-slate-900 text-base">Instantiate SOP Task Template</h3>
+                <h3 className="font-bold text-slate-900 text-base">Instantiate SOP task template</h3>
               </div>
               <button
                 onClick={() => setShowTemplateModal(false)}
@@ -419,7 +420,7 @@ export default function TasksPage() {
 
             <form onSubmit={handleInstantiateTemplate} className="space-y-4">
               <div>
-                <label htmlFor="tasks-select-sop-template" className="block font-bold text-slate-700 mb-1">Select SOP Template *</label>
+                <label htmlFor="tasks-select-sop-template" className="block font-bold text-slate-700 mb-1">Select SOP template *</label>
                 <select id="tasks-select-sop-template"
                   value={selectedTemplateId}
                   onChange={(e) => setSelectedTemplateId(e.target.value)}
@@ -435,8 +436,8 @@ export default function TasksPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Assignee (Officer) *</label>
-                  <select aria-label="Assignee (Officer)"
+                  <label className="block font-bold text-slate-700 mb-1">Assignee (officer) *</label>
+                  <select aria-label="Assignee (officer)"
                     value={templateAssignee}
                     onChange={(e) => setTemplateAssignee(e.target.value)}
                     className="w-full rounded-lg border border-slate-200 p-2.5 outline-none font-medium bg-white"
@@ -450,8 +451,8 @@ export default function TasksPage() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Target Store / Entity Name</label>
-                  <input aria-label="Target Store / Entity Name"
+                  <label className="block font-bold text-slate-700 mb-1">Target store / entity name</label>
+                  <input aria-label="Target store / entity name"
                     type="text"
                     placeholder="e.g. Salesberry Jhamsikhel"
                     value={templateStoreName}
@@ -468,8 +469,8 @@ export default function TasksPage() {
                 return (
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-700">Auto-Generated Step Schedule:</span>
-                      <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                      <span className="font-bold text-slate-700">Auto-generated step schedule:</span>
+                      <span className="text-[11px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
                         {tmpl.steps.length} Staggered Steps
                       </span>
                     </div>
@@ -479,14 +480,14 @@ export default function TasksPage() {
                           key={step.id || idx}
                           className="flex items-start gap-2 bg-white p-2 rounded-lg border border-slate-200"
                         >
-                          <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5">
+                          <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[11px] flex-shrink-0 mt-0.5">
                             {idx + 1}
                           </span>
                           <div className="flex-1">
                             <p className="font-semibold text-slate-800">{step.title}</p>
-                            <p className="text-[10px] text-slate-500 line-clamp-1">{step.description}</p>
+                            <p className="text-[11px] text-slate-500 line-clamp-1">{step.description}</p>
                           </div>
-                          <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">
+                          <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap">
                             +{step.dueDaysOffset || idx + 1} Days
                           </span>
                         </div>
@@ -506,10 +507,10 @@ export default function TasksPage() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow flex items-center gap-1.5"
+                  className="btn btn-primary"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  Generate All Tasks
+                  <Lightbulb className="w-4 h-4" />
+                  Generate all tasks
                 </button>
               </div>
             </form>
@@ -522,7 +523,7 @@ export default function TasksPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-3 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-base">Create New Task</h3>
+              <h3 className="font-bold text-slate-900 text-base">Create new task</h3>
               <button onClick={() => setShowAddModal(false)} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100">
                 <X className="h-5 w-5" />
               </button>
@@ -530,7 +531,7 @@ export default function TasksPage() {
 
             <form onSubmit={handleCreateTask} className="space-y-3">
               <div>
-                <label htmlFor="tasks-task-title" className="block font-bold text-slate-700 mb-1">Task Title *</label>
+                <label htmlFor="tasks-task-title" className="block font-bold text-slate-700 mb-1">Task title *</label>
                 <input id="tasks-task-title"
                   type="text"
                   required
@@ -564,7 +565,7 @@ export default function TasksPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="tasks-assigned-to" className="block font-bold text-slate-700 mb-1">Assigned To</label>
+                  <label htmlFor="tasks-assigned-to" className="block font-bold text-slate-700 mb-1">Assigned to</label>
                   <select id="tasks-assigned-to"
                     value={assignedTo}
                     onChange={(e) => setAssignedTo(e.target.value)}
@@ -594,8 +595,8 @@ export default function TasksPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Related To</label>
-                  <select aria-label="Related To"
+                  <label className="block font-bold text-slate-700 mb-1">Related to</label>
+                  <select aria-label="Related to"
                     value={relatedTo}
                     onChange={(e) => setRelatedTo(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
@@ -609,7 +610,7 @@ export default function TasksPage() {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="tasks-due-date" className="block font-bold text-slate-700 mb-1">Due Date *</label>
+                  <label htmlFor="tasks-due-date" className="block font-bold text-slate-700 mb-1">Due date *</label>
                   <input id="tasks-due-date"
                     type="date"
                     value={dueDateAd}
@@ -639,9 +640,9 @@ export default function TasksPage() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow"
+                  className="btn btn-primary"
                 >
-                  Create Task
+                  Create task
                 </button>
               </div>
             </form>
@@ -659,7 +660,7 @@ export default function TasksPage() {
                   <UserCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Staff Leave &amp; Task Relief Coverage</h3>
+                  <h3 className="font-bold text-slate-900 text-base">Staff leave &amp; task relief coverage</h3>
                   <p className="text-xs text-slate-500">Reassign pending tasks and beat stops to covering sales staff</p>
                 </div>
               </div>
@@ -674,7 +675,7 @@ export default function TasksPage() {
 
             <form onSubmit={handleConfirmLeaveReassign} className="p-5 space-y-4 text-xs">
               <div>
-                <label htmlFor="tasks-staff-member-taking-leave" className="block font-bold text-slate-700 mb-1">Staff Member Taking Leave</label>
+                <label htmlFor="tasks-staff-member-taking-leave" className="block font-bold text-slate-700 mb-1">Staff member taking leave</label>
                 <select id="tasks-staff-member-taking-leave"
                   value={leaveFromOfficerId}
                   onChange={(e) => setLeaveFromOfficerId(e.target.value)}
@@ -690,8 +691,8 @@ export default function TasksPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Leave Start Date</label>
-                  <input aria-label="Leave Start Date"
+                  <label className="block font-bold text-slate-700 mb-1">Leave start date</label>
+                  <input aria-label="Leave start date"
                     type="date"
                     value={leaveStartDate}
                     onChange={(e) => setLeaveStartDate(e.target.value)}
@@ -700,8 +701,8 @@ export default function TasksPage() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Leave End Date</label>
-                  <input aria-label="Leave End Date"
+                  <label className="block font-bold text-slate-700 mb-1">Leave end date</label>
+                  <input aria-label="Leave end date"
                     type="date"
                     value={leaveEndDate}
                     onChange={(e) => setLeaveEndDate(e.target.value)}
@@ -717,18 +718,18 @@ export default function TasksPage() {
                   onChange={(e) => setLeaveReason(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                 >
-                  <option value="Sick Leave">Sick Leave</option>
-                  <option value="Emergency Leave">Emergency Leave</option>
-                  <option value="Annual Leave">Annual Leave</option>
-                  <option value="Casual Leave">Casual Leave</option>
-                  <option value="Festival / Holiday Leave">Festival / Holiday Leave</option>
-                  <option value="Official Off-Duty / Travel">Official Off-Duty / Travel</option>
+                  <option value="Sick Leave">Sick leave</option>
+                  <option value="Emergency Leave">Emergency leave</option>
+                  <option value="Annual Leave">Annual leave</option>
+                  <option value="Casual Leave">Casual leave</option>
+                  <option value="Festival / Holiday Leave">Festival / holiday leave</option>
+                  <option value="Official Off-Duty / Travel">Official off-duty / travel</option>
                 </select>
               </div>
 
               <div>
                 <label htmlFor="tasks-select-covering-reliever-sal" className="block font-bold text-slate-700 mb-1">
-                  Select Covering / Reliever Sales Staff
+                  Select covering / reliever sales staff
                 </label>
                 <select id="tasks-select-covering-reliever-sal"
                   value={leaveToOfficerId}
@@ -736,7 +737,7 @@ export default function TasksPage() {
                   className="w-full p-2.5 bg-amber-50/50 border border-amber-300 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-amber-500"
                   required
                 >
-                  <option value="">-- Choose Covering Staff Member --</option>
+                  <option value="">-- Choose covering staff member --</option>
                   {db
                     .getUsers()
                     .filter((u) => u.id !== leaveFromOfficerId)
@@ -754,7 +755,7 @@ export default function TasksPage() {
               {/* Live Preview Box */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
                 <div>
-                  <span className="font-bold text-slate-700 block">Active Tasks Impacted:</span>
+                  <span className="font-bold text-slate-700 block">Active tasks impacted:</span>
                   <span className="text-slate-500 text-[11px]">
                     {tasks.filter((t) => t.assignedTo === leaveFromOfficerId && t.status !== 'COMPLETED').length} pending tasks •{' '}
                     {db.getBeatItems().filter((b) => b.officerId === leaveFromOfficerId && b.status === 'PENDING').length} beat stops
@@ -775,9 +776,9 @@ export default function TasksPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-xs transition"
+                  className="px-5 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-xs transition"
                 >
-                  Confirm Leave &amp; Reassign Tasks
+                  Confirm leave &amp; reassign tasks
                 </button>
               </div>
             </form>
@@ -805,7 +806,7 @@ export default function TasksPage() {
             }}
             className="rounded-lg bg-slate-800 border border-slate-700 text-white text-xs px-2.5 py-1.5 outline-none font-medium cursor-pointer"
           >
-            <option value="" disabled>Select Officer…</option>
+            <option value="" disabled>Select officer…</option>
             {db.getUsers().map((u) => (
               <option key={u.id} value={u.id}>
                 {u.fullName} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
@@ -821,7 +822,7 @@ export default function TasksPage() {
           className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white shadow transition cursor-pointer"
         >
           <CheckCircle className="w-3.5 h-3.5" />
-          <span>Mark All Complete</span>
+          <span>Mark all complete</span>
         </button>
 
         {/* Set Priority dropdown */}
@@ -837,7 +838,7 @@ export default function TasksPage() {
             }}
             className="rounded-lg bg-slate-800 border border-slate-700 text-white text-xs px-2.5 py-1.5 outline-none font-medium cursor-pointer"
           >
-            <option value="" disabled>Set Priority…</option>
+            <option value="" disabled>Set priority…</option>
             <option value="LOW">Low</option>
             <option value="MEDIUM">Medium</option>
             <option value="HIGH">High</option>

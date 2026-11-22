@@ -105,8 +105,8 @@ export default function ContentPieceForm({ influencer, content, sendId, onClose,
 
   const footer = (
     <div className="flex items-center justify-end gap-2">
-      <button type="button" onClick={onClose} disabled={isSubmitting} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
-      <button type="button" onClick={save} disabled={isSubmitting} className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
+      <button type="button" onClick={onClose} disabled={isSubmitting} className="btn btn-secondary disabled:opacity-50">Cancel</button>
+      <button type="button" onClick={save} disabled={isSubmitting} className="btn btn-primary disabled:cursor-not-allowed disabled:bg-blue-300">
         {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : content ? 'Save changes' : 'Save content'}
       </button>
     </div>
@@ -150,7 +150,7 @@ export default function ContentPieceForm({ influencer, content, sendId, onClose,
             <input id="content-drive" type="url" inputMode="url" value={driveUrl} onChange={(event) => { setDriveUrl(event.target.value); setErrors((current) => ({ ...current, drive: '' })); }} placeholder="https://drive.google.com/file/d/…"
               className={`${field} font-mono ${errors.drive ? 'border-rose-400 bg-rose-50/30' : ''}`} />
             <a href={isHttpUrl(driveUrl.trim()) ? driveUrl.trim() : undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!isHttpUrl(driveUrl.trim())} aria-label="Open the backup link in a new tab"
-              className={`inline-flex shrink-0 items-center gap-1 rounded-xl border px-3 py-2 font-bold ${isHttpUrl(driveUrl.trim()) ? 'border-slate-300 text-slate-700 hover:bg-slate-50' : 'pointer-events-none border-slate-200 text-slate-300'}`}>
+              className={`inline-flex shrink-0 items-center gap-1 rounded-lg border px-3 py-2 font-bold ${isHttpUrl(driveUrl.trim()) ? 'border-slate-300 text-slate-700 hover:bg-slate-50' : 'pointer-events-none border-slate-200 text-slate-300'}`}>
               <ExternalLink className="h-3.5 w-3.5" /> Open
             </a>
           </div>

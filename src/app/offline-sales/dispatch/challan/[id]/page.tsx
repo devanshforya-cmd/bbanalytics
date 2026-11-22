@@ -74,7 +74,7 @@ export default function ChallanPage() {
           </div>
         </div>
 
-        <article id="challan" className="mx-auto my-6 max-w-[210mm] bg-white p-8 text-[12px] leading-5 text-black shadow-sm">
+        <article id="challan" className="mx-auto my-6 max-w-[210mm] bg-white p-8 text-xs leading-5 text-black shadow-sm">
           <header className="flex items-start justify-between border-b-2 border-black pb-3">
             <div>
               <p className="text-lg font-bold">Brand Bucket</p>
@@ -89,7 +89,7 @@ export default function ChallanPage() {
 
           <section className="grid grid-cols-2 gap-6 border-b border-slate-300 py-3">
             <div>
-              <p className="text-[10px] font-bold uppercase text-slate-600">To</p>
+              <p className="text-[11px] font-bold uppercase text-slate-600">To</p>
               <p className="text-sm font-bold">{destinationName(dispatch)}</p>
               {dispatch.branchName && dispatch.distributorName !== dispatch.branchName && <p>{dispatch.distributorName}</p>}
               {storeAddress && <p>{storeAddress}</p>}
@@ -122,7 +122,7 @@ export default function ChallanPage() {
                   <td className="py-1.5 pr-2">{index + 1}</td>
                   <td className="py-1.5 pr-2">
                     <span className="font-semibold">{productLabel(product, item.productName)}</span>
-                    <span className="block text-[10px] text-slate-600">{[product?.alias ? item.productName : '', product?.sku, subBrandName(brands, item.subBrandId || product?.subBrandId), size ? `${size}/carton` : ''].filter(Boolean).join(' · ')}</span>
+                    <span className="block text-[11px] text-slate-600">{[product?.alias ? item.productName : '', product?.sku, subBrandName(brands, item.subBrandId || product?.subBrandId), size ? `${size}/carton` : ''].filter(Boolean).join(' · ')}</span>
                   </td>
                   <td className="py-1.5 pr-2 text-right tabular-nums">{size ? cartons : '—'}</td>
                   <td className="py-1.5 pr-2 text-right tabular-nums">{loose}</td>
@@ -157,7 +157,7 @@ export default function ChallanPage() {
               </div>
             ))}
           </section>
-          <p className="mt-6 text-[10px] text-slate-500">Printed {new Date().toLocaleString('en-GB', { timeZone: 'Asia/Kathmandu' })} from Brand Bucket Analytics.</p>
+          <p className="mt-6 text-[11px] text-slate-500">Printed {new Date().toLocaleString('en-GB', { timeZone: 'Asia/Kathmandu' })} from Brand Bucket Analytics.</p>
         </article>
       </div>
     </PageGuard>

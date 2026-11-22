@@ -6,7 +6,7 @@ import { addBrand as apiAddBrand, isBrandStorageLocalPreview } from '@/lib/db/br
 import { toast } from '@/components/common/Toast';
 import { BrandCode } from '@/lib/types';
 import {
-  Sparkles,
+  Lightbulb,
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
@@ -196,7 +196,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
 
       toast.success(isBrandStorageLocalPreview()
         ? 'Preview setup saved in this browser only. Connect Supabase to share it.'
-        : 'Workspace successfully configured with your custom setup!');
+        : 'Workspace set up');
       onComplete();
     } catch (e: any) {
       toast.error('Setup failed: ' + (e?.message || 'Unknown error'));
@@ -223,7 +223,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-black text-white">Brand Bucket Command Center Setup</h2>
-                <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold text-blue-300 border border-blue-400/30">
+                <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-[11px] font-bold text-blue-300 border border-blue-400/30">
                   Step {step} of 5
                 </span>
               </div>
@@ -264,7 +264,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                     {isDone ? <CheckCircle2 className="h-4 w-4" /> : s.num}
                   </div>
                   <span
-                    className={`text-[10px] font-bold hidden sm:block ${
+                    className={`text-[11px] font-bold hidden sm:block ${
                       isCurrent ? 'text-blue-900' : 'text-slate-500'
                     }`}
                   >
@@ -282,7 +282,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
           {step === 1 && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-black text-slate-900">Step 1: Add Brands to Portfolio</h3>
+                <h3 className="text-sm font-black text-slate-900">Step 1: Add brands to portfolio</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Configure brand names and codes. Once saved, these appear across all dropdowns, header tabs, and product forms.
                 </p>
@@ -292,8 +292,8 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Brand Name *</label>
-                    <input aria-label="Brand Name"
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Brand name *</label>
+                    <input aria-label="Brand name"
                       type="text"
                       value={newBrandName}
                       onChange={(e) => {
@@ -305,8 +305,8 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Brand Code *</label>
-                    <input aria-label="Brand Code"
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Brand code *</label>
+                    <input aria-label="Brand code"
                       type="text"
                       value={newBrandCode}
                       onChange={(e) => setNewBrandCode(e.target.value.toUpperCase())}
@@ -315,7 +315,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Theme Color</label>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Theme color</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -326,7 +326,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                       <button
                         type="button"
                         onClick={handleAddBrand}
-                        className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1 cursor-pointer"
+                        className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-xs flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Add</span>
@@ -340,7 +340,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-slate-700">Configured Brands ({configuredBrands.length}):</h4>
                 {configuredBrands.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-xs text-slate-500 p-3 rounded-xl bg-slate-50 border border-slate-200">
                     No brands added yet. Type a brand name above and click &quot;Add&quot;.
                   </p>
                 ) : (
@@ -357,7 +357,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                           />
                           <div>
                             <span className="font-bold text-xs text-slate-900">{b.name}</span>
-                            <span className="text-[10px] font-mono text-slate-500 block">({b.code})</span>
+                            <span className="text-[11px] font-mono text-slate-500 block">({b.code})</span>
                           </div>
                         </div>
                         <button
@@ -380,7 +380,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
           {step === 2 && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-black text-slate-900">Step 2: Add Initial Products (Optional)</h3>
+                <h3 className="text-sm font-black text-slate-900">Step 2: Add initial products (optional)</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Add products now or configure full catalogs later in the Product Catalog.
                 </p>
@@ -390,8 +390,8 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Product Name</label>
-                    <input aria-label="Product Name"
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Product name</label>
+                    <input aria-label="Product name"
                       type="text"
                       value={newProdName}
                       onChange={(e) => setNewProdName(e.target.value)}
@@ -400,7 +400,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Brand</label>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Brand</label>
                     <select aria-label="Brand"
                       value={newProdBrand}
                       onChange={(e) => setNewProdBrand(e.target.value)}
@@ -414,7 +414,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-600 mb-1">MRP (Rs)</label>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">MRP (rs)</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="number"
@@ -425,7 +425,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                       <button
                         type="button"
                         onClick={handleAddProduct}
-                        className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1 cursor-pointer"
+                        className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-xs flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Add</span>
@@ -438,7 +438,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-slate-700">Initial Products ({productsToAdd.length}):</h4>
                 {productsToAdd.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-xs text-slate-500 p-3 rounded-xl bg-slate-50 border border-slate-200">
                     No initial products added. You can skip this step and add products via Excel / catalog later.
                   </p>
                 ) : (
@@ -465,7 +465,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
           {step === 3 && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-black text-slate-900">Step 3: Initial Retail Stores</h3>
+                <h3 className="text-sm font-black text-slate-900">Step 3: Initial retail stores</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Stores added here will appear in your Store Directory and Beat Plan.
                 </p>
@@ -489,7 +489,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                   }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold"
                 >
-                  Add Store
+                  Add store
                 </button>
               </div>
 
@@ -517,7 +517,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
           {step === 4 && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-black text-slate-900">Step 4: Field Sales Staff</h3>
+                <h3 className="text-sm font-black text-slate-900">Step 4: Field sales staff</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Register Sales Officers for daily beat visits, GPS check-ins, and secondary order collection.
                 </p>
@@ -528,7 +528,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                   type="text"
                   value={newStaffName}
                   onChange={(e) => setNewStaffName(e.target.value)}
-                  placeholder="Officer Name"
+                  placeholder="Officer name"
                   className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-900"
                 />
                 <input
@@ -582,7 +582,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
           {step === 5 && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-black text-slate-900">Step 5: Confirm Workspace Initialization</h3>
+                <h3 className="text-sm font-black text-slate-900">Step 5: Confirm workspace initialization</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Review your initial setup. Click &quot;Initialize Workspace&quot; to activate all systems.
                 </p>
@@ -590,21 +590,21 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
 
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-500 ">Brands</span>
+                  <span className="text-[11px] font-bold text-slate-500 ">Brands</span>
                   <div className="font-bold text-slate-800 mt-0.5">
                     {configuredBrands.map((b) => b.name).join(', ') || 'None'}
                   </div>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-500 ">Initial Products</span>
+                  <span className="text-[11px] font-bold text-slate-500 ">Initial products</span>
                   <div className="font-bold text-slate-800 mt-0.5">{productsToAdd.length} SKUs</div>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-500 ">Stores</span>
+                  <span className="text-[11px] font-bold text-slate-500 ">Stores</span>
                   <div className="font-bold text-slate-800 mt-0.5">{storesToAdd.length} Stores</div>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-500 ">Field Officers</span>
+                  <span className="text-[11px] font-bold text-slate-500 ">Field officers</span>
                   <div className="font-bold text-slate-800 mt-0.5">{staffToAdd.length} Officers</div>
                 </div>
               </div>
@@ -618,7 +618,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
             type="button"
             onClick={handlePrev}
             disabled={step === 1}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 disabled:opacity-40 transition"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 disabled:opacity-40 transition"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back</span>
@@ -627,7 +627,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
           <button
             type="button"
             onClick={handleNext}
-            className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition cursor-pointer"
+            className="btn btn-primary"
           >
             <span>{step === 5 ? 'Initialize Workspace' : 'Continue'}</span>
             <ArrowRight className="w-3.5 h-3.5" />

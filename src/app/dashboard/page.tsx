@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { Check, ChevronDown, Download, LayoutDashboard, MoreHorizontal, Pencil, Plus, Printer, Sparkles, X } from 'lucide-react';
+import { Check, ChevronDown, Download, LayoutDashboard, MoreHorizontal, Pencil, Plus, Printer, Lightbulb, X } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import { toast } from '@/components/common/Toast';
 import MorningBriefCard from './components/MorningBriefCard';
@@ -153,8 +153,8 @@ export default function DashboardPage() {
 
         {hasAccess(user, 'settings') && db.getBrands('ACTIVE').length === 0 && loaded && (
           <div className="flex items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 print:hidden">
-            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-blue-600" aria-hidden="true" /> Add your first brand in Settings to start seeing numbers.</p>
-            <Link href="/settings?tab=brands" className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700">Open Settings</Link>
+            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900"><Lightbulb className="h-4 w-4 text-blue-600" aria-hidden="true" /> Add your first brand in Settings to start seeing numbers.</p>
+            <Link href="/settings?tab=brands" className="btn btn-primary shrink-0">Open settings</Link>
           </div>
         )}
 
@@ -168,10 +168,10 @@ export default function DashboardPage() {
               </form>
             ) : (
               <button key={d.id} role="tab" type="button" aria-selected={d.id === dashboard.id} onClick={() => setActive(d.id)} onDoubleClick={() => setRenaming(d.id)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${d.id === dashboard.id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-200/70'}`}>{d.name}</button>
+                className={`h-8 shrink-0 whitespace-nowrap rounded-lg px-3 text-[13px] transition-colors ${d.id === dashboard.id ? 'bg-black/[0.05] font-medium text-slate-900 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]' : 'text-slate-600 hover:bg-black/[0.03] hover:text-slate-900'}`}>{d.name}</button>
             ))}
             <div className="relative">
-              <button type="button" onClick={() => setMenu(menu === 'new' ? null : 'new')} aria-expanded={menu === 'new'} className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-200/70"><Plus className="h-4 w-4" aria-hidden="true" /> New dashboard</button>
+              <button type="button" onClick={() => setMenu(menu === 'new' ? null : 'new')} aria-expanded={menu === 'new'} className="btn btn-quiet"><Plus aria-hidden="true" /> New dashboard</button>
               {menu === 'new' && (
                 <Menu onClose={() => setMenu(null)}>
                   <MenuItem onClick={() => addDashboard({ id: newId('dash'), name: 'New dashboard', widgets: [], filters: { range: 'thisMonth', compare: 'previous', calendar: db.getCalendarMode() } })}>Start blank</MenuItem>
@@ -218,8 +218,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Shared filters */}
-        <div className="flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 bg-white p-3 text-xs print:border-0 print:p-0">
-          <h1 className="mr-auto self-center text-base font-bold text-slate-900"><LayoutDashboard className="mr-1.5 inline h-4 w-4 text-blue-600" aria-hidden="true" />{dashboard.name}</h1>
+        <div className="flex flex-wrap items-end gap-2 text-xs print:p-0">
+          <h1 className="sr-only">{dashboard.name}</h1><span className="mr-auto" />
           <Select label="Dates" value={dashboard.filters.range} onChange={(range) => setFilters({ range: range as RangePreset, ...(range === 'custom' && !dashboard.filters.fromAd ? { fromAd: prepared.data.today.slice(0, 8) + '01', toAd: prepared.data.today } : {}) })}
             options={(Object.keys(RANGE_LABELS) as RangePreset[]).map((key) => ({ value: key, label: RANGE_LABELS[key] }))} />
           {dashboard.filters.range === 'custom' && (

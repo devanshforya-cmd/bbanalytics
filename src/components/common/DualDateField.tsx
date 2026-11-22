@@ -74,7 +74,7 @@ export default function DualDateField({ id, label, valueAd, onChange, required, 
         <label htmlFor={`${id}-${mode === 'AD' ? 'ad' : 'bs-day'}`} className="block text-xs font-bold text-slate-700">
           {label} {required && <span className="text-rose-600">*</span>}
         </label>
-        {!adOnly && <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[10px] font-bold" role="group" aria-label={`${label} calendar`}>
+        {!adOnly && <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[11px] font-bold" role="group" aria-label={`${label} calendar`}>
           {(['BS', 'AD'] as const).map((option) => (
             <button key={option} type="button" aria-pressed={mode === option} onClick={() => { setMode(option); setTouchedMode(true); }}
               className={`rounded-md px-2 py-0.5 transition ${mode === option ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}>

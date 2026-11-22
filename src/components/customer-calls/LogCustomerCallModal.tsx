@@ -157,7 +157,7 @@ export default function LogCustomerCallModal({ order: givenOrder, followUp, onCl
 
         <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-3">
           <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-          <button type="button" onClick={save} className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700">Save call</button>
+          <button type="button" onClick={save} className="btn btn-primary">Save call</button>
         </div>
       </div>
     </div>

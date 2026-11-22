@@ -66,7 +66,7 @@ export default function SegmentMovement({ segmentMovements }: SegmentMovementPro
                 </span>
               </div>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                className={`rounded-full px-2 py-0.5 text-[11px] font-black ${
                   move.type === 'PROMOTED'
                     ? 'bg-emerald-200 text-emerald-900'
                     : move.type === 'WARNING'

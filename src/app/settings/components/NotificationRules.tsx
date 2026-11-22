@@ -34,7 +34,7 @@ export default function NotificationRules() {
     <form onSubmit={handleSaveRules} onChange={() => setDirty(true)} className="space-y-6">
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
         <div className="border-b border-slate-100 pb-3">
-          <h3 className="text-base font-bold text-slate-900">Alert Tiers &amp; Smart Triggers</h3>
+          <h3 className="text-base font-bold text-slate-900">Alert tiers &amp; smart triggers</h3>
           <p className="text-xs text-slate-500">
             Configure daily operations alerts for Super Admin notification bells and registered push devices. Each user enables push in their profile; email delivery is not configured.
           </p>
@@ -56,13 +56,13 @@ export default function NotificationRules() {
           <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 space-y-3">
             <div className="flex items-center gap-2 text-amber-900 font-bold">
               <AlertTriangle className="w-4 h-4 text-amber-600" />
-              <span>Amber Tier — App Open Warning &amp; Digest</span>
+              <span>Amber tier — app open warning &amp; digest</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
               <div>
                 <label htmlFor="notificationrules-cheque-overdue-alert-thresho" className="block font-semibold text-slate-700 mb-1">
-                  Cheque Overdue Alert Threshold (Days)
+                  Cheque overdue alert threshold (days)
                 </label>
                 <input id="notificationrules-cheque-overdue-alert-thresho"
                   type="number"
@@ -76,7 +76,7 @@ export default function NotificationRules() {
 
               <div>
                 <label htmlFor="notificationrules-field-cheque-handover-gap-al" className="block font-semibold text-slate-700 mb-1">
-                  Field Cheque Handover Gap Alert (Days)
+                  Field cheque handover gap alert (days)
                 </label>
                 <input id="notificationrules-field-cheque-handover-gap-al"
                   type="number"
@@ -90,7 +90,7 @@ export default function NotificationRules() {
 
               <div>
                 <label htmlFor="notificationrules-store-unvisited-alert-thresh" className="block font-semibold text-slate-700 mb-1">
-                  Store Unvisited Alert Threshold (Days)
+                  Store unvisited alert threshold (days)
                 </label>
                 <input id="notificationrules-store-unvisited-alert-thresh"
                   type="number"
@@ -104,7 +104,7 @@ export default function NotificationRules() {
 
               <div>
                 <label htmlFor="notificationrules-weekly-delivery-failure-rate" className="block font-semibold text-slate-700 mb-1">
-                  Weekly Delivery Failure Rate Trigger (%)
+                  Weekly delivery failure rate trigger (%)
                 </label>
                 <input id="notificationrules-weekly-delivery-failure-rate"
                   type="number"
@@ -122,7 +122,7 @@ export default function NotificationRules() {
         <div className="flex justify-end pt-3 border-t border-slate-100">
           <button
             type="submit" disabled={saving}
-            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition"
+            className="btn btn-primary"
           >
             {saving ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Save Notification Thresholds'}
           </button>

@@ -17,7 +17,7 @@ export default function SharedAccessPortalPage() {
   const [expired, setExpired] = useState(false);
   const [requiresPasscode, setRequiresPasscode] = useState(false);
   const [passcode, setPasscode] = useState('');
-  const [name, setName] = useState('Shared Operational View');
+  const [name, setName] = useState('Shared view');
   const [activeTab, setActiveTab] = useState<PortalTab>('dashboard');
 
   const [view, setView] = useState<{ brand?: string; month?: string }>({});
@@ -31,7 +31,7 @@ export default function SharedAccessPortalPage() {
       if (signal?.aborted) return;
       if (response.status === 401 && result.requiresPasscode) {
         setRequiresPasscode(true);
-        setName(result.name || 'Shared Operational View');
+        setName(result.name || 'Shared view');
         setError(sharedPasscode ? 'That password is not right. Check it and try again.' : '');
         try { sessionStorage.removeItem(`shared-pass:${token}`); } catch { /* private mode */ }
         return;
@@ -84,9 +84,9 @@ export default function SharedAccessPortalPage() {
 
   if (!data) return (
     <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="max-w-md space-y-4 rounded-3xl border bg-white p-8 text-center shadow-sm">
+      <div className="max-w-md space-y-4 p-8 text-center">
         <ShieldAlert className="mx-auto h-10 w-10 text-rose-600" />
-        <h1 className="text-xl font-bold">{expired ? 'Shared Access Expired' : 'Shared View Unavailable'}</h1>
+        <h1 className="text-xl font-bold">{expired ? 'This link has expired' : 'This link is not available'}</h1>
         <p role="alert" className="text-sm text-slate-600">{error}</p>
         <p className="text-sm text-slate-500">Contact your Brand Bucket account manager for updated access.</p>
         <button onClick={() => void load()} className="rounded-xl border px-4 py-2 text-sm font-bold">Try again</button>
@@ -105,7 +105,7 @@ export default function SharedAccessPortalPage() {
     <div className="min-h-screen bg-slate-50 pb-16 text-slate-900">
       <header className="border-b bg-white px-4 py-5">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
-          <div><h1 className="text-lg font-bold">Shared Operational View</h1><p className="text-sm text-slate-500">{link.name} • {link.brandScope === 'ALL' ? 'All brands' : link.brandScope.join(', ')}</p></div>
+          <div><h1 className="text-lg font-bold">Shared view</h1><p className="text-sm text-slate-500">{link.name} • {link.brandScope === 'ALL' ? 'All brands' : link.brandScope.join(', ')}</p></div>
           <span className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-800"><ShieldCheck className="h-4 w-4" />Read only • Customer details protected</span>
         </div>
         <nav aria-label="Shared sections" className="mx-auto mt-4 flex max-w-7xl gap-2 overflow-x-auto">

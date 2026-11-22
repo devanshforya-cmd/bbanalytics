@@ -18,7 +18,7 @@ import {
   ExternalLink,
   Ban,
   Clock,
-  Sparkles,
+  Lightbulb,
 } from 'lucide-react';
 import { toast } from '@/components/common/Toast';
 
@@ -63,7 +63,7 @@ export default function SharedAccessSettings() {
     try {
       await ensureSaved(id);
       await navigator.clipboard.writeText(`${window.location.origin}/shared/${token}`);
-      setCopiedId(id); toast.success('Shared access link copied to clipboard!');
+      setCopiedId(id); toast.success('Link copied');
       setTimeout(() => setCopiedId(null), 2500);
     } catch (error) { toast.error(error instanceof Error ? error.message : 'The link could not be copied.'); }
     finally { setSaving(false); }
@@ -144,7 +144,7 @@ export default function SharedAccessSettings() {
     try {
       await ensureSaved(newLink.id);
       setCreatedLinkUrl(`${window.location.origin}/shared/${newLink.token}`);
-      toast.success('Secure shared link saved!');
+      toast.success('Shared link saved');
     } catch (error) { toast.error(error instanceof Error ? error.message : 'This link is pending synchronization.'); }
     finally { setSaving(false); reloadLinks(); }
   };
@@ -198,7 +198,7 @@ export default function SharedAccessSettings() {
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow transition self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          <span>Generate Shared Link</span>
+          <span>Generate shared link</span>
         </button>
       </div>
 
@@ -219,9 +219,9 @@ export default function SharedAccessSettings() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-600 font-bold">
-                  <th className="py-3 px-4">Link Name</th>
-                  <th className="py-3 px-4">Brand Scope</th>
-                  <th className="py-3 px-4">Allowed Sections</th>
+                  <th className="py-3 px-4">Link name</th>
+                  <th className="py-3 px-4">Brand scope</th>
+                  <th className="py-3 px-4">Allowed sections</th>
                   <th className="py-3 px-4">Passcode</th>
                   <th className="py-3 px-4">Expires</th>
                   <th className="py-3 px-4 text-center">Views</th>
@@ -242,22 +242,22 @@ export default function SharedAccessSettings() {
                           <Link2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                           <span>{link.name}</span>
                         </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">
+                        <div className="text-[11px] text-slate-500 mt-0.5">
                           Created {new Date(link.createdAt).toLocaleDateString()} by {link.createdBy || link.createdById || 'Admin'}
                         </div>
                       </td>
 
                       <td className="py-3 px-4">
                         {(!link.brandScope || link.brandScope === 'ALL') ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700">
-                            All Portfolio Brands
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700">
+                            All portfolio brands
                           </span>
                         ) : (
                           <div className="flex flex-wrap gap-1">
                             {Array.isArray(link.brandScope) && link.brandScope.map((b: BrandCode) => (
                               <span
                                 key={b}
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200"
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200"
                               >
                                 {b}
                               </span>
@@ -271,7 +271,7 @@ export default function SharedAccessSettings() {
                           {link.allowedPages.map((page) => (
                             <span
                               key={page}
-                              className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium"
+                              className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[11px] font-medium"
                             >
                               {page === 'delivery-failures'
                                 ? 'Failures'
@@ -320,16 +320,16 @@ export default function SharedAccessSettings() {
                         {isPending ? (
                           <span className="rounded-full bg-amber-100 px-2 py-1 text-amber-800">Pending synchronization</span>
                         ) : isLive ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                             Active
                           </span>
                         ) : isExpired ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">
                             Expired
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-700">
                             Revoked
                           </span>
                         )}
@@ -340,7 +340,7 @@ export default function SharedAccessSettings() {
                           onClick={() => handleCopy(link.token, link.id)}
                           disabled={saving}
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition"
-                          title="Copy Link URL"
+                          title="Copy link URL"
                         >
                           {copiedId === link.id ? (
                             <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -392,7 +392,7 @@ export default function SharedAccessSettings() {
                   <Check className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Secure Shared Link Created!</h3>
+                  <h3 className="text-base font-bold text-slate-900">Shared link created</h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Send this link to your external partners or digital agency:
                   </p>
@@ -403,7 +403,7 @@ export default function SharedAccessSettings() {
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(createdLinkUrl);
-                      toast.success('Copied link URL!');
+                      toast.success('Link copied');
                     }}
                     className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shrink-0"
                   >
@@ -420,7 +420,7 @@ export default function SharedAccessSettings() {
                 <div className="pt-3">
                   <button
                     onClick={resetForm}
-                    className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition"
+                    className="w-full py-2.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition"
                   >
                     Done
                   </button>
@@ -434,7 +434,7 @@ export default function SharedAccessSettings() {
                       <Link2 className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-900 text-sm">Generate Custom Shared Access Link</h3>
+                      <h3 className="font-bold text-slate-900 text-sm">Generate custom shared access link</h3>
                       <p className="text-[11px] text-slate-500">Tokenized read-only access for external partners</p>
                     </div>
                   </div>
@@ -464,7 +464,7 @@ export default function SharedAccessSettings() {
 
                 {/* Brand Scope */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Brand Scope</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Brand scope</label>
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
@@ -475,7 +475,7 @@ export default function SharedAccessSettings() {
                           : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                       }`}
                     >
-                      All Portfolio Brands
+                      All portfolio brands
                     </button>
                     {db.getBrands('ACTIVE').map(brand => brand.code).map((b) => {
                       const isSelected = brandScope !== 'ALL' && brandScope.includes(b);
@@ -499,14 +499,14 @@ export default function SharedAccessSettings() {
 
                 {/* Allowed Sections */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Allowed Sections</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Allowed sections</label>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {[
-                      { id: 'dashboard' as SharedAccessAllowedPage, label: 'Dashboard Overview & Charts' },
-                      { id: 'products' as SharedAccessAllowedPage, label: 'Products & Performance' },
-                      { id: 'delivery-failures' as SharedAccessAllowedPage, label: 'Delivery Failure Trends' },
-                      { id: 'returns' as SharedAccessAllowedPage, label: 'Return Rates & Reasons' },
-                      { id: 'monthly-sales' as SharedAccessAllowedPage, label: 'Monthly Sales Sheet & Breakdown' },
+                      { id: 'dashboard' as SharedAccessAllowedPage, label: 'Dashboard overview & charts' },
+                      { id: 'products' as SharedAccessAllowedPage, label: 'Products & performance' },
+                      { id: 'delivery-failures' as SharedAccessAllowedPage, label: 'Delivery failure trends' },
+                      { id: 'returns' as SharedAccessAllowedPage, label: 'Return rates & reasons' },
+                      { id: 'monthly-sales' as SharedAccessAllowedPage, label: 'Monthly sales sheet & breakdown' },
                     ].map((sec) => (
                       <label
                         key={sec.id}
@@ -534,7 +534,7 @@ export default function SharedAccessSettings() {
                         <span className="block text-[11px] text-blue-800">The viewer picks the brand and month, within the brands chosen above.</span></span>
                     </label>
                   )}
-                  <div className="text-[11px] text-slate-500 mt-1.5 italic">
+                  <div className="text-[11px] text-slate-500 mt-1.5 ">
                     Note: Customer 360, offline beat plans, cheques, and settings are always restricted.
                   </div>
                 </div>
@@ -543,7 +543,7 @@ export default function SharedAccessSettings() {
                 <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-start gap-2.5 text-xs text-emerald-900">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="block font-bold">Automatic Privacy &amp; Commercial Guardrails</strong>
+                    <strong className="block font-bold">Automatic privacy &amp; commercial guardrails</strong>
                     Customer names will be masked as &quot;S*** S***&quot;, phone numbers as &quot;98****1234&quot;, and internal margins are never shared.{allowedPages.includes('monthly-sales') && showSalesAmounts ? ' Sales amounts are shared only in the monthly sheet.' : ' No rupee amounts are shared.'}
                   </div>
                 </div>
@@ -551,7 +551,7 @@ export default function SharedAccessSettings() {
                 {/* Expiration & Passcode */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="sharedaccesssettings-expiration-period" className="block text-xs font-bold text-slate-700 mb-1">Expiration Period</label>
+                    <label htmlFor="sharedaccesssettings-expiration-period" className="block text-xs font-bold text-slate-700 mb-1">Expiration period</label>
                     <select id="sharedaccesssettings-expiration-period"
                       value={expiresInDays}
                       onChange={(e) =>
@@ -559,10 +559,10 @@ export default function SharedAccessSettings() {
                       }
                       className="w-full text-xs rounded-xl border border-slate-200 p-2.5 focus:border-blue-500 focus:outline-hidden bg-white"
                     >
-                      <option value={7}>7 Days (1 Week)</option>
-                      <option value={30}>30 Days (1 Month)</option>
-                      <option value={90}>90 Days (1 Quarter)</option>
-                      <option value="never">Never (Manual Revoke Only)</option>
+                      <option value={7}>7 Days (1 week)</option>
+                      <option value={30}>30 Days (1 month)</option>
+                      <option value={90}>90 Days (1 quarter)</option>
+                      <option value="never">Never (manual revoke only)</option>
                     </select>
                   </div>
 
@@ -585,14 +585,14 @@ export default function SharedAccessSettings() {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-bold"
+                    className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 text-xs font-bold"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-5 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold shadow"
+                    className="btn btn-primary"
                   >
                     {saving ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : 'Generate Secure Link'}
                   </button>
@@ -616,7 +616,7 @@ export default function SharedAccessSettings() {
             <div className="flex flex-wrap items-center justify-end gap-2">
               {passwordFor.passcode && <button type="button" onClick={() => void savePassword(true)} disabled={saving} className="mr-auto rounded-xl px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">Remove password</button>}
               <button type="button" onClick={() => { setPasswordFor(null); setNewPassword(''); }} className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Cancel</button>
-              <button type="submit" disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? 'Saving…' : 'Save password'}</button>
+              <button type="submit" disabled={saving} className="btn btn-primary disabled:opacity-60">{saving ? 'Saving…' : 'Save password'}</button>
             </div>
           </form>
         </div>

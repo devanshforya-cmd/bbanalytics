@@ -19,7 +19,7 @@ import {
   Edit3,
   X,
   Check,
-  Sparkles,
+  Lightbulb,
 } from 'lucide-react';
 import { getBrands } from '@/lib/db/brands-service';
 
@@ -137,17 +137,17 @@ export default function CustomersPage() {
   const getSegmentBadge = (segment: CustomerSegment) => {
     switch (segment) {
       case 'VIP':
-        return <span className="rounded-full bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 text-[10px]">VIP</span>;
+        return <span className="rounded-full bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 text-[11px]">VIP</span>;
       case 'LOYAL':
-        return <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 text-[10px]">Loyal</span>;
+        return <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 text-[11px]">Loyal</span>;
       case 'REGULAR':
-        return <span className="rounded-full bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 text-[10px]">Regular</span>;
+        return <span className="rounded-full bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 text-[11px]">Regular</span>;
       case 'AT_RISK':
-        return <span className="rounded-full bg-rose-100 text-rose-800 font-bold px-2.5 py-0.5 text-[10px]">At Risk</span>;
+        return <span className="rounded-full bg-rose-100 text-rose-800 font-bold px-2.5 py-0.5 text-[11px]">At risk</span>;
       case 'BLACKLISTED':
-        return <span className="rounded-full bg-slate-900 text-white font-bold px-2.5 py-0.5 text-[10px]">Blacklisted</span>;
+        return <span className="rounded-full bg-slate-900 text-white font-bold px-2.5 py-0.5 text-[11px]">Blacklisted</span>;
       default:
-        return <span className="rounded-full bg-slate-100 text-slate-700 font-medium px-2 py-0.5 text-[10px]">New</span>;
+        return <span className="rounded-full bg-slate-100 text-slate-700 font-medium px-2 py-0.5 text-[11px]">New</span>;
     }
   };
 
@@ -157,7 +157,7 @@ export default function CustomersPage() {
       {/* Toast */}
       {toastMsg && (
         <div className="fixed top-20 right-6 z-50 flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold animate-fade-in">
-          <Sparkles className="w-4 h-4 text-emerald-400" />
+          <Lightbulb className="w-4 h-4 text-emerald-400" />
           <span>{toastMsg}</span>
         </div>
       )}
@@ -170,21 +170,20 @@ export default function CustomersPage() {
 <InfoTip label="About this page">Unique customer profiles unified by phone number with auto-calculated Karma Scores (0-100).</InfoTip></h1>
           
         </div>
-          <DownloadButton datasets={['customers']} records={{ customers: filtered } as any} />
-
         <div className="flex items-center gap-2 flex-wrap">
+          <DownloadButton datasets={['customers']} records={{ customers: filtered } as any} />
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
             className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 shadow-sm transition min-h-[40px]"
           >
             <Plus className="h-4 w-4" />
-            <span>Onboard Customer</span>
+            <span>Onboard customer</span>
           </button>
 
           <Link
             href="/customers/insights"
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm min-h-[40px]"
+            className="btn btn-secondary min-h-[40px]"
           >
             View cohort insights
           </Link>
@@ -211,21 +210,21 @@ export default function CustomersPage() {
             onChange={(e) => setSegmentFilter(e.target.value)}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs bg-white outline-none"
           >
-            <option value="ALL">All Segments</option>
+            <option value="ALL">All segments</option>
             <option value="VIP">VIP</option>
             <option value="LOYAL">Loyal</option>
             <option value="REGULAR">Regular</option>
             <option value="NEW">New</option>
-            <option value="AT_RISK">At Risk (&lt;40 Karma)</option>
+            <option value="AT_RISK">At risk (&lt;40 Karma)</option>
             <option value="BLACKLISTED">Blacklisted</option>
           </select>
         </div>
 
         {/* Brand Filter Pills (Dynamic from Database) */}
         <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-100 text-xs font-semibold w-full">
-          <span className="text-slate-500 mr-1 text-[11px] font-bold ">Brand Scope:</span>
+          <span className="text-slate-500 mr-1 text-[11px] font-bold ">Brand scope:</span>
           {[
-            { id: 'ALL', label: 'All Customers' },
+            { id: 'ALL', label: 'All customers' },
             ...getBrands('ACTIVE').map((b) => ({ id: b.code, label: b.name })),
             { id: 'MULTI', label: 'Multi-Brand (2+)' },
           ].map((pill) => (
@@ -248,15 +247,15 @@ export default function CustomersPage() {
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden text-xs">
         <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full text-left min-w-[700px]">
-          <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold ">
+          <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] font-bold ">
             <tr>
-              <th className="py-3 px-4">Customer Name</th>
-              <th className="py-3 px-4">Phone (Unique ID)</th>
+              <th className="py-3 px-4">Customer name</th>
+              <th className="py-3 px-4">Phone (unique ID)</th>
               <th className="py-3 px-4">Location</th>
-              <th className="py-3 px-4 text-center">Karma Score</th>
+              <th className="py-3 px-4 text-center">Karma score</th>
               <th className="py-3 px-4">Segment</th>
-              <th className="py-3 px-4">Total Orders</th>
-              <th className="py-3 px-4">Active Flags</th>
+              <th className="py-3 px-4">Total orders</th>
+              <th className="py-3 px-4">Active flags</th>
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
@@ -295,7 +294,7 @@ export default function CustomersPage() {
                         {c.activeFlags.map((fl, i) => (
                           <span
                             key={i}
-                            className="rounded bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.5 text-[9px] font-bold"
+                            className="rounded bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.5 text-[11px] font-bold"
                           >
                             {fl}
                           </span>
@@ -339,7 +338,7 @@ export default function CustomersPage() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-slate-900 text-base">Onboard Customer Profile</h3>
+                <h3 className="font-bold text-slate-900 text-base">Onboard customer profile</h3>
               </div>
               <button
                 type="button"
@@ -352,7 +351,7 @@ export default function CustomersPage() {
 
             <form onSubmit={handleCreateCustomer} className="space-y-3.5">
               <div>
-                <label htmlFor="customers-full-name" className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
+                <label htmlFor="customers-full-name" className="block text-xs font-bold text-slate-700 mb-1">Full name *</label>
                 <input id="customers-full-name"
                   type="text"
                   required
@@ -365,7 +364,7 @@ export default function CustomersPage() {
 
               <div>
                 <label htmlFor="customers-phone-number-nepal-mobile" className="block text-xs font-bold text-slate-700 mb-1">
-                  Phone Number (Nepal Mobile) *
+                  Phone number (Nepal mobile) *
                 </label>
                 <input id="customers-phone-number-nepal-mobile"
                   type="text"
@@ -379,7 +378,7 @@ export default function CustomersPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="customers-city-district" className="block text-xs font-bold text-slate-700 mb-1">City / District</label>
+                  <label htmlFor="customers-city-district" className="block text-xs font-bold text-slate-700 mb-1">City / district</label>
                   <input id="customers-city-district"
                     type="text"
                     value={addCity}
@@ -407,16 +406,16 @@ export default function CustomersPage() {
               </div>
 
               <div>
-                <label htmlFor="customers-initial-segment-tier" className="block text-xs font-bold text-slate-700 mb-1">Initial Segment Tier</label>
+                <label htmlFor="customers-initial-segment-tier" className="block text-xs font-bold text-slate-700 mb-1">Initial segment tier</label>
                 <select id="customers-initial-segment-tier"
                   value={addSegment}
                   onChange={(e) => setAddSegment(e.target.value as CustomerSegment)}
                   className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white font-semibold"
                 >
-                  <option value="NEW">New Shopper (Karma 72)</option>
-                  <option value="REGULAR">Regular Buyer (Karma 75)</option>
-                  <option value="LOYAL">Loyal Advocate (Karma 85)</option>
-                  <option value="VIP">VIP Key Account (Karma 90)</option>
+                  <option value="NEW">New shopper (Karma 72)</option>
+                  <option value="REGULAR">Regular buyer (Karma 75)</option>
+                  <option value="LOYAL">Loyal advocate (Karma 85)</option>
+                  <option value="VIP">VIP key account (Karma 90)</option>
                 </select>
               </div>
 
@@ -430,9 +429,9 @@ export default function CustomersPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm"
+                  className="btn btn-primary"
                 >
-                  Save Customer
+                  Save customer
                 </button>
               </div>
             </form>
@@ -462,7 +461,7 @@ export default function CustomersPage() {
 
             <form onSubmit={handleUpdateCustomer} className="space-y-3.5">
               <div>
-                <label htmlFor="customers-full-name-2" className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
+                <label htmlFor="customers-full-name-2" className="block text-xs font-bold text-slate-700 mb-1">Full name *</label>
                 <input id="customers-full-name-2"
                   type="text"
                   required
@@ -473,7 +472,7 @@ export default function CustomersPage() {
               </div>
 
               <div>
-                <label htmlFor="customers-phone-number" className="block text-xs font-bold text-slate-700 mb-1">Phone Number *</label>
+                <label htmlFor="customers-phone-number" className="block text-xs font-bold text-slate-700 mb-1">Phone number *</label>
                 <input id="customers-phone-number"
                   type="text"
                   required
@@ -485,7 +484,7 @@ export default function CustomersPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="customers-city-district-2" className="block text-xs font-bold text-slate-700 mb-1">City / District</label>
+                  <label htmlFor="customers-city-district-2" className="block text-xs font-bold text-slate-700 mb-1">City / district</label>
                   <input id="customers-city-district-2"
                     type="text"
                     value={editCity}
@@ -506,7 +505,7 @@ export default function CustomersPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="customers-customer-segment" className="block text-xs font-bold text-slate-700 mb-1">Customer Segment</label>
+                  <label htmlFor="customers-customer-segment" className="block text-xs font-bold text-slate-700 mb-1">Customer segment</label>
                   <select id="customers-customer-segment"
                     value={editSegment}
                     onChange={(e) => setEditSegment(e.target.value as CustomerSegment)}
@@ -516,11 +515,11 @@ export default function CustomersPage() {
                     <option value="REGULAR">Regular</option>
                     <option value="LOYAL">Loyal</option>
                     <option value="VIP">VIP</option>
-                    <option value="AT_RISK">At Risk</option>
+                    <option value="AT_RISK">At risk</option>
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="customers-karma-score-0-100" className="block text-xs font-bold text-slate-700 mb-1">Karma Score (0-100)</label>
+                  <label htmlFor="customers-karma-score-0-100" className="block text-xs font-bold text-slate-700 mb-1">Karma score (0-100)</label>
                   <input id="customers-karma-score-0-100"
                     type="number"
                     min="0"
@@ -535,7 +534,7 @@ export default function CustomersPage() {
               {/* Blacklist toggle */}
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-bold text-rose-900">Blacklist Customer</div>
+                  <div className="text-xs font-bold text-rose-900">Blacklist customer</div>
                   <div className="text-[11px] text-rose-700">Flag for chronic fake COD delivery refusals</div>
                 </div>
                 <input
@@ -558,7 +557,7 @@ export default function CustomersPage() {
                   type="submit"
                   className="px-5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow-sm"
                 >
-                  Update Profile
+                  Update profile
                 </button>
               </div>
             </form>

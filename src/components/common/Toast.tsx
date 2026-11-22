@@ -119,7 +119,7 @@ function ToastNotification({ type, message, subtitle, autoDismiss, onClose, acti
           {(action || undoable) && (
             <div className="flex items-center gap-2 mt-2">
               {undoable && (
-                <button type="button" onClick={handleUndo} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition shadow-xs">
+                <button type="button" onClick={handleUndo} className="btn btn-secondary">
                   <RotateCcw className="w-3 h-3" /> Undo
                 </button>
               )}

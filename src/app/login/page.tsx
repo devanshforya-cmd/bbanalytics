@@ -95,14 +95,14 @@ export default function LoginPage() {
           </div>
 
           <button type="submit" disabled={loading} aria-busy={loading}
-            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[15px] font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-70">
+            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-[15px] font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-70">
             {loading ? <><span className="bb-spinner" aria-hidden="true" /> Signing in…</> : 'Sign in'}
           </button>
-          <p className="mt-4 text-center text-[12px] text-slate-500">You stay signed in for 24 hours on this device.</p>
+          <p className="mt-4 text-center text-xs text-slate-500">You stay signed in for 24 hours on this device.</p>
         </form>
       </div>
 
-      <footer className="pb-6 text-center text-[12px] text-slate-500">Brand Bucket Nepal Pvt. Ltd. · Kathmandu</footer>
+      <footer className="pb-6 text-center text-xs text-slate-500">Brand Bucket Nepal Pvt. Ltd. · Kathmandu</footer>
     </main>
   );
 }

@@ -39,7 +39,7 @@ import {
   Ban,
   Clock,
   Compass,
-  Sparkles,
+  Lightbulb,
   BarChart3,
   ArrowUpRight,
   Activity,
@@ -145,7 +145,7 @@ export default function DeliveryFailuresPage() {
 
     setShowUploadPodModal(null);
     toast.success(
-      `✓ Proof of delivery recorded for order ${showUploadPodModal.orderNumber}. Disputed claim flagged.`
+      `Proof of delivery recorded for order ${showUploadPodModal.orderNumber}. Disputed claim flagged.`
     );
   };
 
@@ -338,17 +338,17 @@ export default function DeliveryFailuresPage() {
       <div className="space-y-6 pb-20">
       <Breadcrumbs
         items={[
-          { label: 'OrderFlow', href: '/orderflow/manual-entry' },
-          { label: 'Delivery Failures' },
+          { label: 'Online orders', href: '/orderflow/manual-entry' },
+          { label: 'Delivery failures' },
         ]}
       />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="flex items-center gap-2">
             <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              Delivery Failures
+              Delivery failures
 <InfoTip label="About this page">Tracks courier bottlenecks (&quot;Call not received&quot;, &quot;Address not found&quot;) without muddying product quality metrics.</InfoTip></h1>
           </div>
           <DownloadButton datasets={['delivery_failures']} records={{ deliveryFailures: filtered } as any} />
@@ -360,7 +360,7 @@ export default function DeliveryFailuresPage() {
           className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 self-start sm:self-auto transition-colors"
         >
           <Plus className="h-4 w-4" />
-          Log Delivery Failure
+          Log delivery failure
         </button>
       </div>
 
@@ -370,7 +370,7 @@ export default function DeliveryFailuresPage() {
           <div>
             <h2 className="font-bold text-slate-900 text-sm flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-blue-600" />
-              Failure Reason Breakdown & Distribution
+              Failure reason breakdown & distribution
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Click any bar to filter the records table below by failure root cause.
@@ -426,53 +426,23 @@ export default function DeliveryFailuresPage() {
 
       {/* 6e. Pattern Analysis Cards (Auto-detected from data) */}
       {patterns && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Card 1: Monday & Tuesday Spike */}
-          <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/60 to-white p-4 shadow-sm space-y-2">
-            <div className="flex items-center gap-2 text-amber-800 text-xs font-bold ">
-              <Sparkles className="h-4 w-4 text-amber-600" />
-              Day-of-Week Pattern
-            </div>
-            <div className="text-xl font-bold text-slate-900">
-              {patterns.monTuePct}% of Failures on Mon/Tue
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Delivery failures cluster heavily at the start of the workweek due to weekend courier transit accumulation and uncoordinated customer calls.
-            </p>
+        <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-black/[0.08] bg-black/[0.06] md:grid-cols-3">
+          <div className="bg-white p-4">
+            <dt className="text-xs text-slate-500">Failures on Monday or Tuesday</dt>
+            <dd className="mt-1 text-[28px] font-medium leading-none tabular-nums text-slate-900">{patterns.monTuePct}%</dd>
+            <dd className="mt-2 text-xs text-slate-500">Share of all failures in this period</dd>
           </div>
-
-          {/* Card 2: Outside Valley Disparity */}
-          <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50/60 to-white p-4 shadow-sm space-y-2">
-            <div className="flex items-center gap-2 text-indigo-800 text-xs font-bold ">
-              <Compass className="h-4 w-4 text-indigo-600" />
-              Territory Disparity
-            </div>
-            <div className="text-xl font-bold text-slate-900">
-              Outside Valley is {patterns.outsideRatio}x Higher
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              {patterns.outsideCount} Outside Valley vs {patterns.insideCount} Inside Valley failures. Provincial regional hubs face severe street landmark ambiguity.
-            </p>
+          <div className="bg-white p-4">
+            <dt className="text-xs text-slate-500">Outside the valley vs inside</dt>
+            <dd className="mt-1 text-[28px] font-medium leading-none tabular-nums text-slate-900">{patterns.outsideRatio}×</dd>
+            <dd className="mt-2 text-xs text-slate-500"><span className="tabular-nums">{patterns.outsideCount}</span> outside, <span className="tabular-nums">{patterns.insideCount}</span> inside</dd>
           </div>
-
-          {/* Card 3: Pathao vs Standard Courier */}
-          <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/60 to-white p-4 shadow-sm space-y-2">
-            <div className="flex items-center gap-2 text-emerald-800 text-xs font-bold ">
-              <TruckIcon className="h-4 w-4 text-emerald-600" />
-              Courier Channel Reliability
-            </div>
-            <div className="text-xl font-bold text-slate-900">
-              {patterns.pathaoCount === patterns.standardCount
-                ? 'Equal Failure Counts'
-                : patterns.pathaoCount < patterns.standardCount
-                ? 'Fewer Pathao Failures'
-                : 'More Pathao Failures'}
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Pathao deliveries log {patterns.pathaoCount} failures versus {patterns.standardCount} on Standard Courier. Counts show volume only; compare against shipment totals to assess carrier reliability.
-            </p>
+          <div className="bg-white p-4">
+            <dt className="text-xs text-slate-500">Pathao vs standard courier</dt>
+            <dd className="mt-1 text-[28px] font-medium leading-none tabular-nums text-slate-900">{patterns.pathaoCount} <span className="text-slate-400">/</span> {patterns.standardCount}</dd>
+            <dd className="mt-2 text-xs text-slate-500">Failure counts only, not a rate</dd>
           </div>
-        </div>
+        </dl>
       )}
 
       {/* 6d. Trend Section: Weekly Line Chart (Last 3 Months) */}
@@ -481,7 +451,7 @@ export default function DeliveryFailuresPage() {
           <div>
             <h2 className="font-bold text-slate-900 text-sm flex items-center gap-2">
               <Activity className="h-4 w-4 text-emerald-600" />
-              Delivery Failure Rate Trend (Last 3 Months / 12 Weeks)
+              Delivery failure rate trend (last 3 months / 12 weeks)
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Failed deliveries as a share of orders placed each week.
@@ -497,7 +467,7 @@ export default function DeliveryFailuresPage() {
             </div>
             <div className="flex items-center gap-1 text-slate-500">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              Actual Rate
+              Actual rate
             </div>
             <div className="flex items-center gap-1 text-slate-500">
               <span className="h-0.5 w-3 bg-rose-400 border-dashed" />
@@ -586,7 +556,7 @@ export default function DeliveryFailuresPage() {
               <span className="font-bold text-emerald-400">{HISTORICAL_WEEKLY_TREND[hoveredWeekIndex].week}</span>
               <span>Dispatches: <strong>{HISTORICAL_WEEKLY_TREND[hoveredWeekIndex].attempts}</strong></span>
               <span>Failures: <strong>{HISTORICAL_WEEKLY_TREND[hoveredWeekIndex].failures}</strong></span>
-              <span>Failure Rate: <strong className="text-emerald-300">{HISTORICAL_WEEKLY_TREND[hoveredWeekIndex].rate}%</strong></span>
+              <span>Failure rate: <strong className="text-emerald-300">{HISTORICAL_WEEKLY_TREND[hoveredWeekIndex].rate}%</strong></span>
             </div>
           )}
         </div>
@@ -614,7 +584,7 @@ export default function DeliveryFailuresPage() {
               onChange={(e) => setSelectedBrand(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
-              <option value="ALL">All Brands</option>
+              <option value="ALL">All brands</option>
               {getBrands('ACTIVE').map((b) => (
                 <option key={b.code} value={b.code}>
                   {b.name}
@@ -630,7 +600,7 @@ export default function DeliveryFailuresPage() {
               onChange={(e) => setSelectedValley(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
-              <option value="ALL">All Territories</option>
+              <option value="ALL">All territories</option>
               <option value="Inside">Inside Valley</option>
               <option value="Outside">Outside Valley</option>
             </select>
@@ -643,7 +613,7 @@ export default function DeliveryFailuresPage() {
               onChange={(e) => setSelectedMethod(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
-              <option value="ALL">All Delivery Methods</option>
+              <option value="ALL">All delivery methods</option>
               {[...new Set([...deliveryMethods, ...db.getDeliveryFailures().map(failure => failure.deliveryMethod).filter((method): method is string => Boolean(method))])].map(method => <option key={method} value={method}>{method}</option>)}
             </select>
           </div>
@@ -652,13 +622,13 @@ export default function DeliveryFailuresPage() {
         {/* Second Row: Status filter & Record counter */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-100">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-slate-500">Status Filter:</span>
+            <span className="text-[11px] font-semibold text-slate-500">Status filter:</span>
             <div className="flex flex-wrap gap-1.5">
               {['ALL', 'FAILED', 'REATTEMPT_SCHEDULED', 'DELIVERED', 'RETURNED_TO_WAREHOUSE', 'CANCELLED'].map((st) => (
                 <button
                   key={st}
                   onClick={() => setSelectedStatus(st)}
-                  className={`rounded-lg px-2.5 py-1 text-[10px] font-bold  transition ${
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-bold  transition ${
                     selectedStatus === st
                       ? 'bg-slate-900 text-white shadow-sm'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -680,7 +650,7 @@ export default function DeliveryFailuresPage() {
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full text-left text-xs min-w-[1100px]">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold ">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] font-bold ">
               <tr>
                 <th className="py-3 px-3">Date</th>
                 <th className="py-3 px-3">Order #</th>
@@ -689,11 +659,11 @@ export default function DeliveryFailuresPage() {
                 <th className="py-3 px-3">Brand</th>
                 <th className="py-3 px-3">Product</th>
                 <th className="py-3 px-3">Reason</th>
-                <th className="py-3 px-3">Delivery Method</th>
+                <th className="py-3 px-3">Delivery method</th>
                 <th className="py-3 px-3">Valley</th>
                 <th className="py-3 px-3">Attempts</th>
                 <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-3">Days Since</th>
+                <th className="py-3 px-3">Days since</th>
                 <th className="py-3 px-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -736,7 +706,7 @@ export default function DeliveryFailuresPage() {
                                     proof: order.deliveryProof!,
                                   })
                                 }
-                                className="mt-1 flex items-center gap-1 rounded bg-rose-50 border border-rose-200 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
+                                className="mt-1 flex items-center gap-1 rounded bg-rose-50 border border-rose-200 px-1.5 py-0.5 text-[11px] font-bold text-rose-700 hover:bg-rose-100 transition cursor-pointer"
                               >
                                 <Camera className="w-3 h-3 text-rose-600" />
                                 <span>Fraud Warning (POD on file)</span>
@@ -750,7 +720,7 @@ export default function DeliveryFailuresPage() {
                                 setShowUploadPodModal(df);
                                 setPodRecipient(df.customerName);
                               }}
-                              className="mt-1 flex items-center gap-1 text-[10px] text-slate-500 hover:text-blue-600 transition cursor-pointer"
+                              className="mt-1 flex items-center gap-1 text-[11px] text-slate-500 hover:text-blue-600 transition cursor-pointer"
                             >
                               <Camera className="w-2.5 h-2.5" />
                               <span>Attach POD</span>
@@ -777,7 +747,7 @@ export default function DeliveryFailuresPage() {
                       {/* Brand */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <span
-                          className="rounded px-2 py-0.5 text-[10px] font-bold bg-slate-50 text-slate-700 border border-slate-200"
+                          className="rounded px-2 py-0.5 text-[11px] font-bold bg-slate-50 text-slate-700 border border-slate-200"
                         >
                           {df.brandCode}
                         </span>
@@ -796,7 +766,7 @@ export default function DeliveryFailuresPage() {
                       {/* Reason */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                          className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
                             df.reason === 'Call not received'
                               ? 'bg-amber-100 text-amber-800'
                               : df.reason === 'Address not found'
@@ -813,7 +783,7 @@ export default function DeliveryFailuresPage() {
 
                       {/* Delivery Method */}
                       <td className="py-3 px-3 whitespace-nowrap">
-                        <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700">
+                        <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
                           {df.deliveryMethod || 'Standard'}
                         </span>
                       </td>
@@ -821,7 +791,7 @@ export default function DeliveryFailuresPage() {
                       {/* Valley */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <span
-                          className={`rounded px-2 py-0.5 text-[10px] font-semibold ${
+                          className={`rounded px-2 py-0.5 text-[11px] font-semibold ${
                             df.valley === 'Inside'
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : 'bg-orange-50 text-orange-700 border border-orange-200'
@@ -833,7 +803,7 @@ export default function DeliveryFailuresPage() {
 
                       {/* Attempts */}
                       <td className="py-3 px-3 whitespace-nowrap font-mono text-center">
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">
                           {df.attempts || 1}
                         </span>
                       </td>
@@ -841,11 +811,11 @@ export default function DeliveryFailuresPage() {
                       {/* Status */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold   ${
+                          className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold   ${
                             status === 'DELIVERED'
                               ? 'bg-emerald-100 text-emerald-800'
                               : status === 'REATTEMPT_SCHEDULED'
-                              ? 'bg-blue-100 text-blue-800 animate-pulse'
+                              ? 'bg-blue-100 text-blue-800'
                               : status === 'RETURNED_TO_WAREHOUSE'
                               ? 'bg-slate-200 text-slate-700'
                               : status === 'CANCELLED'
@@ -874,8 +844,8 @@ export default function DeliveryFailuresPage() {
                                 setReattemptAssignee('Pathao Express Rider');
                                 setReattemptNotes('');
                               }}
-                              title="Schedule Reattempt"
-                              className="rounded bg-blue-50 border border-blue-200 px-2 py-1 text-[10px] font-bold text-blue-700 hover:bg-blue-100 transition-colors"
+                              title="Schedule reattempt"
+                              className="rounded bg-blue-50 border border-blue-200 px-2 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-100 transition-colors"
                             >
                               Reattempt
                             </button>
@@ -885,8 +855,8 @@ export default function DeliveryFailuresPage() {
                           {status !== 'DELIVERED' && status !== 'CANCELLED' && status !== 'RETURNED_TO_WAREHOUSE' && (
                             <button
                               onClick={() => handleMarkAsDelivered(df)}
-                              title="Mark as Delivered"
-                              className="rounded bg-emerald-50 border border-emerald-200 px-2 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                              title="Mark as delivered"
+                              className="rounded bg-emerald-50 border border-emerald-200 px-2 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 transition-colors"
                             >
                               Delivered ✓
                             </button>
@@ -896,8 +866,8 @@ export default function DeliveryFailuresPage() {
                           {status !== 'RETURNED_TO_WAREHOUSE' && status !== 'DELIVERED' && (
                             <button
                               onClick={() => handleReturnToWarehouse(df)}
-                              title="Return to Warehouse (RTO)"
-                              className="rounded bg-slate-100 border border-slate-200 px-1.5 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
+                              title="Return to warehouse (RTO)"
+                              className="rounded bg-slate-100 border border-slate-200 px-1.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
                             >
                               RTO
                             </button>
@@ -907,8 +877,8 @@ export default function DeliveryFailuresPage() {
                           {status !== 'CANCELLED' && status !== 'DELIVERED' && (
                             <button
                               onClick={() => handleCancelOrder(df)}
-                              title="Cancel Order"
-                              className="rounded bg-rose-50 border border-rose-200 px-1.5 py-1 text-[10px] font-semibold text-rose-600 hover:bg-rose-100 transition-colors"
+                              title="Cancel order"
+                              className="rounded bg-rose-50 border border-rose-200 px-1.5 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-100 transition-colors"
                             >
                               Cancel
                             </button>
@@ -932,7 +902,7 @@ export default function DeliveryFailuresPage() {
               <div>
                 <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
                   <RotateCcw className="h-5 w-5 text-blue-600" />
-                  Schedule Delivery Reattempt
+                  Schedule delivery reattempt
                 </h3>
                 <p className="text-slate-500 text-xs mt-0.5">
                   Assign courier unit and reattempt date for order {reattemptModalItem.orderNumber}
@@ -956,7 +926,7 @@ export default function DeliveryFailuresPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="delivery-failures-reattempt-date-ad" className="block font-bold text-slate-700 mb-1">Reattempt Date (AD) *</label>
+                <label htmlFor="delivery-failures-reattempt-date-ad" className="block font-bold text-slate-700 mb-1">Reattempt date (AD) *</label>
                 <input id="delivery-failures-reattempt-date-ad"
                   type="date"
                   value={reattemptDate}
@@ -966,16 +936,16 @@ export default function DeliveryFailuresPage() {
               </div>
 
               <div>
-                <label htmlFor="delivery-failures-assign-courier-rider" className="block font-bold text-slate-700 mb-1">Assign Courier / Rider *</label>
+                <label htmlFor="delivery-failures-assign-courier-rider" className="block font-bold text-slate-700 mb-1">Assign courier / rider *</label>
                 <select id="delivery-failures-assign-courier-rider"
                   value={reattemptAssignee}
                   onChange={(e) => setReattemptAssignee(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500 font-medium"
                 >
-                  <option value="Pathao Express Rider">Pathao Express Rider</option>
-                  <option value="Rider Bikash (In-house)">Rider Bikash (In-house)</option>
-                  <option value="Courier Ramesh Giri">Courier Ramesh Giri</option>
-                  <option value="Outside Valley Hub Agent">Outside Valley Hub Agent</option>
+                  <option value="Pathao Express Rider">Pathao express rider</option>
+                  <option value="Rider Bikash (In-house)">Rider bikash (in-house)</option>
+                  <option value="Courier Ramesh Giri">Courier ramesh giri</option>
+                  <option value="Outside Valley Hub Agent">Outside Valley hub agent</option>
                   <option value="Nepal Post Courier">Nepal Post Courier</option>
                 </select>
               </div>
@@ -983,7 +953,7 @@ export default function DeliveryFailuresPage() {
 
             <div>
               <label htmlFor="delivery-failures-rider-instructions-landmark-" className="block font-bold text-slate-700 mb-1">
-                Rider Instructions / Landmark Clarification
+                Rider instructions / landmark clarification
               </label>
               <textarea id="delivery-failures-rider-instructions-landmark-"
                 rows={2}
@@ -1003,9 +973,9 @@ export default function DeliveryFailuresPage() {
               </button>
               <button
                 onClick={handleScheduleReattempt}
-                className="rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 shadow-sm"
+                className="btn btn-primary"
               >
-                Schedule Reattempt
+                Schedule reattempt
               </button>
             </div>
           </div>
@@ -1024,7 +994,7 @@ export default function DeliveryFailuresPage() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-rose-700 font-bold text-sm">
                 <AlertOctagon className="w-5 h-5 text-rose-600" />
-                <span>Fraud Investigation: Proof of Delivery on File</span>
+                <span>Fraud investigation: Proof of delivery on file</span>
               </div>
               <button
                 type="button"
@@ -1038,7 +1008,7 @@ export default function DeliveryFailuresPage() {
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 flex items-start gap-2">
               <ShieldAlert className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
               <p className="text-[11px] leading-relaxed">
-                <strong>High-Risk Claim:</strong> The delivery courier recorded photographic proof of delivery and confirmed handover to recipient <strong>{selectedPodProof.proof.recipientName || selectedPodProof.customerName}</strong>. The customer claim of non-delivery is disputed.
+                <strong>High-risk claim:</strong> The delivery courier recorded photographic proof of delivery and confirmed handover to recipient <strong>{selectedPodProof.proof.recipientName || selectedPodProof.customerName}</strong>. The customer claim of non-delivery is disputed.
               </p>
             </div>
 
@@ -1050,18 +1020,18 @@ export default function DeliveryFailuresPage() {
                 alt="Delivery Proof"
                 className="max-h-full max-w-full object-contain"
               />
-              <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded font-mono">
-                Handover Evidence Verified
+              <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[11px] px-2 py-0.5 rounded font-mono">
+                Handover evidence verified
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
-                <span className="text-[10px] font-bold text-slate-500 block">Courier / Rider</span>
+                <span className="text-[11px] font-bold text-slate-500 block">Courier / rider</span>
                 <span className="font-semibold text-slate-800">{selectedPodProof.proof.deliveredBy}</span>
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
-                <span className="text-[10px] font-bold text-slate-500 block">Delivery Date</span>
+                <span className="text-[11px] font-bold text-slate-500 block">Delivery date</span>
                 <span className="font-semibold text-slate-800 font-mono">
                   {selectedPodProof.proof.deliveryDateAd}
                 </span>
@@ -1074,7 +1044,7 @@ export default function DeliveryFailuresPage() {
                 onClick={() => setSelectedPodProof(null)}
                 className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 font-semibold hover:bg-slate-50"
               >
-                Close Investigation Modal
+                Close investigation modal
               </button>
             </div>
           </div>
@@ -1088,7 +1058,7 @@ export default function DeliveryFailuresPage() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
                 <Camera className="w-4 h-4 text-blue-600" />
-                <span>Upload Proof of Delivery (POD)</span>
+                <span>Upload proof of delivery (POD)</span>
               </div>
               <button
                 type="button"
@@ -1101,12 +1071,12 @@ export default function DeliveryFailuresPage() {
 
             <form onSubmit={handleSavePod} className="space-y-3">
               <div>
-                <span className="text-slate-500">Order Reference:</span>
+                <span className="text-slate-500">Order reference:</span>
                 <p className="font-bold text-blue-600 font-mono text-sm">{showUploadPodModal.orderNumber}</p>
               </div>
 
               <div>
-                <label htmlFor="delivery-failures-delivered-by-rider-courier" className="block font-bold text-slate-700 mb-1">Delivered By (Rider / Courier) *</label>
+                <label htmlFor="delivery-failures-delivered-by-rider-courier" className="block font-bold text-slate-700 mb-1">Delivered by (rider / courier) *</label>
                 <input id="delivery-failures-delivered-by-rider-courier"
                   type="text"
                   required
@@ -1117,7 +1087,7 @@ export default function DeliveryFailuresPage() {
               </div>
 
               <div>
-                <label htmlFor="delivery-failures-recipient-name" className="block font-bold text-slate-700 mb-1">Recipient Name *</label>
+                <label htmlFor="delivery-failures-recipient-name" className="block font-bold text-slate-700 mb-1">Recipient name *</label>
                 <input id="delivery-failures-recipient-name"
                   type="text"
                   required
@@ -1129,7 +1099,7 @@ export default function DeliveryFailuresPage() {
 
               <div>
                 <CameraCapture
-                  label="Photograph Proof of Delivery (Signature / Stamp)"
+                  label="Photograph proof of delivery (signature / stamp)"
                   sublabel="Take or upload courier run-sheet or recipient signature"
                   maxFiles={1}
                   existingUrls={podPhotoUrl ? [podPhotoUrl] : []}
@@ -1148,9 +1118,9 @@ export default function DeliveryFailuresPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow"
+                  className="btn btn-primary"
                 >
-                  Attach Evidence
+                  Attach evidence
                 </button>
               </div>
             </form>

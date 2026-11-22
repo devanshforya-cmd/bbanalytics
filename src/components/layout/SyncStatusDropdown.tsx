@@ -106,24 +106,19 @@ export default function SyncStatusDropdown() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative flex h-10 w-10 items-center justify-center gap-1.5 rounded-full text-xs font-semibold transition cursor-pointer hover:bg-black/[0.05] sm:h-auto sm:w-auto sm:px-2.5 sm:py-1 sm:shadow-2xs sm:hover:bg-transparent sm:hover:opacity-95 ${
-          syncState === 'SYNCED'
-            ? 'sm:bg-emerald-50 text-emerald-700 sm:border sm:border-emerald-200'
-            : syncState === 'PENDING'
-            ? 'sm:bg-amber-50 text-amber-800 sm:border sm:border-amber-300 sm:ring-2 sm:ring-amber-400/30'
-            : 'sm:bg-rose-50 text-rose-700 sm:border sm:border-rose-200'
+        className={`relative flex h-10 w-10 cursor-pointer items-center justify-center gap-2 rounded-full text-[13px] transition-colors hover:bg-black/[0.05] sm:h-9 sm:w-auto sm:rounded-lg sm:px-2.5 ${
+          syncState === 'SYNCED' ? 'text-slate-600' : syncState === 'PENDING' ? 'text-amber-800' : 'text-rose-700'
         }`}
         aria-label={syncState === 'SYNCED' ? 'All changes synced' : syncState === 'PENDING' ? `${pendingCount} changes waiting to sync` : 'Offline'}
         aria-expanded={isOpen}
       >
-        {syncState === 'SYNCED' && <CheckCircle2 className="h-[18px] w-[18px] sm:h-3.5 sm:w-3.5 text-emerald-600 shrink-0" />}
-        {syncState === 'PENDING' && <AlertCircle className="h-[18px] w-[18px] sm:h-3.5 sm:w-3.5 text-amber-600 shrink-0" />}
-        {syncState === 'OFFLINE' && <WifiOff className="h-[18px] w-[18px] sm:h-3.5 sm:w-3.5 text-rose-600 shrink-0" />}
-        {syncState === 'PENDING' && pendingCount > 0 && <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-600 px-1 text-[9px] font-bold text-white ring-2 ring-white sm:hidden">{pendingCount}</span>}
+        {/* The live sync dot: green when everything is saved, amber while changes wait, red when offline */}
+        <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${syncState === 'SYNCED' ? 'bg-emerald-500' : syncState === 'PENDING' ? 'bg-amber-500' : 'bg-rose-500'}`} />
+        {syncState === 'PENDING' && pendingCount > 0 && <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-600 px-1 font-mono text-[11px] text-white ring-2 ring-white sm:hidden">{pendingCount}</span>}
 
         {/* Dynamic Label */}
-        <span className="hidden font-semibold text-xs whitespace-nowrap sm:inline">
-          {syncState === 'SYNCED' && 'Synced'}
+        <span className="hidden whitespace-nowrap sm:inline">
+          {syncState === 'SYNCED' && 'Saved'}
           {syncState === 'PENDING' && `${pendingCount} pending`}
           {syncState === 'OFFLINE' && 'Offline'}
         </span>
@@ -196,12 +191,12 @@ export default function SyncStatusDropdown() {
 
           <div className="mt-3 flex items-center gap-2">
             <button type="button" onClick={handleForceSync} disabled={isSyncing}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+              className="btn btn-primary flex-1 disabled:opacity-60">
               <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
               {isSyncing ? 'Syncing…' : justSynced ? 'All saved' : 'Sync now'}
             </button>
             {pendingCount > 0 && (
-              <button type="button" onClick={downloadPending} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Download a copy</button>
+              <button type="button" onClick={downloadPending} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Download a copy</button>
             )}
           </div>
           {process.env.NODE_ENV === 'development' && (

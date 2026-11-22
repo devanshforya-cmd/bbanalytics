@@ -70,7 +70,7 @@ export function MonthlySalesTable({ report, showMoney = true }: { report: Monthl
           <th scope="col" className={`${headCell} sticky left-0 z-20`}>Date</th><th scope="col" className={headCell}>Day</th><th scope="col" className={headCell}>Sale running</th>
           {channels.map((channel) => <th scope="col" key={channel} className={headCell}>{channel}</th>)}
           <th scope="col" className={`${headCell} bg-blue-50`}>Orders placed</th><th scope="col" className={headCell}>Cancelled</th>{showMoney && <th scope="col" className={`${headCell} bg-blue-50`}>Net sales (NPR)</th>}
-          {report.items.map((item) => <th scope="col" key={item.id} className={headCell}>{item.name}<span className="mt-1 block text-[10px] font-normal text-slate-500">{item.kind}</span></th>)}
+          {report.items.map((item) => <th scope="col" key={item.id} className={headCell}>{item.name}<span className="mt-1 block text-[11px] font-normal text-slate-500">{item.kind}</span></th>)}
         </tr></thead>
         <tbody>{report.days.map((day) => (
           <tr key={day.date} className={day.sales.length ? 'bg-emerald-50/40' : undefined}>

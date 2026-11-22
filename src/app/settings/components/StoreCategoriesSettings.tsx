@@ -44,7 +44,7 @@ export default function StoreCategoriesSettings() {
         <form onSubmit={add} className="flex gap-2">
           <label htmlFor="new-store-category" className="sr-only">New store category</label>
           <input id="new-store-category" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="e.g. Pharmacy, Cosmetics, Kirana" className="flex-1 rounded-xl border border-slate-300 p-2.5 text-sm" />
-          <button type="submit" className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"><Plus className="h-4 w-4" /> Add category</button>
+          <button type="submit" className="btn btn-primary"><Plus className="h-4 w-4" /> Add category</button>
         </form>
       )}
       {categories.length === 0 ? <p className="text-xs text-slate-500">No categories yet. Add the ones your team uses.</p> : (

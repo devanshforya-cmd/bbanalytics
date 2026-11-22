@@ -50,7 +50,7 @@ export default function DriveBackupCard({ settingsLink = false }: { settingsLink
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs" aria-label="Backup to Google Drive">
       <h2 className="flex items-center gap-1.5 text-sm font-bold text-slate-900"><CloudUpload className="h-4 w-4 text-slate-600" /> Hourly backup to Google Drive</h2>
       <p className="mt-2 text-xs text-slate-600">
-        Every hour, if anything changed, every record is saved as one Excel file in <span className="font-semibold">BB Analytics → Backups</span> in the connected Google account. All backups from the last {state?.keepAllHours || 48} hours are kept, then one per day for {state?.keepDailyDays || 30} days; older ones go to Drive&apos;s trash.
+        Every hour, if anything changed, every record is saved as one Excel file in <span className="font-semibold">BB analytics → Backups</span> in the connected Google account. All backups from the last {state?.keepAllHours || 48} hours are kept, then one per day for {state?.keepDailyDays || 30} days; older ones go to Drive&apos;s trash.
       </p>
 
       {good && (

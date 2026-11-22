@@ -17,7 +17,7 @@ export default function MessageModal({ message, onClose }: { message: Notificati
         </div>
         <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-800">{message.message}</p>
         <div className="mt-5 flex justify-end">
-          <button type="button" onClick={onClose} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Done</button>
+          <button type="button" onClick={onClose} className="btn btn-primary">Done</button>
         </div>
       </div>
     </div>

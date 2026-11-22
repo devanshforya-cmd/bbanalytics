@@ -51,7 +51,7 @@ export default function CohortAnalysis({
                 2e
               </span>
               <h2 className="text-base font-bold text-slate-900">
-                Purchase Timing Patterns & Overdue Order Detection
+                Purchase timing patterns & overdue order detection
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-1">
@@ -63,15 +63,15 @@ export default function CohortAnalysis({
         {/* Segment Benchmarks */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'VIP Segment', cycle: timingPatterns.segmentCycles.VIP, bg: 'bg-amber-50 text-amber-900 border-amber-200' },
-            { label: 'Loyal Regulars', cycle: timingPatterns.segmentCycles.LOYAL, bg: 'bg-blue-50 text-blue-900 border-blue-200' },
-            { label: 'Regular Customers', cycle: timingPatterns.segmentCycles.REGULAR, bg: 'bg-slate-50 text-slate-900 border-slate-200' },
-            { label: 'At-Risk Candidates', cycle: timingPatterns.segmentCycles.AT_RISK, bg: 'bg-rose-50 text-rose-900 border-rose-200' },
+            { label: 'VIP segment', cycle: timingPatterns.segmentCycles.VIP, bg: 'bg-amber-50 text-amber-900 border-amber-200' },
+            { label: 'Loyal regulars', cycle: timingPatterns.segmentCycles.LOYAL, bg: 'bg-blue-50 text-blue-900 border-blue-200' },
+            { label: 'Regular customers', cycle: timingPatterns.segmentCycles.REGULAR, bg: 'bg-slate-50 text-slate-900 border-slate-200' },
+            { label: 'At-risk candidates', cycle: timingPatterns.segmentCycles.AT_RISK, bg: 'bg-rose-50 text-rose-900 border-rose-200' },
           ].map((b) => (
             <div key={b.label} className={`rounded-xl border p-3 ${b.bg} text-center space-y-1`}>
-              <div className="text-[10px] font-bold ">{b.label}</div>
+              <div className="text-[11px] font-bold ">{b.label}</div>
               <div className="text-2xl font-black">{b.cycle} days</div>
-              <div className="text-[10px] opacity-75">Avg interval between orders</div>
+              <div className="text-[11px] opacity-75">Avg interval between orders</div>
             </div>
           ))}
         </div>
@@ -81,7 +81,7 @@ export default function CohortAnalysis({
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 text-amber-600" />
-              Overdue Re-Order Detection (&gt;7 Days Beyond Standard Cycle)
+              Overdue re-order detection (&gt;7 days beyond standard cycle)
             </h3>
             <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
               {timingPatterns.overdueList.length} Accounts Overdue
@@ -94,10 +94,10 @@ export default function CohortAnalysis({
                 <tr>
                   <th className="py-3 px-3">Customer</th>
                   <th className="py-3 px-3">Segment</th>
-                  <th className="py-3 px-3 text-center">Avg Cycle</th>
-                  <th className="py-3 px-3 text-center">Days Inactive</th>
-                  <th className="py-3 px-3 text-center">Overdue By</th>
-                  <th className="py-3 px-3 text-right">Trigger Action</th>
+                  <th className="py-3 px-3 text-center">Avg cycle</th>
+                  <th className="py-3 px-3 text-center">Days inactive</th>
+                  <th className="py-3 px-3 text-center">Overdue by</th>
+                  <th className="py-3 px-3 text-right">Trigger action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -110,24 +110,24 @@ export default function CohortAnalysis({
                       >
                         {item.customer.name}
                       </Link>
-                      <div className="text-[10px] text-slate-500">{item.customer.phone}</div>
+                      <div className="text-[11px] text-slate-500">{item.customer.phone}</div>
                     </td>
                     <td className="py-3 px-3">
-                      <span className="rounded bg-slate-100 text-slate-700 font-bold px-2 py-0.5 text-[10px]">
+                      <span className="rounded bg-slate-100 text-slate-700 font-bold px-2 py-0.5 text-[11px]">
                         {item.customer.segment}
                       </span>
                     </td>
                     <td className="py-3 px-3 text-center font-medium text-slate-600">{item.cycle} days</td>
                     <td className="py-3 px-3 text-center font-bold text-slate-800">{item.daysSince} days</td>
                     <td className="py-3 px-3 text-center">
-                      <span className="rounded bg-rose-100 text-rose-800 font-black px-2 py-0.5 text-[10px]">
+                      <span className="rounded bg-rose-100 text-rose-800 font-black px-2 py-0.5 text-[11px]">
                         +{item.overdueBy} days
                       </span>
                     </td>
                     <td className="py-3 px-3 text-right">
                       <Link
                         href={`/customers/${encodeURIComponent(item.customer.phone)}`}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 text-white font-bold text-[10px] hover:bg-slate-800 transition"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 text-white font-bold text-[11px] hover:bg-slate-800 transition"
                       >
                         Nudge Re-Order <ChevronRight className="h-3 w-3" />
                       </Link>
@@ -149,7 +149,7 @@ export default function CohortAnalysis({
                 2f
               </span>
               <h2 className="text-base font-bold text-slate-900">
-                Multi-Month Retention Cohort Analysis
+                Multi-month retention cohort analysis
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-1">
@@ -162,12 +162,12 @@ export default function CohortAnalysis({
           <table className="w-full text-left text-xs text-slate-700">
             <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
               <tr>
-                <th className="py-3 px-3">Acquisition Cohort</th>
-                <th className="py-3 px-3 text-center">Cohort Size</th>
-                <th className="py-3 px-3 text-center">Month 1 Retention</th>
-                <th className="py-3 px-3 text-center">Month 2 Retention</th>
-                <th className="py-3 px-3 text-center">Month 3 Retention</th>
-                <th className="py-3 px-3 text-right">Active Today (%)</th>
+                <th className="py-3 px-3">Acquisition cohort</th>
+                <th className="py-3 px-3 text-center">Cohort size</th>
+                <th className="py-3 px-3 text-center">Month 1 retention</th>
+                <th className="py-3 px-3 text-center">Month 2 retention</th>
+                <th className="py-3 px-3 text-center">Month 3 retention</th>
+                <th className="py-3 px-3 text-right">Active today (%)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -180,7 +180,7 @@ export default function CohortAnalysis({
                   <td className="py-3 px-3 text-center font-bold text-slate-700">{row.size} users</td>
                   <td className="py-3 px-3 text-center">
                     {row.m1 !== '—' ? (
-                      <span className="rounded bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[10px] border border-emerald-200">
+                      <span className="rounded bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[11px] border border-emerald-200">
                         {row.m1}
                       </span>
                     ) : (
@@ -189,7 +189,7 @@ export default function CohortAnalysis({
                   </td>
                   <td className="py-3 px-3 text-center">
                     {row.m2 !== '—' ? (
-                      <span className="rounded bg-emerald-50 text-emerald-800 font-semibold px-2 py-0.5 text-[10px] border border-emerald-100">
+                      <span className="rounded bg-emerald-50 text-emerald-800 font-semibold px-2 py-0.5 text-[11px] border border-emerald-100">
                         {row.m2}
                       </span>
                     ) : (
@@ -198,7 +198,7 @@ export default function CohortAnalysis({
                   </td>
                   <td className="py-3 px-3 text-center">
                     {row.m3 !== '—' ? (
-                      <span className="rounded bg-amber-50 text-amber-800 font-semibold px-2 py-0.5 text-[10px] border border-amber-100">
+                      <span className="rounded bg-amber-50 text-amber-800 font-semibold px-2 py-0.5 text-[11px] border border-amber-100">
                         {row.m3}
                       </span>
                     ) : (

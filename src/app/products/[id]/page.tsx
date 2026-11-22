@@ -25,7 +25,7 @@ import {
   Building2,
   Calendar,
   MessageSquare,
-  Sparkles,
+  Lightbulb,
   ShoppingBag,
   ExternalLink,
   ArrowUpRight,
@@ -171,7 +171,7 @@ export default function Product360Page() {
       {/* Breadcrumb navigation */}
       <Breadcrumbs
         items={[
-          { label: 'Product Catalog', href: '/products' },
+          { label: 'Product catalog', href: '/products' },
           { label: product.name },
         ]}
       />
@@ -180,13 +180,13 @@ export default function Product360Page() {
       <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-500 to-teal-400 flex items-center justify-center font-bold text-white text-2xl shadow-lg shadow-brand-500/20 shrink-0">
-              <Package className="w-8 h-8" />
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-black/[0.08] bg-slate-50 text-slate-500">
+              <Package className="h-6 w-6" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className="text-[10px] font-black px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700"
+                  className="text-[11px] font-black px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700"
                 >
                   {db.getBrands().find(brand => brand.code === product.brandCode)?.name || product.brandCode}
                 </span>
@@ -207,16 +207,16 @@ export default function Product360Page() {
           {/* Master Catalog MRP */}
           <div className="bg-slate-50 border border-slate-200 px-5 py-3 rounded-2xl flex items-center gap-4">
             <div>
-              <span className="text-[10px] font-bold text-slate-500 block ">
-                Catalog Reference MRP
+              <span className="text-[11px] font-bold text-slate-500 block ">
+                Catalog reference MRP
               </span>
-              <div className="text-xl sm:text-2xl font-black text-emerald-700 font-mono mt-0.5">
+              <div className="text-xl sm:text-2xl font-black text-slate-900 font-mono mt-0.5">
                 <Money>{product.mrp}</Money>
               </div>
             </div>
-            <div className="border-l border-slate-200 pl-4 text-[10px] text-slate-500 font-medium">
+            <div className="border-l border-slate-200 pl-4 text-[11px] text-slate-500 font-medium">
               Consumer Catalog Price<br />
-              <span className="text-slate-500">VAT Inclusive</span>
+              <span className="text-slate-500">VAT inclusive</span>
             </div>
           </div>
         </div>
@@ -239,10 +239,10 @@ export default function Product360Page() {
 
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-            <span>Store Penetration</span>
+            <span>Store penetration</span>
             <Store className="w-4 h-4 text-blue-600" />
           </div>
-          <div className="text-2xl font-black text-blue-700 mt-2 font-mono">
+          <div className="text-2xl font-black text-slate-900 mt-2 font-mono">
             {penetrationPct}%
           </div>
           <div className="text-xs text-slate-500 mt-1">
@@ -268,18 +268,18 @@ export default function Product360Page() {
           className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs hover:border-brand-500 hover:shadow-md transition cursor-pointer group block"
         >
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-            <span className="group-hover:text-brand-600 transition-colors">Feedback Summary</span>
+            <span className="group-hover:text-brand-600 transition-colors">Feedback summary</span>
             <div className="flex items-center gap-1 text-brand-600">
               <MessageSquare className="w-4 h-4" />
               <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-slate-900 mt-2 font-mono group-hover:text-brand-700 transition-colors">
+          <div className="text-xl sm:text-2xl font-black text-slate-900 mt-2 font-mono group-hover:text-slate-900 transition-colors">
             {reviewsCount} {reviewsCount === 1 ? 'review' : 'reviews'}, {complaintsCount} {complaintsCount === 1 ? 'complaint' : 'complaints'}
           </div>
           <div className="text-xs text-slate-500 mt-1 truncate flex items-center justify-between" title={`Top Issue: ${topIssue}`}>
-            <span>Top Issue: <strong className="text-slate-700">{topIssue}</strong></span>
-            <span className="text-[10px] text-brand-600 font-bold group-hover:underline">View in Hub</span>
+            <span>Top issue: <strong className="text-slate-700">{topIssue}</strong></span>
+            <span className="text-[11px] text-brand-600 font-bold group-hover:underline">View in hub</span>
           </div>
         </Link>
       </div>
@@ -291,9 +291,9 @@ export default function Product360Page() {
         {/* Channel Volume Breakdown */}
         <div className="lg:col-span-1 bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">Sales Channel Velocity</h3>
+            <h3 className="text-sm font-bold text-slate-900">Sales channel velocity</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Volume split across General Trade, Modern Trade, and Online D2C
+              Volume split across general trade, modern trade, and online D2C
             </p>
           </div>
 
@@ -306,7 +306,7 @@ export default function Product360Page() {
               {/* GT */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="text-slate-700">General Trade (Kiranas &amp; Pharmacies)</span>
+                  <span className="text-slate-700">General trade (kiranas &amp; pharmacies)</span>
                   <span className="text-slate-900 font-bold font-mono">{gtPct}% ({gtUnits} units)</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -317,7 +317,7 @@ export default function Product360Page() {
               {/* MT */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="text-slate-700">Modern Trade (Supermarkets &amp; Chains)</span>
+                  <span className="text-slate-700">Modern trade (supermarkets &amp; chains)</span>
                   <span className="text-slate-900 font-bold font-mono">{mtPct}% ({mtUnits} units)</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -328,7 +328,7 @@ export default function Product360Page() {
               {/* Online D2C */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="text-slate-700">D2C Online (WhatsApp / Social Orders)</span>
+                  <span className="text-slate-700">D2C online (WhatsApp / social orders)</span>
                   <span className="text-slate-900 font-bold font-mono">{d2cPct}% ({d2cUnits} units)</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -351,7 +351,7 @@ export default function Product360Page() {
           )}
 
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 mt-4">
-            <div className="text-xs font-bold text-slate-800">Secondary Cadence:</div>
+            <div className="text-xs font-bold text-slate-800">Secondary cadence:</div>
             <div className="flex items-center gap-2 text-xs text-slate-600">
               <Clock className="w-4 h-4 text-slate-400" />
               <span>
@@ -369,7 +369,7 @@ export default function Product360Page() {
         <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Consumer Feedback &amp; Quality Telemetry</h3>
+              <h3 className="text-sm font-bold text-slate-900">Consumer feedback &amp; quality telemetry</h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 Real customer feedback, returns, and star ratings mapped to this SKU
               </p>
@@ -378,7 +378,7 @@ export default function Product360Page() {
               href="/reviews/feedback"
               className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1"
             >
-              <span>Feedback Hub</span>
+              <span>Feedback hub</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -403,7 +403,7 @@ export default function Product360Page() {
                       );
                     })}
                   </div>
-                  <span className="text-[10px] text-slate-500 font-mono">{f.dateReceivedBs || f.dateReceivedAd || ''}</span>
+                  <span className="text-[11px] text-slate-500 font-mono">{f.dateReceivedBs || f.dateReceivedAd || ''}</span>
                 </div>
                 <p className="text-slate-700 font-medium line-clamp-2">
                   &ldquo;{f.fullText}&rdquo;
@@ -445,7 +445,7 @@ export default function Product360Page() {
               href={`/reviews/returns?product=${encodeURIComponent(product.name)}`}
               className="font-bold underline text-amber-800 hover:text-amber-950 shrink-0 ml-2"
             >
-              View Returns
+              View returns
             </Link>
           </div>
         </div>
@@ -455,7 +455,7 @@ export default function Product360Page() {
       <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">Recent In-Store Secondary Bookings</h3>
+            <h3 className="text-sm font-bold text-slate-900">Recent in-store secondary bookings</h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Live orders booked by sales officers during beat visits
             </p>
@@ -464,7 +464,7 @@ export default function Product360Page() {
             href="/offline-sales/beat-plan"
             className="text-xs font-bold text-brand-600 hover:text-brand-700"
           >
-            Go to Beat Plan
+            Go to beat plan
           </Link>
         </div>
 
@@ -478,10 +478,10 @@ export default function Product360Page() {
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold ">
                   <th className="p-3">Order #</th>
-                  <th className="p-3">Store Name</th>
-                  <th className="p-3">Sales Rep</th>
+                  <th className="p-3">Store name</th>
+                  <th className="p-3">Sales rep</th>
                   <th className="p-3">Date</th>
-                  <th className="p-3 text-right">Cases Booked</th>
+                  <th className="p-3 text-right">Cases booked</th>
                   <th className="p-3 text-center">Status</th>
                 </tr>
               </thead>
@@ -503,7 +503,7 @@ export default function Product360Page() {
                           {ord.storeName}
                           <ArrowUpRight className="h-3 w-3 text-slate-400" />
                         </Link>
-                        <div className="text-[10px] text-slate-500">{ord.contactPhone}</div>
+                        <div className="text-[11px] text-slate-500">{ord.contactPhone}</div>
                       </td>
                       <td className="p-3">
                         <Link
@@ -518,7 +518,7 @@ export default function Product360Page() {
                         {item.cases} Cases ({item.totalUnits} units)
                       </td>
                       <td className="p-3 text-center">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 enum-label">
                           {ord.status}
                         </span>
                       </td>
@@ -537,7 +537,7 @@ export default function Product360Page() {
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Store className="w-4 h-4 text-blue-600" />
-              Stores Carrying This Product
+              Stores carrying this product
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Live shelf presence, stock count audit history, and on-shelf unit inventory
@@ -559,10 +559,10 @@ export default function Product360Page() {
                 <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold ">
                   <th className="p-3">Store</th>
                   <th className="p-3">Branch</th>
-                  <th className="p-3">Assigned Officer</th>
-                  <th className="p-3">Last Stock Count</th>
-                  <th className="p-3 text-right">Units on Shelf</th>
-                  <th className="p-3 text-right">Days Since Count</th>
+                  <th className="p-3">Assigned officer</th>
+                  <th className="p-3">Last stock count</th>
+                  <th className="p-3 text-right">Units on shelf</th>
+                  <th className="p-3 text-right">Days since count</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -636,7 +636,7 @@ export default function Product360Page() {
           </div>
           <Link
             href={`/reviews/feedback?product=${encodeURIComponent(product.name)}`}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-brand-50 hover:bg-brand-100/80 text-brand-700 font-bold px-3 py-1.5 text-xs transition-colors border border-brand-200"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 hover:bg-brand-100/80 text-brand-700 font-bold px-3 py-1.5 text-xs transition-colors border border-brand-200"
           >
             <span>Open in Feedback Hub ({relatedFeedback.length})</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -661,7 +661,7 @@ export default function Product360Page() {
                       {item.customerName}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
                         item.type === 'COMPLAINT'
                           ? 'bg-rose-100 text-rose-800'
                           : 'bg-emerald-100 text-emerald-800'
@@ -670,14 +670,14 @@ export default function Product360Page() {
                       {item.type}
                     </span>
                   </div>
-                  <p className="text-slate-600 line-clamp-2 italic text-[11px]">
+                  <p className="text-slate-600 line-clamp-2 text-[11px]">
                     &ldquo;{item.fullText}&rdquo;
                   </p>
                 </div>
-                <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 text-[10px] text-slate-500 font-medium">
+                <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 text-[11px] text-slate-500 font-medium">
                   <span>{item.dateReceivedBs || item.dateReceivedAd}</span>
                   <span className="text-brand-600 font-semibold group-hover:underline flex items-center gap-0.5">
-                    View Details
+                    View details
                   </span>
                 </div>
               </Link>

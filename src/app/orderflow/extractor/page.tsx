@@ -36,7 +36,7 @@ import { displayDocumentId } from '@/lib/document-ids';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toast } from '@/components/common/Toast';
 import {
-  Sparkles,
+  ScanText,
   Pencil,
   CheckCircle,
   AlertCircle,
@@ -182,13 +182,13 @@ export default function ExtractorPage() {
 
     if (ordersWithErrors.length > 0) {
       toast.error(
-        `Extraction Alert: ${ordersWithErrors.length} order(s) have missing details!`,
+        `${ordersWithErrors.length} order(s) have missing details`,
         `Review the red alert banners: check for missing phone, catalog products, or delivery address.`
       );
     } else if (results.length === 1) {
-      toast.success('Extracted 1 order with dynamic catalog matching!');
+      toast.success('Extracted 1 order');
     } else {
-      toast.success(`Batch extracted ${results.length} orders successfully!`);
+      toast.success(`Extracted ${results.length} orders`);
     }
   };
 
@@ -352,7 +352,7 @@ export default function ExtractorPage() {
       case 'REVIEW':
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 border border-amber-200">
-            Needs Review
+            Needs review
           </span>
         );
       case 'FAILED':
@@ -371,8 +371,8 @@ export default function ExtractorPage() {
         {/* Breadcrumbs */}
         <Breadcrumbs
           items={[
-            { label: 'Orderflow', href: '/orderflow/extractor' },
-            { label: 'WhatsApp Order Extractor' },
+            { label: 'Online orders', href: '/orderflow/extractor' },
+            { label: 'WhatsApp order extractor' },
           ]}
         />
 
@@ -382,7 +382,7 @@ export default function ExtractorPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-                  WhatsApp Order Extractor
+                  WhatsApp order extractor
 <InfoTip label="About this page" align="left">
                 <span className="block">Products, combos and prices come from the catalogue.</span>
                 <span className="mt-1.5 block"><strong>Discount:</strong> write “5% off”, or the amount the customer pays (“total 3415”).</span>
@@ -417,7 +417,7 @@ export default function ExtractorPage() {
           >
             <span className="flex items-center gap-2">
               <HelpCircle className="w-4 h-4 text-blue-600" />
-              Suggested WhatsApp Order Format
+              Suggested WhatsApp order format
             </span>
             {showTemplate ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
           </button>
@@ -443,8 +443,8 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-blue-600" />
-              <h2 className="text-sm font-bold text-slate-900">Paste WhatsApp Messages</h2>
+              <ScanText className="w-4 h-4 text-blue-600" />
+              <h2 className="text-sm font-bold text-slate-900">Paste WhatsApp messages</h2>
               <span className="text-[11px] text-slate-500">
                 (Paste 1 chat or separate multiple orders with &quot;---&quot;)
               </span>
@@ -452,7 +452,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
 
             {/* Date Mode Toggle (Fix 67h) */}
             <div className="flex items-center gap-3 text-xs">
-              <span className="font-semibold text-slate-600">Order Date:</span>
+              <span className="font-semibold text-slate-600">Order date:</span>
               <label className="inline-flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="radio"
@@ -508,14 +508,14 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                 onClick={() => setChatText('')}
                 className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
               >
-                Clear Text
+                Clear text
               </button>
               <button
                 onClick={handleExtract}
                 disabled={!!extractProgress || !chatText.trim()}
-                className="px-5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition flex items-center gap-2 shadow-xs disabled:opacity-70"
+                className="btn btn-primary disabled:opacity-70"
               >
-                {extractProgress ? <ButtonRing value={extractProgress.value} estimateMs={1500} done={extractProgress.done} /> : <Sparkles className="w-4 h-4" />}
+                {extractProgress ? <ButtonRing value={extractProgress.value} estimateMs={1500} done={extractProgress.done} /> : <ScanText className="w-4 h-4" />}
                 {extractProgress ? 'Extracting…' : 'Extract orders'}
               </button>
             </div>
@@ -551,7 +551,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                   onClick={handleDiscardAll}
                   className="px-3 py-1.5 border border-rose-200 bg-white rounded-lg text-xs font-semibold text-rose-700 hover:bg-rose-50"
                 >
-                  Discard All
+                  Discard all
                 </button>
                 {canCreateOrders && <button
                   onClick={() => {
@@ -693,7 +693,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1">
                         <div className="flex items-center gap-2 text-xs font-bold text-rose-800">
                           <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                          <span>Extraction Error: Missing critical order details!</span>
+                          <span>Missing order details</span>
                         </div>
                         <ul className="text-xs text-rose-700 list-disc list-inside space-y-0.5 pl-1">
                           {ord.extractionErrors.map((err, ei) => (
@@ -722,25 +722,25 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       {/* Customer Name */}
                       <div>
                         <label className="font-semibold text-slate-500 mb-1 block flex items-center justify-between">
-                          <span>Customer Name</span>
-                          {!ord.customerName.value && <span className="text-rose-600 font-bold text-[10px]">Required</span>}
+                          <span>Customer name</span>
+                          {!ord.customerName.value && <span className="text-rose-600 font-bold text-[11px]">Required</span>}
                         </label>
-                        <input aria-label="Customer Name"
+                        <input aria-label="Customer name"
                           type="text"
                           value={ord.customerName.value}
                           onChange={(e) => handleUpdateOrderField(ord.id, 'customerName', e.target.value)}
                           className={`w-full px-2.5 py-1.5 border rounded-lg text-xs font-medium focus:outline-none ${
                             !ord.customerName.value ? 'border-rose-300 bg-rose-50/30 ring-1 ring-rose-200' : 'border-slate-200 focus:ring-2 focus:ring-blue-500'
                           }`}
-                          placeholder="Customer Name"
+                          placeholder="Customer name"
                         />
                       </div>
 
                       {/* Phone */}
                       <div>
                         <label htmlFor="extractor-phone-number" className="font-semibold text-slate-500 mb-1 block flex items-center justify-between">
-                          <span>Phone Number</span>
-                          {!ord.customerPhone.value && <span className="text-rose-600 font-bold text-[10px]">Required</span>}
+                          <span>Phone number</span>
+                          {!ord.customerPhone.value && <span className="text-rose-600 font-bold text-[11px]">Required</span>}
                         </label>
                         <input id="extractor-phone-number"
                           type="text"
@@ -765,12 +765,12 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       {/* Address (Exact message address preserved) */}
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="font-semibold text-slate-500 block">Exact Address / Landmark</label>
+                          <label className="font-semibold text-slate-500 block">Exact address / landmark</label>
                           {ord.rawAddress && ord.rawAddress !== ord.address.value && (
                             <button
                               type="button"
                               onClick={() => handleUpdateOrderField(ord.id, 'address', ord.rawAddress)}
-                              className="text-[10px] text-blue-600 hover:underline font-semibold"
+                              className="text-[11px] text-blue-600 hover:underline font-semibold"
                             >
                               Reset to verbatim
                             </button>
@@ -787,12 +787,12 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           placeholder="Exact address from message"
                         />
                         {ord.rawAddress && (
-                          <div className="text-[10px] text-slate-500 mt-1 truncate" title={ord.rawAddress}>
+                          <div className="text-[11px] text-slate-500 mt-1 truncate" title={ord.rawAddress}>
                             Exact text: <span className="font-mono text-slate-600 font-semibold">{ord.rawAddress}</span>
                           </div>
                         )}
-                        {ord.address.value && ord.address.confidence === 'REVIEW' && <p className="text-[10px] text-amber-700 mt-1">Address copied from the message; its location has not been verified. Please review.</p>}
-                        {ord.address.value && !ord.city.value && !ord.province.value && <p className="text-[10px] text-amber-700 mt-1">City and province are empty. You can add them later in Daily Orders.</p>}
+                        {ord.address.value && ord.address.confidence === 'REVIEW' && <p className="text-[11px] text-amber-700 mt-1">Address copied from the message; its location has not been verified. Please review.</p>}
+                        {ord.address.value && !ord.city.value && !ord.province.value && <p className="text-[11px] text-amber-700 mt-1">City and province are empty. You can add them later in Daily Orders.</p>}
                       </div>
                     </div>
 
@@ -823,11 +823,11 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                           <div key={itIdx} className="p-3 flex items-center justify-between gap-2 flex-wrap">
                             <div className="flex items-center gap-2">
                               {item.isCombo ? (
-                                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold rounded">
+                                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[11px] font-bold rounded">
                                   COMBO
                                 </span>
                               ) : (
-                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded">
+                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[11px] font-bold rounded">
                                   SKU
                                 </span>
                               )}
@@ -926,7 +926,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                             className="shrink-0 whitespace-nowrap px-4 py-1.5 bg-rose-100 text-rose-800 font-bold rounded-xl hover:bg-rose-200 transition flex items-center gap-1.5 shadow-xs text-xs border border-rose-300"
                           >
                             <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
-                            Fix Errors to Push
+                            Fix errors to push
                           </button>
                         ) : (
                           <button
@@ -957,7 +957,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
               <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
               <div>
                 <h3 className="text-xs font-bold text-emerald-950">
-                  {pushedSummary.count} Order(s) Pushed Successfully!
+                  {pushedSummary.count} order(s) saved
                 </h3>
                 <p className="text-[11px] text-emerald-700 mt-0.5">
                   Assigned numbers: {pushedSummary.orderNumbers.join(', ')}. View on Daily Orders or Dashboard.
@@ -978,7 +978,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Clock className="w-4 h-4 text-slate-500" />
-              Recent Extraction Trail
+              Recent extraction trail
             </h2>
             {history.length > 0 && (
               <button
@@ -989,7 +989,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                 }}
                 className="text-[11px] text-slate-500 hover:text-rose-600 font-semibold"
               >
-                Clear History
+                Clear history
               </button>
             )}
           </div>
@@ -1018,10 +1018,10 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       <td className="py-2.5 px-3 text-slate-500">{item.timestamp}</td>
                       <td className="py-2.5 px-3 font-semibold text-slate-800">
                         {item.customerName}
-                        <span className="block text-[10px] text-slate-500 font-normal">{item.customerPhone}</span>
+                        <span className="block text-[11px] text-slate-500 font-normal">{item.customerPhone}</span>
                       </td>
                       <td className="py-2.5 px-3">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">
                           {item.brandCode}
                         </span>
                       </td>
@@ -1029,11 +1029,11 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                       <td className="py-2.5 px-3 font-bold text-slate-900"><Money>{item.totalAmount.toLocaleString()}</Money></td>
                       <td className="py-2.5 px-3">
                         {item.status === 'PUSHED' ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                             <Check className="w-3 h-3" /> PUSHED
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-slate-500 font-bold text-[10px] bg-slate-100 px-2 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-slate-500 font-bold text-[11px] bg-slate-100 px-2 py-0.5 rounded-full">
                             DISCARDED
                           </span>
                         )}
@@ -1054,7 +1054,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
             <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-slate-900">Confirm Batch Push</h3>
+                <h3 className="text-base font-bold text-slate-900">Confirm batch push</h3>
                 <button onClick={() => setShowConfirmModal(false)} className="text-slate-500 hover:text-slate-600">
                   <X className="w-5 h-5" />
                 </button>

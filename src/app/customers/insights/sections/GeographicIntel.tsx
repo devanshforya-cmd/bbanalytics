@@ -30,7 +30,7 @@ export default function GeographicIntel({ geographicIntel }: GeographicIntelProp
               2j
             </span>
             <h2 className="text-base font-bold text-slate-900">
-              Geographic Intelligence (Nepal Valley & Province Breakdown)
+              Geographic intelligence (Nepal Valley & province breakdown)
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -43,13 +43,13 @@ export default function GeographicIntel({ geographicIntel }: GeographicIntelProp
         <table className="w-full text-left text-xs text-slate-700">
           <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
             <tr>
-              <th className="py-3 px-3">City / Center</th>
+              <th className="py-3 px-3">City / center</th>
               <th className="py-3 px-3">Province</th>
               <th className="py-3 px-3 text-center">Customers</th>
-              <th className="py-3 px-3 text-center">Total Orders</th>
+              <th className="py-3 px-3 text-center">Total orders</th>
               <th className="py-3 px-3 text-right">Revenue (NPR)</th>
               <th className="py-3 px-3 text-center">Orders, last 30 days vs 30 before</th>
-              <th className="py-3 px-3">Leading Brand</th>
+              <th className="py-3 px-3">Leading brand</th>
               <th className="py-3 px-3 text-center">Avg Karma</th>
             </tr>
           </thead>
@@ -61,7 +61,7 @@ export default function GeographicIntel({ geographicIntel }: GeographicIntelProp
                     <MapPin className="h-3.5 w-3.5 text-emerald-600" />
                     <span>{row.city}</span>
                   </div>
-                  <span className="text-[10px] text-slate-500">
+                  <span className="text-[11px] text-slate-500">
                     {row.isOutsideValley ? 'Outside Valley Hub' : 'Kathmandu Valley'}
                   </span>
                 </td>
@@ -72,13 +72,13 @@ export default function GeographicIntel({ geographicIntel }: GeographicIntelProp
                   <Money>{row.revenue.toLocaleString()}</Money>
                 </td>
                 <td className="py-3 px-3 text-center">
-                  <span className={`rounded font-bold px-2 py-0.5 text-[10px] ${row.growth.startsWith('-') ? 'bg-rose-100 text-rose-800' : row.growth === '—' ? 'text-slate-500' : 'bg-emerald-100 text-emerald-800'}`}>
+                  <span className={`rounded font-bold px-2 py-0.5 text-[11px] ${row.growth.startsWith('-') ? 'bg-rose-100 text-rose-800' : row.growth === '—' ? 'text-slate-500' : 'bg-emerald-100 text-emerald-800'}`}>
                     {row.growth}
                   </span>
                 </td>
                 <td className="py-3 px-3 font-semibold text-slate-800">{row.topBrand}</td>
                 <td className="py-3 px-3 text-center">
-                  <span className="rounded-full bg-slate-100 text-slate-800 font-bold px-2 py-0.5 text-[10px]">
+                  <span className="rounded-full bg-slate-100 text-slate-800 font-bold px-2 py-0.5 text-[11px]">
                     {row.avgKarma}
                   </span>
                 </td>

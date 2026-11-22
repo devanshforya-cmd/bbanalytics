@@ -40,7 +40,7 @@ export default function DynamicCheckboxes({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <label className="block text-xs font-bold text-slate-700">
-          Issue Categories (Dynamic Multi-Select)
+          Issue categories (dynamic multi-select)
         </label>
         <button
           type="button"
@@ -48,7 +48,7 @@ export default function DynamicCheckboxes({
           className="flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800"
         >
           <Plus className="h-3.5 w-3.5" />
-          Create New Category
+          Create new category
         </button>
       </div>
 
@@ -76,7 +76,7 @@ export default function DynamicCheckboxes({
                 {isSelected && <Check className="h-2.5 w-2.5" />}
               </div>
               <span>{cat.name}</span>
-              <span className="text-[10px] text-slate-500">({cat.tickCount})</span>
+              <span className="text-[11px] text-slate-500">({cat.tickCount})</span>
             </button>
           );
         })}
@@ -87,7 +87,7 @@ export default function DynamicCheckboxes({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl space-y-3 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h4 className="font-bold text-slate-900 text-sm">Create Issue Category</h4>
+              <h4 className="font-bold text-slate-900 text-sm">Create issue category</h4>
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
@@ -119,9 +119,9 @@ export default function DynamicCheckboxes({
                 type="button"
                 onClick={handleCreateCategory}
                 disabled={!newCatName.trim()}
-                className="rounded-lg bg-blue-600 px-4 py-1.5 font-semibold text-white hover:bg-blue-700 shadow disabled:opacity-50"
+                className="btn btn-primary disabled:opacity-50"
               >
-                Create & Select
+                Create & select
               </button>
             </div>
           </div>

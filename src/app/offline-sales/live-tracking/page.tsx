@@ -19,7 +19,7 @@ import {
   Activity,
   CheckCircle2,
   RefreshCw,
-  Sparkles,
+  Lightbulb,
   Play,
   PowerOff,
   Coffee,
@@ -39,28 +39,28 @@ const DUTY_BADGES: Record<
     icon: CheckCircle2,
   },
   IN_FIELD: {
-    label: 'In Field',
+    label: 'In field',
     color: 'text-blue-700',
     bg: 'bg-blue-50',
     border: 'border-blue-200',
     icon: TrendingUp,
   },
   ON_BREAK: {
-    label: 'On Break',
+    label: 'On break',
     color: 'text-amber-700',
     bg: 'bg-amber-50',
     border: 'border-amber-200',
     icon: Coffee,
   },
   OFFLINE: {
-    label: 'Offline (Day Ended)',
+    label: 'Offline (day ended)',
     color: 'text-slate-600',
     bg: 'bg-slate-100',
     border: 'border-slate-300',
     icon: PowerOff,
   },
   ON_LEAVE: {
-    label: 'On Leave',
+    label: 'On leave',
     color: 'text-rose-700',
     bg: 'bg-rose-50',
     border: 'border-rose-200',
@@ -223,8 +223,7 @@ export default function LiveStaffTrackingPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Navigation className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 animate-pulse" />
-            <span>Real-Time Field Force GPS &amp; Activity Tracking</span>
+                        <span>Live GPS tracking</span>
 <InfoTip label="About this page">Monitor on-duty sales officers, live store dwell times, transit corridors, and route breadcrumbs.</InfoTip></h1>
           
         </div>
@@ -233,7 +232,7 @@ export default function LiveStaffTrackingPage() {
         <div className="flex flex-wrap items-center gap-2">
           {toastMessage && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold shadow-xs animate-in fade-in">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <Lightbulb className="w-3.5 h-3.5 text-emerald-600" />
               <span>{toastMessage}</span>
             </div>
           )}
@@ -256,7 +255,7 @@ export default function LiveStaffTrackingPage() {
                 filterDuty === 'ACTIVE' ? 'bg-white font-bold text-emerald-700 shadow-2xs' : 'text-slate-600'
               }`}
             >
-              Active Only
+              Active only
             </button>
             <button
               type="button"
@@ -265,18 +264,18 @@ export default function LiveStaffTrackingPage() {
                 filterDuty === 'OFFLINE' ? 'bg-white font-bold text-slate-800 shadow-2xs' : 'text-slate-600'
               }`}
             >
-              Offline / Break
+              Offline / break
             </button>
           </div>
 
           {hasAccess(currentUser, 'beat_plans') && <button
             type="button"
             onClick={handlePingMyGps}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+            className="btn btn-primary"
             title="Pin current device GPS location to map"
           >
             <Navigation className="w-3.5 h-3.5" />
-            <span>Ping My GPS</span>
+            <span>Ping my GPS</span>
           </button>}
 
           <button
@@ -285,7 +284,7 @@ export default function LiveStaffTrackingPage() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 text-xs font-semibold shadow-2xs transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Sync Live</span>
+            <span>Sync live</span>
           </button>
         </div>
       </div>
@@ -300,7 +299,7 @@ export default function LiveStaffTrackingPage() {
         <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-xs">
           <EmptyState
             type="visits"
-            title="No Field Officers Online"
+            title="No field officers online"
             description="No field sales officers are currently transmitting live GPS pings or active on beat routes. Officers will appear on the radar once they mark their duty status as Online."
           />
         </div>
@@ -367,7 +366,7 @@ export default function LiveStaffTrackingPage() {
 
                 {/* Duty Status Badge */}
                 <div
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${dutyBadge.bg} ${dutyBadge.color} ${dutyBadge.border}`}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border ${dutyBadge.bg} ${dutyBadge.color} ${dutyBadge.border}`}
                 >
                   <DutyIcon className="w-3 h-3" />
                   <span>{dutyBadge.label}</span>
@@ -395,7 +394,7 @@ export default function LiveStaffTrackingPage() {
                   <div className="flex items-center justify-between text-slate-500">
                     <span className="flex items-center gap-1">
                       <Navigation className="w-3.5 h-3.5 text-blue-600" />
-                      Moving along Beat Corridor
+                      Moving along beat corridor
                     </span>
                     <span>Lat: {loc.currentLat.toFixed(3)}</span>
                   </div>
@@ -488,7 +487,7 @@ export default function LiveStaffTrackingPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                  className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
                     DUTY_BADGES[selectedStaff.dutyStatus || 'ONLINE']?.bg
                   } ${DUTY_BADGES[selectedStaff.dutyStatus || 'ONLINE']?.color} ${
                     DUTY_BADGES[selectedStaff.dutyStatus || 'ONLINE']?.border
@@ -528,7 +527,7 @@ export default function LiveStaffTrackingPage() {
                 </span>
               </div>
               <div className="flex items-center gap-4">
-                <span>Stops Today: <strong className="text-white">{selectedStaff.todayRoute.length}</strong></span>
+                <span>Stops today: <strong className="text-white">{selectedStaff.todayRoute.length}</strong></span>
                 <span>Battery: <strong className="text-white">Not reported</strong></span>
                 <span>Speed: <strong className="text-white">Not collected</strong></span>
                 <span>Accuracy: <strong className="text-white">Not collected</strong></span>
@@ -539,7 +538,7 @@ export default function LiveStaffTrackingPage() {
           {/* Route Breadcrumbs Timeline */}
           <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">Today&apos;s Audit Breadcrumb Log</h3>
+              <h3 className="font-bold text-slate-900 text-sm">Today&apos;s audit breadcrumb log</h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 Timestamped check-ins, check-outs, and transit intervals.
               </p>

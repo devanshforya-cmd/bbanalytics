@@ -38,16 +38,16 @@ export default function DraftResumeBanner({
         <button
           type="button"
           onClick={onDiscard}
-          className="px-3 py-1.5 rounded-xl border border-amber-300 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition"
+          className="px-3 py-1.5 rounded-lg border border-amber-300 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition"
         >
           Discard
         </button>
         <button
           type="button"
           onClick={onResume}
-          className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition"
+          className="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition"
         >
-          Resume Draft
+          Resume draft
         </button>
       </div>
     </div>

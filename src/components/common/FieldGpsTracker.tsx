@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { MapPin, Smartphone } from 'lucide-react';
+import { Smartphone } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
 import { clearPendingGps, recordGpsPing, retryPendingGps } from '@/lib/db/gps-service';
 import { hasAccess } from '@/lib/permissions';
@@ -95,24 +95,26 @@ export default function FieldGpsTracker() {
   };
 
   if (!allowed) return null;
-  return <section aria-label="Device GPS sharing" className="mb-4 rounded-xl border border-slate-200 bg-white p-3 text-xs space-y-2">
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <div className="flex items-start gap-2"><MapPin className="h-4 w-4 shrink-0 text-blue-600" /><div><strong>{!enabled ? 'GPS sharing off' : !onDuty ? 'GPS paused: off duty' : 'Device GPS'}</strong><p role="status" className="text-slate-600 mt-1">{!enabled ? 'Enable to share your location while this app is open.' : !onDuty ? 'Go on duty in Beat Plan to resume sharing.' : message}{lastSaved && enabled && onDuty ? ` · Last confirmed ${lastSaved}` : ''}</p></div></div>
-      <div className="flex gap-2">
-        {enabled && onDuty && <button type="button" onClick={() => setRetry(value => value + 1)} className="rounded-lg border px-3 py-2 font-semibold">Retry GPS</button>}
-        <button type="button" className="rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white" onClick={() => {
+  const live = enabled && onDuty;
+  return <section aria-label="Device GPS sharing" className="mb-4 rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${live ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+      <p role="status" className="min-w-0 flex-1 text-slate-600"><span className="font-medium text-slate-900">{!enabled ? 'GPS sharing off' : !onDuty ? 'GPS paused, off duty' : 'Sharing GPS'}</span>{' · '}{!enabled ? 'share your location while this app is open' : !onDuty ? 'go on duty in Beat plan to resume' : message}{lastSaved && live ? ` · last confirmed ${lastSaved}` : ''}</p>
+      <div className="flex items-center gap-2">
+        {live && <button type="button" onClick={() => setRetry(value => value + 1)} className="h-8 rounded-lg border border-black/[0.08] px-3 font-medium text-slate-700 hover:bg-slate-50">Retry</button>}
+        <button type="button" className={`h-8 rounded-lg px-3 font-medium ${enabled ? 'border border-black/[0.08] text-slate-700 hover:bg-slate-50' : 'bg-blue-600 text-white hover:bg-blue-700'}`} onClick={() => {
           const next = !enabled; localStorage.setItem(consentKey(user.id), next ? 'on' : 'off'); setEnabled(next);
           if (!next) { clearPendingGps(user.id); lastFix.current = null; setLastSaved(''); }
-        }}>{enabled ? 'Stop sharing' : 'Enable GPS'}</button>
+        }}>{enabled ? 'Stop sharing' : 'Share GPS'}</button>
       </div>
     </div>
     <details onToggle={event => setNativeOpen(event.currentTarget.open)}>
-      <summary className="cursor-pointer font-semibold text-blue-700 py-1"><Smartphone className="inline h-3.5 w-3.5 mr-1" />Background tracking on your phone</summary>
+      <summary className="mt-1 w-fit cursor-pointer py-1 text-slate-500 hover:text-slate-800"><Smartphone className="mr-1 inline h-3.5 w-3.5" />Background tracking on your phone</summary>
       <div className="pt-2 space-y-2 text-slate-600">
-        <p>Browsers can pause GPS when closed or locked. For background updates, install the free <a className="underline text-blue-700" href="https://www.traccar.org/client/" target="_blank" rel="noreferrer">Traccar Client</a> from your phone’s app store. Use OsmAnd protocol, the server URL and private device identifier below; set a 30–60 second interval, allow background/Always location, and allow battery usage. Turn on the client’s tracking service and keep your app duty status Online.</p>
+        <p>Browsers can pause GPS when closed or locked. For background updates, install the free <a className="underline text-blue-700" href="https://www.traccar.org/client/" target="_blank" rel="noreferrer">Traccar client</a> from your phone’s app store. Use OsmAnd protocol, the server URL and private device identifier below; set a 30–60 second interval, allow background/Always location, and allow battery usage. Turn on the client’s tracking service and keep your app duty status Online.</p>
         <p role="status">{nativeStatus}</p>
         {device && <div className="space-y-2"><label className="block">Server URL<input readOnly value={device.serverUrl} className="block w-full border rounded-lg p-2 mt-1" /></label><label className="block">Private device identifier<input readOnly value={device.identifier} className="block w-full border rounded-lg p-2 mt-1 font-mono" /></label><p>Expires {new Date(device.expiresAt).toLocaleDateString()}. Store the identifier only in your tracker. Never share it in screenshots.</p>{device.serverUrl.startsWith('http:') && <p className="text-amber-800">Pair on the live HTTPS website for phone tracking. This localhost URL is only reachable from this computer.</p>}</div>}
-        <div className="flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={() => void changePairing('POST')} className="border rounded-lg px-3 py-2 font-semibold text-blue-700 disabled:opacity-50">{busy ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Updating…</> : 'Generate / replace device identifier'}</button><button type="button" disabled={busy} onClick={() => void changePairing('DELETE')} className="border rounded-lg px-3 py-2 font-semibold text-rose-700 disabled:opacity-50">Disconnect native tracker</button></div>
+        <div className="flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={() => void changePairing('POST')} className="rounded-lg border border-black/[0.08] px-3 py-2 font-medium text-slate-800 disabled:opacity-50">{busy ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Updating…</> : 'Generate / replace device identifier'}</button><button type="button" disabled={busy} onClick={() => void changePairing('DELETE')} className="rounded-lg border border-black/[0.08] px-3 py-2 font-medium text-rose-700 disabled:opacity-50">Disconnect native tracker</button></div>
         <p>Stop sharing above stops this browser only. Disconnect the native tracker here, stop its service, or go off duty to stop native updates. A phone test is required to confirm your device’s background permissions.</p>
       </div>
     </details>

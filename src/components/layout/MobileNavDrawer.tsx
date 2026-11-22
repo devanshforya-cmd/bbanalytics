@@ -17,7 +17,7 @@ import {
   CreditCard,
   FileText,
   Award,
-  Sparkles,
+  Lightbulb,
   ClipboardPen,
   ClipboardCheck,
   TruckIcon,
@@ -77,7 +77,7 @@ export default function MobileNavDrawer({
           {/* Header */}
           <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
+              <span className="h-2 w-2 rounded-full bg-blue-600"></span>
               <BrandLogo variant="full" className="h-7" />
             </div>
             <button
@@ -126,7 +126,7 @@ export default function MobileNavDrawer({
                 <div className="truncate text-xs font-bold text-slate-900">
                   {currentUser.fullName}
                 </div>
-                <div className="truncate text-[10px] text-slate-500">
+                <div className="truncate text-[11px] text-slate-500">
                   {roleLabel(currentUser)}
                 </div>
               </div>

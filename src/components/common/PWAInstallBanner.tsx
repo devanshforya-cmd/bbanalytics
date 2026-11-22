@@ -126,19 +126,19 @@ export default function PWAInstallBanner() {
           {platform === 'ios' && (
             <ol className="mt-1.5 space-y-1 text-[13px] leading-snug text-slate-600">
               <li>1. Tap <ShareGlyph /> <span className="font-medium text-slate-800">Share</span> in the Safari toolbar.</li>
-              <li>2. Scroll down and tap <span className="font-medium text-slate-800">Add to Home Screen</span>.</li>
+              <li>2. Scroll down and tap <span className="font-medium text-slate-800">Add to home screen</span>.</li>
               <li>3. Tap <span className="font-medium text-slate-800">Add</span>. Open it from your home screen to get notifications.</li>
             </ol>
           )}
           {platform === 'ios-inapp' && (
-            <p className="mt-1 text-[13px] leading-snug text-slate-600">This page is open inside another app. Open it in Safari first, then tap <ShareGlyph /> Share and choose Add to Home Screen.</p>
+            <p className="mt-1 text-[13px] leading-snug text-slate-600">This page is open inside another app. Open it in Safari first, then tap <ShareGlyph /> Share and choose add to home screen.</p>
           )}
           {platform === 'other' && (
             <p className="mt-1 text-[13px] leading-snug text-slate-600">Opens like an app, works offline in the field, and can send you notifications.</p>
           )}
           <div className="mt-3 flex items-center gap-2">
             {platform === 'other' && deferredPrompt && (
-              <button type="button" onClick={handleInstallClick} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700">
+              <button type="button" onClick={handleInstallClick} className="btn btn-primary">
                 <Download className="h-3.5 w-3.5" />
                 Install
               </button>

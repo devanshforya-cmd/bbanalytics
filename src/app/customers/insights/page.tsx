@@ -557,8 +557,8 @@ export default function CustomerInsightsPage() {
       <div className="space-y-8 pb-16 max-w-7xl mx-auto">
       <Breadcrumbs
         items={[
-          { label: 'Customer Intelligence', href: '/customers' },
-          { label: 'Cohort Insights' },
+          { label: 'Customer intelligence', href: '/customers' },
+          { label: 'Cohort insights' },
         ]}
       />
 
@@ -569,15 +569,15 @@ export default function CustomerInsightsPage() {
             <Link
               href="/customers"
               className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition"
-              title="Return to Customer Directory"
+              title="Return to customer directory"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="flex items-center gap-1.5 text-xl sm:text-2xl font-black tracking-tight text-slate-900">
-                  Customer Intelligence & Cohort Analytics
-<InfoTip label="About this page">Deterministic analytics layer per PRD 7.3: Churn forecasting, revenue concentration, brand synergy, and karma trajectories.</InfoTip></h1>
+                  Cohort insights
+<InfoTip label="About this page">Churn forecasting, revenue concentration, brand synergy, and karma trajectories.</InfoTip></h1>
               </div>
               
             </div>
@@ -587,7 +587,7 @@ export default function CustomerInsightsPage() {
         <div className="flex items-center gap-2">
           <Link
             href="/customers"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition"
+            className="btn btn-secondary"
           >
             <Users className="h-3.5 w-3.5 text-slate-500" />
             Customer 360 Directory
@@ -610,7 +610,7 @@ export default function CustomerInsightsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[11px] font-semibold text-slate-500">Customer Base</span>
+            <span className="text-[11px] font-semibold text-slate-500">Customer base</span>
             <Users className="h-4 w-4 text-blue-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-slate-900">{customers.length}</div>
@@ -622,25 +622,25 @@ export default function CustomerInsightsPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-4 shadow-xs">
+        <div className="rounded-2xl border border-black/[0.08] bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-rose-400">
-            <span className="text-[11px] font-semibold text-rose-800">Churn Risk (60d+)</span>
+            <span className="text-[11px] font-semibold text-rose-800">Churn risk (60d+)</span>
             <TrendingDown className="h-4 w-4 text-rose-600" />
           </div>
           <div className="mt-2 text-2xl font-black text-rose-900">{churnAnalysis.length}</div>
           <div className="mt-1 text-[11px] text-rose-700 font-medium">High-value dormant profiles</div>
         </div>
 
-        <div className="rounded-2xl border border-blue-200 bg-blue-50/40 p-4 shadow-xs">
+        <div className="rounded-2xl border border-black/[0.08] bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-blue-400">
-            <span className="text-[11px] font-semibold text-blue-800">Top 10% Revenue</span>
+            <span className="text-[11px] font-semibold text-blue-800">Top 10% revenue</span>
             <Flame className="h-4 w-4 text-amber-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-blue-950">{revenueConcentration.concentrationPct}%</div>
           <div className="mt-1 text-[11px] text-blue-700">Driven by {revenueConcentration.topSlice.length} VIP buyers</div>
         </div>
 
-        <div className="rounded-2xl border border-purple-200 bg-purple-50/40 p-4 shadow-xs">
+        <div className="rounded-2xl border border-black/[0.08] bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-purple-400">
             <span className="text-[11px] font-semibold text-purple-800">Cross-Brand</span>
             <Layers className="h-4 w-4 text-purple-600" />
@@ -666,12 +666,12 @@ export default function CustomerInsightsPage() {
       {/* Navigation Filter Tabs */}
       <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-100 p-1.5 border border-slate-200">
         {[
-          { key: 'ALL', label: 'All 13 Insights', icon: Activity },
-          { key: 'CHURN_WINBACK', label: 'Churn & Win-Back', icon: TrendingDown },
+          { key: 'ALL', label: 'All 13 insights', icon: Activity },
+          { key: 'CHURN_WINBACK', label: 'Churn & win-back', icon: TrendingDown },
           { key: 'REVENUE_LTV', label: 'Revenue & LTV', icon: DollarSign },
-          { key: 'BRAND_CHANNEL', label: 'Brands & Channels', icon: Layers },
-          { key: 'BEHAVIOR', label: 'Cycles & Cohorts', icon: Clock },
-          { key: 'GEOGRAPHY', label: 'Geographic Intelligence', icon: MapPin },
+          { key: 'BRAND_CHANNEL', label: 'Brands & channels', icon: Layers },
+          { key: 'BEHAVIOR', label: 'Cycles & cohorts', icon: Clock },
+          { key: 'GEOGRAPHY', label: 'Geographic intelligence', icon: MapPin },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;

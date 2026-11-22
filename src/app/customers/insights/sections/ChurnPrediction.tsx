@@ -28,9 +28,9 @@ export default function ChurnPrediction({ churnAnalysis }: ChurnPredictionProps)
               2a
             </span>
             <h2 className="text-base font-bold text-slate-900">
-              Churn Prediction Board (60+ Days Inactive)
+              Churn prediction board (60+ days inactive)
             </h2>
-            <span className="rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5">
+            <span className="rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold px-2 py-0.5">
               {churnAnalysis.length} Profiles
             </span>
           </div>
@@ -38,7 +38,7 @@ export default function ChurnPrediction({ churnAnalysis }: ChurnPredictionProps)
             Identifies buyers whose order gap exceeds 60 days, evaluated by previous order velocity and last recorded interaction.
           </p>
         </div>
-        <span className="text-[11px] font-bold text-slate-500">Sorted by Karma (High Value Risk First)</span>
+        <span className="text-[11px] font-bold text-slate-500">Sorted by Karma (high value risk first)</span>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200" tabIndex={0}>
@@ -46,13 +46,13 @@ export default function ChurnPrediction({ churnAnalysis }: ChurnPredictionProps)
           <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
             <tr>
               <th className="py-3 px-3">Customer</th>
-              <th className="py-3 px-3">Last Order Date</th>
-              <th className="py-3 px-3 text-center">Days Inactive</th>
+              <th className="py-3 px-3">Last order date</th>
+              <th className="py-3 px-3 text-center">Days inactive</th>
               <th className="py-3 px-3">Prev. Frequency</th>
-              <th className="py-3 px-3 text-center">Karma Score</th>
-              <th className="py-3 px-3">Last Experience</th>
-              <th className="py-3 px-3">Recommended Action</th>
-              <th className="py-3 px-3 text-right">Quick Action</th>
+              <th className="py-3 px-3 text-center">Karma score</th>
+              <th className="py-3 px-3">Last experience</th>
+              <th className="py-3 px-3">Recommended action</th>
+              <th className="py-3 px-3 text-right">Quick action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -73,7 +73,7 @@ export default function ChurnPrediction({ churnAnalysis }: ChurnPredictionProps)
                       <span>{item.customer.name}</span>
                       <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition text-blue-600" />
                     </Link>
-                    <div className="text-[10px] text-slate-500">{item.customer.phone}</div>
+                    <div className="text-[11px] text-slate-500">{item.customer.phone}</div>
                   </td>
                   <td className="py-3 px-3 text-slate-600 font-medium">
                     {item.customer.lastOrderDate || '2026-06-12'}
@@ -101,7 +101,7 @@ export default function ChurnPrediction({ churnAnalysis }: ChurnPredictionProps)
                   </td>
                   <td className="py-3 px-3">
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${
                         item.lastExpType === 'RETURN'
                           ? 'bg-rose-100 text-rose-800 border border-rose-200'
                           : item.lastExpType === 'FAILURE'
@@ -118,7 +118,7 @@ export default function ChurnPrediction({ churnAnalysis }: ChurnPredictionProps)
                   <td className="py-3 px-3 text-right">
                     <Link
                       href={`/customers/${encodeURIComponent(item.customer.phone)}`}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 text-white font-bold text-[10px] hover:bg-slate-800 transition"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 text-white font-bold text-[11px] hover:bg-slate-800 transition"
                     >
                       Engage <ChevronRight className="h-3 w-3" />
                     </Link>

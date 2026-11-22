@@ -22,7 +22,7 @@ export default function Sidebar({ pending = false }: { pending?: boolean }) {
   }, []);
 
   return (
-    <aside className="hidden w-64 flex-col border-r border-black/[0.06] bg-white/80 text-slate-700 backdrop-blur-xl lg:flex">
+    <aside className="hidden w-64 flex-col border-r border-black/[0.06] bg-[#f4f4f5] text-slate-700 lg:flex">
       {/* Brand Header */}
       <div className="flex h-16 items-center px-5">
         <Link href="/dashboard" aria-label="Brand Bucket home" className="rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500">
@@ -39,14 +39,14 @@ export default function Sidebar({ pending = false }: { pending?: boolean }) {
       <div className="border-t border-black/[0.06] p-3">
         <div className="flex items-center gap-3 rounded-xl p-2">
           <div className="relative">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-medium text-slate-700 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]">
               {currentUser.fullName ? currentUser.fullName.charAt(0) : 'U'}
             </div>
-            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-[#f4f4f5]" />
           </div>
           <div className="overflow-hidden flex-1 min-w-0">
-            <div className="truncate text-xs font-bold text-slate-900">{currentUser.fullName}</div>
-            <div className="truncate text-[10px] font-medium text-slate-500">
+            <div className="truncate text-[13px] font-medium text-slate-900">{currentUser.fullName}</div>
+            <div className="truncate text-xs text-slate-500">
               {roleLabel(currentUser)}
             </div>
           </div>

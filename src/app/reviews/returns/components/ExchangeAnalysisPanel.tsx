@@ -11,9 +11,9 @@ const Tile = ({ label, value, hint, tone = 'slate' }: { label: string; value: st
   const tones = { slate: 'text-slate-900', purple: 'text-purple-700', amber: 'text-amber-700', emerald: 'text-emerald-700', rose: 'text-rose-700' };
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3">
-      <p className="text-[10px] font-bold text-slate-500">{label}</p>
+      <p className="text-[11px] font-bold text-slate-500">{label}</p>
       <p className={`mt-1 text-lg font-black tabular-nums ${tones[tone]}`}>{value}</p>
-      {hint && <p className="text-[10px] text-slate-500">{hint}</p>}
+      {hint && <p className="text-[11px] text-slate-500">{hint}</p>}
     </div>
   );
 };
@@ -59,7 +59,7 @@ export default function ExchangeAnalysisPanel({ returns }: { returns: ReturnEntr
                   </li>
                 ))}
               </ul>
-              <p className="mt-3 flex flex-wrap gap-3 text-[10px] text-slate-500">
+              <p className="mt-3 flex flex-wrap gap-3 text-[11px] text-slate-500">
                 <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-purple-500" /> Exchanged</span>
                 <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sky-400" /> Refunded</span>
                 <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-300" /> Pending / returned / rejected</span>

@@ -383,7 +383,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
               <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3">
                 <Search className="w-6 h-6" />
               </div>
-              <p className="text-sm font-semibold text-slate-800">Global Command Palette</p>
+              <p className="text-sm font-semibold text-slate-800">Global command palette</p>
               <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
                 Search records available to your account. Type at least <span className="font-semibold text-blue-600">3 characters</span>.
               </p>
@@ -391,7 +391,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
               {/* Quick Jump Shortcuts */}
               <div className="mt-6 pt-5 border-t border-slate-100 text-left">
                 <div className="text-[11px] font-bold text-slate-500 mb-2 px-1">
-                  Quick Directory Navigation
+                  Quick directory navigation
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {hasAccess(currentUser, 'customers') && <button
@@ -420,7 +420,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                       <Store className="w-3.5 h-3.5" />
                     </div>
-                    <span>Store Directory</span>
+                    <span>Store directory</span>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400 ml-auto shrink-0" />
                   </button>}
 
@@ -435,7 +435,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     <div className="w-6 h-6 rounded-md bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
                       <Package className="w-3.5 h-3.5" />
                     </div>
-                    <span>Products & Catalog</span>
+                    <span>Products & catalog</span>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400 ml-auto shrink-0" />
                   </button>}
 
@@ -450,7 +450,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                     <div className="w-6 h-6 rounded-md bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
                       <CreditCard className="w-3.5 h-3.5" />
                     </div>
-                    <span>Cheque Custody & Deposit</span>
+                    <span>Cheque custody & deposit</span>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400 ml-auto shrink-0" />
                   </button>}
                 </div>
@@ -672,7 +672,7 @@ function CategorySection({
       </div>
       <div>
         {count === 0 ? (
-          <div className="px-5 py-2 text-xs text-slate-500 italic font-medium">
+          <div className="px-5 py-2 text-xs text-slate-500 font-medium">
             {emptyText}
           </div>
         ) : (
@@ -725,7 +725,7 @@ function SearchResultRow({
             </span>
             {badgeText && (
               <span
-                className={`text-[10px] font-bold px-1.5 py-0.2 rounded border   shrink-0 ${
+                className={`text-[11px] font-bold px-1.5 py-0.2 rounded border   shrink-0 ${
                   badgeColor || 'bg-slate-100 text-slate-600 border-slate-200'
                 }`}
               >

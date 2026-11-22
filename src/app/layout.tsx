@@ -1,10 +1,13 @@
+import '@fontsource-variable/ibm-plex-sans/wght.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import AppShell from '@/components/layout/AppShell';
 
 export const metadata: Metadata = {
   title: 'Brand Bucket',
-  description: 'Operational Intelligence & Field Sales Force Management for Brand Bucket Nepal',
+  description: 'Operational intelligence & field sales force management for Brand Bucket Nepal',
   manifest: '/manifest.json',
   icons: { icon: '/icon-192.png', apple: '/apple-touch-icon.png' },
   appleWebApp: {
@@ -18,7 +21,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#2563eb',
+  themeColor: '#fafafa',
 };
 
 export default function RootLayout({
@@ -53,7 +56,7 @@ export default function RootLayout({
           }}
         />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#fafafa" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>

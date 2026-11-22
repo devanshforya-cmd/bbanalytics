@@ -24,7 +24,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ExternalLink,
-  Sparkles,
+  Lightbulb,
   Info,
   Tag,
   AlertCircle, Circle } from 'lucide-react';
@@ -63,21 +63,21 @@ function CustomerNotFound({ rawPhone }: { rawPhone: string }) {
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to Customer Directory
+        Back to customer directory
       </Link>
       <div className="bg-white rounded-2xl border border-slate-200 p-12 max-w-md mx-auto space-y-3 shadow-xs">
         <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400 font-bold text-lg">
           ?
         </div>
-        <h2 className="text-base font-bold text-slate-900">Customer Profile Not Found</h2>
+        <h2 className="text-base font-bold text-slate-900">Customer profile not found</h2>
         <p className="text-xs text-slate-500">
           No profile exists matching phone number &quot;{rawPhone}&quot;.
         </p>
         <Link
           href="/customers"
-          className="inline-block px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition"
+          className="inline-block px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition"
         >
-          Return to Directory
+          Return to directory
         </Link>
       </div>
     </div>
@@ -312,7 +312,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
     // Serial Returner: 3+ returns
     if (customer.totalReturns >= 3 || returns.length >= 3) {
       flags.push({
-        title: 'Serial Returner',
+        title: 'Serial returner',
         color: 'red',
         description: '3+ returns recorded in the last 30 days. High reverse logistics cost profile.',
       });
@@ -331,7 +331,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
     const refusedCount = failures.filter((f) => f.reason.toLowerCase().includes('refuse')).length;
     if (customer.totalCancellations >= 3 || refusedCount >= 2) {
       flags.push({
-        title: 'COD Abuser',
+        title: 'COD abuser',
         color: 'orange',
         description: 'Multiple COD delivery refusals or cancellations. Pre-payment requirement strongly advised.',
       });
@@ -371,7 +371,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
       {/* Breadcrumb navigation */}
       <Breadcrumbs
         items={[
-          { label: 'Customer Intelligence', href: '/customers' },
+          { label: 'Customer intelligence', href: '/customers' },
           { label: 'Customer 360' },
           { label: customer.name },
         ]}
@@ -406,11 +406,11 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
         {/* Karma Score Pill & Breakdown Trigger */}
         <div className="flex flex-col items-center sm:items-end">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center min-w-[160px] shadow-2xs">
-            <div className="text-[10px] font-bold text-slate-500 ">Karma Score</div>
-            <div className="text-2xl font-black text-blue-600 mt-0.5">
+            <div className="text-[11px] font-bold text-slate-500 ">Karma score</div>
+            <div className="text-2xl font-black text-slate-900 mt-0.5">
               {customer.karmaScore} <span className="text-xs font-normal text-slate-500">/ 100</span>
             </div>
-            <div className="text-[10px] text-slate-500 mt-0.5">
+            <div className="text-[11px] text-slate-500 mt-0.5">
               {customer.karmaScore >= 70
                 ? 'Clean Track Record'
                 : customer.karmaScore >= 40
@@ -437,7 +437,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
             <div>
               <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                 <Award className="h-4 w-4 text-blue-600" />
-                Karma Score Audit Trail & Ledger
+                Karma score audit trail & ledger
               </h3>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Transparent rule-based scoring determining reliability, discount eligibility, and Cash on Delivery (COD) approval.
@@ -451,11 +451,11 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
           <div className="overflow-x-auto" tabIndex={0}>
             <table className="w-full text-xs text-left">
               <thead>
-                <tr className="border-b border-blue-100 text-slate-500 font-bold text-[10px]">
+                <tr className="border-b border-blue-100 text-slate-500 font-bold text-[11px]">
                   <th className="py-2 px-3">Event</th>
                   <th className="py-2 px-3">Date</th>
                   <th className="py-2 px-3 text-center">Points</th>
-                  <th className="py-2 px-3 text-right">Running Total</th>
+                  <th className="py-2 px-3 text-right">Running total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-blue-100/60 bg-white/80 rounded-xl overflow-hidden">
@@ -494,8 +494,8 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
       {/* BRAND ENGAGEMENT (Fix 69c) */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-3">
         <h2 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-purple-600" />
-          Brand Engagement
+          <Lightbulb className="w-4 h-4 text-purple-600" />
+          Brand engagement
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {brandEngagement.map((be) => (
@@ -510,20 +510,20 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                   <span>{be.dot}</span> {be.name}
                 </span>
                 {be.hasOrdered ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white shadow-2xs">
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white shadow-2xs">
                     {be.ordersCount} order{be.ordersCount > 1 ? 's' : ''}
                   </span>
                 ) : (
-                  <span className="text-[10px] font-medium text-slate-500">Never ordered</span>
+                  <span className="text-[11px] font-medium text-slate-500">Never ordered</span>
                 )}
               </div>
               {be.hasOrdered ? (
                 <div className="mt-2 text-[11px] space-y-0.5 opacity-90">
                   <div>• Returns: <strong>{be.returnsCount}</strong> | Complaints: <strong>{be.complaintsCount}</strong></div>
-                  <div className="text-[10px] text-slate-500">Customer since: {be.firstDate || '2026-08'}</div>
+                  <div className="text-[11px] text-slate-500">Customer since: {be.firstDate || '2026-08'}</div>
                 </div>
               ) : (
-                <div className="mt-2 text-[10px] text-slate-500">
+                <div className="mt-2 text-[11px] text-slate-500">
                   Target for cross-brand bundle recommendations
                 </div>
               )}
@@ -535,28 +535,28 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-slate-500 font-bold text-[10px] ">
+          <div className="text-slate-500 font-bold text-[11px] ">
             {brandTimelineFilter === 'ALL' ? 'Orders Placed' : `${brandTimelineFilter} Orders`}
           </div>
           <div className="text-lg font-bold text-slate-900 mt-1">{filteredStats.ordersCount}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-slate-500 font-bold text-[10px] ">
+          <div className="text-slate-500 font-bold text-[11px] ">
             {brandTimelineFilter === 'ALL' ? 'Delivery Failures' : `${brandTimelineFilter} Failures`}
           </div>
           <div className="text-lg font-bold text-rose-600 mt-1">{filteredStats.failuresCount}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-slate-500 font-bold text-[10px] ">
+          <div className="text-slate-500 font-bold text-[11px] ">
             {brandTimelineFilter === 'ALL' ? 'Product Returns' : `${brandTimelineFilter} Returns`}
           </div>
           <div className="text-lg font-bold text-amber-600 mt-1">{filteredStats.returnsCount}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-slate-500 font-bold text-[10px] ">
+          <div className="text-slate-500 font-bold text-[11px] ">
             {brandTimelineFilter === 'ALL' ? 'Reviews Given' : `${brandTimelineFilter} Reviews`}
           </div>
-          <div className="text-lg font-bold text-emerald-600 mt-1">{filteredStats.feedbackCount}</div>
+          <div className="text-lg font-bold text-slate-900 mt-1">{filteredStats.feedbackCount}</div>
         </div>
       </div>
 
@@ -565,7 +565,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
             <ShieldAlert className="h-4 w-4 text-slate-500" />
-            Active Risk & Behavior Flags
+            Active risk & behavior flags
           </h2>
           <span className="text-[11px] text-slate-500 font-medium">Auto-Evaluated</span>
         </div>
@@ -610,7 +610,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
           <div>
             <h2 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
               <Tag className="h-4 w-4 text-slate-500" />
-              Brands Purchased & Cross-Sell Opportunities
+              Brands purchased & cross-sell opportunities
             </h2>
             <p className="text-[11px] text-slate-500 mt-0.5">
               Shows principal brand penetration for this customer across the distributor portfolio.
@@ -640,7 +640,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                     {orderCount} order{orderCount > 1 ? 's' : ''}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-slate-500 font-medium">
+                  <span className="text-[11px] text-slate-500 font-medium">
                     (0 orders) ← Cross-sell opportunity
                   </span>
                 )}
@@ -655,7 +655,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
             <h2 className="text-sm font-bold text-slate-800">
-              Unified Chronological Timeline
+              Unified chronological timeline
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Merged interactions (Orders, Delivery Failures, Returns & Feedback) ordered chronologically (newest first).
@@ -671,7 +671,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-bold text-slate-500 text-[11px] mr-1">Showing:</span>
             {[
-              { id: 'ALL', label: 'All Brands' },
+              { id: 'ALL', label: 'All brands' },
               ...allBrands.map(brand => ({ id: brand.code, label: brand.name })),
             ].map((pill) => (
               <button
@@ -696,7 +696,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
 
         {filteredTimelineItems.length === 0 ? (
           <div className="p-8 text-center text-xs text-slate-500 space-y-1">
-            <Sparkles className="h-6 w-6 mx-auto text-slate-300" />
+            <Lightbulb className="h-6 w-6 mx-auto text-slate-300" />
             <p className="font-semibold text-slate-600">No interaction history recorded for this brand</p>
             <p>New orders, calls, deliveries, or returns will show up here automatically.</p>
           </div>
@@ -707,9 +707,8 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                 const ord = item.data;
                 return (
                   <div key={item.id} className="relative group">
-                    <div className="absolute -left-[31px] top-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white text-[10px] ring-4 ring-white shadow-xs">
-                      ✓
-                    </div>
+                    <div className="absolute -left-[31px] top-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white text-[11px] ring-4 ring-white shadow-xs">
+                      </div>
                     <div className="rounded-xl border border-blue-100 bg-blue-50/20 p-4 space-y-2 hover:border-blue-300 transition shadow-2xs">
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -720,7 +719,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                             {ord.orderDateAd} • Platform: <strong>{ord.platform}</strong> • Total: <strong className="text-slate-800"><Money>{ord.totalAmount?.toLocaleString()}</Money></strong>
                           </div>
                         </div>
-                        <span className="rounded-full bg-blue-100 text-blue-800 font-bold px-2 py-0.5 text-[10px]">
+                        <span className="rounded-full bg-blue-100 text-blue-800 font-bold px-2 py-0.5 text-[11px] enum-label">
                           {ord.status}
                         </span>
                       </div>
@@ -759,7 +758,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                 const df = item.data;
                 return (
                   <div key={item.id} className="relative group">
-                    <div className="absolute -left-[31px] top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white text-[10px] font-bold ring-4 ring-white shadow-xs">
+                    <div className="absolute -left-[31px] top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white text-[11px] font-bold ring-4 ring-white shadow-xs">
                       !
                     </div>
                     <div className="rounded-xl border border-rose-100 bg-rose-50/30 p-4 space-y-2 hover:border-rose-300 transition shadow-2xs">
@@ -772,13 +771,13 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                             {df.dateAd} • Courier Territory: <strong>{df.valley} Valley</strong>
                           </div>
                         </div>
-                        <span className="rounded-full bg-rose-100 text-rose-800 font-bold px-2 py-0.5 text-[10px]">
+                        <span className="rounded-full bg-rose-100 text-rose-800 font-bold px-2 py-0.5 text-[11px]">
                           -5 Karma Penalty
                         </span>
                       </div>
 
                       {df.remarks && (
-                        <div className="text-rose-700 bg-white rounded-lg p-2 border border-rose-100 text-[11px] italic">
+                        <div className="text-rose-700 bg-white rounded-lg p-2 border border-rose-100 text-[11px] ">
                           &quot;{df.remarks}&quot;
                         </div>
                       )}
@@ -821,7 +820,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                             {ret.dateAd} • Status: <strong>{ret.orderStatus || 'Returned'}</strong> • Reason: <strong>{ret.reasonCategory}</strong>
                           </div>
                         </div>
-                        <span className="rounded-full bg-amber-100 text-amber-800 font-bold px-2 py-0.5 text-[10px]">
+                        <span className="rounded-full bg-amber-100 text-amber-800 font-bold px-2 py-0.5 text-[11px]">
                           -3 Karma Penalty
                         </span>
                       </div>
@@ -857,7 +856,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                 return (
                   <div key={item.id} className="relative group">
                     <div
-                      className={`absolute -left-[31px] top-1 flex h-5 w-5 items-center justify-center rounded-full text-white text-[10px] ring-4 ring-white shadow-xs ${
+                      className={`absolute -left-[31px] top-1 flex h-5 w-5 items-center justify-center rounded-full text-white text-[11px] ring-4 ring-white shadow-xs ${
                         isComplaint ? 'bg-rose-500' : 'bg-emerald-600'
                       }`}
                     >
@@ -879,13 +878,13 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                             {fb.dateReceivedBs} ({fb.dateReceivedAd}) via <strong>{fb.channel}</strong>
                           </div>
                         </div>
-                        <span className={`rounded-full font-bold px-2 py-0.5 text-[10px] ${pillColor}`}>
+                        <span className={`rounded-full font-bold px-2 py-0.5 text-[11px] ${pillColor}`}>
                           {fb.type}
                         </span>
                       </div>
 
                       {fb.fullText && (
-                        <div className="text-slate-700 bg-white rounded-lg p-2 border border-slate-100 text-[11px] italic">
+                        <div className="text-slate-700 bg-white rounded-lg p-2 border border-slate-100 text-[11px] ">
                           &quot;{fb.fullText}&quot;
                         </div>
                       )}

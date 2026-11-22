@@ -39,7 +39,7 @@ import {
   RotateCw,
   ZoomIn,
   ZoomOut,
-  Sparkles,
+  Lightbulb,
   ArrowRight,
   ShieldCheck,
   ChevronRight,
@@ -200,7 +200,7 @@ export default function StoreDetailPage() {
     return (
       <div className="p-8 text-center text-slate-500">
         <Store className="h-10 w-10 text-slate-300 mx-auto mb-2" />
-        <h2 className="text-base font-bold text-slate-800">Store Not Found</h2>
+        <h2 className="text-base font-bold text-slate-800">Store not found</h2>
         <p className="text-xs text-slate-500 mt-1">
           No record matching ID &quot;{storeIdParam}&quot; exists.
         </p>
@@ -220,8 +220,8 @@ export default function StoreDetailPage() {
       {/* 7f. Breadcrumbs */}
       <Breadcrumbs
         items={[
-          { label: 'Offline Sales', href: '/offline-sales/stores' },
-          { label: 'Stores & Branches', href: '/offline-sales/stores' },
+          { label: 'Offline sales', href: '/offline-sales/stores' },
+          { label: 'Stores & branches', href: '/offline-sales/stores' },
           { label: store.name },
         ]}
       />
@@ -240,7 +240,7 @@ export default function StoreDetailPage() {
                     {store.name}
                   </h1>
                   <StoreDeleteButton id={store.id} name={store.name} onDeleted={() => router.push('/offline-sales/stores')} />
-                  <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold text-blue-800">
+                  <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-800">
                     {store.subType}
                   </span>
                   {store.type === 'BRANCH' && store.distributorId && <Link href={`/offline-sales/stores/${store.distributorId}`} className="text-[11px] font-semibold text-blue-700 hover:underline">Whole chain →</Link>}
@@ -249,7 +249,7 @@ export default function StoreDetailPage() {
                   <MapPin className="h-3.5 w-3.5 text-slate-400" />
                   <span>{store.address}</span>
                   {store.coordinates && (
-                    <span className="font-mono text-[10px] text-slate-500 ml-1">
+                    <span className="font-mono text-[11px] text-slate-500 ml-1">
                       ({store.coordinates.lat.toFixed(4)}, {store.coordinates.lng.toFixed(4)})
                     </span>
                   )}
@@ -280,17 +280,17 @@ export default function StoreDetailPage() {
             <div className="flex flex-wrap gap-2">
               <Link
                 href="/offline-sales/beat-plan"
-                className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
+                className="btn btn-primary"
               >
                 <Clock className="h-3.5 w-3.5" />
-                Go to Today&apos;s Beat
+                Go to today&apos;s beat
               </Link>
               <Link
                 href={`/offline-sales/cheques?search=${encodeURIComponent(store.name)}`}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                className="btn btn-secondary"
               >
                 <CreditCard className="h-3.5 w-3.5 text-emerald-600" />
-                Cheques Register
+                Cheques register
               </Link>
               {(store.type === 'RETAILER' || store.type === 'BRANCH') && (
                 <button type="button" onClick={() => setCountOpen(true)}
@@ -311,7 +311,7 @@ export default function StoreDetailPage() {
           {/* Contacts */}
           <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1">
             <span className="font-semibold text-slate-500 text-[11px] block">
-              Primary Contact
+              Primary contact
             </span>
             <div className="font-bold text-slate-900 flex items-center gap-1.5">
               <User className="h-3.5 w-3.5 text-slate-500" />
@@ -331,7 +331,7 @@ export default function StoreDetailPage() {
               {/* Credit Limit */}
               <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1">
                 <span className="font-semibold text-slate-500 text-[11px] block">
-                  Credit Limit
+                  Credit limit
                 </span>
                 <div className="font-bold text-slate-900 text-sm">
                   <Money>{(store.creditLimit || 0).toLocaleString()}</Money>
@@ -344,7 +344,7 @@ export default function StoreDetailPage() {
               {/* Outstanding Balance */}
               <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1">
                 <span className="font-semibold text-slate-500 text-[11px] block">
-                  Current Outstanding
+                  Current outstanding
                 </span>
                 <div className="font-bold text-amber-600 text-sm">
                   <Money>{(store.outstandingBalance || 0).toLocaleString()}</Money>
@@ -359,7 +359,7 @@ export default function StoreDetailPage() {
           {/* Activity Totals */}
           <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1">
             <span className="font-semibold text-slate-500 text-[11px] block">
-              Historical Activity
+              Historical activity
             </span>
             <div className="font-bold text-slate-900">
               {visits.length} Visits • {secondaryOrders.length} Orders
@@ -371,7 +371,7 @@ export default function StoreDetailPage() {
 
           {/* Fix 34: Store Health Score Card (Hidden for Sales Officers) */}
           {!isOfficer && healthScore && (
-            <div className="rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 shadow-sm md:col-span-2 lg:col-span-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="rounded-xl bg-slate-900 text-white p-4 md:col-span-2 lg:col-span-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <div className="relative flex items-center justify-center">
                   <div
@@ -389,9 +389,9 @@ export default function StoreDetailPage() {
 
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-sm text-white">Store Health Score</h4>
+                    <h4 className="font-bold text-sm text-white">Store health score</h4>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold   ${
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-bold   ${
                         healthScore.tier === 'TIER_1'
                           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                           : healthScore.tier === 'TIER_2'
@@ -410,19 +410,19 @@ export default function StoreDetailPage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs border-t sm:border-t-0 sm:border-l border-slate-700 pt-3 sm:pt-0 sm:pl-4">
                 <div>
-                  <span className="text-slate-500 text-[10px] font-bold block">Order Velocity</span>
+                  <span className="text-slate-500 text-[11px] font-bold block">Order velocity</span>
                   <span className="font-bold text-white text-sm">{healthScore.orderRegularity}/30</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 text-[10px] font-bold block">Payment Discipline</span>
+                  <span className="text-slate-500 text-[11px] font-bold block">Payment discipline</span>
                   <span className="font-bold text-white text-sm">{healthScore.paymentDiscipline}/25</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 text-[10px] font-bold block">Stock Freshness</span>
+                  <span className="text-slate-500 text-[11px] font-bold block">Stock freshness</span>
                   <span className="font-bold text-white text-sm">{healthScore.stockMaintenance}/25</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 text-[10px] font-bold block">Visit Cooperation</span>
+                  <span className="text-slate-500 text-[11px] font-bold block">Visit cooperation</span>
                   <span className="font-bold text-white text-sm">{healthScore.visitCooperation}/20</span>
                 </div>
               </div>
@@ -446,7 +446,7 @@ export default function StoreDetailPage() {
                   className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs flex items-center gap-2"
                 >
                   <span className="font-semibold text-slate-800">{c.name}</span>
-                  <span className="rounded bg-white px-1 border border-slate-200 text-[10px] text-slate-600 font-medium">
+                  <span className="rounded bg-white px-1 border border-slate-200 text-[11px] text-slate-600 font-medium">
                     {c.role}
                   </span>
                   <a href={`tel:${c.phone}`} className="font-mono text-blue-600 text-[11px]">
@@ -462,7 +462,7 @@ export default function StoreDetailPage() {
             className="inline-flex items-center gap-1 self-start sm:self-auto px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition shrink-0"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Add Contact</span>
+            <span>Add contact</span>
           </button>
         </div>
       </div>
@@ -501,12 +501,12 @@ export default function StoreDetailPage() {
                 setShowAddContactModal(false);
                 setNewContactName('');
                 setNewContactPhone('+977-98');
-                toast.success(`✓ Contact ${newContactName} added.`);
+                toast.success(`Contact ${newContactName} added.`);
               }}
               className="space-y-4 pt-4 text-xs"
             >
               <div>
-                <label htmlFor="-id--contact-name" className="block font-bold text-slate-700 mb-1">Contact Name *</label>
+                <label htmlFor="-id--contact-name" className="block font-bold text-slate-700 mb-1">Contact name *</label>
                 <input id="-id--contact-name"
                   type="text"
                   required
@@ -518,22 +518,22 @@ export default function StoreDetailPage() {
               </div>
 
               <div>
-                <label htmlFor="-id--contact-role" className="block font-bold text-slate-700 mb-1">Contact Role *</label>
+                <label htmlFor="-id--contact-role" className="block font-bold text-slate-700 mb-1">Contact role *</label>
                 <select id="-id--contact-role"
                   value={newContactRole}
                   onChange={(e) => setNewContactRole(e.target.value as any)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium bg-white"
                 >
-                  <option value="Owner">Owner / Proprietor</option>
-                  <option value="Store Manager">Store Manager</option>
-                  <option value="Accounts / Cheque">Accounts / Cheque Department</option>
-                  <option value="Floor Supervisor">Floor Supervisor</option>
-                  <option value="Receiving Bay">Receiving Bay / Stock Incharge</option>
+                  <option value="Owner">Owner / proprietor</option>
+                  <option value="Store Manager">Store manager</option>
+                  <option value="Accounts / Cheque">Accounts / cheque department</option>
+                  <option value="Floor Supervisor">Floor supervisor</option>
+                  <option value="Receiving Bay">Receiving bay / stock incharge</option>
                 </select>
               </div>
 
               <div>
-                <label htmlFor="-id--phone-number" className="block font-bold text-slate-700 mb-1">Phone Number *</label>
+                <label htmlFor="-id--phone-number" className="block font-bold text-slate-700 mb-1">Phone number *</label>
                 <input id="-id--phone-number"
                   type="tel"
                   required
@@ -554,9 +554,9 @@ export default function StoreDetailPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs"
+                  className="btn btn-primary"
                 >
-                  Save Contact
+                  Save contact
                 </button>
               </div>
             </form>
@@ -619,16 +619,16 @@ export default function StoreDetailPage() {
       {/* Tabs Navigation */}
       <div className="flex overflow-x-auto gap-2 border-b border-slate-200 pb-2">
         {[
-          { key: 'VISITS', label: 'Visit History', count: visits.length, icon: Clock },
-          ...(!isOfficer ? [{ key: 'ANALYTICS', label: 'Analytics & Credit', icon: TrendingUp }] : []),
-          ...(canViewSelling ? [{ key: 'SALES_INTELLIGENCE', label: 'Area Selling Assist', icon: TrendingUp }] : []),
-          { key: 'STOCK', label: 'Stock Counts', count: stockCounts.length, icon: ClipboardList },
+          { key: 'VISITS', label: 'Visit history', count: visits.length, icon: Clock },
+          ...(!isOfficer ? [{ key: 'ANALYTICS', label: 'Analytics & credit', icon: TrendingUp }] : []),
+          ...(canViewSelling ? [{ key: 'SALES_INTELLIGENCE', label: 'Area selling assist', icon: TrendingUp }] : []),
+          { key: 'STOCK', label: 'Stock counts', count: stockCounts.length, icon: ClipboardList },
           { key: 'LEDGER', label: 'Stock ledger', icon: BookOpen },
-          { key: 'PHOTOS', label: 'Shelf Photos', count: shelfPhotos.length, icon: Camera },
+          { key: 'PHOTOS', label: 'Shelf photos', count: shelfPhotos.length, icon: Camera },
           { key: 'CHEQUES', label: 'Cheques', count: cheques.length, icon: CreditCard },
           { key: 'DOCS', label: 'Documents', count: documents.length, icon: FileText },
           { key: 'ORDERS', label: 'Orders', count: secondaryOrders.length, icon: ShoppingBag },
-          { key: 'NOTES', label: 'Notes Log', icon: Sparkles },
+          { key: 'NOTES', label: 'Notes log', icon: Lightbulb },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -646,7 +646,7 @@ export default function StoreDetailPage() {
               <span>{tab.label}</span>
               {typeof tab.count === 'number' && (
                 <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                  className={`rounded-full px-1.5 py-0.2 text-[11px] font-bold ${
                     isActive ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700'
                   }`}
                 >
@@ -662,7 +662,7 @@ export default function StoreDetailPage() {
       {activeTab === 'VISITS' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-slate-900 text-sm">Beat Visits & Field Check-ins</h3>
+            <h3 className="font-bold text-slate-900 text-sm">Beat visits & field check-ins</h3>
             <span className="text-xs text-slate-500 font-medium">
               {visits.length} logged visits
             </span>
@@ -681,13 +681,13 @@ export default function StoreDetailPage() {
                       <span className="font-bold text-slate-900">{v.dateBs}</span>
                       <span className="text-slate-500 font-mono text-[11px]">({v.dateAd})</span>
                       <span
-                        className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                        className={`rounded px-2 py-0.5 text-[11px] font-bold ${
                           v.status === 'VISITED'
                             ? 'bg-emerald-100 text-emerald-800'
                             : v.status === 'SKIPPED'
                             ? 'bg-rose-100 text-rose-800'
                             : 'bg-slate-100 text-slate-600'
-                        }`}
+                        } enum-label`}
                       >
                         {v.status}
                       </span>
@@ -723,7 +723,7 @@ export default function StoreDetailPage() {
           {/* Top Velocity Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-              <span className="text-slate-500 text-[11px] font-bold block">30-Day Order Volume</span>
+              <span className="text-slate-500 text-[11px] font-bold block">30-Day order volume</span>
               <p className="text-xl font-black text-slate-900 mt-1"><Money>{volume30Days.toLocaleString()}</Money></p>
               <span className="text-xs text-slate-500 font-semibold mt-0.5 inline-block">
                 {last30DaysOrders.length} {last30DaysOrders.length === 1 ? 'order' : 'orders'} in the last 30 days
@@ -731,14 +731,14 @@ export default function StoreDetailPage() {
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-              <span className="text-slate-500 text-[11px] font-bold block">Average Order Value (AOV)</span>
-              <p className="text-xl font-black text-purple-700 mt-1"><Money>{aov.toLocaleString()}</Money></p>
+              <span className="text-slate-500 text-[11px] font-bold block">Average order value (AOV)</span>
+              <p className="text-xl font-black text-slate-900 mt-1"><Money>{aov.toLocaleString()}</Money></p>
               <span className="text-xs text-slate-500 mt-0.5 inline-block">{liveOrders.length} orders, cancelled left out</span>
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-              <span className="text-slate-500 text-[11px] font-bold block">Replenishment Cadence</span>
-              <p className="text-xl font-black text-blue-700 mt-1">{cadenceText}</p>
+              <span className="text-slate-500 text-[11px] font-bold block">Replenishment cadence</span>
+              <p className="text-xl font-black text-slate-900 mt-1">{cadenceText}</p>
               <span className="text-xs text-blue-600 font-semibold mt-0.5 inline-block">
                 {liveOrders.length > 1 ? 'Typical gap between orders' : 'Awaiting more orders'}
               </span>
@@ -749,7 +749,7 @@ export default function StoreDetailPage() {
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-slate-900 text-sm">SKU Stock Depletion &amp; Runout Forecast</h3>
+                <h3 className="font-bold text-slate-900 text-sm">SKU stock depletion &amp; runout forecast</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   From this store&apos;s last two shelf counts and the units it ordered between them.
                 </p>
@@ -765,10 +765,10 @@ export default function StoreDetailPage() {
                   <tr>
                     <th className="p-3">Product SKU</th>
                     <th className="p-3">Brand</th>
-                    <th className="p-3 text-center">Shelf Stock</th>
-                    <th className="p-3 text-center">Daily Run Rate</th>
-                    <th className="p-3 text-center">Days of Stock</th>
-                    <th className="p-3">Replenishment Status</th>
+                    <th className="p-3 text-center">Shelf stock</th>
+                    <th className="p-3 text-center">Daily run rate</th>
+                    <th className="p-3 text-center">Days of stock</th>
+                    <th className="p-3">Replenishment status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -790,11 +790,11 @@ export default function StoreDetailPage() {
                         <tr key={row.productId} className="hover:bg-slate-50">
                           <td className="p-3 font-semibold text-slate-900"><Link href={`/products/${row.productId}`} className="hover:text-blue-600 hover:underline">{row.productName}</Link></td>
                           <td className="p-3 text-slate-600 font-medium">{row.brandCode}</td>
-                          <td className="p-3 text-center font-bold text-slate-800">{row.shelfQty} units<div className="text-[10px] font-normal text-slate-500">counted {row.countedOn}</div></td>
+                          <td className="p-3 text-center font-bold text-slate-800">{row.shelfQty} units<div className="text-[11px] font-normal text-slate-500">counted {row.countedOn}</div></td>
                           <td className="p-3 text-center text-slate-600">{row.perDay === null ? '—' : `${row.perDay} a day`}</td>
                           <td className={`p-3 text-center font-black ${tone.text}`}>{row.daysLeft === null ? '—' : `${row.daysLeft} days`}</td>
                           <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${tone.chip}`}>{label}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${tone.chip}`}>{label}</span>
                           </td>
                         </tr>
                       );
@@ -809,7 +809,7 @@ export default function StoreDetailPage() {
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-slate-900 text-sm">Vendor Payment History &amp; Credit Tracking</h3>
+                <h3 className="font-bold text-slate-900 text-sm">Vendor payment history &amp; credit tracking</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Tracks credit limit utilization, invoice aging, and cheque collection discipline.
                 </p>
@@ -821,21 +821,21 @@ export default function StoreDetailPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] font-bold text-slate-500 block">Total Credit Line</span>
+                <span className="text-[11px] font-bold text-slate-500 block">Total credit line</span>
                 <p className="text-base font-bold text-slate-900 mt-0.5"><Money>{(store.creditLimit || 0).toLocaleString()}</Money></p>
               </div>
               <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
-                <span className="text-[10px] font-bold text-blue-600 block">Current Outstanding</span>
+                <span className="text-[11px] font-bold text-blue-600 block">Current outstanding</span>
                 <p className="text-base font-bold text-blue-900 mt-0.5"><Money>{(store.outstandingBalance || 0).toLocaleString()}</Money></p>
               </div>
               <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-                <span className="text-[10px] font-bold text-emerald-600 block">Available Balance</span>
+                <span className="text-[11px] font-bold text-emerald-600 block">Available balance</span>
                 <p className="text-base font-bold text-emerald-900 mt-0.5">
                   <Money>{Math.max(0, (store.creditLimit || 0) - (store.outstandingBalance || 0)).toLocaleString()}</Money>
                 </p>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] font-bold text-slate-500 block">Avg Clearance Delay</span>
+                <span className="text-[11px] font-bold text-slate-500 block">Avg clearance delay</span>
                 <p className="text-base font-bold text-slate-900 mt-0.5">{avgClearanceDelay}</p>
               </div>
             </div>
@@ -895,7 +895,7 @@ export default function StoreDetailPage() {
                         <div className="flex justify-between items-center text-[11px] mt-1 text-slate-600">
                           <span>Shelf: <strong>{item.shelfQty}</strong> (before: {item.previousQty})</span>
                           {item.flaggedDrop && (
-                            <span className="text-[10px] text-rose-600 font-semibold bg-rose-50 px-1 rounded">
+                            <span className="text-[11px] text-rose-600 font-semibold bg-rose-50 px-1 rounded">
                               &gt;50% Drop
                             </span>
                           )}
@@ -914,7 +914,7 @@ export default function StoreDetailPage() {
       {activeTab === 'PHOTOS' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-slate-900 text-sm">Shelf Merchandising & Facing Gallery</h3>
+            <h3 className="font-bold text-slate-900 text-sm">Shelf merchandising & facing gallery</h3>
             <span className="text-xs text-slate-500 font-medium">
               {shelfPhotos.length} photo sets
             </span>
@@ -940,7 +940,7 @@ export default function StoreDetailPage() {
                         <img
                           src={img}
                           alt="Shelf"
-                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="h-full w-full object-cover transition-transform duration-300"
                         />
                       ) : (
                         <Camera className="w-8 h-8 text-slate-400" />
@@ -949,7 +949,7 @@ export default function StoreDetailPage() {
                     <div className="p-3 bg-white text-xs space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-slate-900">{p.dateBs}</span>
-                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-bold text-emerald-800">
                           {(p as any).facingCount || 12} Facings
                         </span>
                       </div>
@@ -975,7 +975,7 @@ export default function StoreDetailPage() {
               href={`/offline-sales/cheques?search=${encodeURIComponent(store.name)}`}
               className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
             >
-              Open Full Cheque Ledger ↗
+              Open full cheque ledger ↗
             </Link>
           </div>
 
@@ -986,13 +986,13 @@ export default function StoreDetailPage() {
           ) : (
             <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full text-left text-xs min-w-[650px]">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] font-bold">
                   <tr>
                     <th className="p-2.5">Cheque #</th>
                     <th className="p-2.5">Bank</th>
                     <th className="p-2.5 text-right">Amount (NPR)</th>
-                    <th className="p-2.5">Received Date</th>
-                    <th className="p-2.5">Cash Date</th>
+                    <th className="p-2.5">Received date</th>
+                    <th className="p-2.5">Cash date</th>
                     <th className="p-2.5">Status</th>
                     <th className="p-2.5">Officer</th>
                   </tr>
@@ -1017,13 +1017,13 @@ export default function StoreDetailPage() {
                       <td className="p-2.5 text-slate-600">{c.cashDateBs}</td>
                       <td className="p-2.5">
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
                             c.status === 'CASHED'
                               ? 'bg-emerald-100 text-emerald-800'
                               : c.status === 'COLLECTED_IN_FIELD'
                               ? 'bg-blue-100 text-blue-800'
                               : 'bg-amber-100 text-amber-800'
-                          }`}
+                          } enum-label`}
                         >
                           {c.status.replace(/_/g, ' ')}
                         </span>
@@ -1050,12 +1050,12 @@ export default function StoreDetailPage() {
       {activeTab === 'DOCS' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-slate-900 text-sm">Vendor Handover Documents</h3>
+            <h3 className="font-bold text-slate-900 text-sm">Vendor handover documents</h3>
             <Link
               href="/offline-sales/documents"
               className="text-xs font-bold text-blue-600 hover:underline"
             >
-              Open Documents Hub ↗
+              Open documents hub ↗
             </Link>
           </div>
 
@@ -1070,13 +1070,13 @@ export default function StoreDetailPage() {
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-900">{d.documentType}</span>
                     <span
-                      className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                      className={`rounded px-2 py-0.5 text-[11px] font-bold ${
                         d.status === 'FILED'
                           ? 'bg-emerald-100 text-emerald-800'
                           : d.status === 'HANDED_OVER'
                           ? 'bg-blue-100 text-blue-800'
                           : 'bg-amber-100 text-amber-800'
-                      }`}
+                      } enum-label`}
                     >
                       {d.status}
                     </span>
@@ -1132,7 +1132,7 @@ export default function StoreDetailPage() {
                       {(() => {
                         const dispatch = db.getDispatches().find((d) => d.orderId === ord.id);
                         const label = dispatch ? statusLabel(dispatchStatus(dispatch)) : ord.status === 'CANCELLED' ? 'Cancelled' : ord.status === 'DELIVERED' ? 'Delivered' : ord.status === 'DISPATCHED' ? 'Dispatched' : 'Order received';
-                        return <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">{label}{dispatch?.dispatchNumber ? ` · ${dispatch.dispatchNumber}` : ''}</span>;
+                        return <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">{label}{dispatch?.dispatchNumber ? ` · ${dispatch.dispatchNumber}` : ''}</span>;
                       })()}
                     </div>
                     <div className="flex items-center gap-2">
@@ -1168,14 +1168,14 @@ export default function StoreDetailPage() {
       {/* TAB 7: NOTES */}
       {activeTab === 'NOTES' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4 text-xs">
-          <h3 className="font-bold text-slate-900 text-sm">Field Directives & Account Remarks</h3>
+          <h3 className="font-bold text-slate-900 text-sm">Field directives & account remarks</h3>
           <div className="space-y-2 text-slate-700">
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-              <span className="font-bold text-slate-900 block mb-0.5">Payment Routine:</span>
+              <span className="font-bold text-slate-900 block mb-0.5">Payment routine:</span>
               Prefers cheque handover during Thursday afternoon beats. Requires original VAT copy stamped by accounts clerk.
             </div>
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-              <span className="font-bold text-slate-900 block mb-0.5">Merchandising Target:</span>
+              <span className="font-bold text-slate-900 block mb-0.5">Merchandising target:</span>
               Maintain at least 12 front-facing units of key hero SKUs at eye-level shelf.
             </div>
           </div>

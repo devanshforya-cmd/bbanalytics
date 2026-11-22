@@ -27,7 +27,7 @@ export default function KarmaTrendBoard({ karmaTrendBoard }: KarmaTrendBoardProp
               2h
             </span>
             <h2 className="text-base font-bold text-slate-900">
-              Karma Trend Board (Recent Score Declines)
+              Karma trend board (recent score declines)
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -43,10 +43,10 @@ export default function KarmaTrendBoard({ karmaTrendBoard }: KarmaTrendBoardProp
               <th className="py-3 px-3">Customer</th>
               <th className="py-3 px-3 text-center">Previous Karma</th>
               <th className="py-3 px-3 text-center">Current Karma</th>
-              <th className="py-3 px-3 text-center">Point Change</th>
-              <th className="py-3 px-3">Primary Factor</th>
-              <th className="py-3 px-3">Current Segment</th>
-              <th className="py-3 px-3 text-right">Action Directive</th>
+              <th className="py-3 px-3 text-center">Point change</th>
+              <th className="py-3 px-3">Primary factor</th>
+              <th className="py-3 px-3">Current segment</th>
+              <th className="py-3 px-3 text-right">Action directive</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -59,19 +59,19 @@ export default function KarmaTrendBoard({ karmaTrendBoard }: KarmaTrendBoardProp
                   >
                     {item.customer.name}
                   </Link>
-                  <div className="text-[10px] text-slate-500">{item.customer.phone}</div>
+                  <div className="text-[11px] text-slate-500">{item.customer.phone}</div>
                 </td>
                 <td className="py-3 px-3 text-center font-bold text-slate-500">{item.prevKarma}</td>
                 <td className="py-3 px-3 text-center font-black text-rose-700">{item.currentKarma}</td>
                 <td className="py-3 px-3 text-center">
-                  <span className="rounded bg-rose-100 text-rose-800 font-bold px-2 py-0.5 text-[10px]">
+                  <span className="rounded bg-rose-100 text-rose-800 font-bold px-2 py-0.5 text-[11px]">
                     {item.change} pts
                   </span>
                 </td>
                 <td className="py-3 px-3 text-slate-600 font-medium">{item.reason}</td>
                 <td className="py-3 px-3">
                   <span
-                    className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                    className={`rounded px-2 py-0.5 text-[11px] font-bold ${
                       item.customer.segment === 'BLACKLISTED'
                         ? 'bg-red-900 text-white'
                         : 'bg-rose-100 text-rose-800'

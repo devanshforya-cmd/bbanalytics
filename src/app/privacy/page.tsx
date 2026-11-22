@@ -25,7 +25,7 @@ export default function PrivacyPage() {
         <li>stores documents and photos staff upload in the app.</li>
       </ul>
       <p>The app cannot see any other file in the Drive. It reads the connected account&apos;s email address and name only to show which account is connected. Google data is used only for these features. It is not sold, not used for advertising, not shared with anyone outside Brand Bucket, and not used to train AI models.</p>
-      <p>Brand Bucket Analytics&apos; use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+      <p>Brand Bucket Analytics&apos; use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API services user data policy</a>, including the Limited Use requirements.</p>
       <p>The Google sign-in token is stored encrypted on our server. An administrator can remove the connection in the app at any time (Settings → Google Sheets &amp; Drive), and you can also remove the app&apos;s access at <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">myaccount.google.com/permissions</a>. Files already saved to Drive stay there until you delete them.</p>
 
       <h2>Keeping data safe</h2>

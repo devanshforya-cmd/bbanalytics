@@ -137,8 +137,8 @@ export default function InfluencerForm({ influencer, onClose, onSaved }: Influen
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3">
-          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-          <button type="button" onClick={save} disabled={isSubmitting} className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300">
+          <button type="button" onClick={onClose} className="btn btn-secondary">Cancel</button>
+          <button type="button" onClick={save} disabled={isSubmitting} className="btn btn-primary disabled:cursor-not-allowed disabled:bg-blue-300">
             {isSubmitting ? <><span className="bb-spinner mr-1.5" aria-hidden="true" />Saving…</> : influencer ? 'Save changes' : 'Add influencer'}
           </button>
         </div>

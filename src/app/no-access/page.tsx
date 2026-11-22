@@ -16,7 +16,7 @@ export default function NoAccessPage() {
           <p className="mt-2 text-sm text-slate-500">Ask your administrator to assign your workspace access.</p>
       
       {destination !== '/no-access' && (
-        <Link href={destination} className="mt-5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+        <Link href={destination} className="btn btn-primary mt-5">
           Continue to your workspace
         </Link>
       )}

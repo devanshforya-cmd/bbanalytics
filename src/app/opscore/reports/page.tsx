@@ -103,7 +103,7 @@ export default function ReportsPage() {
   if (!canDownload(user)) {
     return (
       <PageGuard feature="export">
-        <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-6 text-center">
+        <div className="mx-auto max-w-xl text-center">
           <h1 className="text-lg font-bold text-slate-900">Downloads are not part of your role</h1>
           <p className="mt-2 text-sm text-slate-600">Ask an admin to turn on &quot;Download data&quot; for your role in Settings → Staff &amp; roles if you need Excel files.</p>
         </div>

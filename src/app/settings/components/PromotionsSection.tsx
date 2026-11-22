@@ -12,7 +12,7 @@ import {
   Gift,
   CheckCircle2,
   Store,
-  Sparkles,
+  Lightbulb,
   ToggleLeft,
   ToggleRight,
   Percent,
@@ -85,7 +85,7 @@ export default function PromotionsSection() {
           <div>
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Tag className="w-6 h-6 text-blue-600" />
-              Trade Promotions & Consumer Offers
+              Trade promotions & consumer offers
             </h2>
             <p className="text-sm text-gray-500 mt-1">
               Configure active schemes that automatically surface in the Smart Selling Assist tool when field officers visit stores.
@@ -123,7 +123,7 @@ export default function PromotionsSection() {
             >
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border   ${typeBadgeColor}`}>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border   ${typeBadgeColor}`}>
                     {promo.offerType.replace(/_/g, ' ')}
                   </span>
                   <button
@@ -170,7 +170,7 @@ export default function PromotionsSection() {
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   {promo.active ? 'Active on Field App' : 'Paused'}
                 </span>
-                <span className="text-[10px] text-gray-500">Dashain / Tihar Festive</span>
+                <span className="text-[11px] text-gray-500">Dashain / Tihar festive</span>
               </div>
             </div>
           );
@@ -183,7 +183,7 @@ export default function PromotionsSection() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
               <h3 className="font-bold text-gray-900 flex items-center gap-2 text-sm">
-                <Sparkles className="w-4 h-4 text-blue-600" />
+                <Lightbulb className="w-4 h-4 text-blue-600" />
                 New promotion Scheme
               </h3>
               <button
@@ -196,7 +196,7 @@ export default function PromotionsSection() {
 
             <form onSubmit={handleCreatePromo} className="p-6 space-y-4">
               <div>
-                <label htmlFor="promotionssection-promotion-title" className="block text-xs font-semibold text-gray-700 mb-1">Promotion Title *</label>
+                <label htmlFor="promotionssection-promotion-title" className="block text-xs font-semibold text-gray-700 mb-1">Promotion title *</label>
                 <input id="promotionssection-promotion-title"
                   type="text"
                   required
@@ -209,7 +209,7 @@ export default function PromotionsSection() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="promotionssection-brand-portfolio" className="block text-xs font-semibold text-gray-700 mb-1">Brand Portfolio</label>
+                  <label htmlFor="promotionssection-brand-portfolio" className="block text-xs font-semibold text-gray-700 mb-1">Brand portfolio</label>
                   <select id="promotionssection-brand-portfolio"
                     value={brandCode}
                     onChange={(e) => setBrandCode(e.target.value as BrandCode)}
@@ -220,26 +220,26 @@ export default function PromotionsSection() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Offer Type</label>
-                  <select aria-label="Offer Type"
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Offer type</label>
+                  <select aria-label="Offer type"
                     value={offerType}
                     onChange={(e) => setOfferType(e.target.value as any)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-600"
                   >
-                    <option value="BUY_X_GET_Y">Buy X Get Y Free</option>
-                    <option value="PERCENTAGE_OFF">Percentage Discount</option>
-                    <option value="COMBO">Bundle / Combo Offer</option>
-                    <option value="FREE_SAMPLE">Free Sampling Unit</option>
-                    <option value="NEW_LAUNCH">New Launch Special</option>
+                    <option value="BUY_X_GET_Y">Buy X get Y free</option>
+                    <option value="PERCENTAGE_OFF">Percentage discount</option>
+                    <option value="COMBO">Bundle / combo offer</option>
+                    <option value="FREE_SAMPLE">Free sampling unit</option>
+                    <option value="NEW_LAUNCH">New launch special</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Applicable Products (Comma separated)
+                  Applicable products (comma separated)
                 </label>
-                <input aria-label="Applicable Products (Comma separated)"
+                <input aria-label="Applicable products (comma separated)"
                   type="text"
                   placeholder="e.g. Cica Soothing Cleanser, Matte Lip Gloss"
                   value={productNames}
@@ -250,7 +250,7 @@ export default function PromotionsSection() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="promotionssection-valid-from-bs" className="block text-xs font-semibold text-gray-700 mb-1">Valid From (BS)</label>
+                  <label htmlFor="promotionssection-valid-from-bs" className="block text-xs font-semibold text-gray-700 mb-1">Valid from (BS)</label>
                   <input id="promotionssection-valid-from-bs"
                     type="text"
                     value={validFromBs}
@@ -259,7 +259,7 @@ export default function PromotionsSection() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="promotionssection-valid-to-bs" className="block text-xs font-semibold text-gray-700 mb-1">Valid To (BS)</label>
+                  <label htmlFor="promotionssection-valid-to-bs" className="block text-xs font-semibold text-gray-700 mb-1">Valid to (BS)</label>
                   <input id="promotionssection-valid-to-bs"
                     type="text"
                     value={validToBs}
@@ -270,20 +270,20 @@ export default function PromotionsSection() {
               </div>
 
               <div>
-                <label htmlFor="promotionssection-target-channel" className="block text-xs font-semibold text-gray-700 mb-1">Target Channel</label>
+                <label htmlFor="promotionssection-target-channel" className="block text-xs font-semibold text-gray-700 mb-1">Target channel</label>
                 <select id="promotionssection-target-channel"
                   value={applicableStoreTypes}
                   onChange={(e) => setApplicableStoreTypes(e.target.value as any)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs bg-white"
                 >
-                  <option value="ALL">All Retailers & Distributors</option>
-                  <option value="GT">General Trade (GT Kirana / Chemists)</option>
-                  <option value="MT">Modern Trade (Supermarkets & Departmental)</option>
+                  <option value="ALL">All retailers & distributors</option>
+                  <option value="GT">General trade (GT kirana / chemists)</option>
+                  <option value="MT">Modern trade (supermarkets & departmental)</option>
                 </select>
               </div>
 
               <div>
-                <label htmlFor="promotionssection-scheme-details-notes" className="block text-xs font-semibold text-gray-700 mb-1">Scheme Details / Notes</label>
+                <label htmlFor="promotionssection-scheme-details-notes" className="block text-xs font-semibold text-gray-700 mb-1">Scheme details / notes</label>
                 <textarea id="promotionssection-scheme-details-notes"
                   rows={2}
                   placeholder="e.g. Buy 12 units get 1 tester free + 5% extra retailer cash margin."
@@ -303,9 +303,9 @@ export default function PromotionsSection() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700"
+                  className="btn btn-primary"
                 >
-                  Save Promotion
+                  Save promotion
                 </button>
               </div>
             </form>

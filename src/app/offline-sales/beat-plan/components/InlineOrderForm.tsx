@@ -301,10 +301,10 @@ export default function InlineOrderForm({
                   <button
                     type="button"
                     onClick={handleAddLineItem}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold transition text-xs shadow-2xs"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold transition text-xs shadow-2xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Add Product</span>
+                    <span>Add product</span>
                   </button>
                 </div>
 
@@ -325,7 +325,7 @@ export default function InlineOrderForm({
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
-                            <label className="text-[10px] font-bold text-slate-500 ">
+                            <label className="text-[11px] font-bold text-slate-500 ">
                               SKU #{index + 1}
                             </label>
                             <select aria-label="SKU #"
@@ -362,10 +362,10 @@ export default function InlineOrderForm({
                         {/* Quantity and Unit Mode */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 items-end">
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500 ">
-                              Unit Mode
+                            <label className="text-[11px] font-bold text-slate-500 ">
+                              Unit mode
                             </label>
-                            <select aria-label="Unit Mode"
+                            <select aria-label="Unit mode"
                               value={item.unitType}
                               disabled={prodMode !== 'BOTH'}
                               onChange={(e) =>
@@ -381,7 +381,7 @@ export default function InlineOrderForm({
                           </div>
 
                           <div>
-                            <label htmlFor="inlineorderform-quantity" className="text-[10px] font-bold text-slate-500 ">
+                            <label htmlFor="inlineorderform-quantity" className="text-[11px] font-bold text-slate-500 ">
                               Quantity ({item.unitType === 'CASES' ? 'Cases' : 'Pcs'})
                             </label>
                             <input id="inlineorderform-quantity"
@@ -398,8 +398,8 @@ export default function InlineOrderForm({
                           </div>
 
                           <div>
-                            <label htmlFor="inlineorderform-promotional-scheme" className="text-[10px] font-bold text-slate-500 ">
-                              Promotional Scheme
+                            <label htmlFor="inlineorderform-promotional-scheme" className="text-[11px] font-bold text-slate-500 ">
+                              Promotional scheme
                             </label>
                             <select id="inlineorderform-promotional-scheme"
                               value={item.scheme}
@@ -408,18 +408,18 @@ export default function InlineOrderForm({
                               }
                               className="w-full mt-1 p-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900"
                             >
-                              <option value="NONE">No Scheme</option>
-                              <option value="BUY_2_GET_4_FREE">Buy 2c Get 4pcs Free</option>
-                              <option value="BUY_5_GET_1_CASE_FREE">Buy 5c Get 1c Free</option>
+                              <option value="NONE">No scheme</option>
+                              <option value="BUY_2_GET_4_FREE">Buy 2c get 4pcs free</option>
+                              <option value="BUY_5_GET_1_CASE_FREE">Buy 5c get 1c free</option>
                             </select>
                           </div>
 
                           <div className="p-2 bg-white border border-slate-200 rounded-xl text-right">
-                            <span className="text-[10px] text-slate-500 block">Store Pays</span>
+                            <span className="text-[11px] text-slate-500 block">Store pays</span>
                             <span className="font-bold text-slate-900 text-xs">
                               Rs. {lineAmount.toLocaleString()}
                             </span>
-                            <span className="text-[9px] text-slate-500 block font-mono">
+                            <span className="text-[11px] text-slate-500 block font-mono">
                               ({units} pcs @ Rs.{storePaysUnit})
                             </span>
                           </div>
@@ -435,7 +435,7 @@ export default function InlineOrderForm({
                 <div className="flex items-center gap-2">
                   <Percent className="w-4 h-4 text-blue-600" />
                   <h4 className="font-bold text-slate-900 text-xs">
-                    Live Brand Commercial Terms &amp; Store Margins
+                    Live brand commercial terms &amp; store margins
                   </h4>
                 </div>
                 <p className="text-[11px] text-slate-600">
@@ -455,14 +455,14 @@ export default function InlineOrderForm({
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-slate-900 text-xs">{brandLabel}</span>
-                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+                          <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
                             {margin.pct}% Margin
                           </span>
                         </div>
 
                         <div className="flex items-center gap-2">
                           <div className="flex-1">
-                            <label className="text-[10px] text-slate-500 font-semibold">
+                            <label className="text-[11px] text-slate-500 font-semibold">
                               Margin %
                             </label>
                             <input aria-label="Margin %"
@@ -482,8 +482,8 @@ export default function InlineOrderForm({
                           </div>
 
                           <div className="flex-1">
-                            <label className="text-[10px] text-slate-500 font-semibold">
-                              Calc Mode
+                            <label className="text-[11px] text-slate-500 font-semibold">
+                              Calc mode
                             </label>
                             <div className="flex items-center gap-1 mt-0.5">
                               <button
@@ -494,7 +494,7 @@ export default function InlineOrderForm({
                                     [brand]: { ...margin, type: 'MARKDOWN' },
                                   })
                                 }
-                                className={`flex-1 py-1 text-[10px] font-bold rounded-md transition ${
+                                className={`flex-1 py-1 text-[11px] font-bold rounded-md transition ${
                                   margin.type === 'MARKDOWN'
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -510,7 +510,7 @@ export default function InlineOrderForm({
                                     [brand]: { ...margin, type: 'MARKUP' },
                                   })
                                 }
-                                className={`flex-1 py-1 text-[10px] font-bold rounded-md transition ${
+                                className={`flex-1 py-1 text-[11px] font-bold rounded-md transition ${
                                   margin.type === 'MARKUP'
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -531,23 +531,23 @@ export default function InlineOrderForm({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="inlineorderform-payment-terms" className="block font-bold text-slate-800 mb-1.5">
-                    Payment Terms
+                    Payment terms
                   </label>
                   <select id="inlineorderform-payment-terms"
                     value={paymentTerms}
                     onChange={(e) => setPaymentTerms(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white"
                   >
-                    <option value="COD">Cash On Delivery (COD)</option>
-                    <option value="CREDIT_7_DAYS">7 Days Credit</option>
-                    <option value="CREDIT_15_DAYS">15 Days Credit</option>
-                    <option value="CREDIT_30_DAYS">30 Days Credit</option>
+                    <option value="COD">Cash on delivery (COD)</option>
+                    <option value="CREDIT_7_DAYS">7 Days credit</option>
+                    <option value="CREDIT_15_DAYS">15 Days credit</option>
+                    <option value="CREDIT_30_DAYS">30 Days credit</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block font-bold text-slate-800 mb-1.5">
-                    Physical Order Sheet / Counter Photo
+                    Physical order sheet / counter photo
                   </label>
                   {orderPhotoUrl ? (
                     <div className="relative rounded-xl overflow-hidden border border-emerald-300 h-10 bg-slate-900 flex items-center justify-between px-3 text-white text-xs">
@@ -565,7 +565,7 @@ export default function InlineOrderForm({
                   ) : (
                     <label className="flex items-center justify-center gap-2 border border-dashed border-slate-300 rounded-xl p-2.5 bg-slate-50 hover:bg-slate-100 cursor-pointer text-slate-600 font-semibold transition">
                       <Camera className="w-4 h-4 text-blue-600" />
-                      <span>Take / Upload Photo</span>
+                      <span>Take / upload photo</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -580,7 +580,7 @@ export default function InlineOrderForm({
               {/* 4. Notes */}
               <div>
                 <label htmlFor="inlineorderform-order-instructions-amp-deliv" className="block font-bold text-slate-800 mb-1">
-                  Order Instructions &amp; Delivery Notes
+                  Order instructions &amp; delivery notes
                 </label>
                 <input id="inlineorderform-order-instructions-amp-deliv"
                   type="text"
@@ -595,8 +595,8 @@ export default function InlineOrderForm({
             /* 2-Step Confirmation Summary Screen */
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                <span className="text-[10px] font-bold text-slate-500 ">
-                  Store Information
+                <span className="text-[11px] font-bold text-slate-500 ">
+                  Store information
                 </span>
                 <div className="text-sm font-bold text-slate-900">{targetBeat.storeName}</div>
                 <div className="text-xs text-slate-500">
@@ -609,8 +609,8 @@ export default function InlineOrderForm({
 
               {/* Items Breakdown */}
               <div className="space-y-2">
-                <span className="text-[10px] font-bold text-slate-500 ">
-                  Ordered Products Breakdown
+                <span className="text-[11px] font-bold text-slate-500 ">
+                  Ordered products breakdown
                 </span>
                 <div className="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100 bg-white">
                   {calculatedItems.map((item, idx) => (
@@ -638,17 +638,17 @@ export default function InlineOrderForm({
               {/* Financial Totals */}
               <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2">
                 <div className="flex justify-between items-center text-xs text-slate-600">
-                  <span>Catalog MRP Value:</span>
+                  <span>Catalog MRP value:</span>
                   <span className="font-semibold line-through text-slate-500">
                     Rs. {grandMrpValue.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-xs text-slate-600">
-                  <span>Total Order Volume:</span>
+                  <span>Total order volume:</span>
                   <span className="font-bold text-slate-900">{grandTotalUnits} pieces</span>
                 </div>
                 <div className="flex justify-between items-center text-sm font-bold text-emerald-900 pt-2 border-t border-emerald-200">
-                  <span>Store Payable Amount:</span>
+                  <span>Store payable amount:</span>
                   <span className="text-base text-emerald-700">
                     Rs. {grandStoreTotal.toLocaleString()}
                   </span>
@@ -663,11 +663,11 @@ export default function InlineOrderForm({
           {!isReviewStep ? (
             <>
               <div className="text-xs">
-                <span className="text-slate-500 block">Total Payable:</span>
+                <span className="text-slate-500 block">Total payable:</span>
                 <strong className="text-sm font-bold text-slate-900">
                   Rs. {grandStoreTotal.toLocaleString()}
                 </strong>
-                <span className="text-[10px] text-slate-500 block font-mono">
+                <span className="text-[11px] text-slate-500 block font-mono">
                   ({grandTotalUnits} units)
                 </span>
               </div>
@@ -675,9 +675,9 @@ export default function InlineOrderForm({
                 type="button"
                 onClick={handleProceedToReview}
                 disabled={lineItems.length === 0 || grandTotalUnits === 0}
-                className="flex-1 sm:flex-initial sm:px-8 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-base shadow-sm transition flex items-center justify-center gap-2"
+                className="flex-1 sm:flex-initial sm:px-8 h-14 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-base shadow-sm transition flex items-center justify-center gap-2"
               >
-                <span>Review Order with Retailer</span>
+                <span>Review order with retailer</span>
                 <ChevronRight className="w-5 h-5" />
               </button>
             </>
@@ -688,23 +688,23 @@ export default function InlineOrderForm({
                 onClick={() => setIsReviewStep(false)}
                 className="px-5 h-14 rounded-2xl border border-slate-300 bg-white font-semibold text-slate-700 hover:bg-slate-50 text-sm transition"
               >
-                Back to Edit
+                Back to edit
               </button>
               <button
                 type="button"
                 onClick={handleFinalSubmit}
                 disabled={isSubmitting}
-                className="flex-1 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-base shadow-sm transition flex items-center justify-center gap-2"
+                className="flex-1 h-14 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-base shadow-sm transition flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
-                    <span>Booking Order…</span>
+                    <span>Booking order…</span>
                   </>
                 ) : (
                   <>
                     <Check className="w-5 h-5" />
-                    <span>Confirm &amp; Book Order</span>
+                    <span>Confirm &amp; book order</span>
                   </>
                 )}
               </button>

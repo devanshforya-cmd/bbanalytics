@@ -17,7 +17,7 @@ import {
   CheckSquare,
   Clock,
   ArrowRight,
-  Sparkles,
+  Lightbulb,
   Search,
 } from 'lucide-react';
 
@@ -80,10 +80,10 @@ export default function EmptyState({
         customDescription ||
         'Orders come in via WhatsApp, Instagram, and field visits. Morning rush usually starts by 10 AM.';
       if (!defaultAction) {
-        defaultAction = { label: 'Enter Order Manually', href: '/orderflow/manual-entry' };
+        defaultAction = { label: 'Enter order manually', href: '/orderflow/manual-entry' };
       }
       if (!defaultSecondaryAction) {
-        defaultSecondaryAction = { label: 'Open WhatsApp Extractor', href: '/orderflow/extractor' };
+        defaultSecondaryAction = { label: 'Open WhatsApp extractor', href: '/orderflow/extractor' };
       }
       break;
 
@@ -115,12 +115,12 @@ export default function EmptyState({
       break;
 
     case 'complaints':
-      DefaultIcon = Sparkles;
+      DefaultIcon = Lightbulb;
       title = 'Zero complaints this week ';
       description =
         customMessage ||
         customDescription ||
-        'Your product quality and customer service are on point. Keep it up!';
+        'No complaints in this period.';
       isCelebrate = true;
       break;
 
@@ -180,7 +180,7 @@ export default function EmptyState({
 
     case 'failures':
       DefaultIcon = CheckCircle2;
-      title = 'Zero Delivery Failures!';
+      title = 'No delivery failures';
       description =
         customMessage ||
         customDescription ||
@@ -237,23 +237,23 @@ export default function EmptyState({
     <div
       className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border ${
         isCelebrate
-          ? 'border-emerald-200 bg-gradient-to-b from-emerald-50/70 to-emerald-50/20'
-          : 'border-dashed border-slate-200 bg-slate-50/50'
+          ? 'border-black/[0.06] bg-white'
+          : 'border-dashed border-black/[0.1] bg-transparent'
       }`}
     >
       <div
-        className={`p-4 rounded-2xl shadow-xs border mb-3.5 transition-transform duration-300 hover:scale-105 ${
+        className={`p-3 rounded-xl border mb-3 ${
           isCelebrate
-            ? 'bg-emerald-100/80 border-emerald-200 text-emerald-700'
+            ? 'bg-white border-black/[0.08] text-emerald-700'
             : 'bg-white border-slate-200/80 text-slate-500'
         }`}
       >
-        <FinalIcon className="w-8 h-8" />
+        <FinalIcon className="h-6 w-6" />
       </div>
-      <h2 className={`text-base font-bold ${isCelebrate ? 'text-emerald-950' : 'text-slate-900'}`}>
+      <h2 className="text-[15px] font-medium text-slate-900">
         {finalTitle}
       </h2>
-      <p className={`text-xs max-w-md mt-1.5 leading-relaxed ${isCelebrate ? 'text-emerald-800 font-medium' : 'text-slate-500'}`}>
+      <p className="mt-1 max-w-md text-[13px] leading-5 text-slate-500">
         {finalDescription}
       </p>
 
