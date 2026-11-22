@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildFollowUps, DEFAULT_FOLLOW_UP_PLAN, validateFollowUpPlan, addDays } from '../src/lib/follow-ups.ts';
 import { FakeDatabase } from './fake-supabase.ts';
-import { useTestDatabaseClient } from '../src/lib/db/supabase-server.ts';
+import { setTestDatabaseClient } from '../src/lib/db/supabase-server.ts';
 import { saveWorkspaceMutation } from '../src/lib/db/server-workspace.ts';
 
 const plan = { ...DEFAULT_FOLLOW_UP_PLAN, startFromAd: '2026-11-01' }; // calls on day 3, 10 and 25 after the order
@@ -76,7 +76,7 @@ test('the server keeps calls honest: caller, order number and brand come from th
   db.tables.users = [admin, caller].map(userRow);
   db.tables.brands = [{ id: 'b1', code: 'FORYA', name: 'Forya', is_active: true }];
   db.seed('orders', { ...order('o1'), orderNumber: 'FY-100' });
-  useTestDatabaseClient(db as any);
+  setTestDatabaseClient(db as any);
   await saveWorkspaceMutation(caller, mutation('customerCalls', { id: 'cc1', orderId: 'o1', orderNumber: 'FAKE', brandCode: 'TEORA', officerId: 'admin', customerName: 'Customer o1', customerPhone: '9841000001',
     purpose: 'Follow-up', followUpStepId: 'fu_check', followUpStepLabel: 'Delivery check', outcome: 'HAPPY', dateAd: '2026-11-22', dateBs: '', createdAt: '2026-11-22T05:00:00Z' }));
   const saved = db.records('customerCalls')[0].data;

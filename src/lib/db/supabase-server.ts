@@ -6,7 +6,7 @@ let cached: { url: string; key: string; client: SupabaseClient } | undefined;
 let testClient: SupabaseClient | undefined;
 
 /** Automated tests swap in an in-memory database. Refused outside the Node test runner. */
-export function useTestDatabaseClient(client: SupabaseClient | undefined): void {
+export function setTestDatabaseClient(client: SupabaseClient | undefined): void {
   if (!process.env.NODE_TEST_CONTEXT && process.env.NODE_ENV !== 'test') throw new Error('The database client can only be replaced inside automated tests.');
   testClient = client;
 }

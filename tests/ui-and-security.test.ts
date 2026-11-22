@@ -2,13 +2,6 @@ import { DEFAULT_SUPER_ADMIN } from './fixtures';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-// Import A/B Testing Engine
-import {
-  getExperimentVariant,
-  ACTIVE_EXPERIMENTS,
-  getExperimentAnalytics,
-} from '../src/lib/ab-testing.ts';
-
 // Import Security & Validation Functions
 import {
   sanitizeText,
@@ -20,41 +13,6 @@ import {
 // Import Database & Permission Services
 import { db } from '../src/lib/db/db-service.ts';
 import { canAccessBrand, canPerform, hasAccess, isSuperAdmin } from '../src/lib/permissions.ts';
-
-// ==========================================
-// 1. A/B Testing Engine Verification
-// ==========================================
-test('A/B Testing - returns deterministic variant for identical user/device ID', () => {
-  const userIdA = 'user_officer_101';
-  const variant1 = getExperimentVariant('premium-nav-style', userIdA);
-  const variant2 = getExperimentVariant('premium-nav-style', userIdA);
-
-  assert.equal(variant1, variant2, 'Same user ID must always receive identical variant');
-  assert.ok(
-    ['control', 'glass_premium'].includes(variant1),
-    `Variant ${variant1} must be an active variant`
-  );
-});
-
-test('A/B Testing - returns valid variant for different experiments', () => {
-  const userIdB = 'user_officer_202';
-  const navVariant = getExperimentVariant('premium-nav-style', userIdB);
-  const kpiVariant = getExperimentVariant('dashboard-kpi-layout', userIdB);
-
-  assert.ok(['control', 'glass_premium'].includes(navVariant));
-  assert.ok(['control', 'compact_pro'].includes(kpiVariant));
-});
-
-test('A/B Testing - analytics structure returns valid rates and numbers', () => {
-  const analytics = getExperimentAnalytics('premium-nav-style');
-  assert.equal(analytics.experimentId, 'premium-nav-style');
-  assert.ok(Array.isArray(analytics.variants));
-  assert.ok(analytics.variants.length >= 2);
-  analytics.variants.forEach((v) => {
-    assert.ok(typeof v.conversionRate === 'number');
-    assert.ok(v.conversionRate >= 0 && v.conversionRate <= 100);
-  });
-});
 
 // ==========================================
 // 2. Security Testing: Input Sanitization & XSS

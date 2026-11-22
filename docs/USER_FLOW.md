@@ -38,7 +38,7 @@ Settings → Data Import validates each row against current product, brand, orde
 
 Settings manages staff, brands, field requirements and configuration. Channels & Logistics reports actual recorded usage; it does not connect social accounts or courier services. Saved alert thresholds drive the daily in-app operations alerts. Email and lock-screen push delivery are not configured.
 
-Feature flags and their events persist through protected server APIs. Only the Super Admin can manage definitions or view analytics. Event identity comes from the session.
+
 
 Shared Access creates cryptographically random links. The server checks active status, expiry, passcode, brands and allowed modules before returning a limited projection. It excludes login secrets and internal records. Access counts are recorded separately so opening a link cannot conflict with editing its configuration. Revoking a link blocks later reads.
 

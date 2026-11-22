@@ -2,6 +2,7 @@
 
 import Money from '@/components/common/Money';
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import { compareWindows, inWindow, changeLabel, COMPARE_LABEL, type CompareMode, type DateWindow } from '@/lib/period-compare';
@@ -10,9 +11,7 @@ import { FilterCriteria, BrandCode, FeedbackEntry, ComparisonMode, DashboardSale
 import AdvancedFilterBar from '@/components/common/AdvancedFilterBar';
 import { getTodayAd, matchesDateCriteria } from '@/lib/nepali-calendar';
 import MetricSparkline from './components/MetricSparkline';
-import MetricDrillDownModal, { DrillDownType } from './components/MetricDrillDownModal';
-import IssueChipDrillDownModal from './components/IssueChipDrillDownModal';
-import ReviewListModal from './components/ReviewListModal';
+import type { DrillDownType } from './components/MetricDrillDownModal';
 import ProductPerformanceTable from './components/ProductPerformanceTable';
 import SalesChannelPerformance from './components/SalesChannelPerformance';
 import BrandComparisonView from './components/BrandComparisonView';
@@ -22,9 +21,7 @@ import ThirtyDayTrendCharts from './components/ThirtyDayTrendCharts';
 import MorningBriefCard from './components/MorningBriefCard';
 import SeasonalInsightsSection from './components/SeasonalInsightsSection';
 import StoreNetworkOverviewSection from './components/StoreNetworkOverviewSection';
-import SetupWizard from '@/components/dashboard/SetupWizard';
 import PageGuard from '@/components/common/PageGuard';
-import { useExperiment } from '@/hooks/useExperiment';
 import { getSessionUser } from '@/lib/auth';
 import { FeatureKey, hasAccess, isSuperAdmin } from '@/lib/permissions';
 import {
@@ -52,10 +49,15 @@ function DashboardFeature({ allowed, children }: { allowed: boolean; children: R
   return allowed ? <>{children}</> : null;
 }
 
+// Opened on demand: loaded the first time someone opens them, not with the dashboard.
+const MetricDrillDownModal = dynamic(() => import('./components/MetricDrillDownModal'));
+const IssueChipDrillDownModal = dynamic(() => import('./components/IssueChipDrillDownModal'));
+const ReviewListModal = dynamic(() => import('./components/ReviewListModal'));
+const SetupWizard = dynamic(() => import('@/components/dashboard/SetupWizard'));
+
 export default function DashboardPage() {
   const currentUser = getSessionUser() || db.getCurrentUser();
   const canSee = (feature: FeatureKey) => hasAccess(currentUser, feature);
-  const { variant: kpiVariant } = useExperiment('dashboard-kpi-layout');
   const globalBrand = db.getActiveBrandFilter();
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({
     calendarMode: 'BS',
@@ -1062,7 +1064,7 @@ export default function DashboardPage() {
       {canSee('stores') && canSee('distributors') && salesMode !== 'D2C' && <StoreNetworkOverviewSection />}
 
       {/* DRILL-DOWN MODALS */}
-      <MetricDrillDownModal
+      {activeDrillDown && <MetricDrillDownModal
         type={activeDrillDown}
         onClose={() => setActiveDrillDown(null)}
         orders={canSee('orderflow') ? orders : []}
@@ -1074,17 +1076,17 @@ export default function DashboardPage() {
         scorecards={canSee('staff_scorecards') ? scorecards : []}
         activeBrand={activeBrand}
         calendarMode={filterCriteria.calendarMode || 'BS'}
-      />
+      />}
 
-      <IssueChipDrillDownModal
+      {activeIssueChip && <IssueChipDrillDownModal
         categoryName={activeIssueChip}
         onClose={() => setActiveIssueChip(null)}
         feedback={canSee('reviews') ? feedback : []}
         returns={canSee('reviews') ? returns : []}
         calendarMode={filterCriteria.calendarMode || 'BS'}
-      />
+      />}
 
-      <ReviewListModal
+      {(reviewModalFilter || selectedReview) && <ReviewListModal
         filterType={reviewModalFilter}
         selectedReview={selectedReview}
         onClose={() => {
@@ -1093,7 +1095,7 @@ export default function DashboardPage() {
         }}
         feedback={canSee('reviews') ? feedback : []}
         calendarMode={filterCriteria.calendarMode || 'BS'}
-      />
+      />}
 
       {showSetupWizard && setupGuideDue && (
         <SetupWizard onComplete={closeSetupWizard} onDismiss={closeSetupWizard} />

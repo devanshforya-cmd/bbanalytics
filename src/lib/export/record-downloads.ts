@@ -77,5 +77,3 @@ export function downloadStockCountWorkbook(count: StockCount, products: Product[
   downloadWorkbook(stockCountWorkbookSheets(count, products, brands), `Shelf-count_${fileSafe(count.storeName)}_${count.dateAd}`, { title: `Shelf count ${count.storeName}` });
 }
 
-/** Build without downloading (tests, Drive). */
-export const recordWorkbook = (sheets: Sheet[], title: string) => buildWorkbook(sheets, { title });

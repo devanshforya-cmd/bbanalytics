@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { google } from 'googleapis';
+import { sheets as googleSheets } from '@googleapis/sheets';
 import { requireFeatureAccess } from '@/lib/auth-guard';
 import { hasAccess, isSuperAdmin } from '@/lib/permissions';
 import { openServerWorkspace } from '@/lib/db/server-workspace';
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const { db } = await openServerWorkspace(auth.user);
     const now = new Date();
     const tabs = buildGoogleReportTabs(db, month, now);
-    const sheets = google.sheets({ version: 'v4', auth: workspace.auth });
+    const sheets = googleSheets({ version: 'v4', auth: workspace.auth });
     const spreadsheetUrl = await writeGoogleReportTabs(sheets, workspace.spreadsheetId, tabs);
     const result = { spreadsheetUrl, totalRows: tabs.reduce((sum, tab) => sum + tab.values.length, 0), tabsUpdated: tabs.map((tab) => tab.title), exportedAt: now.toISOString() };
     try { await saveGoogleExportMetadata(result); }

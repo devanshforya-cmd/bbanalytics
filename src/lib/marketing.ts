@@ -4,7 +4,6 @@ import type { ContentPlatformLink, Influencer, InfluencerContent, InfluencerNich
 
 export const DEFAULT_REACH_OUT_PLATFORMS = ['Instagram DM', 'WhatsApp', 'Email', 'Phone call', 'Agency'];
 export const DEFAULT_CONTENT_PLATFORMS = ['Instagram', 'TikTok', 'YouTube', 'Facebook'];
-export const SEND_DELIVERY_CHANNELS = ['Standard', 'Pathao', 'InDrive', 'Yango', 'Pick-up', 'Direct hand delivery'];
 export const DEFAULT_FAILURE_REASONS = ['Call not received', 'Address not found', 'Customer refused', 'Customer unavailable', 'Area not serviceable', 'Other'];
 
 /** Stable ID from a name, so creating the same name twice cannot produce two records. */

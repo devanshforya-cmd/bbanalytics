@@ -50,10 +50,10 @@ function pushServerHarness() {
     '@/lib/db/supabase-server': { supabaseAdmin: database }, '@/lib/permissions': permissions,
     './push-validation': { validatePushSubscription, safeNotificationPath }, './notification-events': notificationEvents,
   };
-  const module = { exports: {} as any };
+  const loaded = { exports: {} as any };
   const source = ts.transpileModule(readFileSync(new URL('../src/lib/push-server.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText;
-  new Function('require', 'module', 'exports', 'process', source)((id: string) => { if (!(id in dependencies)) throw new Error(id); return dependencies[id]; }, module, module.exports, { env: { VAPID_PUBLIC_KEY: 'public', VAPID_PRIVATE_KEY: 'private', VAPID_SUBJECT: 'https://bb.example' } });
-  return { server: module.exports, get calls() { return calls; }, deliveries, fail() { transportStatus = 503; } };
+  new Function('require', 'module', 'exports', 'process', source)((id: string) => { if (!(id in dependencies)) throw new Error(id); return dependencies[id]; }, loaded, loaded.exports, { env: { VAPID_PUBLIC_KEY: 'public', VAPID_PRIVATE_KEY: 'private', VAPID_SUBJECT: 'https://bb.example' } });
+  return { server: loaded.exports, get calls() { return calls; }, deliveries, fail() { transportStatus = 503; } };
 }
 import * as awaitImportCrypto from 'node:crypto';
 const officer = { id: 'a', role: 'SALES_OFFICER', active: true, customPermissions: { tasks: { access: 'FULL', actions: ['VIEW'], scope: 'OWN' } } };

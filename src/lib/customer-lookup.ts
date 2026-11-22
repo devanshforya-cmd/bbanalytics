@@ -18,11 +18,6 @@ export function isFullPhone(input: unknown): boolean {
   return /^(97|98)\d{8}$/.test(phoneDigits(input));
 }
 
-export function samePhone(a: unknown, b: unknown): boolean {
-  const left = phoneDigits(a);
-  return !!left && left === phoneDigits(b);
-}
-
 export interface CustomerMatch { customer: Customer; matchedOn: 'phone' | 'name' }
 
 /**

@@ -71,26 +71,3 @@ export function rateLimitRecordFailure(identifier: string): {
 export function rateLimitReset(identifier: string): void {
   attempts.delete(identifier);
 }
-
-export function rateLimitClearAll(): void {
-  attempts.clear();
-}
-
-export function rateLimitGetStatus(identifier: string): {
-  isLocked: boolean;
-  attemptsCount: number;
-  retryAfterSeconds: number;
-} {
-  const now = Date.now();
-  const record = attempts.get(identifier);
-  if (!record || now > record.resetAt) {
-    return { isLocked: false, attemptsCount: 0, retryAfterSeconds: 0 };
-  }
-  const isLocked = record.count >= RATE_LIMIT_MAX_ATTEMPTS;
-  const retryAfterSeconds = isLocked ? Math.max(1, Math.ceil((record.resetAt - now) / 1000)) : 0;
-  return {
-    isLocked,
-    attemptsCount: record.count,
-    retryAfterSeconds,
-  };
-}

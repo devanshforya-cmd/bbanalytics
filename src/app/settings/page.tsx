@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+
 import {
   Users,
   Tag,
@@ -14,31 +16,33 @@ import {
 import PageGuard from '@/components/common/PageGuard';
 
 // 58a. Modular Settings Sub-components
-import StaffManagement from './components/StaffManagement';
-import BrandSettings from './components/BrandSettings';
-import ChannelSettings from './components/ChannelSettings';
-import NotificationSettings from './components/NotificationSettings';
-import NotificationRules from './components/NotificationRules';
-import HolidayCalendar from './components/HolidayCalendar';
-import TaskTemplates from './components/TaskTemplates';
-import PromotionManager from './components/PromotionManager';
-import DataImport from './components/DataImport';
-import SharedAccessSettings from './components/SharedAccessSettings';
-import FieldSalesSettings from './components/FieldSalesSettings';
-import StoreCategoriesSettings from './components/StoreCategoriesSettings';
-import FeatureFlagsSettings from './components/FeatureFlagsSettings';
-import GoogleWorkspaceSettings from './components/GoogleWorkspaceSettings';
-import ListsSettings from './components/ListsSettings';
-import OrderIdPrefixes from './components/OrderIdPrefixes';
-import DataUpgradeSettings from './components/DataUpgradeSettings';
-import TestDataSettings from './components/TestDataSettings';
-import SetupWizard from '@/components/dashboard/SetupWizard';
 import { db } from '@/lib/db/db-service';
 import { getSessionUser } from '@/lib/auth';
 import { hasAccess, isSuperAdmin, setActivePage } from '@/lib/permissions';
 import { pageForSettingsTab } from '@/lib/access-catalog';
-import FollowUpSettings from './components/FollowUpSettings';
-import { PhoneCall, Compass, Sliders, ListChecks, DatabaseZap, Sparkles, Truck, Link2, FlaskConical } from 'lucide-react';
+import { PhoneCall, Compass, ListChecks, DatabaseZap, Sparkles, Truck, Link2, FlaskConical } from 'lucide-react';
+
+// Each tab loads only when it is opened, so Settings opens fast.
+const TabLoading = () => <p className="p-6 text-sm text-slate-500">Loading…</p>;
+const StaffManagement = dynamic(() => import('./components/StaffManagement'), { loading: TabLoading });
+const BrandSettings = dynamic(() => import('./components/BrandSettings'), { loading: TabLoading });
+const ChannelSettings = dynamic(() => import('./components/ChannelSettings'), { loading: TabLoading });
+const NotificationSettings = dynamic(() => import('./components/NotificationSettings'), { loading: TabLoading });
+const NotificationRules = dynamic(() => import('./components/NotificationRules'), { loading: TabLoading });
+const HolidayCalendar = dynamic(() => import('./components/HolidayCalendar'), { loading: TabLoading });
+const TaskTemplates = dynamic(() => import('./components/TaskTemplates'), { loading: TabLoading });
+const PromotionManager = dynamic(() => import('./components/PromotionManager'), { loading: TabLoading });
+const DataImport = dynamic(() => import('./components/DataImport'), { loading: TabLoading });
+const SharedAccessSettings = dynamic(() => import('./components/SharedAccessSettings'), { loading: TabLoading });
+const FieldSalesSettings = dynamic(() => import('./components/FieldSalesSettings'), { loading: TabLoading });
+const StoreCategoriesSettings = dynamic(() => import('./components/StoreCategoriesSettings'), { loading: TabLoading });
+const GoogleWorkspaceSettings = dynamic(() => import('./components/GoogleWorkspaceSettings'), { loading: TabLoading });
+const ListsSettings = dynamic(() => import('./components/ListsSettings'), { loading: TabLoading });
+const OrderIdPrefixes = dynamic(() => import('./components/OrderIdPrefixes'), { loading: TabLoading });
+const DataUpgradeSettings = dynamic(() => import('./components/DataUpgradeSettings'), { loading: TabLoading });
+const TestDataSettings = dynamic(() => import('./components/TestDataSettings'), { loading: TabLoading });
+const SetupWizard = dynamic(() => import('@/components/dashboard/SetupWizard'), { loading: TabLoading });
+const FollowUpSettings = dynamic(() => import('./components/FollowUpSettings'), { loading: TabLoading });
 
 export type SettingsTab =
   | 'STAFF'
@@ -51,7 +55,6 @@ export type SettingsTab =
   | 'PROMOTIONS'
   | 'IMPORT'
   | 'SHARED_ACCESS'
-  | 'FEATURE_FLAGS'
   | 'GOOGLE'
   | 'LISTS'
   | 'UPGRADE'
@@ -78,7 +81,6 @@ export default function SettingsPage() {
       promotions: 'PROMOTIONS',
       import: 'IMPORT',
       'shared-access': 'SHARED_ACCESS',
-      'feature-flags': 'FEATURE_FLAGS',
       google: 'GOOGLE',
       lists: 'LISTS',
       upgrade: 'UPGRADE',
@@ -111,7 +113,6 @@ export default function SettingsPage() {
       { id: 'GOOGLE', label: 'Google Sheets & Drive', icon: Share2, tile: 'bg-emerald-500' },
       { id: 'IMPORT', label: 'Import data', icon: FileSpreadsheet, tile: 'bg-blue-500' },
       { id: 'UPGRADE', label: 'Data upgrade', icon: DatabaseZap, tile: 'bg-slate-600' },
-      { id: 'FEATURE_FLAGS', label: 'Experiments', icon: Sliders, tile: 'bg-purple-500' },
       { id: 'TEST_DATA', label: 'Test data', icon: FlaskConical, tile: 'bg-orange-500' },
     ] },
   ];
@@ -129,7 +130,7 @@ export default function SettingsPage() {
   }, [activeTabAllowed]);
   const queryByTab: Record<SettingsTab, string> = {
     GOOGLE: 'google', STAFF: 'staff', FIELD_SALES: 'field-sales', BRANDS: 'brands', CHANNELS: 'channels', RULES: 'rules', HOLIDAYS: 'holidays',
-    TEMPLATES: 'templates', PROMOTIONS: 'promotions', IMPORT: 'import', SHARED_ACCESS: 'shared-access', FEATURE_FLAGS: 'feature-flags', LISTS: 'lists', UPGRADE: 'upgrade', TEST_DATA: 'test-data', FOLLOW_UPS: 'follow-ups',
+    TEMPLATES: 'templates', PROMOTIONS: 'promotions', IMPORT: 'import', SHARED_ACCESS: 'shared-access', LISTS: 'lists', UPGRADE: 'upgrade', TEST_DATA: 'test-data', FOLLOW_UPS: 'follow-ups',
   };
   const choose = (id: SettingsTab) => {
     setActiveTab(id);
@@ -209,7 +210,6 @@ export default function SettingsPage() {
           {activeTab === 'PROMOTIONS' && <PromotionManager />}
           {activeTab === 'IMPORT' && <DataImport />}
           {activeTab === 'SHARED_ACCESS' && <SharedAccessSettings />}
-          {activeTab === 'FEATURE_FLAGS' && <FeatureFlagsSettings />}
           {activeTab === 'LISTS' && <div className="space-y-6"><StoreCategoriesSettings /><ListsSettings /></div>}
           {activeTab === 'UPGRADE' && <DataUpgradeSettings />}
           {activeTab === 'TEST_DATA' && isSuperAdmin(user) && <TestDataSettings />}

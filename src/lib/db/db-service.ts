@@ -300,7 +300,11 @@ export class DatabaseService {
           expectedVersion: this.pending.get(key)?.expectedVersion ?? Math.max(this.versions[collection]?.[id] || 0, this.server ? 0 : syncManager.getRecordVersion(collection, id)),
         };
         if (this.server) this.pending.set(key, mutation);
-        else if (this.activeUserId) syncManager.enqueue('WORKSPACE_MUTATION', mutation as unknown as Record<string, unknown>);
+        else if (this.activeUserId) {
+          syncManager.enqueue('WORKSPACE_MUTATION', mutation as unknown as Record<string, unknown>);
+          // A local change may be refused; the next refresh must fetch in full to put the server copy back.
+          this.workspaceTag = null;
+        }
       }
     }
     this.baseline = snapshot;
@@ -352,13 +356,18 @@ export class DatabaseService {
   }
   /** When this device last had a full copy from the server (ms), or 0. */
   public lastPulledAt = 0;
+  /** The server's tag for the copy this page holds. Kept in memory only, so a reload always fetches in full. */
+  private workspaceTag: { owner: string; tag: string } | null = null;
   /** True when the data on this device came from the server within the last `ms`. */
   public isFresh(ms: number): boolean { return this.lastPulledAt > 0 && Date.now() - this.lastPulledAt < ms; }
   private async pullWorkspace(owner: string): Promise<{ success: boolean; syncedCount: number; message: string }> {
     try {
-      const response = await fetch('/api/sync', { cache: 'no-store', credentials: 'same-origin', headers: { 'X-Workspace-User': owner } });
+      // Send what this page last loaded; the server says "unchanged" when nothing moved since.
+      const known = this.workspaceLoaded && this.workspaceTag?.owner === owner ? this.workspaceTag.tag : '';
+      const response = await fetch('/api/sync', { cache: 'no-store', credentials: 'same-origin', headers: { 'X-Workspace-User': owner, ...(known ? { 'X-Workspace-Tag': known } : {}) } });
       const result = await response.json().catch(() => null);
       if (owner !== this.activeUserId || this.readSessionUser()?.id !== owner) return { success: false, syncedCount: 0, message: 'Account changed during sync.' };
+      if (response.ok && result?.success && result.unchanged && known && result.tag === known) return { success: true, syncedCount: 0, message: 'Workspace data is up to date.' };
       if (response.status === 401 || response.status === 403) {
         localStorage.removeItem('bb_auth_user_session_v3'); this.setSessionUser(null);
         window.location?.replace('/login');
@@ -408,6 +417,7 @@ export class DatabaseService {
       if (!this.users.some((user) => user.id === this.currentUser.id)) this.users.push(this.currentUser);
       if (Array.isArray(result.data.brands)) this.brands = result.data.brands;
       this.workspaceLoaded = true;
+      this.workspaceTag = typeof result.tag === 'string' && !pending.length ? { owner, tag: result.tag } : null;
       this.writeCache(); window.dispatchEvent(new CustomEvent('bb-db-updated'));
       return { success: true, syncedCount: WORKSPACE_COLLECTIONS.reduce((count, collection) => count + (remote[collection]?.length || 0), 0), message: pending.length ? `${pending.length} local changes remain pending.` : 'Workspace data refreshed.' };
     } catch (error) { return { success: false, syncedCount: 0, message: error instanceof Error ? error.message : 'Workspace refresh failed.' }; }

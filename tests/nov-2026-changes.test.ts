@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeDatabase } from './fake-supabase.ts';
-import { useTestDatabaseClient } from '../src/lib/db/supabase-server.ts';
+import { setTestDatabaseClient } from '../src/lib/db/supabase-server.ts';
 import { allocateSequence } from '../src/lib/db/document-counter.ts';
 import { prepareRecordData, saveWorkspaceMutation, validateWorkspaceMutation } from '../src/lib/db/server-workspace.ts';
 import { planDataUpgrade, runDataUpgrade } from '../src/lib/db/data-upgrade.ts';
@@ -40,7 +40,7 @@ function database() {
   db.tables.users = [userRow(admin), userRow(marketer)];
   db.tables.brands = [{ id: 'b1', code: 'FORYA', name: 'Forya', is_active: true }, { id: 'b2', code: 'PEESAFE', name: 'Pee Safe', is_active: true }];
   db.seed('products', product); db.seed('products', product2);
-  useTestDatabaseClient(db as any);
+  setTestDatabaseClient(db as any);
   return db;
 }
 

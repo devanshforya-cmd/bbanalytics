@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeDatabase } from './fake-supabase.ts';
-import { useTestDatabaseClient } from '../src/lib/db/supabase-server.ts';
+import { setTestDatabaseClient } from '../src/lib/db/supabase-server.ts';
 import { saveWorkspaceMutation } from '../src/lib/db/server-workspace.ts';
 import { dayPart, GREETING, nepalHour } from '../src/lib/greeting.ts';
 import { eventRecipients, cleanRouting } from '../src/lib/notification-events.ts';
@@ -57,7 +57,7 @@ function database() {
   db.tables.brands = [{ id: 'b1', code: 'FORYA', name: 'Forya', is_active: true }];
   db.seed('products', { id: 'p1', name: 'Roll-On Peach', sku: 'ROP', brandCode: 'FORYA', mrp: 500, caseSize: 24, active: true });
   db.seed('retailers', { id: 'r1', name: 'Shrestha Kirana', brandsStocked: ['FORYA'], assignedOfficerId: 'rider', contacts: [] });
-  useTestDatabaseClient(db as any);
+  setTestDatabaseClient(db as any);
   return db;
 }
 const storeOrder = { id: 'so1', orderNumber: '', officerId: 'rider', officerName: 'Rajan', entityType: 'RETAILER', entityId: 'r1', storeName: 'Shrestha Kirana', contactName: '', contactPhone: '',

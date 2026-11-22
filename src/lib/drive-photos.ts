@@ -4,7 +4,7 @@
  */
 import { Readable } from 'node:stream';
 import { createHash } from 'node:crypto';
-import { google, type drive_v3 } from 'googleapis';
+import { auth as googleAuth, drive as googleDrive, type drive_v3 } from '@googleapis/drive';
 import { supabaseAdmin } from './db/supabase-server';
 import { logGoogleFailure } from './google-workspace';
 import { DRIVE_PHOTO_FOLDERS, DRIVE_UPLOAD_LIMIT, type DriveFeature } from './google-workspace-security';
@@ -100,11 +100,11 @@ export interface PhotoMoveResult { records: number; photos: number; failed: numb
  * Move photos still kept on records into Drive. Skips records changed in the last ten minutes,
  * so a phone that is still editing one is not surprised by a newer version.
  */
-export async function moveInlinePhotosToDrive(auth: InstanceType<typeof google.auth.OAuth2> | InstanceType<typeof google.auth.JWT>, rootId: string, limit = 40): Promise<PhotoMoveResult> {
+export async function moveInlinePhotosToDrive(auth: InstanceType<typeof googleAuth.OAuth2> | InstanceType<typeof googleAuth.JWT>, rootId: string, limit = 40): Promise<PhotoMoveResult> {
   const result: PhotoMoveResult = { records: 0, photos: 0, failed: 0 };
   const { data, error } = await supabaseAdmin.rpc('records_with_inline_files', { max_rows: limit });
   if (error) { logGoogleFailure('inline photo scan', error); return result; }
-  const drive = google.drive({ version: 'v3', auth });
+  const drive = googleDrive({ version: 'v3', auth });
   for (const row of (data || []) as { collection: string; id: string; data: unknown; version: number; created_by: string | null }[]) {
     const feature = PHOTO_FEATURE_BY_COLLECTION[row.collection];
     if (!feature) continue;

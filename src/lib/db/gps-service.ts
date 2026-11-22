@@ -98,9 +98,3 @@ export async function fetchLatestPingsFromSupabase(): Promise<{ locations: Staff
   }
 }
 
-/**
- * Query active live staff locations
- */
-export function getLiveStaffLocations(): StaffLiveLocation[] {
-  return db.getStaffLiveLocations();
-}

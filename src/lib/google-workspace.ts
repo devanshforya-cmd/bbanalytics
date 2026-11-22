@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { auth as googleAuth, drive as googleDrive } from '@googleapis/drive';
 import { supabaseAdmin } from './db/supabase-server';
 import { getAuthSessionSecret } from './auth-session';
 import { decryptGoogleToken, encryptGoogleToken } from './google-workspace-security';
@@ -35,7 +35,7 @@ export function googleOAuthConfiguration() {
 export function createGoogleOAuthClient() {
   const config = googleOAuthConfiguration();
   if (!config.ready) throw new Error('Google OAuth setup is incomplete.');
-  return new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, config.redirectUri!);
+  return new googleAuth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, config.redirectUri!);
 }
 
 export async function readGoogleConnection(): Promise<GoogleConnection | null> {
@@ -60,7 +60,7 @@ export async function connectGoogleAccount(code: string, connectedBy: string) {
   // A fresh consent is required so an unrelated account's previous refresh token is never reused.
   if (!tokens.refresh_token) throw new Error('Google did not provide offline access. Connect again and grant consent.');
   auth.setCredentials(tokens);
-  const drive = google.drive({ version: 'v3', auth });
+  const drive = googleDrive({ version: 'v3', auth });
   const identity = await drive.about.get({ fields: 'user(emailAddress,displayName)' });
   const connection: GoogleConnection = {
     encryptedRefreshToken: encryptGoogleToken(tokens.refresh_token, getAuthSessionSecret()!),
@@ -76,7 +76,7 @@ export async function connectGoogleAccount(code: string, connectedBy: string) {
 export async function provisionGoogleResources(connection: GoogleConnection) {
   const auth = createGoogleOAuthClient();
   auth.setCredentials({ refresh_token: decryptGoogleToken(connection.encryptedRefreshToken, getAuthSessionSecret()!) });
-  const drive = google.drive({ version: 'v3', auth });
+  const drive = googleDrive({ version: 'v3', auth });
   if (!connection.folderId) {
     const folder = await drive.files.create({ requestBody: { name: 'BB Analytics', mimeType: 'application/vnd.google-apps.folder', appProperties: { app: 'bb-analytics' } }, fields: 'id', supportsAllDrives: true });
     if (!folder.data.id) throw new Error('Google folder could not be created.');
@@ -102,7 +102,7 @@ export async function getGoogleWorkspace() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
   if (!email || !privateKey) throw new Error('Connect Google in Settings → Google Workspace.');
-  const auth = new google.auth.JWT({ email, key: privateKey.replace(/\\n/g, '\n'), scopes: ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets'] });
+  const auth = new googleAuth.JWT({ email, key: privateKey.replace(/\\n/g, '\n'), scopes: ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets'] });
   return { auth, connection: null, folderId: process.env.GOOGLE_DRIVE_FOLDER_ID || '', spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID || '', mode: 'service-account' as const };
 }
 
