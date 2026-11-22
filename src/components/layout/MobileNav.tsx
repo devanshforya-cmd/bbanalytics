@@ -103,7 +103,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
             </div>
 
             {/* Permission-Filtered Speed Actions */}
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="bb-stagger grid grid-cols-2 gap-2.5">
               {hasAccess(currentUser, 'p.beat_plan') && (
                 <Link
                   href="/offline-sales/beat-plan"
@@ -219,27 +219,43 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
       )}
 
       {/* Primary Mobile Bottom Navigation Bar (Dynamic from user permissions) */}
-      <nav
-        className="mobile-bottom-nav fixed bottom-0 left-0 z-40 w-full items-center border-t border-slate-200 bg-white/95 backdrop-blur-md px-1 shadow-lg lg:hidden grid"
-        style={{ gridTemplateColumns: `repeat(${Math.max(1, visibleBottomTabs.length)}, minmax(0, 1fr))` }}
-      >
-        {visibleBottomTabs.map((tab) => {
-          const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
-          const Icon = tab.icon;
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={`flex flex-col items-center justify-center min-h-[44px] px-1 text-[11px] font-medium transition ${
-                isActive ? 'text-blue-600 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              <span className="leading-tight mt-1 truncate">{tab.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      {(() => {
+        const activeIndex = visibleBottomTabs.findIndex((tab) => pathname === tab.href || pathname.startsWith(`${tab.href}/`));
+        const count = Math.max(1, visibleBottomTabs.length);
+        return (
+          <nav
+            aria-label="Main"
+            className="mobile-bottom-nav fixed bottom-0 left-0 z-40 grid w-full items-center bg-white/90 px-1 backdrop-blur-md lg:hidden"
+            style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}
+          >
+            <span aria-hidden="true" className="bb-brand-line pointer-events-none absolute inset-x-0 top-0 h-[2px]" />
+            {/* The pill slides to the open tab */}
+            {activeIndex >= 0 && (
+              <span aria-hidden="true" className="bb-tab-pill pointer-events-none absolute left-1 top-[6px] h-[52px]"
+                style={{ width: `calc((100% - 0.5rem) / ${count})`, transform: `translateX(${activeIndex * 100}%)` }}>
+                <span className="mx-auto block h-full w-[calc(100%-8px)] rounded-2xl bg-blue-50 shadow-[inset_0_0_0_1px_rgba(12,121,181,0.12)]" />
+              </span>
+            )}
+            {visibleBottomTabs.map((tab) => {
+              const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+              const Icon = tab.icon;
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`bb-tab relative flex min-h-[52px] flex-col items-center justify-center px-1 text-[11px] transition-colors duration-200 ${
+                    isActive ? 'font-medium text-blue-700' : 'text-slate-500'
+                  }`}
+                >
+                  <Icon className="bb-tab-icon h-5 w-5" />
+                  <span className="mt-1 truncate leading-tight">{tab.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        );
+      })()}
     </>
   );
 }

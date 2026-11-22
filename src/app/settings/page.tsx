@@ -180,7 +180,7 @@ export default function SettingsPage() {
                     return (
                       <li key={item.id}>
                         <button type="button" onClick={() => choose(item.id)} aria-current={active ? 'page' : undefined}
-                          className={`group flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] transition-colors ${active ? 'bg-black/[0.05] font-medium text-slate-900 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]' : 'text-slate-600 hover:bg-black/[0.03] hover:text-slate-900'}`}>
+                          className={`group flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] transition-colors ${active ? 'bg-blue-50 font-medium text-blue-900 shadow-[inset_0_0_0_1px_rgba(12,121,181,0.12)]' : 'text-slate-600 hover:bg-black/[0.03] hover:text-slate-900'}`}>
                           <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
                           <span className="flex-1 truncate">{item.label}</span>
                         </button>

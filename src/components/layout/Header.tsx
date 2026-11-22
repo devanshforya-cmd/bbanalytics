@@ -162,8 +162,9 @@ export default function Header() {
   return (
     <>
       <header
-        className={`sticky top-0 z-30 flex h-14 sm:h-16 w-full items-center justify-between gap-2 border-b px-2.5 sm:px-6 transition duration-200 border-black/[0.06] bg-[#fafafa]/95 backdrop-blur-sm`}
+        className={`sticky top-0 z-30 flex h-14 sm:h-16 w-full items-center justify-between gap-2 px-2.5 sm:px-6 transition duration-200 bg-white/90 backdrop-blur-md`}
       >
+        <span aria-hidden="true" className="bb-brand-line pointer-events-none absolute inset-x-0 bottom-0 h-[2px]" />
         <SavingBar />
         {/* Left: Hamburger (mobile/tablet) + Clean Brand Dropdown */}
         <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-none sm:gap-3">
@@ -231,8 +232,10 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setShowNotifMenu(!showNotifMenu)}
+              key={unreadNotifs.length}
               className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-700 hover:bg-black/[0.05] transition sm:h-9 sm:w-9 sm:rounded-lg sm:border sm:border-black/[0.08] sm:bg-white"
               aria-label={unreadNotifs.length ? `View notifications, ${unreadNotifs.length} unread` : 'View notifications'}
+              data-ring={unreadNotifs.length > 0 || undefined}
             >
               <Bell className="h-[18px] w-[18px] sm:h-4 sm:w-4" />
               {unreadNotifs.length > 0 && (
@@ -391,7 +394,7 @@ export default function Header() {
             className="flex h-10 w-10 items-center justify-center gap-2 rounded-full text-xs font-semibold text-slate-800 transition hover:bg-black/[0.05] sm:h-auto sm:w-auto sm:rounded-lg sm:border sm:border-slate-200 sm:bg-slate-50 sm:px-2.5 sm:py-1.5 sm:shadow-2xs sm:hover:bg-slate-100"
             aria-label="Open user profile and duty settings"
           >
-            <div className="relative flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 font-semibold text-xs text-white sm:h-6 sm:w-6 sm:text-[11px]">
+            <div className="relative flex h-7 w-7 items-center justify-center rounded-full bg-[image:var(--bb-logo-grad)] font-semibold text-xs text-white sm:h-6 sm:w-6 sm:text-[11px]">
               {currentUser?.fullName?.charAt(0) || 'U'}
               {/* Duty indicator dot */}
               <span

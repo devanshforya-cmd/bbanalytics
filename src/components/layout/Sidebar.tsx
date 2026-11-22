@@ -39,7 +39,7 @@ export default function Sidebar({ pending = false }: { pending?: boolean }) {
       <div className="border-t border-black/[0.06] p-3">
         <div className="flex items-center gap-3 rounded-xl p-2">
           <div className="relative">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-medium text-slate-700 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium text-white" style={{ background: 'var(--bb-logo-grad)' }}>
               {currentUser.fullName ? currentUser.fullName.charAt(0) : 'U'}
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-[#f4f4f5]" />

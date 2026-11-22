@@ -4,11 +4,14 @@
  * Small, dependency-free charts drawn as SVG. Every mark can be clicked to see the records behind it,
  * and each chart carries a text summary for screen readers.
  */
+import { useId } from 'react';
 import { formatValue, type Point } from '@/lib/metrics/engine';
 import type { Unit } from '@/lib/metrics/catalog';
 
-// Ledger inks: the Brand Bucket blue leads, the rest are quiet earth tones that stay apart from each other.
-export const PALETTE = ['#1470b0', '#c98a2b', '#4e8f6a', '#b5524a', '#5b7f99', '#8c7a5b', '#7a7a80', '#a1a1a6'];
+// The BB logo blue leads; the rest are clear, distinct hues so every series reads at a glance.
+export const PALETTE = ['#0c79b5', '#f2a12e', '#17a95c', '#e5484d', '#7a5ce0', '#12a5b4', '#d9559b', '#8b8b92'];
+const useSvgId = () => useId().replace(/[^a-zA-Z0-9_-]/g, '');
+const delay = (i: number, n: number) => ({ animationDelay: `${Math.round((Math.min(i, 30) / Math.max(1, Math.min(n, 30))) * 420)}ms` });
 const OTHER = '#d4d4d8';
 
 type Pick = (key: string) => void;
@@ -31,20 +34,29 @@ export function LineChart({ buckets, series, unit, onPick }: { buckets: Point[];
   const x = (i: number) => L + (buckets.length <= 1 ? (W - L) / 2 : (i / (buckets.length - 1)) * (W - L - 8));
   const y = (v: number) => T + (H - T - B) * (1 - v / max);
   const labelEvery = Math.max(1, Math.ceil(buckets.length / 6));
+  const uid = useSvgId();
   return (
     <figure className="w-full">
       <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full" role="img" aria-label={`Line chart. ${summary(buckets, unit)}`}>
+        <defs>
+          <linearGradient id={`${uid}-stroke`} x1="0" x2="1" y1="0" y2="0"><stop offset="0" stopColor="#233f70" /><stop offset="0.55" stopColor="#0c79b5" /><stop offset="1" stopColor="#3ea4dd" /></linearGradient>
+          <linearGradient id={`${uid}-area`} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#0c79b5" stopOpacity="0.22" /><stop offset="1" stopColor="#0c79b5" stopOpacity="0" /></linearGradient>
+        </defs>
         {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W} y1={y(max * f)} y2={y(max * f)} stroke="#ececee" /><text x={L - 6} y={y(max * f) + 4} textAnchor="end" className="fill-slate-500 font-mono text-[11px]">{short(max * f, unit)}</text></g>)}
         {buckets.map((b, i) => i % labelEvery === 0 || i === buckets.length - 1 ? <text key={b.key} x={x(i)} y={H - 6} textAnchor="middle" className="fill-slate-500 font-mono text-[11px]">{b.label.replace('Week of ', '')}</text> : null)}
         {lines.map((line, li) => {
           const color = line.key === '__other__' ? OTHER : PALETTE[li % PALETTE.length];
           const pts = line.values.map((v, i) => (v === null ? null : [x(i), y(v)] as const));
           const d = pts.reduce((acc, pt, i) => (pt ? `${acc}${acc && pts[i - 1] ? 'L' : 'M'}${pt[0]},${pt[1]}` : acc), '');
+          const lead = lines.length === 1;
+          const solid = pts.filter((pt): pt is readonly [number, number] => !!pt);
+          const area = lead && solid.length > 1 && solid.length === pts.length ? `${d}L${solid[solid.length - 1][0]},${H - B}L${solid[0][0]},${H - B}Z` : '';
           return (
             <g key={line.key}>
-              <path d={d} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" />
+              {area && <path d={area} fill={`url(#${uid}-area)`} className="bb-fade" />}
+              <path d={d} pathLength={1} fill="none" stroke={lead ? `url(#${uid}-stroke)` : color} strokeWidth={lead ? 2.5 : 2} strokeLinejoin="round" strokeLinecap="round" className="bb-draw" style={{ animationDelay: `${120 + li * 120}ms` }} />
               {pts.map((pt, i) => pt && (
-                <circle key={i} cx={pt[0]} cy={pt[1]} r={buckets.length > 40 ? 2 : 3.5} fill={color} className={onPick ? 'cursor-pointer' : ''}
+                <circle key={i} cx={pt[0]} cy={pt[1]} r={buckets.length > 40 ? 2 : 3.5} fill="#fff" stroke={color} strokeWidth="2" style={{ animationDelay: `${300 + (i / Math.max(1, pts.length)) * 900}ms` }} className={`bb-dot ${onPick ? 'cursor-pointer' : ''}`}
                   onClick={() => onPick?.(buckets[i].key, line.key === '__all__' || line.key === '__other__' ? undefined : line.key)}>
                   <title>{`${line.label} · ${buckets[i].label}: ${formatValue(line.values[i], unit)}`}</title>
                 </circle>
@@ -65,15 +77,17 @@ export function ColumnChart({ buckets, unit, onPick }: { buckets: Point[]; unit:
   const slot = (W - L) / Math.max(1, buckets.length);
   const bw = Math.max(2, Math.min(40, slot * 0.7));
   const labelEvery = Math.max(1, Math.ceil(buckets.length / 6));
+  const uid = useSvgId();
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full" role="img" aria-label={`Column chart. ${summary(buckets, unit)}`}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="bb-marks h-48 w-full" role="img" aria-label={`Column chart. ${summary(buckets, unit)}`}>
+      <defs><linearGradient id={`${uid}-bar`} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#3ea4dd" /><stop offset="1" stopColor="#0c79b5" /></linearGradient></defs>
       {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W} y1={T + (H - T - B) * (1 - f)} y2={T + (H - T - B) * (1 - f)} stroke="#ececee" /><text x={L - 6} y={T + (H - T - B) * (1 - f) + 4} textAnchor="end" className="fill-slate-500 font-mono text-[11px]">{short(max * f, unit)}</text></g>)}
       {buckets.map((b, i) => {
         const h = ((b.value || 0) / max) * (H - T - B);
         const cx = L + slot * i + slot / 2;
         return (
           <g key={b.key} className={onPick ? 'cursor-pointer' : ''} onClick={() => onPick?.(b.key)}>
-            <rect x={cx - bw / 2} y={H - B - h} width={bw} height={Math.max(0, h)} rx="2" fill={PALETTE[0]}><title>{`${b.label}: ${formatValue(b.value, unit)}`}</title></rect>
+            <rect x={cx - bw / 2} y={H - B - h} width={bw} height={Math.max(0, h)} rx="3" fill={`url(#${uid}-bar)`} className="bb-grow bb-mark" style={delay(i, buckets.length)}><title>{`${b.label}: ${formatValue(b.value, unit)}`}</title></rect>
             {(i % labelEvery === 0 || i === buckets.length - 1) && <text x={cx} y={H - 6} textAnchor="middle" className="fill-slate-500 font-mono text-[11px]">{b.label.replace('Week of ', '')}</text>}
           </g>
         );
@@ -92,18 +106,18 @@ export function StackedChart({ buckets, series, unit, onPick }: { buckets: Point
   const labelEvery = Math.max(1, Math.ceil(buckets.length / 6));
   return (
     <figure className="w-full">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full" role="img" aria-label={`Stacked column chart of ${series.map((s) => s.label).join(', ')}`}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="bb-marks h-48 w-full" role="img" aria-label={`Stacked column chart of ${series.map((s) => s.label).join(', ')}`}>
         {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W} y1={T + (H - T - B) * (1 - f)} y2={T + (H - T - B) * (1 - f)} stroke="#ececee" /><text x={L - 6} y={T + (H - T - B) * (1 - f) + 4} textAnchor="end" className="fill-slate-500 font-mono text-[11px]">{short(max * f, unit)}</text></g>)}
         {buckets.map((b, i) => {
           let base = H - B;
           const cx = L + slot * i + slot / 2;
           return (
-            <g key={b.key}>
+            <g key={b.key} className="bb-grow" style={delay(i, buckets.length)}>
               {series.map((line, li) => {
                 const h = ((line.values[i] || 0) / max) * (H - T - B);
                 base -= h;
                 return h > 0 ? (
-                  <rect key={line.key} x={cx - bw / 2} y={base} width={bw} height={h} fill={line.key === '__other__' ? OTHER : PALETTE[li % PALETTE.length]} className={onPick ? 'cursor-pointer' : ''}
+                  <rect key={line.key} x={cx - bw / 2} y={base} width={bw} height={h} fill={line.key === '__other__' ? OTHER : PALETTE[li % PALETTE.length]} className={`bb-mark ${onPick ? 'cursor-pointer' : ''}`}
                     onClick={() => onPick?.(b.key, line.key === '__other__' ? undefined : line.key)}>
                     <title>{`${line.label} · ${b.label}: ${formatValue(line.values[i], unit)}`}</title>
                   </rect>
@@ -124,17 +138,17 @@ export function BarList({ points, unit, onPick, ranked = false, compare }: { poi
   const max = Math.max(0, ...finite(points.map((p) => p.value)));
   if (!points.length) return <p className="py-6 text-center text-xs text-slate-400">Nothing in this period.</p>;
   return (
-    <ol className="space-y-1.5">
+    <ol className="space-y-2">
       {points.map((p, i) => {
         const before = compare?.get(p.key);
         return (
           <li key={p.key}>
-            <button type="button" disabled={!onPick || p.key === '__other__'} onClick={() => onPick?.(p.key)} className="group w-full rounded-md text-left text-xs enabled:hover:bg-slate-50">
+            <button type="button" disabled={!onPick || p.key === '__other__'} onClick={() => onPick?.(p.key)} className="group w-full rounded-md py-0.5 text-left text-xs transition-colors enabled:hover:bg-slate-50">
               <div className="flex items-baseline justify-between gap-2 px-1">
                 <span className="min-w-0 truncate text-slate-700">{ranked && <span className="mr-1.5 tabular-nums text-slate-400">{i + 1}.</span>}{p.label}</span>
                 <span className="shrink-0 font-semibold tabular-nums text-slate-900">{formatValue(p.value, unit)}{before !== undefined && before !== null && p.value !== null && <span className="ml-1 font-normal text-slate-400">(was {formatValue(before, unit)})</span>}</span>
               </div>
-              <div className="mx-1 mt-0.5 h-1.5 rounded-full bg-slate-100"><div className="h-1.5 rounded-full" style={{ width: `${max ? Math.max(2, ((p.value || 0) / max) * 100) : 0}%`, background: p.key === '__other__' ? OTHER : PALETTE[0] }} /></div>
+              <div className="mx-1 mt-1 h-2 overflow-hidden rounded-full bg-slate-100"><div className="bb-grow-x h-2 rounded-full transition-[filter] group-hover:brightness-110" style={{ width: `${max ? Math.max(2, ((p.value || 0) / max) * 100) : 0}%`, background: p.key === '__other__' ? OTHER : 'linear-gradient(90deg, #233f70, #0c79b5 60%, #3ea4dd)', animationDelay: `${Math.min(i, 12) * 50}ms` }} /></div>
             </button>
           </li>
         );
@@ -144,6 +158,7 @@ export function BarList({ points, unit, onPick, ranked = false, compare }: { poi
 }
 
 export function Donut({ points, unit, onPick }: { points: Point[]; unit: Unit; onPick?: Pick }) {
+  const uid = useSvgId();
   const total = points.reduce((s, p) => s + Math.max(0, p.value || 0), 0);
   if (!total) return <p className="py-6 text-center text-xs text-slate-400">Nothing in this period.</p>;
   let angle = -Math.PI / 2;
@@ -160,8 +175,11 @@ export function Donut({ points, unit, onPick }: { points: Point[]; unit: Unit; o
   });
   return (
     <div className="flex flex-wrap items-center gap-4">
-      <svg viewBox="0 0 100 100" className="h-32 w-32 shrink-0" role="img" aria-label={`Share chart. ${summary(points, unit)}`}>
-        {arcs.map((a) => <path key={a.p.key} d={a.d} fill={a.color} className={onPick && a.p.key !== '__other__' ? 'cursor-pointer' : ''} onClick={() => a.p.key !== '__other__' && onPick?.(a.p.key)}><title>{`${a.p.label}: ${formatValue(a.p.value, unit)} (${Math.round(a.share * 100)}%)`}</title></path>)}
+      <svg viewBox="0 0 100 100" className="bb-marks h-32 w-32 shrink-0" role="img" aria-label={`Share chart. ${summary(points, unit)}`}>
+        <defs><mask id={`${uid}-sweep`}><circle cx="50" cy="50" r="32" fill="none" stroke="#fff" strokeWidth="20" pathLength={1} transform="rotate(-90 50 50)" className="bb-sweep" /></mask></defs>
+        <g mask={`url(#${uid}-sweep)`}>
+        {arcs.map((a) => <path key={a.p.key} d={a.d} fill={a.color} stroke="#fff" strokeWidth="0.8" className={`bb-mark ${onPick && a.p.key !== '__other__' ? 'cursor-pointer' : ''}`} onClick={() => a.p.key !== '__other__' && onPick?.(a.p.key)}><title>{`${a.p.label}: ${formatValue(a.p.value, unit)} (${Math.round(a.share * 100)}%)`}</title></path>)}
+        </g>
       </svg>
       <ul className="min-w-0 flex-1 space-y-1 text-xs">
         {arcs.map((a) => (

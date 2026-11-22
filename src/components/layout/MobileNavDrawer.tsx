@@ -73,7 +73,7 @@ export default function MobileNavDrawer({
       />
 
       <div className="fixed inset-y-0 left-0 max-w-full flex">
-        <div className="w-80 max-w-[85vw] bg-white flex flex-col shadow-2xl animate-in slide-in-from-left duration-200">
+        <div className="relative w-80 max-w-[85vw] bg-white flex flex-col shadow-2xl animate-in slide-in-from-left duration-300 ease-out">
           {/* Header */}
           <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
             <div className="flex items-center gap-2">

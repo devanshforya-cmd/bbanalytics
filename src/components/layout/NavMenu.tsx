@@ -43,7 +43,7 @@ export default function NavMenu({ user, pathname, query = '', onNavigate, compac
 
   const link = compact
     ? { base: 'flex items-center justify-between rounded-lg px-3 py-2 text-xs transition', active: 'bg-black/[0.05] font-medium text-slate-900', idle: 'text-slate-600 hover:bg-slate-50', icon: 'h-4 w-4' }
-    : { base: 'group flex h-8 items-center justify-between rounded-lg px-2.5 text-[13px] transition-colors duration-150', active: 'bg-black/[0.05] font-medium text-slate-900 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]', idle: 'text-slate-600 hover:bg-black/[0.03] hover:text-slate-900', icon: 'h-4 w-4' };
+    : { base: 'group flex h-8 items-center justify-between rounded-lg px-2.5 text-[13px] transition-colors duration-150', active: 'bg-blue-50 font-medium text-blue-900 shadow-[inset_0_0_0_1px_rgba(12,121,181,0.12)]', idle: 'text-slate-600 hover:bg-black/[0.03] hover:text-slate-900', icon: 'h-4 w-4' };
 
   return (
     <div className="space-y-2">
@@ -62,7 +62,7 @@ export default function NavMenu({ user, pathname, query = '', onNavigate, compac
                     const active = item.href === activeHref;
                     const Icon = item.icon;
                     return (
-                      <Link key={item.href} href={item.href} onClick={onNavigate} aria-current={active ? 'page' : undefined} className={`${link.base} ${active ? link.active : link.idle}`}>
+                      <Link key={item.href} href={item.href} onClick={onNavigate} aria-current={active ? 'page' : undefined} className={`${link.base} ${active ? `${link.active}${compact ? '' : ' bb-nav-active'}` : link.idle}`}>
                         <span className="flex items-center gap-2.5">
                           <Icon className={`${link.icon} shrink-0 ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
                           <span>{item.label}</span>

@@ -110,7 +110,7 @@ function ToastNotification({ type, message, subtitle, autoDismiss, onClose, acti
   };
   const c = config[type];
   return (
-    <div role="alert" className={`relative pointer-events-auto w-80 sm:w-96 rounded-2xl shadow-xl overflow-hidden ${c.bg} ${c.border} transition duration-300 ease-out ${visible && !leaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
+    <div role="alert" className={`relative pointer-events-auto w-80 sm:w-96 rounded-2xl shadow-xl overflow-hidden ${c.bg} ${c.border} transition duration-500 [transition-timing-function:cubic-bezier(0.34,1.3,0.5,1)] ${visible && !leaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
       <div className="flex items-start gap-3 p-3.5 pb-4">
         <div className={`p-1.5 rounded-lg shrink-0 ${c.iconBg}`}>{c.icon}</div>
         <div className="flex-1 min-w-0">
