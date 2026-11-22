@@ -261,3 +261,11 @@ a:focus-visible, button:focus-visible, [role="button"]:focus-visible, [role="tab
   border-radius: 1px;
   animation: confettiFly 0.7s ease-out forwards;
 }
+
+/* Printing a page (for example a dashboard as PDF): only the page itself, no menus, everything visible. */
+@media print {
+  .app-chrome { display: none !important; }
+  .app-frame, .app-body, #main-content { display: block !important; height: auto !important; overflow: visible !important; padding: 0 !important; }
+  body { background: #fff !important; }
+  section { break-inside: avoid; }
+}

@@ -6,6 +6,7 @@ import { readWorkspaceResetState } from './workspace-reset-server';
 import { createHash, randomUUID } from 'node:crypto';
 import { validateAlertRules } from '../alert-rules';
 import { CALL_PURPOSES, outcomeInfo, validateFollowUpPlan } from '../follow-ups';
+import { cleanPrefs, cleanTemplates } from '../metrics/dashboards';
 import { defaultOrderOptions, validateOrderOptions, requiredOrderOptionActions, assertActiveOrderOption } from '../order-options';
 import { DatabaseService } from './db-service';
 import { supabaseAdmin } from './supabase-server';
@@ -231,7 +232,7 @@ export function validateWorkspaceMutation(value: unknown): asserts value is Work
     if (!name || name.length > 60 || /[\u0000-\u001f\u007f]/.test(name)) throw new WorkspaceError(400, 'Enter a name of at most 60 characters.');
     if (m.collection === 'marketingOptions' && !['REACH_OUT', 'CONTENT_PLATFORM'].includes(m.data.list)) throw new WorkspaceError(400, 'Invalid list.');
   }
-  if (m.collection === 'userPreferences' && m.data && Object.keys(m.data).some(key => !['id', 'setupGuideDismissedAt', 'updatedAt', 'createdById', 'reportPresets'].includes(key))) throw new WorkspaceError(400, 'Invalid preference.');
+  if (m.collection === 'userPreferences' && m.data && Object.keys(m.data).some(key => !['id', 'setupGuideDismissedAt', 'updatedAt', 'createdById', 'reportPresets', 'dashboards'].includes(key))) throw new WorkspaceError(400, 'Invalid preference.');
   if (m.collection === 'userPreferences' && m.data?.reportPresets !== undefined) {
     const presets = m.data.reportPresets;
     const plain = (value: unknown, max: number) => value === undefined || (typeof value === 'string' && value.length <= max);
@@ -259,6 +260,12 @@ export function validateWorkspaceMutation(value: unknown): asserts value is Work
   if (m.collection === 'sharedAccessLinks' && m.data && !/^bb_[A-Za-z0-9_-]{43,128}$/.test(m.data.token || '')) throw new WorkspaceError(400, 'Regenerate this legacy sharing link before saving it.');
   if (m.collection === 'workspaceConfig' && m.data?.orderOptions !== undefined) {
     try { validateOrderOptions(m.data.orderOptions); } catch (error) { throw new WorkspaceError(400, error instanceof Error ? error.message : 'Invalid channel options.'); }
+  }
+  if (m.collection === 'userPreferences' && m.data?.dashboards !== undefined) {
+    try { m.data.dashboards = cleanPrefs(m.data.dashboards); } catch (error) { throw new WorkspaceError(400, error instanceof Error ? error.message : 'Invalid dashboards.'); }
+  }
+  if (m.collection === 'workspaceConfig' && m.data?.dashboardTemplates !== undefined) {
+    try { m.data.dashboardTemplates = cleanTemplates(m.data.dashboardTemplates); } catch (error) { throw new WorkspaceError(400, error instanceof Error ? error.message : 'Invalid shared dashboards.'); }
   }
   if (m.collection === 'workspaceConfig' && m.data?.followUpPlan !== undefined) {
     try { m.data.followUpPlan = validateFollowUpPlan(m.data.followUpPlan); } catch (error) { throw new WorkspaceError(400, error instanceof Error ? error.message : 'Invalid follow-up settings.'); }
@@ -421,6 +428,8 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
   }
   if (mutation.collection === 'workspaceConfig' && JSON.stringify(data.followUpPlan) !== JSON.stringify(prior?.data.followUpPlan) && data.followUpPlan !== undefined
     && !canPerform(user, 'p.settings_follow_ups', prior?.data.followUpPlan ? 'EDIT' : 'CREATE') && !isSuperAdmin(user)) throw new WorkspaceError(403, 'Changing follow-up calls needs the Follow-up calls settings.');
+  if (mutation.collection === 'workspaceConfig' && data.dashboardTemplates !== undefined && JSON.stringify(data.dashboardTemplates) !== JSON.stringify(prior?.data.dashboardTemplates ?? [])
+    && !isSuperAdmin(user)) throw new WorkspaceError(403, 'Only Super Admins share dashboards with everyone.');
   if (mutation.collection === 'customerCalls') {
     // A call is logged by the person who made it; the order decides its number and brand.
     data.officerId = prior?.data.officerId || user.id;
@@ -436,8 +445,18 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
     // A browser running an older build must not drop settings it does not know about.
     if (data.brandPrefixes === undefined && prior.data.brandPrefixes !== undefined) data.brandPrefixes = prior.data.brandPrefixes;
     if (data.followUpPlan === undefined && prior.data.followUpPlan !== undefined) data.followUpPlan = prior.data.followUpPlan;
+    if (data.dashboardTemplates === undefined && prior.data.dashboardTemplates !== undefined) data.dashboardTemplates = prior.data.dashboardTemplates;
   }
   if (mutation.collection === 'orders' && typeof data.orderNumber === 'string') data.orderNumber = data.orderNumber.trim().toUpperCase();
+  if (mutation.collection === 'orders' && !prior && !data.orderTime) {
+    // Orders entered on the day they come in get the time they were entered, so "when orders come in" can be charted.
+    const nepal = new Date(Date.now() + (5 * 60 + 45) * 60000).toISOString();
+    if (data.orderDateAd === nepal.slice(0, 10)) data.orderTime = nepal.slice(11, 16);
+  }
+  if (mutation.collection === 'feedbackEntries' && data.rating !== undefined && data.rating !== null) {
+    if (![1, 2, 3, 4, 5].includes(Number(data.rating))) throw new WorkspaceError(400, 'A rating must be from 1 to 5 stars.');
+    data.rating = Number(data.rating);
+  } else if (mutation.collection === 'feedbackEntries') delete data.rating;
   if (mutation.collection === 'products') {
     if (data.alias !== undefined) { data.alias = String(data.alias || '').trim().replace(/\s+/g, ' ').slice(0, 60); if (!data.alias) delete data.alias; }
     if (data.barcode !== undefined) { data.barcode = String(data.barcode || '').replace(/\s+/g, '').slice(0, 32); if (!data.barcode) delete data.barcode; }

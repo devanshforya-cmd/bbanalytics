@@ -1,4 +1,5 @@
 'use client';
+import { orderHistoryOf } from '@/lib/metrics/sources';
 
 import Money from '@/components/common/Money';
 import DownloadButton from '@/components/common/DownloadButton';
@@ -192,7 +193,9 @@ export default function DailyOrdersPage() {
     const instaCount = commercialOrders.filter((o) => o.platform === 'Instagram').length;
     const instaPct = totalCommercial > 0 ? Math.round((instaCount / totalCommercial) * 100) : 0;
 
-    const repeatCount = commercialOrders.filter((o) => o.orderType === 'REPEAT').length;
+    // Repeat = the customer had bought before (same rule as the dashboard), not the typed tag.
+    const history = orderHistoryOf(db.getOrders('ALL' as BrandCode));
+    const repeatCount = commercialOrders.filter((o) => history.get(o.id)?.first === false).length;
     const repeatPct = totalCommercial > 0 ? Math.round((repeatCount / totalCommercial) * 100) : 0;
 
     return {

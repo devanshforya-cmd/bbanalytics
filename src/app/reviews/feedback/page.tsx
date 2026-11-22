@@ -97,6 +97,7 @@ function FeedbackContent() {
   const [fullText, setFullText] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [sentiment, setSentiment] = useState<Sentiment>('POSITIVE');
+  const [rating, setRating] = useState<0 | 1 | 2 | 3 | 4 | 5>(0);
   const [hasScreenshot, setHasScreenshot] = useState(false);
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
   const [proofPhotoUrl, setProofPhotoUrl] = useState('');
@@ -211,6 +212,7 @@ function FeedbackContent() {
         screenshotUrls: photosToSave,
         issueCategories: selectedCategories,
         sentiment,
+        ...(rating ? { rating } : {}),
         hasScreenshot: photosToSave.length > 0,
         usedInDesign,
         postedOnWebsite,
@@ -236,6 +238,7 @@ function FeedbackContent() {
       setFullText('');
       setSelectedCategories([]);
       setUploadedPhotos([]);
+      setRating(0);
     });
   };
 
@@ -951,6 +954,18 @@ function FeedbackContent() {
                   </button>
                 </div>
               </div>
+
+              <fieldset>
+                <legend className="mb-1.5 font-bold text-slate-700">Customer’s rating (optional)</legend>
+                <div className="flex items-center gap-1" role="radiogroup">
+                  {([1, 2, 3, 4, 5] as const).map((star) => (
+                    <button key={star} type="button" role="radio" aria-checked={rating === star} aria-label={`${star} star${star === 1 ? '' : 's'}`}
+                      onClick={() => setRating(rating === star ? 0 : star)}
+                      className={`h-8 w-8 rounded-lg border text-base leading-none ${rating >= star ? 'border-amber-400 bg-amber-50 text-amber-500' : 'border-slate-200 text-slate-300 hover:text-amber-400'}`}>★</button>
+                  ))}
+                  <span className="ml-2 text-slate-500">{rating ? `${rating} of 5` : 'Leave blank if they didn’t rate'}</span>
+                </div>
+              </fieldset>
 
               {/* Customer: phone first, so it is clear who this entry attaches to */}
               <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">

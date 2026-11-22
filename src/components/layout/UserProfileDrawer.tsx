@@ -1,4 +1,5 @@
 'use client';
+import { getTodayAd } from '@/lib/nepali-calendar';
 
 import { roleLabel } from '@/lib/roles';
 import Money from '@/components/common/Money';
@@ -118,7 +119,7 @@ export default function UserProfileDrawer({
   if (!isOpen) return null;
 
   const isOfficer = getScope(currentUser, 'beat_plans') === 'OWN';
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayAd();
   const todayBeats = isOfficer ? db.getTodayBeat(currentUser.id).filter((beat) => beat.dateAd === today) : [];
   const todayOrderAmount = isOfficer
     ? db.getSecondaryOrders({ officerId: currentUser.id })

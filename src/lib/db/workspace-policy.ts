@@ -44,7 +44,7 @@ const GLOBAL_CATALOG = new Set<WorkspaceCollection>([
 export function collectionFeatures(collection: WorkspaceCollection, read = false): AccessKey[] {
   if (read && (collection === 'products' || collection === 'combos')) return ['products', 'beat_plans', 'orderflow', 'order_desk', 'dispatches', 'stock_counts'];
   if (read && collection === 'reviewCategories') return ['reviews', 'order_desk'];
-  if (read && ['documentTypes', 'storeCategories', 'workspaceConfig', 'promotions'].includes(collection)) return ['settings', 'beat_plans', 'stores', 'document_handover', 'orderflow', 'order_desk', 'customer_calls'];
+  if (read && ['documentTypes', 'storeCategories', 'workspaceConfig', 'promotions'].includes(collection)) return ['settings', 'beat_plans', 'stores', 'document_handover', 'orderflow', 'order_desk', 'customer_calls', 'dashboard'];
   // Callers need the orders and customers they phone about.
   if (read && (collection === 'orders' || collection === 'customers')) return [...FEATURES[collection], 'customer_calls'];
   if (read && collection === 'holidays') return ['settings', 'beat_plans', 'tasks'];
