@@ -10,6 +10,7 @@ import { syncManager, SyncState } from '@/lib/offline-sync';
 import { BrandCode, User, Notification } from '@/lib/types';
 import BrandDropdown from './BrandDropdown';
 import UserProfileDrawer from './UserProfileDrawer';
+import { useGpsSharing } from '@/lib/gps-sharing-store';
 import MobileNavDrawer from './MobileNavDrawer';
 import SyncStatusDropdown from './SyncStatusDropdown';
 import NotificationHistoryModal from '@/components/common/NotificationHistoryModal';
@@ -158,6 +159,7 @@ export default function Header() {
   const unreadNotifs = notifications.filter((n) => !n.read);
   const displayedNotifs = notifTab === 'UNREAD' ? unreadNotifs : notifications;
   const duty = currentUser.dutyStatus || 'ONLINE';
+  const gps = useGpsSharing();
 
   return (
     <>
@@ -392,7 +394,7 @@ export default function Header() {
             type="button"
             onClick={() => setShowProfileDrawer(true)}
             className="flex h-10 w-10 items-center justify-center gap-2 rounded-full text-xs font-semibold text-slate-800 transition hover:bg-black/[0.05] sm:h-auto sm:w-auto sm:rounded-lg sm:border sm:border-slate-200 sm:bg-slate-50 sm:px-2.5 sm:py-1.5 sm:shadow-2xs sm:hover:bg-slate-100"
-            aria-label="Open user profile and duty settings"
+            aria-label={gps.allowed ? `Open profile, duty and GPS settings. GPS sharing is ${gps.enabled ? 'on' : 'off'}` : 'Open user profile and duty settings'}
           >
             <div className="relative flex h-7 w-7 items-center justify-center rounded-full bg-[image:var(--bb-logo-grad)] font-semibold text-xs text-white sm:h-6 sm:w-6 sm:text-[11px]">
               {currentUser?.fullName?.charAt(0) || 'U'}
@@ -416,6 +418,7 @@ export default function Header() {
               </div>
               <div className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">
                 {duty === 'ONLINE' ? 'Online' : duty.replace('_', ' ')}
+                {gps.allowed && <span className={gps.enabled ? 'text-emerald-700' : 'text-amber-700'}>{gps.enabled ? ' · GPS on' : ' · GPS off'}</span>}
               </div>
             </div>
 

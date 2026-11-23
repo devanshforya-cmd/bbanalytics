@@ -1,4 +1,5 @@
 'use client';
+import GpsSharingPanel from './GpsSharingPanel';
 import { getTodayAd } from '@/lib/nepali-calendar';
 
 import { roleLabel } from '@/lib/roles';
@@ -314,6 +315,8 @@ export default function UserProfileDrawer({
                 )}
               </div>
             </div>
+
+            <GpsSharingPanel userId={currentUser.id} />
 
             {/* Field Performance Snapshot for Officers */}
             {isOfficer && hasAccess(currentUser, 'staff_scorecards') && (
