@@ -18,14 +18,8 @@ export interface CrossBrandMapData {
   crossSellOpportunities: CrossSellOpportunity[];
 }
 
-export interface ChannelLoyaltyRow {
-  channel: string;
-  customerCount: number;
-  orderCount: number;
-  avgKarma: number;
-  repeatRate: string;
-  loyalistPct: string;
-}
+export type { ChannelRow as ChannelLoyaltyRow } from '@/lib/customer-insights';
+import type { ChannelRow as ChannelLoyaltyRow } from '@/lib/customer-insights';
 
 export interface ProductAffinitySegment {
   segment: string;
@@ -48,14 +42,11 @@ export default function CrossBrandMap({
 }: CrossBrandMapProps) {
   return (
     <div className="space-y-8">
-      {/* 2c. Cross-Brand Behavior Map */}
+      {/* Cross-Brand Behavior Map */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-600 text-white text-xs font-black">
-                2c
-              </span>
               <h2 className="text-base font-bold text-slate-900">
                 Cross-brand behavior map & portfolio synergies
               </h2>
@@ -137,20 +128,17 @@ export default function CrossBrandMap({
         </div>
       </section>
 
-      {/* 2g. Channel Loyalty */}
+      {/* Channel Loyalty */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-500 text-white text-xs font-black">
-                2g
-              </span>
               <h2 className="text-base font-bold text-slate-900">
                 Channel loyalty & omnichannel dynamics
               </h2>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Evaluates which channels foster repeat loyalty vs. one-off impulse acquisitions.
+              Where each customer placed their first order, whether they bought again, and whether they came back through the same channel.
             </p>
           </div>
         </div>
@@ -159,12 +147,13 @@ export default function CrossBrandMap({
           <table className="w-full text-left text-xs text-slate-700">
             <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
               <tr>
-                <th className="py-3 px-3">Acquisition channel</th>
-                <th className="py-3 px-3 text-center">Unique customers</th>
-                <th className="py-3 px-3 text-center">Total orders</th>
-                <th className="py-3 px-3 text-center">Avg Karma</th>
-                <th className="py-3 px-3 text-center">Repeat order rate</th>
-                <th className="py-3 px-3 text-right">Channel loyalist share (&gt;80%)</th>
+                <th className="py-3 px-3">First order came through</th>
+                <th className="py-3 px-3 text-center">Customers</th>
+                <th className="py-3 px-3 text-center">Their orders since</th>
+                <th className="py-3 px-3 text-center">Average karma</th>
+                <th className="py-3 px-3 text-center">Bought again</th>
+                <th className="py-3 px-3 text-center">Came back the same way</th>
+                <th className="py-3 px-3 text-right">All orders on this channel</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -173,13 +162,10 @@ export default function CrossBrandMap({
                   <td className="py-3 px-3 font-bold text-slate-900">{row.channel}</td>
                   <td className="py-3 px-3 text-center font-bold text-slate-700">{row.customerCount}</td>
                   <td className="py-3 px-3 text-center font-semibold text-slate-600">{row.orderCount}</td>
-                  <td className="py-3 px-3 text-center">
-                    <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[11px]">
-                      {row.avgKarma}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-center font-black text-blue-700">{row.repeatRate}</td>
-                  <td className="py-3 px-3 text-right font-bold text-slate-800">{row.loyalistPct}</td>
+                  <td className="py-3 px-3 text-center tabular-nums">{row.avgKarma ?? '—'}</td>
+                  <td className="py-3 px-3 text-center font-medium tabular-nums text-slate-900">{row.repeatRate === null ? '—' : `${row.repeatRate}%`}</td>
+                  <td className="py-3 px-3 text-center tabular-nums" title="Of their repeat orders, the share placed through the same channel">{row.stayedPct === null ? 'No repeat yet' : `${row.stayedPct}%`}</td>
+                  <td className="py-3 px-3 text-right tabular-nums text-slate-600">{row.ordersHere}</td>
                 </tr>
               ))}
             </tbody>
@@ -187,14 +173,11 @@ export default function CrossBrandMap({
         </div>
       </section>
 
-      {/* 2k. Product Affinity by Segment */}
+      {/* Product Affinity by Segment */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-teal-600 text-white text-xs font-black">
-                2k
-              </span>
               <h2 className="text-base font-bold text-slate-900">
                 Product affinity by customer segment
               </h2>

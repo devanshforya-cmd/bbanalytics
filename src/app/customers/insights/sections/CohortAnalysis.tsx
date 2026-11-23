@@ -13,13 +13,15 @@ export interface OverdueItem {
 }
 
 export interface TimingPatternsData {
+  /** Real average days between orders per segment; null when nobody in it has ordered twice. */
   segmentCycles: {
-    VIP: number;
-    LOYAL: number;
-    REGULAR: number;
-    AT_RISK: number;
+    VIP: number | null;
+    LOYAL: number | null;
+    REGULAR: number | null;
+    AT_RISK: number | null;
   };
   overdueList: OverdueItem[];
+  samples?: number;
 }
 
 export interface CohortRow {
@@ -42,14 +44,11 @@ export default function CohortAnalysis({
 }: CohortAnalysisProps) {
   return (
     <div className="space-y-8">
-      {/* 2e. Purchase Timing Patterns */}
+      {/* Purchase Timing Patterns */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-600 text-white text-xs font-black">
-                2e
-              </span>
               <h2 className="text-base font-bold text-slate-900">
                 Purchase timing patterns & overdue order detection
               </h2>
@@ -70,8 +69,8 @@ export default function CohortAnalysis({
           ].map((b) => (
             <div key={b.label} className={`rounded-xl border p-3 ${b.bg} text-center space-y-1`}>
               <div className="text-[11px] font-bold ">{b.label}</div>
-              <div className="text-2xl font-black">{b.cycle} days</div>
-              <div className="text-[11px] opacity-75">Avg interval between orders</div>
+              <div className="text-2xl font-black">{b.cycle === null ? '—' : `${b.cycle} days`}</div>
+              <div className="text-[11px] opacity-75">{b.cycle === null ? 'Nobody here has ordered twice yet' : 'Average gap between orders'}</div>
             </div>
           ))}
         </div>
@@ -140,14 +139,11 @@ export default function CohortAnalysis({
         </div>
       </section>
 
-      {/* 2f. Cohort Analysis */}
+      {/* Cohort Analysis */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500 text-white text-xs font-black">
-                2f
-              </span>
               <h2 className="text-base font-bold text-slate-900">
                 Multi-month retention cohort analysis
               </h2>

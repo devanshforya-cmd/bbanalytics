@@ -30,9 +30,6 @@ export default function WinBackList({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-600 text-white text-xs font-black">
-              2i
-            </span>
             <h2 className="text-base font-bold text-emerald-950">
               VIP win-back priority queue
             </h2>
