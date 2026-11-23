@@ -2,7 +2,7 @@
 
 import InfoTip from '@/components/common/InfoTip';
 import DownloadButton from '@/components/common/DownloadButton';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db/db-service';
 import { CallLog, CallLabel, CallOutcome, Product } from '@/lib/types';
 import { getTodayAd, getTodayBs } from '@/lib/nepali-calendar';
@@ -29,6 +29,8 @@ export default function CallsPage() {
   const [currentUser] = useState(() => db.getCurrentUser());
   const isSalesOfficer = getScope(currentUser, 'call_tracker') === 'OWN';
   const [calls, setCalls] = useState<CallLog[]>(db.getCalls());
+  // The workspace may still be loading when the page opens; follow it as it arrives and changes.
+  useEffect(() => { const refresh = () => setCalls([...db.getCalls()]); refresh(); window.addEventListener('bb-db-updated', refresh); return () => window.removeEventListener('bb-db-updated', refresh); }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [showLogModal, setShowLogModal] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});

@@ -1,7 +1,7 @@
 'use client';
 
 import InfoTip from '@/components/common/InfoTip';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { db } from '@/lib/db/db-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageGuard from '@/components/common/PageGuard';
@@ -127,7 +127,9 @@ function formatActionLabel(action: string): string {
 }
 
 export default function ActivityTrailPage() {
-  const [logs] = useState<ActivityLog[]>(() => db.getActivityLogs());
+  const [logs, setLogs] = useState<ActivityLog[]>(() => db.getActivityLogs());
+  // The workspace may still be loading when the page opens; follow it as it arrives and changes.
+  useEffect(() => { const refresh = () => setLogs([...db.getActivityLogs()]); refresh(); window.addEventListener('bb-db-updated', refresh); return () => window.removeEventListener('bb-db-updated', refresh); }, []);
 
   // 4a. Filters
   const [searchTerm, setSearchTerm] = useState('');

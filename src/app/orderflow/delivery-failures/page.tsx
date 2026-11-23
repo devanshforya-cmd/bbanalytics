@@ -92,6 +92,8 @@ export default function DeliveryFailuresPage() {
   const orderOptions = useOrderOptions();
   const deliveryMethods = activeOrderOptionNames(orderOptions, 'deliveryMethods');
   const [failures, setFailures] = useState<DeliveryFailure[]>(() => db.getDeliveryFailures());
+  // The workspace may still be loading when the page opens; follow it as it arrives and changes.
+  useEffect(() => { const refresh = () => setFailures([...db.getDeliveryFailures()]); refresh(); window.addEventListener('bb-db-updated', refresh); return () => window.removeEventListener('bb-db-updated', refresh); }, []);
   const HISTORICAL_WEEKLY_TREND = useMemo(() => getHistoricalWeeklyTrend(failures), [failures]);
   const currentWeekTrend = HISTORICAL_WEEKLY_TREND[HISTORICAL_WEEKLY_TREND.length - 1];
   const previousWeekWithOrders = [...HISTORICAL_WEEKLY_TREND.slice(0, -1)]

@@ -42,7 +42,8 @@ export interface Widget {
 
 export interface DashboardFilters { range: RangePreset; fromAd?: string; toAd?: string; brand?: string; compare: CompareMode; calendar: CalendarMode }
 export interface Dashboard { id: string; name: string; filters: DashboardFilters; widgets: Widget[]; template?: string }
-export interface DashboardPrefs { list: Dashboard[]; activeId?: string }
+/** `seeded`: which set of starting dashboards this person has been given (see DEFAULTS_VERSION). */
+export interface DashboardPrefs { list: Dashboard[]; activeId?: string; seeded?: number }
 export interface PublishedTemplate { id: string; name: string; description?: string; dashboard: Dashboard; publishedBy?: string; publishedAt?: string }
 
 export const LIMITS = { dashboards: 12, widgets: 30, name: 60, filterValues: 50, columns: 4, templates: 20 };
@@ -123,6 +124,7 @@ export function cleanPrefs(value: unknown): DashboardPrefs {
   if (new Set(clean.map((d) => d.id)).size !== clean.length) throw new Error('Two dashboards share an id.');
   const prefs: DashboardPrefs = { list: clean };
   if (typeof raw.activeId === 'string' && clean.some((d) => d.id === raw.activeId)) prefs.activeId = raw.activeId;
+  if (Number.isInteger(raw.seeded) && raw.seeded > 0 && raw.seeded < 100) prefs.seeded = raw.seeded;
   if (JSON.stringify(prefs).length > 120000) throw new Error('These dashboards are too large to save. Remove some charts.');
   return prefs;
 }
@@ -162,36 +164,42 @@ export const TEMPLATES: { key: string; name: string; description: string; widget
     ],
   },
   {
-    key: 'online', name: 'Online desk', description: 'Today’s orders, deliveries to chase, returns, complaints and follow-up calls.',
+    key: 'online', name: 'Online', description: 'Online sales, orders, deliveries to chase, returns, complaints, customers and follow-up calls.',
     range: 'last30',
     widgets: [
-      w('online_orders'), w('online_unconfirmed'), w('online_open_orders'), w('followups_due'),
-      w('online_orders', 'line', { size: 'L', bucket: 'day', title: 'Orders per day' }),
-      w('online_orders', 'table', { split: 'channel', columns: ['delivery_failure_rate', 'return_rate', 'complaints_per_100'], title: 'Channels side by side', size: 'L' }),
-      w('delivery_failure_rate'), w('return_rate'), w('open_complaints'), w('customer_reach_rate'),
+      w('online_revenue'), w('online_orders'), w('online_aov'), w('online_unconfirmed'),
+      w('online_revenue', 'line', { size: 'L', bucket: 'auto', title: 'Online sales over time' }),
+      w('online_orders', 'table', { split: 'brand', columns: ['online_revenue', 'return_rate', 'complaints_per_100'], title: 'Brands side by side', size: 'L' }),
+      w('delivery_success_rate'), w('return_rate'), w('repeat_customer_rate'), w('followups_due'),
+      w('online_orders', 'stacked', { split: 'channel', bucket: 'auto', title: 'Orders by channel' }),
+      w('online_units', 'donut', { split: 'subBrand', title: 'Units sold by sub-brand' }),
       w('delivery_failures', 'bar', { split: 'reason', title: 'Why deliveries fail' }),
       w('returns', 'bar', { split: 'reason', title: 'Why customers return' }),
+      w('online_units', 'top', { split: 'product', limit: 8, title: 'Best-selling products' }),
+      w('online_orders', 'bar', { split: 'hour', title: 'When orders come in' }),
+      w('open_complaints'), w('avg_rating'), w('customer_reach_rate'), w('online_cod_share'),
       w('online_orders', 'bar', { split: 'staff', title: 'Orders handled per person' }),
       w('online_orders', 'donut', { split: 'payment', title: 'How customers pay' }),
-      w('online_orders', 'bar', { split: 'hour', title: 'When orders come in' }),
-      w('online_units', 'top', { split: 'product', limit: 8, title: 'Best-selling products' }),
     ],
   },
   {
-    key: 'field_manager', name: 'Field team', description: 'Store sales, beat compliance, stock on shelves and money to collect.',
+    key: 'field_manager', name: 'Offline', description: 'Store sales, beats, dispatch, money to collect and stock on shelves.',
     widgets: [
-      w('store_orders'), w('store_order_value'), w('ordering_stores'), w('beat_compliance'),
+      w('store_order_value'), w('store_orders'), w('ordering_stores'), w('beat_compliance'),
+      w('store_order_value', 'line', { size: 'L', bucket: 'auto', title: 'Store sales over time' }),
       w('store_visits', 'table', { split: 'staff', columns: ['beat_compliance', 'store_orders', 'store_order_value'], title: 'Field staff side by side', size: 'L' }),
-      w('store_order_value', 'stacked', { split: 'storeType', bucket: 'auto', title: 'Store sales by store type', size: 'L' }),
-      w('cheques_overdue'), w('money_overdue'), w('out_of_stock'), w('dormant_stores'),
-      w('visits_skipped', 'bar', { split: 'skipReason', title: 'Why visits were skipped' }),
-      w('out_of_stock', 'top', { split: 'product', limit: 8, title: 'Most often out of stock' }),
-      w('store_order_value', 'top', { split: 'store', limit: 10, title: 'Top stores' }),
+      w('money_due'), w('money_overdue'), w('cheques_overdue_value'), w('dispatches_open'),
+      w('store_order_value', 'stacked', { split: 'brand', bucket: 'auto', title: 'Store sales by brand' }),
+      w('store_order_value', 'donut', { split: 'storeType', title: 'Store sales by store type' }),
       w('money_overdue', 'bar', { split: 'aging', title: 'Money overdue, by how late' }),
+      w('store_order_value', 'top', { split: 'store', limit: 10, title: 'Top stores' }),
+      w('out_of_stock'), w('low_stock'), w('dormant_stores'), w('store_call_conversion'),
+      w('out_of_stock', 'top', { split: 'product', limit: 8, title: 'Most often out of stock' }),
+      w('visits_skipped', 'bar', { split: 'skipReason', title: 'Why visits were skipped' }),
     ],
   },
   {
-    key: 'field_officer', name: 'My field day', description: 'Your visits, store orders, cheques and stock to fix.',
+    key: 'field_officer', name: 'Offline: my day', description: 'Your visits, store orders, cheques and stock to fix.',
     range: 'thisMonth',
     widgets: [
       w('store_visits'), w('beat_compliance'), w('store_orders'), w('store_units'),
@@ -213,17 +221,32 @@ export const TEMPLATES: { key: string; name: string; description: string; widget
   },
 ];
 
-/** The starting point that fits a person's job best. */
+/** Bump when the set of starting dashboards changes, so people who already saved theirs get the new ones once. */
+export const DEFAULTS_VERSION = 2;
+
+/** The starting dashboards for a person: Online and Offline, each only if their access covers it. */
+export function defaultTemplates(user: UserWithPermissions | null | undefined): string[] {
+  if (!user || isSuperAdmin(user)) return ['online', 'field_manager'];
+  const keys: string[] = [];
+  if (hasAccess(user, 'orderflow') || hasAccess(user, 'order_desk')) keys.push('online');
+  if (hasAccess(user, 'beat_plans')) keys.push(getScope(user, 'beat_plans') === 'OWN' ? 'field_officer' : 'field_manager');
+  else if (hasAccess(user, 'dispatches') || hasAccess(user, 'stores')) keys.push('field_manager');
+  if (!keys.length) keys.push(hasAccess(user, 'marketing') ? 'marketing' : 'owner');
+  return keys;
+}
+
+/** The starting point that fits a person's job best (the first of their defaults). */
 export function templateFor(user: UserWithPermissions | null | undefined): string {
-  if (!user || isSuperAdmin(user)) return 'owner';
-  const online = hasAccess(user, 'orderflow') || hasAccess(user, 'order_desk');
-  const field = hasAccess(user, 'beat_plans');
-  if (online && field) return 'owner';
-  if (online) return 'online';
-  if (field) return getScope(user, 'beat_plans') === 'OWN' ? 'field_officer' : 'field_manager';
-  if (hasAccess(user, 'dispatches') || hasAccess(user, 'stores')) return 'field_manager';
-  if (hasAccess(user, 'marketing')) return 'marketing';
-  return 'owner';
+  return defaultTemplates(user)[0];
+}
+
+/** Saved dashboards plus any starting ones added since this person last saved. Returns null if nothing changed. */
+export function withDefaults(prefs: DashboardPrefs, user: UserWithPermissions | null | undefined, calendar: CalendarMode = 'BS'): DashboardPrefs | null {
+  if ((prefs.seeded || 0) >= DEFAULTS_VERSION) return null;
+  const have = new Set(prefs.list.map((d) => d.template).filter(Boolean));
+  const add = defaultTemplates(user).filter((key) => !have.has(key)).map((key) => fromTemplate(key, user, calendar)).filter((d) => d.widgets.length);
+  const list = [...prefs.list, ...add].slice(0, LIMITS.dashboards);
+  return { ...prefs, list, seeded: DEFAULTS_VERSION };
 }
 
 /** A new dashboard from a template, keeping only the charts this person is allowed to see. */

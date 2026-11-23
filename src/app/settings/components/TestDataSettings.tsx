@@ -40,8 +40,8 @@ export default function TestDataSettings() {
       await db.syncWithSupabase();
       await refresh();
       setMessage({ tone: 'ok', text: kind === 'load'
-        ? `Loaded ${result.total.toLocaleString()} test records and 3 test field officers.`
-        : `Removed ${Number(result.removed?.records || 0).toLocaleString()} test records and ${result.removed?.staff || 0} test officers. Your real data is unchanged.` });
+        ? `Loaded ${result.total.toLocaleString()} test records, the test brands and 5 test staff.`
+        : `Removed ${Number(result.removed?.records || 0).toLocaleString()} test records, ${result.removed?.brands || 0} test brands and ${result.removed?.staff || 0} test staff. Your real data is unchanged.` });
     } catch (error) {
       setMessage({ tone: 'error', text: (error as Error).message });
     } finally { setBusy(null); }
@@ -55,12 +55,14 @@ export default function TestDataSettings() {
       <section className="rounded-2xl bg-white p-5 shadow-xs ring-1 ring-black/[0.06] space-y-3">
         <h2 className="text-lg font-semibold text-slate-900">Test data</h2>
         <p className="text-sm text-slate-600 max-w-2xl">
-          Fills the app with realistic sample stores, field officers, visits, store orders, stock counts, cheques, dispatches, documents,
-          influencers, reviews and offer drafts, so every page can be tried out. Online orders and customers are not touched.
+          Fills the app with a realistic history so every page can be tried out: Renee and Pee Safe as test brands (Pee Safe with FURR,
+          Comfort and Domina), products with short names, online customers and orders across channels and couriers, failed deliveries,
+          returns, follow-up and customer calls, star-rated reviews, plus stores, field officers, visits, store orders, stock counts,
+          cheques, dispatches, documents and influencers.
         </p>
         <p className="text-sm text-slate-600 max-w-2xl">
-          Every test record is tagged. <strong>Remove test data</strong> deletes exactly those records and the three test officers, nothing else.
-          Test officers cannot sign in. Sample offer campaigns are drafts or already ended, so they never change prices on real orders.
+          Test orders count in the dashboards next to real ones while loaded. Every test record is tagged, and
+          <strong> Remove test data</strong> deletes exactly those records, the test brands and the test staff, nothing else. Test staff cannot sign in. Sample offer campaigns are drafts or already ended, so they never change prices on real orders.
         </p>
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -77,7 +79,7 @@ export default function TestDataSettings() {
           )}
           {confirming && (
             <span className="inline-flex flex-wrap items-center gap-2 rounded-lg bg-rose-50 px-3 py-1.5 text-sm text-rose-900">
-              Remove {counts?.total.toLocaleString()} test records and the test officers?
+              Remove {counts?.total.toLocaleString()} test records, the test brands and the test staff?
               <button type="button" onClick={() => run('remove')} className="inline-flex items-center gap-2 rounded-md bg-rose-600 px-3 py-1 font-semibold text-white hover:bg-rose-700">
                 {busy === 'remove' && <ButtonRing estimateMs={5000} />}Remove
               </button>

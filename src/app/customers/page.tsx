@@ -2,7 +2,7 @@
 
 import InfoTip from '@/components/common/InfoTip';
 import DownloadButton from '@/components/common/DownloadButton';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import PageGuard from '@/components/common/PageGuard';
@@ -25,6 +25,8 @@ import { getBrands } from '@/lib/db/brands-service';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>(db.getCustomers());
+  // The workspace may still be loading when the page opens; follow it as it arrives and changes.
+  useEffect(() => { const refresh = () => setCustomers([...db.getCustomers()]); refresh(); window.addEventListener('bb-db-updated', refresh); return () => window.removeEventListener('bb-db-updated', refresh); }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [segmentFilter, setSegmentFilter] = useState<string>('ALL');
   const [brandFilter, setBrandFilter] = useState<string>('ALL');

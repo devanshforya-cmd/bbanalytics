@@ -24,16 +24,46 @@ test('every test record is tagged and removable', () => {
   assert.equal(new Set(keys).size, keys.length, 'no duplicate ids');
 });
 
-test('never creates online orders or customers, and no offer campaign is live', () => {
-  assert.equal(of('orders').length, 0);
-  assert.equal(of('customers').length, 0);
+test('Renee and Pee Safe come in as test brands, Pee Safe with FURR, Comfort and Domina; no offer campaign is live', () => {
+  assert.deepEqual(set.brands.map((b) => b.code), ['RENEE', 'PEESAFE']);
+  assert.deepEqual(set.brands[1].subBrands.map((s) => s.name), ['FURR', 'Comfort', 'Domina']);
+  assert.ok(set.brands.every((b) => b.id.startsWith(SAMPLE_ID_PREFIX)));
+  const testProducts = of('products');
+  assert.ok(testProducts.every((p) => p.alias && p.alias !== p.name), 'every test product has a short name');
+  assert.deepEqual([...new Set(testProducts.filter((p) => p.subBrandId).map((p) => p.subBrandId))].sort(), ['sb_peesafe_comfort', 'sb_peesafe_domina', 'sb_peesafe_furr']);
   assert.ok(of('campaigns').every((c) => c.status === 'DRAFT' || c.status === 'ENDED'));
+  // A real brand with the same code is never duplicated.
+  const withReal = generateSampleData({ todayAd: '2026-11-20', products, manager: { id: 'user_admin', name: 'Admin' }, brands: [{ id: 'brand_x', code: 'RENEE' }] });
+  assert.deepEqual(withReal.brands.map((b) => b.code), ['PEESAFE']);
+});
+
+test('online orders, customers, failures, returns, calls and reviews agree with each other', () => {
+  const orders = of('orders');
+  assert.ok(orders.length > 120);
+  assert.deepEqual([...new Set(orders.map((o) => o.brandCode))].sort(), ['FORYA', 'PEESAFE', 'RENEE']);
+  assert.ok(orders.some((o) => o.orderDateAd === '2026-11-20' && o.status === 'PENDING'), 'orders waiting today');
+  assert.ok(orders.some((o) => o.items.some((i: any) => i.subBrandId === 'sb_peesafe_furr')), 'sub-brand stamped on lines');
+  const numbers = orders.map((o) => o.orderNumber);
+  assert.equal(new Set(numbers).size, numbers.length);
+  assert.ok(numbers.every((n) => /^[A-Z]{2,4}-9\d{3}$/.test(n)));
+  const byId = new Map(orders.map((o) => [o.id, o]));
+  for (const f of of('deliveryFailures')) assert.ok(byId.has(f.orderId));
+  for (const r of of('returns')) assert.equal(byId.get(r.orderId)?.status, 'RETURNED');
+  for (const c of of('customerCalls')) assert.ok(byId.has(c.orderId));
+  assert.ok(of('customerCalls').some((c) => c.followUpStepId === 'fu_check'), 'follow-up calls logged');
+  for (const customer of of('customers')) {
+    const mine = orders.filter((o) => o.customerPhone === customer.phone);
+    assert.equal(customer.totalOrders, mine.length, customer.id);
+    assert.equal(mine.filter((o) => o.orderType === 'NEW').length, 1, `${customer.id} has exactly one first order`);
+  }
+  assert.ok(of('feedbackEntries').some((f) => f.rating === 5) && of('feedbackEntries').some((f) => f.rating === 1), 'star ratings');
+  assert.ok(of('notifications').some((n) => n.kind === 'MESSAGE') && of('notifications').every((n) => n.userId === 'user_admin'));
 });
 
 test('links between records resolve', () => {
   const stores = new Set([...of('retailers'), ...of('branches')].map((s) => s.id));
   const officers = new Set(set.users.map((u) => u.id));
-  const productIds = new Set(products.map((p) => p.id));
+  const productIds = new Set([...products, ...of('products')].map((p) => p.id));
   for (const collection of ['visits', 'secondaryOrders', 'stockCounts', 'cheques', 'callLogs', 'shelfPhotos', 'documents', 'beatItems']) {
     for (const row of of(collection)) {
       assert.ok(stores.has(row.entityId), `${collection} ${row.id} store`);

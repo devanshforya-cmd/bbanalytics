@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanPrefs, cleanTemplates, fromTemplate, templateFor, TEMPLATES, newId } from '../src/lib/metrics/dashboards.ts';
+import { cleanPrefs, cleanTemplates, defaultTemplates, DEFAULTS_VERSION, fromTemplate, templateFor, TEMPLATES, newId, withDefaults } from '../src/lib/metrics/dashboards.ts';
 import { computeWidget } from '../src/lib/metrics/widget-data.ts';
 import { prepare, type MetricData } from '../src/lib/metrics/sources.ts';
 import { DEFAULT_FOLLOW_UP_PLAN } from '../src/lib/follow-ups.ts';
@@ -26,12 +26,26 @@ test('every ready-made dashboard is valid and only uses numbers that exist', () 
 });
 
 test('each person starts from the dashboard that fits their job, with only what they may see', () => {
-  assert.equal(templateFor(admin), 'owner');
+  assert.equal(templateFor(admin), 'online');
   assert.equal(templateFor(officer), 'field_officer');
   assert.equal(templateFor(desk), 'online');
+  assert.deepEqual(defaultTemplates(admin), ['online', 'field_manager'], 'Super Admin starts with Online and Offline');
+  assert.deepEqual(defaultTemplates(officer), ['field_officer']);
+  assert.deepEqual(defaultTemplates(desk), ['online']);
   const mine = fromTemplate('owner', officer);
   assert.ok(mine.widgets.every((w) => typeof w.metric === 'string' && !w.metric.startsWith('online')), 'no online numbers for a field officer');
   assert.ok(!mine.widgets.some((w) => w.metric === 'store_order_value'), 'no money without Money access');
+});
+
+test('people who saved dashboards before Online and Offline existed get them once', () => {
+  const saved = { list: [{ ...fromTemplate('owner', admin), id: 'dash_old', name: 'Mine' }], activeId: 'dash_old' };
+  const upgraded = withDefaults(saved, admin)!;
+  assert.deepEqual(upgraded.list.map((d) => d.template), ['owner', 'online', 'field_manager']);
+  assert.equal(upgraded.activeId, 'dash_old', 'the open dashboard stays the same');
+  assert.equal(upgraded.seeded, DEFAULTS_VERSION);
+  assert.equal(withDefaults(cleanPrefs(upgraded), admin), null, 'only once, even after deleting one');
+  const deleted = cleanPrefs({ ...upgraded, list: upgraded.list.filter((d) => d.template !== 'online') });
+  assert.equal(withDefaults(deleted, admin), null);
 });
 
 test('saved dashboards are checked: bad parts are refused or cleaned', () => {
