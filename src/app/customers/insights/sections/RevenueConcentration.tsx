@@ -40,14 +40,11 @@ export default function RevenueConcentration({
 }: RevenueConcentrationProps) {
   return (
     <div className="space-y-8">
-      {/* 2b. Revenue Concentration */}
+      {/* Revenue Concentration */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-600 text-white text-xs font-black">
-                2b
-              </span>
               <h2 className="text-base font-bold text-slate-900">
                 Revenue concentration (top 10% contribution)
               </h2>
@@ -133,14 +130,11 @@ export default function RevenueConcentration({
         </div>
       </section>
 
-      {/* 2l. LTV Distribution */}
+      {/* LTV Distribution */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-600 text-white text-xs font-black">
-                2l
-              </span>
               <h2 className="text-base font-bold text-slate-900">
                 Customer lifetime value (LTV) distribution
               </h2>

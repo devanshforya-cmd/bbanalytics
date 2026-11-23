@@ -20,9 +20,6 @@ export default function SegmentMovement({ segmentMovements }: SegmentMovementPro
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-cyan-600 text-white text-xs font-black">
-              2m
-            </span>
             <h2 className="text-base font-bold text-slate-900">
               Customer lifecycle: last 30 days
             </h2>

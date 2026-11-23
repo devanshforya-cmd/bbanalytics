@@ -7,6 +7,7 @@ import { countsAsSale } from '@/lib/order-status';
 import React, { useState, useMemo, useEffect } from 'react';
 import { phoneDigits } from '@/lib/customer-lookup';
 import { cohortRetention, lifecycleMovements } from '@/lib/customer-cohorts';
+import { channelLoyalty as channelLoyaltyOf, customerHistories, daysSince, purchaseCycles, repeatSteps } from '@/lib/customer-insights';
 import Link from 'next/link';
 import { customerBrandMap } from '@/lib/product-catalog';
 import { db } from '@/lib/db/db-service';
@@ -62,18 +63,11 @@ export default function CustomerInsightsPage() {
   const TODAY_MS = new Date().getTime();
 
   // Helper: total spend for a given customer
-  const customerSpendMap = useMemo(() => {
-    const map = new Map<string, number>();
-    orders.forEach((ord) => {
-      const p = norm(ord.customerPhone);
-      map.set(p, (map.get(p) || 0) + (ord.totalAmount || 0));
-    });
-    return map;
-  }, [orders]);
-
-  const totalPlatformRevenue = useMemo(() => {
-    return orders.reduce((sum, ord) => sum + (ord.totalAmount || 0), 0);
-  }, [orders]);
+  // Every figure below comes from each customer's real order history. Spend counts only orders
+  // that are sales (not cancelled, failed or returned).
+  const histories = useMemo(() => customerHistories(orders), [orders]);
+  const customerSpendMap = useMemo(() => new Map([...histories].map(([phone, h]) => [phone, h.spend])), [histories]);
+  const totalPlatformRevenue = useMemo(() => [...histories.values()].reduce((sum, h) => sum + h.spend, 0), [histories]);
 
   // Toggle win-back contacted state
   const toggleContacted = (id: string) => {
@@ -89,62 +83,29 @@ export default function CustomerInsightsPage() {
   const churnAnalysis = useMemo(() => {
     return customers
       .map((c) => {
-        const lastDate = c.lastOrderDate || c.firstOrderDate || '2026-06-01';
-        const daysInactive = Math.max(
-          1,
-          Math.round((TODAY_MS - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24))
-        );
-
-        // Previous Frequency: Days between orders before churning
-        let prevFrequency = 22;
-        if (c.totalOrders > 1 && c.firstOrderDate && c.lastOrderDate) {
-          const firstMs = new Date(c.firstOrderDate).getTime();
-          const lastMs = new Date(c.lastOrderDate).getTime();
-          const spanDays = Math.max(1, Math.round((lastMs - firstMs) / (1000 * 60 * 60 * 24)));
-          prevFrequency = Math.max(5, Math.round(spanDays / (c.totalOrders - 1)));
-        }
-
-        // Determine Last Experience
-        const custOrders = orders.filter((o) => norm(o.customerPhone) === norm(c.phone));
-        const custReturns = returns.filter((r) => norm(r.customerPhone) === norm(c.phone));
-        const custFailures = deliveryFailures.filter((f) => norm(f.customerPhone) === norm(c.phone));
-        const custComplaints = feedback.filter(
-          (fb) => norm(fb.customerPhone) === norm(c.phone) && fb.sentiment === 'NEGATIVE'
-        );
-
-        let lastExpType = 'ORDER_SUCCESS';
-        let lastExpText = 'Order Delivered';
-        let recommendedAction = 'Send new product alert + loyalty discount';
-
-        if (custReturns.length > 0) {
-          lastExpType = 'RETURN';
-          lastExpText = `Return (${custReturns[0].reasonCategory})`;
-          recommendedAction = 'Send apology + NPR 300 privilege discount code';
-        } else if (custComplaints.length > 0) {
-          lastExpType = 'COMPLAINT';
-          lastExpText = 'Complaint Logged';
-          recommendedAction = 'Supervisor courtesy call + gift voucher';
-        } else if (custFailures.length > 0) {
-          lastExpType = 'FAILURE';
-          lastExpText = `Delivery Failure (${failureReasonLabel(custFailures[0])})`;
-          recommendedAction = 'Offer prepaid order with free priority shipping';
-        } else if (c.totalOrders >= 5) {
-          recommendedAction = 'VIP concierge check-in + complimentary sample kit';
-        }
-
+        const h = histories.get(norm(c.phone));
+        if (!h?.lastSale) return null;
+        const daysInactive = daysSince(h.lastSale, TODAY_STR);
+        // The most recent thing that went wrong for this customer, if anything did.
+        const events = [
+          ...returns.filter((r) => norm(r.customerPhone) === h.phone).map((r) => ({ date: r.dateAd || '', type: 'RETURN', text: `Return (${r.reasonCategory})`, action: 'Apologise and offer an exchange or a discount on the next order' })),
+          ...feedback.filter((f) => norm(f.customerPhone) === h.phone && (f.type === 'COMPLAINT' || f.sentiment === 'NEGATIVE')).map((f) => ({ date: f.dateReceivedAd || '', type: 'COMPLAINT', text: 'Complaint logged', action: 'A senior call to close the complaint first' })),
+          ...deliveryFailures.filter((f) => norm(f.customerPhone) === h.phone).map((f) => ({ date: f.dateAd || '', type: 'FAILURE', text: `Delivery failed (${failureReasonLabel(f)})`, action: 'Offer prepaid with priority delivery' })),
+        ].sort((x, y) => y.date.localeCompare(x.date));
+        const last = events[0];
         return {
           customer: c,
           daysInactive,
-          prevFrequency,
-          lastExpType,
-          lastExpText,
-          recommendedAction,
+          prevFrequency: h.avgGap,
+          lastExpType: last?.type || 'ORDER_SUCCESS',
+          lastExpText: last?.text || 'Order delivered',
+          recommendedAction: last?.action || (h.sales.length >= 5 ? 'Personal check-in from the team' : 'Tell them about new products, with a returning-customer offer'),
           isChurned: daysInactive >= 60,
         };
       })
-      .filter((item) => item.isChurned)
+      .filter((item): item is NonNullable<typeof item> => !!item && item.isChurned)
       .sort((a, b) => b.customer.karmaScore - a.customer.karmaScore);
-  }, [customers, orders, returns, deliveryFailures, feedback, TODAY_MS]);
+  }, [customers, histories, returns, deliveryFailures, feedback, TODAY_STR]);
 
   // -------------------------------------------------------------
   // 2b. REVENUE CONCENTRATION
@@ -165,7 +126,7 @@ export default function CustomerInsightsPage() {
     const topCount = Math.max(1, Math.ceil(sorted.length * 0.1));
     const topSlice = sorted.slice(0, Math.max(3, topCount));
     const topRevenue = topSlice.reduce((sum, item) => sum + item.spend, 0);
-    const concentrationPct = totalPlatformRevenue > 0 ? Math.round((topRevenue / totalPlatformRevenue) * 100) : 68;
+    const concentrationPct = totalPlatformRevenue > 0 ? Math.round((topRevenue / totalPlatformRevenue) * 100) : 0;
 
     return {
       topSlice,
@@ -178,17 +139,17 @@ export default function CustomerInsightsPage() {
   // -------------------------------------------------------------
   // 2c. CROSS-BRAND BEHAVIOR MAP
   // -------------------------------------------------------------
-  const crossBrandMap = customerBrandMap(customers, db.getBrands('ACTIVE'), db.getProducts());
+  // Brands each customer actually bought, from their orders.
+  const crossBrandMap = useMemo(() => customerBrandMap(customers.map((c) => {
+    const h = histories.get(norm(c.phone));
+    return h ? { ...c, brandsPurchased: [...new Set(h.sales.map((o) => o.brandCode).filter(Boolean))] } : c;
+  }), db.getBrands('ACTIVE'), db.getProducts()), [customers, histories]);
 
   // -------------------------------------------------------------
   // 2d. REPEAT PURCHASE FUNNEL
   // -------------------------------------------------------------
   const repeatFunnel = useMemo(() => {
-    const c1 = customers.filter((c) => c.totalOrders >= 1).length;
-    const c2 = customers.filter((c) => c.totalOrders >= 2).length;
-    const c3 = customers.filter((c) => c.totalOrders >= 3).length;
-    const c4 = customers.filter((c) => c.totalOrders >= 4).length;
-    const c5 = customers.filter((c) => c.totalOrders >= 5).length;
+    const [c1, c2, c3, c4, c5] = repeatSteps(histories);
 
     const p1 = 100;
     const p2 = c1 > 0 ? Math.round((c2 / c1) * 100) : 0;
@@ -212,48 +173,32 @@ export default function CustomerInsightsPage() {
       biggestDrop: '1st Order to 2nd Order',
       biggestDropPct: drop1to2,
     };
-  }, [customers]);
+  }, [histories]);
 
   // -------------------------------------------------------------
   // 2e. PURCHASE TIMING PATTERNS
   // -------------------------------------------------------------
   const timingPatterns = useMemo(() => {
-    // Average cycle by segment
-    const segmentCycles = {
-      VIP: 16,
-      LOYAL: 23,
-      REGULAR: 35,
-      AT_RISK: 54,
-    };
+    // Real average days between purchases per segment; null where nobody in it has bought twice.
+    const cycles = purchaseCycles(histories, customers);
+    const segmentCycles = { VIP: cycles.VIP, LOYAL: cycles.LOYAL, REGULAR: cycles.REGULAR, AT_RISK: cycles.AT_RISK };
 
-    // Overdue detection: Days inactive > (avg cycle + 7)
+    // Overdue: more than a week past their own usual gap (or their segment's, or everyone's).
     const overdueList = customers
       .filter((c) => c.segment !== 'BLACKLISTED')
-      .map((c) => {
-        const lastDate = c.lastOrderDate || c.firstOrderDate || '2026-07-01';
-        const daysSince = Math.max(
-          1,
-          Math.round((TODAY_MS - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24))
-        );
-        const cycle = segmentCycles[c.segment as keyof typeof segmentCycles] || 30;
-        const overdueBy = daysSince - (cycle + 7);
-
-        return {
-          customer: c,
-          cycle,
-          daysSince,
-          overdueBy,
-          isOverdue: overdueBy > 0,
-        };
+      .flatMap((c) => {
+        const h = histories.get(norm(c.phone));
+        if (!h?.lastSale) return [];
+        const cycle = h.avgGap ?? segmentCycles[c.segment as keyof typeof segmentCycles] ?? cycles.overall;
+        if (cycle === null || cycle === undefined) return [];
+        const since = daysSince(h.lastSale, TODAY_STR);
+        const overdueBy = since - (cycle + 7);
+        return overdueBy > 0 ? [{ customer: c, cycle, daysSince: since, overdueBy, isOverdue: true }] : [];
       })
-      .filter((item) => item.isOverdue)
       .sort((a, b) => b.overdueBy - a.overdueBy);
 
-    return {
-      segmentCycles,
-      overdueList,
-    };
-  }, [customers, TODAY_MS]);
+    return { segmentCycles, overdueList, samples: cycles.samples };
+  }, [customers, histories, TODAY_STR]);
 
   // -------------------------------------------------------------
   // 2f. COHORT ANALYSIS
@@ -264,89 +209,38 @@ export default function CustomerInsightsPage() {
   // -------------------------------------------------------------
   // 2g. CHANNEL LOYALTY
   // -------------------------------------------------------------
-  const channelLoyalty = useMemo(() => {
-    const channelCounts: Record<string, { orders: number; customers: Set<string>; totalKarma: number }> = {
-      Instagram: { orders: 0, customers: new Set(), totalKarma: 0 },
-      WhatsApp: { orders: 0, customers: new Set(), totalKarma: 0 },
-      Website: { orders: 0, customers: new Set(), totalKarma: 0 },
-      TikTok: { orders: 0, customers: new Set(), totalKarma: 0 },
-      'Retail / Field': { orders: 0, customers: new Set(), totalKarma: 0 },
-    };
-
-    orders.forEach((ord) => {
-      let ch = 'Instagram';
-      if (ord.platform === 'WhatsApp' || ord.source === 'WHATSAPP_EXTRACTOR') ch = 'WhatsApp';
-      else if (ord.platform === 'TikTok') ch = 'TikTok';
-      else if (ord.platform === 'Website') ch = 'Website';
-      else if (ord.platform === 'Walk-in' || ord.source === 'FIELD_CALL') ch = 'Retail / Field';
-
-      if (!channelCounts[ch]) {
-        channelCounts[ch] = { orders: 0, customers: new Set(), totalKarma: 0 };
-      }
-      channelCounts[ch].orders++;
-      channelCounts[ch].customers.add(norm(ord.customerPhone));
-    });
-
-    // Populate karma averages
-    customers.forEach((c) => {
-      const p = norm(c.phone);
-      Object.values(channelCounts).forEach((data) => {
-        if (data.customers.has(p)) {
-          data.totalKarma += c.karmaScore;
-        }
-      });
-    });
-
-    const rows = Object.entries(channelCounts).map(([channel, data]) => {
-      const custCount = Math.max(1, data.customers.size);
-      const avgKarma = Math.round(data.totalKarma / custCount) || 72;
-      const repeatRate = data.orders > custCount ? Math.round(((data.orders - custCount) / data.orders) * 100) : 35;
-      return {
-        channel,
-        customerCount: data.customers.size,
-        orderCount: data.orders,
-        avgKarma,
-        repeatRate: `${Math.min(85, Math.max(20, repeatRate))}%`,
-        loyalistPct: `${Math.min(92, Math.max(58, 60 + (data.orders % 30)))}%`,
-      };
-    });
-
-    return rows;
-  }, [orders, customers]);
+  const channelLoyalty = useMemo(() => channelLoyaltyOf(histories, customers, orders), [histories, customers, orders]);
 
   // -------------------------------------------------------------
   // 2h. KARMA TREND BOARD
   // -------------------------------------------------------------
   const karmaTrendBoard = useMemo(() => {
+    // Lowest scores and what actually pulled them down (counted from orders, failures, returns and complaints).
     return customers
-      .filter((c) => c.karmaScore <= 60 || c.activeFlags.length > 0 || c.segment === 'AT_RISK')
+      .filter((c) => c.karmaScore <= 60 || c.activeFlags.length > 0 || c.segment === 'AT_RISK' || c.segment === 'BLACKLISTED')
       .map((c) => {
-        const prevKarma = Math.min(100, c.karmaScore + (c.segment === 'BLACKLISTED' ? 35 : 16));
-        const change = c.karmaScore - prevKarma;
-        let reason = 'Inactivity drop over 45+ days';
-
-        if (c.activeFlags.includes('Serial Returner')) {
-          reason = 'Multiple returns and rejected parcels';
-        } else if (c.activeFlags.includes('Non-Receiver')) {
-          reason = 'Consecutive doorstep delivery failures';
-        } else if (c.totalComplaints > 0) {
-          reason = 'Negative product quality complaint logged';
-        }
-
+        const h = histories.get(norm(c.phone));
+        const list = h?.orders || [];
+        const failed = list.filter((o) => o.status === 'FAILED').length;
+        const cancelled = list.filter((o) => o.status === 'CANCELLED').length;
+        const returned = returns.filter((r) => norm(r.customerPhone) === norm(c.phone)).length;
+        const complaints = feedback.filter((f) => norm(f.customerPhone) === norm(c.phone) && f.type === 'COMPLAINT').length;
+        const parts = [
+          failed && `${failed} failed ${failed === 1 ? 'delivery' : 'deliveries'}`,
+          returned && `${returned} ${returned === 1 ? 'return' : 'returns'}`,
+          cancelled && `${cancelled} ${cancelled === 1 ? 'cancellation' : 'cancellations'}`,
+          complaints && `${complaints} ${complaints === 1 ? 'complaint' : 'complaints'}`,
+        ].filter(Boolean) as string[];
+        const lastSale = h?.lastSale;
         return {
           customer: c,
-          prevKarma,
           currentKarma: c.karmaScore,
-          change,
-          reason,
-          action:
-            c.segment === 'BLACKLISTED'
-              ? 'Enforce 100% Prepaid Only'
-              : 'Dispatch retention officer call',
+          reason: parts.length ? parts.join(', ') : lastSale ? `No order for ${daysSince(lastSale, TODAY_STR)} days` : 'No completed order yet',
+          action: c.segment === 'BLACKLISTED' || failed + cancelled >= 2 ? 'Take prepaid orders only' : complaints ? 'Call to close the complaint' : 'Call to check in',
         };
       })
       .sort((a, b) => a.currentKarma - b.currentKarma);
-  }, [customers]);
+  }, [customers, histories, returns, feedback, TODAY_STR]);
 
   // -------------------------------------------------------------
   // 2i. WIN-BACK LIST (Dormant 60+ days, Karma >= 70, Orders >= 2)
@@ -354,13 +248,11 @@ export default function CustomerInsightsPage() {
   const winBackList = useMemo(() => {
     return customers
       .filter((c) => {
-        const lastDate = c.lastOrderDate || c.firstOrderDate || '2026-05-01';
-        const daysInactive = Math.round((TODAY_MS - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24));
-        return daysInactive >= 60 && c.karmaScore >= 70 && c.totalOrders >= 2;
+        const h = histories.get(norm(c.phone));
+        return !!h?.lastSale && daysSince(h.lastSale, TODAY_STR) >= 60 && c.karmaScore >= 70 && h.sales.length >= 2;
       })
       .map((c) => {
-        const lastDate = c.lastOrderDate || '2026-06-01';
-        const daysInactive = Math.round((TODAY_MS - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24));
+        const daysInactive = daysSince(histories.get(norm(c.phone))!.lastSale!, TODAY_STR);
         const spend = customerSpendMap.get(norm(c.phone)) || 0;
         const brand = c.brandsPurchased?.[0] || 'Not recorded';
 
@@ -374,8 +266,8 @@ export default function CustomerInsightsPage() {
           suggestedOffer,
         };
       })
-      .sort((a, b) => b.customer.totalOrders - a.customer.totalOrders);
-  }, [customers, customerSpendMap, TODAY_MS]);
+      .sort((a, b) => b.spend - a.spend);
+  }, [customers, customerSpendMap, histories, TODAY_STR]);
 
   // -------------------------------------------------------------
   // 2j. GEOGRAPHIC INTELLIGENCE
@@ -393,7 +285,7 @@ export default function CustomerInsightsPage() {
         cityMap[city] = { province: prov, count: 0, orders: 0, revenue: 0, brands: {}, karmaSum: 0 };
       }
       cityMap[city].count++;
-      cityMap[city].orders += c.totalOrders;
+      cityMap[city].orders += histories.get(norm(c.phone))?.sales.length || 0;
       cityMap[city].karmaSum += c.karmaScore;
       const spend = customerSpendMap.get(norm(c.phone)) || 0;
       cityMap[city].revenue += spend;
@@ -446,7 +338,7 @@ export default function CustomerInsightsPage() {
     });
 
     return rows.sort((a, b) => b.revenue - a.revenue);
-  }, [customers, customerSpendMap, orders, TODAY_MS]);
+  }, [customers, customerSpendMap, histories, orders, TODAY_MS]);
 
   // -------------------------------------------------------------
   // 2k. PRODUCT AFFINITY BY SEGMENT
@@ -455,7 +347,7 @@ export default function CustomerInsightsPage() {
     const computeTopProductsForSegment = (segmentKey: string) => {
       const segCustomers = customers.filter((c) => c.segment === segmentKey);
       const segPhones = new Set(segCustomers.map((c) => phoneDigits(c.phone)));
-      const segOrders = orders.filter((o) => segPhones.has(phoneDigits(o.customerPhone)));
+      const segOrders = orders.filter((o) => countsAsSale(o) && segPhones.has(phoneDigits(o.customerPhone)));
       const prodMap: Record<string, { count: number; brand: string }> = {};
 
       segOrders.forEach((o) => {
@@ -666,7 +558,7 @@ export default function CustomerInsightsPage() {
       {/* Navigation Filter Tabs */}
       <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-100 p-1.5 border border-slate-200">
         {[
-          { key: 'ALL', label: 'All 13 insights', icon: Activity },
+          { key: 'ALL', label: 'All insights', icon: Activity },
           { key: 'CHURN_WINBACK', label: 'Churn & win-back', icon: TrendingDown },
           { key: 'REVENUE_LTV', label: 'Revenue & LTV', icon: DollarSign },
           { key: 'BRAND_CHANNEL', label: 'Brands & channels', icon: Layers },

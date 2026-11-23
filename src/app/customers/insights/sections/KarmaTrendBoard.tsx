@@ -6,9 +6,7 @@ import { Customer } from '@/lib/types';
 
 export interface KarmaTrendItem {
   customer: Customer;
-  prevKarma: number;
   currentKarma: number;
-  change: number;
   reason: string;
   action: string;
 }
@@ -23,15 +21,12 @@ export default function KarmaTrendBoard({ karmaTrendBoard }: KarmaTrendBoardProp
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-600 text-white text-xs font-black">
-              2h
-            </span>
             <h2 className="text-base font-bold text-slate-900">
-              Karma trend board (recent score declines)
+              Lowest karma customers
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Monitors customers experiencing negative karma trajectory due to rejected shipments, delivery misses, or quality disputes.
+            Customers with the lowest scores, and what actually pulled them down: failed deliveries, returns, cancellations and complaints.
           </p>
         </div>
       </div>
@@ -41,12 +36,10 @@ export default function KarmaTrendBoard({ karmaTrendBoard }: KarmaTrendBoardProp
           <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
             <tr>
               <th className="py-3 px-3">Customer</th>
-              <th className="py-3 px-3 text-center">Previous Karma</th>
-              <th className="py-3 px-3 text-center">Current Karma</th>
-              <th className="py-3 px-3 text-center">Point change</th>
-              <th className="py-3 px-3">Primary factor</th>
+              <th className="py-3 px-3 text-center">Karma</th>
+              <th className="py-3 px-3">What pulled it down</th>
               <th className="py-3 px-3">Current segment</th>
-              <th className="py-3 px-3 text-right">Action directive</th>
+              <th className="py-3 px-3 text-right">Suggested next step</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -61,13 +54,7 @@ export default function KarmaTrendBoard({ karmaTrendBoard }: KarmaTrendBoardProp
                   </Link>
                   <div className="text-[11px] text-slate-500">{item.customer.phone}</div>
                 </td>
-                <td className="py-3 px-3 text-center font-bold text-slate-500">{item.prevKarma}</td>
-                <td className="py-3 px-3 text-center font-black text-rose-700">{item.currentKarma}</td>
-                <td className="py-3 px-3 text-center">
-                  <span className="rounded bg-rose-100 text-rose-800 font-bold px-2 py-0.5 text-[11px]">
-                    {item.change} pts
-                  </span>
-                </td>
+                <td className="py-3 px-3 text-center font-medium tabular-nums text-rose-700">{item.currentKarma}</td>
                 <td className="py-3 px-3 text-slate-600 font-medium">{item.reason}</td>
                 <td className="py-3 px-3">
                   <span
