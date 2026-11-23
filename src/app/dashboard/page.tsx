@@ -19,7 +19,7 @@ import { DIMENSIONS, type DimensionKey } from '@/lib/metrics/sources';
 import { formatValue } from '@/lib/metrics/engine';
 import { computeWidget } from '@/lib/metrics/widget-data';
 import {
-  TEMPLATES, cleanPrefs, fromPublished, fromTemplate, newId, templateFor,
+  TEMPLATES, DEFAULTS_VERSION, cleanPrefs, defaultTemplates, fromPublished, fromTemplate, newId, withDefaults,
   type Dashboard, type DashboardFilters, type DashboardPrefs, type Widget,
 } from '@/lib/metrics/dashboards';
 
@@ -51,8 +51,13 @@ export default function DashboardPage() {
     let next: DashboardPrefs | null = null;
     try { next = saved?.list?.length ? cleanPrefs(saved) : null; } catch { next = null; }
     if (!next) {
-      const first = fromTemplate(templateFor(user), user, db.getCalendarMode());
-      next = { list: [first], activeId: first.id };
+      // A new person starts with Online and Offline (whichever their access covers).
+      const list = defaultTemplates(user).map((key) => fromTemplate(key, user, db.getCalendarMode())).filter((d) => d.widgets.length);
+      next = { list, activeId: list[0]?.id, seeded: DEFAULTS_VERSION };
+    } else {
+      // Someone who saved dashboards before Online and Offline existed gets them added once, and saved.
+      const upgraded = withDefaults(next, user, db.getCalendarMode());
+      if (upgraded) { next = upgraded; try { db.setMyPreferences({ dashboards: cleanPrefs(upgraded) }); } catch { /* shown next time they edit */ } }
     }
     setPrefs(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -47,6 +47,8 @@ function ChequesContent() {
   const searchParam = searchParams?.get('search') || searchParams?.get('id') || searchParams?.get('chequeNumber');
 
   const [cheques, setCheques] = useState<Cheque[]>(() => db.getCheques());
+  // The workspace may still be loading when the page opens; follow it as it arrives and changes.
+  useEffect(() => { const refresh = () => setCheques([...db.getCheques()]); refresh(); window.addEventListener('bb-db-updated', refresh); return () => window.removeEventListener('bb-db-updated', refresh); }, []);
   const [currentUser, setCurrentUser] = useState(() => db.getCurrentUser());
   const [searchTerm, setSearchTerm] = useState(searchParam || '');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');

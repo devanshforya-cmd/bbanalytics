@@ -8,6 +8,8 @@
  */
 import { adToBs } from '../nepali-calendar';
 import { dispatchFromOrder, paymentDueDate } from '../dispatch-flow';
+import { SAMPLE_BRANDS, sampleProducts, type SampleBrand } from './catalog';
+import { generateOnlineSample } from './online';
 import type {
   BeatItem, Branch, CallLabel, CallLog, CallOutcome, Cheque, ChequeStatus, Dispatch, Distributor, FacingAudit, FeedbackEntry,
   HandoverDocument, Influencer, InfluencerContent, MarketingSend, Product, Promotion, RecurringScheduleEntry, Retailer,
@@ -18,19 +20,28 @@ export const SAMPLE_ID_PREFIX = 'sample_';
 export const SAMPLE_USER_PREFIX = 'user_sample_';
 
 export interface SampleUser {
-  id: string; full_name: string; name: string; email: string; phone: string; role: 'SALES_OFFICER';
+  id: string; full_name: string; name: string; email: string; phone: string; role: 'SALES_OFFICER' | 'STAFF';
   territory: string; assigned_territory: string; reports_to_id: string | null; assigned_brands: string[]; duty_status: string; is_active: true;
 }
 export interface SampleRecord { collection: string; id: string; data: Record<string, any> & { id: string; isSample: true } }
-export interface SampleSet { users: SampleUser[]; records: SampleRecord[]; summary: Record<string, number> }
+export interface SampleSet { users: SampleUser[]; brands: SampleBrand[]; records: SampleRecord[]; summary: Record<string, number> }
 
 export interface SampleOptions {
   todayAd: string;
   products: Product[];
   manager: { id: string; name: string };
   existingNiches?: string[];
+  /** Real brands already in the workspace. Renee and Pee Safe are added as test brands when missing. */
+  brands?: { id: string; code: string }[];
+  brandPrefixes?: Record<string, string> | null;
   seed?: number;
 }
+
+/** Online desk staff for the test data (they handle orders and make the customer calls). */
+const DESK = [
+  { key: 'pooja', name: 'Pooja Sharma', phone: '9800000201' },
+  { key: 'nikesh', name: 'Nikesh Tamang', phone: '9800000202' },
+];
 
 // ---------------------------------------------------------------------------------------------
 // Helpers
@@ -122,7 +133,15 @@ export function generateSampleData(options: SampleOptions): SampleSet {
 
   const today = Date.parse(`${options.todayAd}T00:00:00Z`);
   const dayAd = (offset: number) => iso(today - offset * DAY);
-  const products = options.products.filter((product) => product.active !== false).slice(0, 8);
+  // Real brands keep their real products; Renee and Pee Safe come in as test brands with their
+  // sub-brands when the workspace does not have them, and every brand gets products with short names.
+  const realBrands = options.brands || [];
+  const testBrands = SAMPLE_BRANDS.filter((brand) => !realBrands.some((real) => real.code.toUpperCase() === brand.code));
+  const brandIdFor = (code: string) => realBrands.find((b) => b.code.toUpperCase() === code)?.id || testBrands.find((b) => b.code === code)?.id;
+  const realProducts = options.products.filter((product) => product.active !== false && !product.isCombo).slice(0, 8);
+  const realBrandCodes = new Set(realProducts.map((p) => p.brandCode.toUpperCase()));
+  const extra = sampleProducts(brandIdFor).filter((p) => p.brandCode === 'FORYA' || !realBrandCodes.has(p.brandCode) || testBrands.some((b) => b.code === p.brandCode));
+  const products = [...realProducts, ...extra];
   if (!products.length) throw new Error('Add at least one active product before loading test data.');
   const brandCodes = [...new Set(products.map((product) => product.brandCode))];
   const manager = options.manager;
@@ -139,6 +158,11 @@ export function generateSampleData(options: SampleOptions): SampleSet {
     id: o.id, full_name: o.name, name: o.name, email: `${o.key}@sample.invalid`, phone: o.phone, role: 'SALES_OFFICER',
     territory: o.territory, assigned_territory: o.territory, reports_to_id: manager.id, assigned_brands: brandCodes, duty_status: 'ONLINE', is_active: true,
   }));
+  const desk = DESK.map((d) => ({ id: `${SAMPLE_USER_PREFIX}${d.key}`, name: d.name }));
+  users.push(...DESK.map((d) => ({
+    id: `${SAMPLE_USER_PREFIX}${d.key}`, full_name: d.name, name: d.name, email: `${d.key}@sample.invalid`, phone: d.phone, role: 'STAFF' as const,
+    territory: 'Online desk', assigned_territory: 'Online desk', reports_to_id: manager.id, assigned_brands: brandCodes, duty_status: 'ONLINE', is_active: true as const,
+  })));
 
   const margin = (pct: number) => Object.fromEntries(brandCodes.map((code) => [code, { pct, type: 'MARKDOWN' as const }]));
   const contact = (key: string, name: string, role: string, phone: string) => ({ id: sid('contact', key), name, role: role as any, phone, isPrimary: true });
@@ -194,7 +218,12 @@ export function generateSampleData(options: SampleOptions): SampleSet {
       brandsStocked: brandCodes, defaultMargins: margin(marginPct), vatRegistered: r.type !== 'Kirana', creditTerms: terms,
       creditLimit: r.habit === 'big' ? 150000 : 60000,
     });
-    const carried = r.type === 'Pharmacy' ? products.filter((p, i) => i % 2 === 0 || /serum|acne/i.test(p.name)).map((p) => p.id) : products.map((p) => p.id).filter(() => chance(0.85));
+    // What a shop stocks follows what it is: pharmacies carry hygiene and treatment lines, cosmetics shops
+    // carry Renee and skin care, grocery and general stores carry everyday hygiene and body care.
+    const fits = (p: Product) => r.type === 'Pharmacy' ? p.brandCode === 'PEESAFE' || /serum|acne/i.test(p.name)
+      : r.type === 'Cosmetics' ? p.brandCode !== 'PEESAFE' || /FURR/i.test(p.name)
+        : p.brandCode !== 'RENEE' && !/Domina/i.test(p.name);
+    const carried = products.filter(fits).map((p) => p.id).filter(() => chance(0.85));
     sims.push({ id: sid('retailer', r.key), name: r.name, entityType: 'RETAILER', officer: o, lat: r.lat, lng: r.lng, address: `${r.area}, ${r.city}`, contactName: r.owner, contactPhone: phone,
       habit: r.habit, marginPct, terms, city: r.city, area: r.area, distributorId: fewa?.id, distributorName: fewa?.name, storeType: 'GT',
       shelf: {}, sellPerDay: {}, carried: carried.length ? carried : [products[0].id], orders: [], visits: [], cheques: [],
@@ -282,7 +311,7 @@ export function generateSampleData(options: SampleOptions): SampleSet {
           units = s.entityType === 'BRANCH' ? Math.ceil(units / 12) * 12 : Math.ceil(units / 3) * 3;
           const price = unitPrice(product, s.marginPct);
           const free = s.entityType === 'RETAILER' && units >= 12 && chance(0.3) ? Math.floor(units / 12) : 0;
-          return { productId, productName: product.name, brandCode: product.brandCode, cases: Math.floor(units / (product.caseSize || 72)), unitsPerCase: product.caseSize || 72,
+          return { productId, productName: product.name, brandCode: product.brandCode, subBrandId: product.subBrandId, cases: Math.floor(units / (product.caseSize || 72)), unitsPerCase: product.caseSize || 72,
             totalUnits: units, unitPrice: price, totalAmount: units * price, freeUnits: free || undefined, appliedScheme: free ? 'Buy 12 get 1' : undefined };
         });
         const total = lines.reduce((sum, line) => sum + line.totalAmount, 0);
@@ -545,8 +574,8 @@ export function generateSampleData(options: SampleOptions): SampleSet {
   promo('dashain', 'Dashain stock-up scheme', 'PERCENTAGE_OFF', 75, 45, 'ALL', 'Ended. 5% off orders above NPR 25,000.');
 
   // ------------------------------------------------------------------------------------------
-  // Online side: only the sections that are empty. No sample online orders or customers, so
-  // real sales figures stay real.
+  // Reviews without an order (social comments). Reviews from test customers come with the
+  // online side below.
   // ------------------------------------------------------------------------------------------
   const categories = ['Leaking bottle', 'Damaged packaging', 'Fragrance too strong', 'Late delivery', 'Wrong item sent', 'Skin irritation', 'Price too high', 'Great results'];
   categories.forEach((name, index) => add<ReviewCategory>('reviewCategories', { id: sid('category', index + 1), name, tickCount: 0, isArchived: false, createdBy: manager.name, createdAt: at(dayAd(120), 10) }));
@@ -634,7 +663,11 @@ export function generateSampleData(options: SampleOptions): SampleSet {
   campaign('newyear', 'New Year offer (sample draft)', 'DRAFT', -40, -50, false, 'Sample draft, not scheduled.');
   campaign('template', 'Weekend flash sale template (sample)', 'DRAFT', 0, -2, true, 'Sample template.');
 
-  const summary: Record<string, number> = { staff: users.length };
+  // Test products and the online side: customers, orders, deliveries, returns, calls, reviews.
+  for (const product of extra) add('products', product);
+  generateOnlineSample({ random, today: options.todayAd, bs, at, add, products, desk, manager, brandPrefixes: options.brandPrefixes });
+
+  const summary: Record<string, number> = { staff: users.length, brands: testBrands.length };
   for (const record of records) summary[record.collection] = (summary[record.collection] || 0) + 1;
-  return { users, records, summary };
+  return { users, brands: testBrands, records, summary };
 }

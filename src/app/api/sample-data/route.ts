@@ -52,22 +52,38 @@ export async function POST(request: Request) {
   if (productError) return failure('Products are temporarily unavailable.', 503);
   const products = (productRows || []).map((row) => row.data).filter((product: any) => !product.isSample);
   const { data: nicheRows } = await supabaseAdmin.from('workspace_records').select('id').eq('collection', 'influencerNiches');
-  const { data: fieldRole } = await supabaseAdmin.from('staff_roles').select('id,name,permissions').ilike('name', 'field sales officer').maybeSingle();
+  const { data: roles } = await supabaseAdmin.from('staff_roles').select('id,name,permissions');
+  const role = (name: string) => (roles || []).find((r: any) => String(r.name).trim().toLowerCase() === name);
+  const { data: brandRows, error: brandError } = await supabaseAdmin.from('brands').select('id,code');
+  if (brandError) return failure('Brands are temporarily unavailable.', 503);
+  const realBrands = (brandRows || []).filter((b: any) => !String(b.id).startsWith('sample_')).map((b: any) => ({ id: String(b.id), code: String(b.code || '') }));
+  const { data: configRow } = await supabaseAdmin.from('workspace_records').select('data').eq('collection', 'workspaceConfig').eq('id', 'workspace').maybeSingle();
 
   let set;
   try {
     set = generateSampleData({ todayAd: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kathmandu' }), products,
-      manager: { id: auth.user.id, name: auth.user.fullName || 'Manager' }, existingNiches: (nicheRows || []).map((row) => row.id) });
+      manager: { id: auth.user.id, name: auth.user.fullName || 'Manager' }, existingNiches: (nicheRows || []).map((row) => row.id),
+      brands: realBrands, brandPrefixes: (configRow?.data as any)?.brandPrefixes || null });
   } catch (error) { return failure(error instanceof Error ? error.message : 'Could not build test data.'); }
 
   const removed = await supabaseAdmin.rpc('remove_sample_records');
   if (removed.error) return failure('Could not clear the previous test data.', 503);
 
-  const permissions = fieldRole ? resolveAccess(normalizeAccessMap(fieldRole.permissions), {}, { id: fieldRole.id, name: fieldRole.name }) : {};
+  // Test brands first, so products and orders that name them load into a workspace that knows them.
+  if (set.brands.length) {
+    const { error } = await supabaseAdmin.from('brands').upsert(set.brands.map((b) => ({ id: b.id, code: b.code, name: b.name, color: b.color, category: b.category,
+      description: b.description, principal_company: b.principalCompany, is_active: true, sub_brands: b.subBrands, updated_at: new Date().toISOString() })), { onConflict: 'id' });
+    if (error) return failure('Could not add the test brands.', 503);
+  }
+
+  // Field officers get the field sales role's access; online desk staff get the D2C officer role's.
+  const accessOf = (name: string) => { const r = role(name); return r ? resolveAccess(normalizeAccessMap(r.permissions), {}, { id: r.id, name: r.name }) : {}; };
+  const fieldAccess = accessOf('field sales officer');
+  const deskAccess = accessOf('d2c officer');
   const { error: userError } = await supabaseAdmin.from('users').upsert(set.users.map((user) => ({
-    ...user, password_hash: 'test-account-cannot-sign-in', custom_permissions: permissions, permissions: {},
+    ...user, password_hash: 'test-account-cannot-sign-in', custom_permissions: user.role === 'STAFF' ? deskAccess : fieldAccess, permissions: {},
   })), { onConflict: 'id' });
-  if (userError) return failure('Could not add the test field officers.', 503);
+  if (userError) return failure('Could not add the test staff.', 503);
 
   // Live tracking reads one GPS row per officer; these go when the test officers are removed.
   const live = set.records.filter((record) => record.collection === 'staffLiveLocations').map((record) => record.data);
@@ -85,7 +101,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ success: true, data: { summary: set.summary, total: set.records.length } }, { headers });
 }
 
-/** Remove every test record and test staff account. */
+/** Remove every test record, test brand and test staff account. */
 export async function DELETE(request: Request) {
   const auth = await superAdmin(request, true);
   if (auth.response) return auth.response;

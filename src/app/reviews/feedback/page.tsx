@@ -64,6 +64,14 @@ function FeedbackContent() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  // Keep the list in step with the workspace: it may still be loading when the page opens.
+  useEffect(() => {
+    const refresh = () => setFeedbackList([...db.getFeedback()]);
+    refresh();
+    window.addEventListener('bb-db-updated', refresh);
+    return () => window.removeEventListener('bb-db-updated', refresh);
+  }, []);
+
   useEffect(() => {
     const prod = searchParams.get('product') || searchParams.get('search') || '';
     if (prod) {

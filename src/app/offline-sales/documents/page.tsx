@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import DownloadButton from '@/components/common/DownloadButton';
 import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
@@ -48,6 +48,8 @@ export default function DocumentsPage() {
   const [currentUser] = useState(() => db.getCurrentUser());
   const isSalesOfficer = getScope(currentUser, 'document_handover') === 'OWN';
   const [documents, setDocuments] = useState<HandoverDocument[]>(() => db.getDocuments());
+  // The workspace may still be loading when the page opens; follow it as it arrives and changes.
+  useEffect(() => { const refresh = () => setDocuments([...db.getDocuments()]); refresh(); window.addEventListener('bb-db-updated', refresh); return () => window.removeEventListener('bb-db-updated', refresh); }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStore, setFilterStore] = useState('ALL');
   const [filterDocType, setFilterDocType] = useState('ALL');
