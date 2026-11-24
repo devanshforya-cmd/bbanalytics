@@ -1,5 +1,6 @@
 'use client';
 
+import StoredPhoto from '@/components/common/StoredPhoto';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import { confirmAction } from '@/components/common/confirm';
@@ -585,11 +586,7 @@ function FeedbackContent() {
                         className="relative group/img rounded-lg overflow-hidden border border-slate-200 h-12 w-16 shrink-0 shadow-2xs hover:ring-2 hover:ring-brand-500 transition"
                         title="Click to zoom proof screenshot"
                       >
-                        <img
-                          src={url}
-                          alt="Customer proof"
-                          className="h-full w-full object-cover group-hover/img:scale-105 transition-transform"
-                        />
+                        <StoredPhoto src={url} alt="Customer proof" imgClassName="h-full w-full object-cover group-hover/img:scale-105 transition-transform" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity text-white text-[11px] font-bold gap-0.5">
                           <ZoomIn className="w-3 h-3" />
                           <span>Zoom</span>
@@ -768,11 +765,7 @@ function FeedbackContent() {
                         onClick={() => setLightboxImageUrl(url)}
                         className="group relative h-28 rounded-xl border border-slate-200 overflow-hidden bg-slate-100 cursor-zoom-in shadow-2xs"
                       >
-                        <img
-                          src={url}
-                          alt={`Proof photo ${idx + 1}`}
-                          className="h-full w-full object-cover transition-transform"
-                        />
+                        <StoredPhoto src={url} alt={`Proof photo ${idx + 1}`} imgClassName="h-full w-full object-cover transition-transform" />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                           <span className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full bg-white/90 text-slate-800 shadow transition-opacity">
                             <Maximize2 className="w-3.5 h-3.5" />

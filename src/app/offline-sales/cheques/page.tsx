@@ -1,5 +1,6 @@
 'use client';
 
+import StoredPhoto from '@/components/common/StoredPhoto';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import Money, { nprText } from '@/components/common/Money';
@@ -531,11 +532,7 @@ function ChequesContent() {
             <div className="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
               {/* Image Preview */}
               <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-                <img
-                  src={selectedCheque.photoUrl}
-                  alt="Cheque photo"
-                  className="h-44 w-full object-cover"
-                />
+                <StoredPhoto src={selectedCheque.photoUrl} alt="Cheque photo" className="h-44 w-full" imgClassName="h-full w-full object-cover" />
               </div>
 
               {/* Information Cards */}

@@ -1,5 +1,6 @@
 'use client';
 
+import StoredPhoto from '@/components/common/StoredPhoto';
 import Portal from '@/components/common/Portal';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -37,6 +38,8 @@ import PageGuard from '@/components/common/PageGuard';
 import { canPerform, getScope, hasAccess, isSuperAdmin } from '@/lib/permissions';
 import { toast } from '@/components/common/Toast';
 import { capturePhoto } from '@/lib/photo-capture';
+import { usePhotoUploads } from '@/hooks/usePhotoUploads';
+import { Loader2 } from 'lucide-react';
 
 // 58a. Modular Beat Plan Sub-components
 import BeatRouteList from './components/BeatRouteList';
@@ -98,6 +101,15 @@ export default function BeatPlanPage() {
   // In-Store Shelf Photos Form State
   const [shelfRackSection, setShelfRackSection] = useState('Main Eye-Level Rack');
   const [beforePhotoUrls, setBeforePhotoUrls] = useState<string[]>([]);
+  const shelfUploading = usePhotoUploads('shelf_photos');
+  const chequeUploading = usePhotoUploads('cheque_tracker');
+  const [uploadingSide, setUploadingSide] = useState<{ before: number; after: number }>({ before: 0, after: 0 });
+  const takeShelfPhoto = (side: 'before' | 'after', file?: File | null) => {
+    if (!file) return;
+    setUploadingSide((c) => ({ ...c, [side]: c[side] + 1 }));
+    void capturePhoto(file, 'shelf_photos', (url) => (side === 'before' ? setBeforePhotoUrls : setAfterPhotoUrls)((prev) => [...prev, url]))
+      .finally(() => setUploadingSide((c) => ({ ...c, [side]: Math.max(0, c[side] - 1) })));
+  };
   const [afterPhotoUrls, setAfterPhotoUrls] = useState<string[]>([]);
 
   // End Day Modal
@@ -776,11 +788,7 @@ export default function BeatPlanPage() {
                   {chequePhotoUrl ? (
                     <div className="relative rounded-xl border border-slate-200 p-2 bg-slate-50 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <img
-                          src={chequePhotoUrl}
-                          alt="Cheque"
-                          className="w-14 h-10 object-cover rounded-lg border border-slate-200"
-                        />
+                        <StoredPhoto src={chequePhotoUrl} alt="Cheque" className="w-14 h-10 rounded-lg border border-slate-200" imgClassName="h-full w-full object-cover rounded-lg border border-slate-200" />
                         <span className="text-xs text-slate-700 font-medium">Cheque photo captured</span>
                       </div>
                       <button
@@ -791,6 +799,8 @@ export default function BeatPlanPage() {
                         <X className="w-4 h-4" />
                       </button>
                     </div>
+                  ) : chequeUploading > 0 ? (
+                    <div className="flex items-center justify-center gap-2 w-full p-3 rounded-xl border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-800" aria-busy="true"><Loader2 className="h-4 w-4 animate-spin" />Uploading cheque photo…</div>
                   ) : (
                     <label className="flex items-center justify-center gap-2 w-full p-3 border border-dashed border-slate-300 hover:border-amber-500 hover:bg-amber-50/40 rounded-xl cursor-pointer transition text-slate-600 font-medium text-xs">
                       <Camera className="w-4 h-4 text-amber-600" />
@@ -879,7 +889,7 @@ export default function BeatPlanPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {beforePhotoUrls.map((url, idx) => (
                       <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200">
-                        <img src={url} alt="Before shelf" className="w-full h-full object-cover" />
+                        <StoredPhoto src={url} alt="Before shelf" imgClassName="w-full h-full object-cover" />
                         <button
                           type="button"
                           onClick={() => setBeforePhotoUrls(beforePhotoUrls.filter((_, i) => i !== idx))}
@@ -887,6 +897,11 @@ export default function BeatPlanPage() {
                         >
                           <X className="w-3 h-3" />
                         </button>
+                      </div>
+                    ))}
+                    {Array.from({ length: uploadingSide.before }, (_, i) => (
+                      <div key={`up-before-${i}`} className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border border-blue-200 bg-blue-50 text-[11px] font-semibold text-blue-800" aria-busy="true">
+                        <Loader2 className="h-5 w-5 animate-spin text-blue-600" />Uploading…
                       </div>
                     ))}
                     <label className="w-20 h-20 flex flex-col items-center justify-center border border-dashed border-slate-300 hover:border-blue-500 rounded-xl cursor-pointer text-slate-500 text-[11px] gap-1 hover:bg-blue-50/30">
@@ -897,7 +912,7 @@ export default function BeatPlanPage() {
                         accept="image/*"
                         capture="environment"
                         className="hidden"
-                        onChange={(e) => { void capturePhoto(e.target.files?.[0], 'shelf_photos', (url) => setBeforePhotoUrls((prev) => [...prev, url])); e.target.value = ''; }}
+                        onChange={(e) => { takeShelfPhoto('before', e.target.files?.[0]); e.target.value = ''; }}
                       />
                     </label>
                   </div>
@@ -909,7 +924,7 @@ export default function BeatPlanPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {afterPhotoUrls.map((url, idx) => (
                       <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200">
-                        <img src={url} alt="After shelf" className="w-full h-full object-cover" />
+                        <StoredPhoto src={url} alt="After shelf" imgClassName="w-full h-full object-cover" />
                         <button
                           type="button"
                           onClick={() => setAfterPhotoUrls(afterPhotoUrls.filter((_, i) => i !== idx))}
@@ -917,6 +932,11 @@ export default function BeatPlanPage() {
                         >
                           <X className="w-3 h-3" />
                         </button>
+                      </div>
+                    ))}
+                    {Array.from({ length: uploadingSide.after }, (_, i) => (
+                      <div key={`up-after-${i}`} className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border border-blue-200 bg-blue-50 text-[11px] font-semibold text-blue-800" aria-busy="true">
+                        <Loader2 className="h-5 w-5 animate-spin text-blue-600" />Uploading…
                       </div>
                     ))}
                     <label className="w-20 h-20 flex flex-col items-center justify-center border border-dashed border-slate-300 hover:border-emerald-500 rounded-xl cursor-pointer text-slate-500 text-[11px] gap-1 hover:bg-emerald-50/30">
@@ -927,7 +947,7 @@ export default function BeatPlanPage() {
                         accept="image/*"
                         capture="environment"
                         className="hidden"
-                        onChange={(e) => { void capturePhoto(e.target.files?.[0], 'shelf_photos', (url) => setAfterPhotoUrls((prev) => [...prev, url])); e.target.value = ''; }}
+                        onChange={(e) => { takeShelfPhoto('after', e.target.files?.[0]); e.target.value = ''; }}
                       />
                     </label>
                   </div>
@@ -945,9 +965,10 @@ export default function BeatPlanPage() {
                 <button
                   type="button"
                   onClick={handleSaveShelfPhotos}
-                  className="btn btn-primary"
+                  disabled={shelfUploading > 0}
+                  className="btn btn-primary disabled:opacity-60"
                 >
-                  Save shelf photos
+                  {shelfUploading > 0 ? <><Loader2 className="animate-spin" />Uploading photos…</> : 'Save shelf photos'}
                 </button>
               </div>
             </div>

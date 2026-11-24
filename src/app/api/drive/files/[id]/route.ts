@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth(request);
-  if (auth.response) return auth.response;
+  if (auth.response) { console.warn('Drive file refused', { reason: `auth-${auth.response.status}` }); return auth.response; }
   const { id } = await context.params;
   if (!/^[a-zA-Z0-9_-]{10,200}$/.test(id)) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   try {
@@ -24,7 +24,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       if (error) throw new Error('Team authorization is unavailable.');
       teamIds = await getTeamMemberIds(auth.user.id, data || []);
     }
-    if (metadata.data.trashed || !canReadDriveFile(auth.user, properties, teamIds) || Number(metadata.data.size) > DRIVE_UPLOAD_LIMIT) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+    // Say why a photo is refused (no names or ids), so a broken photo can be traced in the logs.
+    const refusal = metadata.data.trashed ? 'trashed' : !properties ? 'no-app-properties' : properties.app !== 'bb-analytics' ? 'other-app'
+      : !canReadDriveFile(auth.user, properties, teamIds) ? `no-access:${properties.feature}` : Number(metadata.data.size) > DRIVE_UPLOAD_LIMIT ? 'too-large' : '';
+    if (refusal) { console.warn('Drive file refused', { reason: refusal }); return NextResponse.json({ error: 'Not found.' }, { status: 404 }); }
     const content = await drive.files.get({ fileId: id, alt: 'media', supportsAllDrives: true }, { responseType: 'arraybuffer' });
     const mimeType = metadata.data.mimeType || 'application/octet-stream';
     const inline = request.nextUrl.searchParams.get('download') !== '1' && ['image/jpeg', 'image/png', 'image/webp'].includes(mimeType);
@@ -35,6 +38,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     } });
   } catch (error) {
     logGoogleFailure('file read', error);
+    console.warn('Drive file read error', { message: error instanceof Error ? error.message.slice(0, 160) : 'unknown' });
     return NextResponse.json({ error: 'File is unavailable or access was denied.' }, { status: 404 });
   }
 }

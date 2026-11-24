@@ -8,6 +8,7 @@ import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
 import PWAInstallBanner from '@/components/common/PWAInstallBanner';
 import { ToastContainer } from '@/components/common/Toast';
+import UploadIndicator from '@/components/common/UploadIndicator';
 import { ConfirmHost } from '@/components/common/confirm';
 import OfflineBar from '@/components/common/OfflineBar';
 import FieldGpsTracker from '@/components/common/FieldGpsTracker';
@@ -127,6 +128,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="app-chrome contents"><MobileNav pending={!confirmed} /></div>
       </div>
       <PWAInstallBanner />
+      <UploadIndicator />
       <OfflineBar />
       <ToastContainer />
       <ConfirmHost />

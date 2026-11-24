@@ -1,8 +1,10 @@
 'use client';
 
+import StoredPhoto from '@/components/common/StoredPhoto';
 import Portal from '@/components/common/Portal';
-import React, { useState, useRef } from 'react';
-import { compressImage, uploadImage, UploadResult } from '@/lib/file-upload';
+import React, { useState, useRef, useEffect } from 'react';
+import { compressImage, uploadImage, UploadResult, type PhotoFeature } from '@/lib/file-upload';
+import { trackUpload } from '@/lib/photo-capture';
 import {
   Camera,
   Upload,
@@ -27,6 +29,8 @@ export interface CameraCaptureProps {
   autoCompress?: boolean;
   disabled?: boolean;
   className?: string;
+  /** Told when photos start and finish uploading, so the form can wait before saving. */
+  onBusyChange?: (busy: boolean) => void;
 }
 
 interface CapturedItem {
@@ -50,6 +54,7 @@ export default function CameraCapture({
   autoCompress = true,
   disabled = false,
   className = '',
+  onBusyChange,
 }: CameraCaptureProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,6 +65,10 @@ export default function CameraCapture({
   /** What the last save did, e.g. "2 photos saved to Drive · 9.8 MB → 610 KB". */
   const [savedNote, setSavedNote] = useState('');
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  /** Photos being prepared and sent to Drive right now, shown as tiles with a spinner. */
+  const [pending, setPending] = useState<{ id: string; previewUrl: string; step: 'preparing' | 'uploading' }[]>([]);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  useEffect(() => { onBusyChange?.(isProcessing); }, [isProcessing, onBusyChange]);
 
   const totalCount = existingUrls.length + capturedItems.length;
   const canAddMore = totalCount < maxFiles;
@@ -73,6 +82,10 @@ export default function CameraCapture({
 
     if (filesToProcess.length === 0) return;
 
+    // Show every chosen photo straight away, with a spinner until it is saved.
+    const tiles = filesToProcess.map((file, index) => ({ id: `up-${Date.now()}-${index}`, previewUrl: URL.createObjectURL(file), step: 'preparing' as const }));
+    if (onUpload) setPending((current) => [...current, ...tiles]);
+    setProgress({ done: 0, total: filesToProcess.length });
     setIsProcessing(true);
     setUploadError('');
     setSavedNote('');
@@ -82,8 +95,9 @@ export default function CameraCapture({
     const savedBytes = { original: 0, final: 0, offline: 0 };
     const uploadResults: UploadResult[] = [];
 
-    for (const rawFile of filesToProcess) {
+    for (const [fileIndex, rawFile] of filesToProcess.entries()) {
       const originalSize = rawFile.size;
+      const tile = tiles[fileIndex];
       let finalFile = rawFile;
 
       if (autoCompress && rawFile.type.startsWith('image/')) {
@@ -114,14 +128,18 @@ export default function CameraCapture({
         const shown = newItems.pop();
         if (shown) URL.revokeObjectURL(shown.previewUrl);
         processedFiles.pop();
+        setPending((current) => current.map((entry) => entry.id === tile.id ? { ...entry, step: 'uploading' } : entry));
         try {
-          const res = await uploadImage(finalFile, folder, false);
+          const res = await trackUpload(folder as PhotoFeature, () => uploadImage(finalFile, folder, false));
           uploadResults.push(res);
           savedBytes.original += originalSize; savedBytes.final += res.size;
           if (!res.savedToDrive) savedBytes.offline += 1;
         } catch (e) {
           setUploadError(e instanceof Error ? e.message : 'Upload failed. Please try again.');
         }
+        setPending((current) => current.filter((entry) => entry.id !== tile.id));
+        URL.revokeObjectURL(tile.previewUrl);
+        setProgress((current) => ({ ...current, done: current.done + 1 }));
       }
     }
     if (uploadResults.length) {
@@ -238,12 +256,12 @@ export default function CameraCapture({
       {isProcessing && (
         <div className="flex items-center gap-2 p-2.5 bg-blue-50/60 border border-blue-200 rounded-lg text-xs text-blue-800">
           <Loader2 className="w-4 h-4 animate-spin text-blue-600 shrink-0" />
-          <span className="font-medium">Preparing and saving photos to Drive…</span>
+          <span className="font-medium">{progress.total > 1 ? `Uploading photo ${Math.min(progress.done + 1, progress.total)} of ${progress.total} to Drive…` : 'Uploading photo to Drive…'} Keep this screen open.</span>
         </div>
       )}
 
       {/* Thumbnails Grid */}
-      {(existingUrls.length > 0 || capturedItems.length > 0) && (
+      {(existingUrls.length > 0 || capturedItems.length > 0 || pending.length > 0) && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           {/* Existing URLs */}
           {existingUrls.map((url, idx) => (
@@ -252,7 +270,7 @@ export default function CameraCapture({
               className="group relative aspect-4/3 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shadow-2xs"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt={`Saved Photo ${idx + 1}`} className="w-full h-full object-cover" />
+              <StoredPhoto src={url} alt={`Saved Photo ${idx + 1}`} imgClassName="w-full h-full object-cover" />
               
               <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
                 <button
@@ -278,6 +296,19 @@ export default function CameraCapture({
               <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-xs text-white text-[11px] font-semibold px-1.5 py-0.5 rounded">
                 Attached #{idx + 1}
               </div>
+            </div>
+          ))}
+
+          {/* Photos still uploading */}
+          {pending.map((entry) => (
+            <div key={entry.id} className="relative aspect-4/3 overflow-hidden rounded-xl border border-blue-300 bg-slate-100" aria-busy="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={entry.previewUrl} alt="Photo uploading" className="h-full w-full object-cover opacity-60" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-white/40 text-[11px] font-bold text-blue-900">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                {entry.step === 'preparing' ? 'Preparing…' : 'Uploading…'}
+              </div>
+              <div className="absolute inset-x-0 bottom-0 h-1 overflow-hidden bg-blue-100"><div className={`h-full bg-blue-600 transition-all duration-700 ${entry.step === 'preparing' ? 'w-1/4' : 'w-3/4 animate-pulse'}`} /></div>
             </div>
           ))}
 

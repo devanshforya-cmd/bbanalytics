@@ -1,5 +1,6 @@
 'use client';
 
+import StoredPhoto from '@/components/common/StoredPhoto';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import Money from '@/components/common/Money';
@@ -1089,11 +1090,7 @@ function ScorecardContent() {
                         return (
                           <div key={p.id} className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
                             {img ? (
-                              <img
-                                src={img}
-                                alt={p.storeName}
-                                className="h-32 w-full object-cover"
-                              />
+                              <StoredPhoto src={img} alt={p.storeName} className="h-32 w-full" imgClassName="h-full w-full object-cover" />
                             ) : (
                               <div className="h-32 w-full flex items-center justify-center bg-slate-100 text-slate-500">
                                 <Camera className="w-6 h-6" />
