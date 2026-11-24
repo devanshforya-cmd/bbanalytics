@@ -137,7 +137,7 @@ export async function canDeleteBrand(brandCode: string): Promise<{
       products: db.getProducts().filter((p) => p.brandCode === code).length,
       stockCounts: db.getStockCounts().filter((sc) => sc.items.some((it) => it.brandCode === code)).length,
       feedback: db.getFeedback().filter((f) => f.brandCode === code).length,
-      returns: db.getReturns().filter((r) => r.brandCode === code).length,
+      returns: db.getOrderIssues().filter((r) => r.brandCode === code).length,
     };
 
     const total = Object.values(counts).reduce((a, b) => a + b, 0);

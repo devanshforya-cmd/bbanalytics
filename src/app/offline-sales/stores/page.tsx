@@ -222,7 +222,7 @@ export default function StoresPage() {
       return;
     }
 
-    if (fieldLat === null || fieldLng === null) { toast.error('Pin the store using device GPS before saving.'); return; }
+    // The pin is optional: a store without one can still be put on a beat. Check-in then skips the distance check.
     if (!fieldArea.trim() || !fieldCity.trim()) { toast.error('Enter the store area and city.'); return; }
 
     guardedSubmit(async () => {
@@ -237,8 +237,8 @@ export default function StoresPage() {
         city: fieldCity,
         area: fieldArea.trim(),
         address: fieldAddress || `${fieldArea}, ${fieldCity}`,
-        lat: fieldLat,
-        lng: fieldLng,
+        lat: fieldLat ?? 0,
+        lng: fieldLng ?? 0,
         assignedOfficerId: currentUser.id,
         assignedOfficerName: currentUser.fullName,
         contactName: firstContact.name,
@@ -283,7 +283,10 @@ export default function StoresPage() {
 
     const adminChannel = storeChannel(adminStoreType);
     if ((adminChannel.account === 'distributors' ? !canCreateAccounts : !canCreateStores)) { toast.error(`You can't add ${adminChannel.label} accounts. Ask an admin to allow it in Staff & roles.`); return; }
-    if (adminChannel.account === 'retailers' && (!adminArea.trim() || !adminCity.trim() || !adminLat.trim() || !adminLng.trim() || !validGpsCoordinates(Number(adminLat), Number(adminLng)))) { toast.error('Enter the store area, city and actual latitude/longitude before saving.'); return; }
+    if (adminChannel.account === 'retailers' && (!adminArea.trim() || !adminCity.trim())) { toast.error('Enter the store area and city before saving.'); return; }
+    // Latitude and longitude are optional. If one is entered, both must be, and they must be real coordinates.
+    const adminHasPin = adminLat.trim() !== '' || adminLng.trim() !== '';
+    if (adminHasPin && (!adminLat.trim() || !adminLng.trim() || !validGpsCoordinates(Number(adminLat), Number(adminLng)))) { toast.error('Enter both latitude and longitude as numbers, or leave both empty.'); return; }
 
     guardedSubmit(async () => {
       if (adminStoreType === 'DISTRIBUTOR') {
@@ -335,8 +338,8 @@ export default function StoresPage() {
           city: adminCity,
           area: adminArea.trim(),
           address: adminAddress || `${adminArea}, ${adminCity}`,
-          lat: Number(adminLat),
-          lng: Number(adminLng),
+          lat: adminHasPin ? Number(adminLat) : 0,
+          lng: adminHasPin ? Number(adminLng) : 0,
           assignedOfficerId: currentUser.id,
           assignedOfficerName: currentUser.fullName,
           contactName: adminContactName,
@@ -924,7 +927,7 @@ export default function StoresPage() {
                 {/* Location Section with GPS Pin */}
                 <div className="space-y-2 rounded-2xl bg-slate-50 p-3.5 border border-slate-200">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-700 text-[11px] ">Store location</span>
+                    <span className="font-bold text-slate-700 text-[11px] ">Store location <span className="font-normal text-slate-500">(optional, pin it later if you are not at the store)</span></span>
                     <button
                       type="button"
                       onClick={handlePinLocation}
@@ -1210,8 +1213,8 @@ export default function StoresPage() {
                   <label className="font-semibold">Area<input value={adminArea} onChange={event => setAdminArea(event.target.value)} required={storeChannel(adminStoreType).account === 'retailers'} className="block mt-1 w-full rounded-lg border p-2" /></label>
                   <label className="font-semibold col-span-2">Address<input value={adminAddress} onChange={event => setAdminAddress(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
                   {storeChannel(adminStoreType).account === 'retailers' && <>
-                    <label className="font-semibold">Latitude<input type="number" step="any" min="-90" max="90" required value={adminLat} onChange={event => setAdminLat(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
-                    <label className="font-semibold">Longitude<input type="number" step="any" min="-180" max="180" required value={adminLng} onChange={event => setAdminLng(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
+                    <label className="font-semibold">Latitude <span className="font-normal text-slate-500">(optional)</span><input type="number" step="any" min="-90" max="90" value={adminLat} onChange={event => setAdminLat(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
+                    <label className="font-semibold">Longitude <span className="font-normal text-slate-500">(optional)</span><input type="number" step="any" min="-180" max="180" value={adminLng} onChange={event => setAdminLng(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
                     <button type="button" className="col-span-2 rounded-lg border p-2 font-semibold text-blue-700" onClick={() => {
                       if (!navigator.geolocation) { toast.error('This browser does not support GPS. Enter the store coordinates.'); return; }
                       navigator.geolocation.getCurrentPosition(position => {

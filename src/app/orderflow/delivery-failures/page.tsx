@@ -90,6 +90,8 @@ function getHistoricalWeeklyTrend(failures: DeliveryFailure[]) {
 
 export default function DeliveryFailuresPage() {
   const router = useRouter();
+  // RTO parcels and whether they are back, from their tickets.
+  const rtoTickets = new Map(db.getOrderIssues('ALL').filter((entry) => entry.deliveryFailureId).map((entry) => [entry.deliveryFailureId!, entry]));
   const { formatDate } = useCalendarPreference();
   const orderOptions = useOrderOptions();
   const deliveryMethods = activeOrderOptionNames(orderOptions, 'deliveryMethods');
@@ -297,7 +299,9 @@ export default function DeliveryFailuresPage() {
       remarks: `${item.remarks || ''} (All delivery attempts exhausted. Consignment returned to warehouse)`.trim(),
     });
     setFailures([...db.getDeliveryFailures()]);
-    toast.info('Consignment returned to warehouse.');
+    const ticket = db.getOrderIssues('ALL').find((entry) => entry.deliveryFailureId === item.id);
+    if (ticket) toast.success('RTO ticket opened', 'Mark it received when the parcel is back at the warehouse.', { label: 'Open ticket', onClick: () => router.push(`/reviews/returns?ticket=${encodeURIComponent(ticket.id)}`) });
+    else toast.info('Consignment returned to warehouse.');
   };
 
   const handleCancelOrder = async (item: DeliveryFailure) => {
@@ -829,6 +833,11 @@ export default function DeliveryFailuresPage() {
                         >
                           {status.replace(/_/g, ' ')}
                         </span>
+                        {status === 'RETURNED_TO_WAREHOUSE' && (() => {
+                          const ticket = rtoTickets.get(df.id);
+                          if (!ticket) return null;
+                          return <Link href={`/reviews/returns?ticket=${encodeURIComponent(ticket.id)}`} className={`mt-1 block text-[11px] font-semibold hover:underline ${ticket.receivedDateAd ? 'text-teal-700' : 'text-amber-700'}`}>{ticket.receivedDateAd ? `Back ${ticket.receivedDateAd}` : 'Not back yet'}</Link>;
+                        })()}
                       </td>
 
                       {/* Days Since */}

@@ -6,6 +6,7 @@ import type { Order } from '../types';
 import { hasDeliveryOutcome, isOpenOrder } from '../order-status';
 import { dispatchStatus } from '../dispatch-flow';
 import { outcomeInfo } from '../follow-ups';
+import { awaitingGoods, OPEN_STAGES, ticketStageOf, ticketTypeOf } from '../order-tickets';
 import { chequeIsOverdue, helpers, type OrderLineRow, type Prepared, type SourceKey, type StockLineRow, type StoreLineRow } from './sources';
 import type { CallLog, Cheque, CustomerCall, Dispatch, FeedbackEntry, MarketingSend, SecondaryOrder, Task, BeatItem, Visit, ReturnEntry, Customer } from '../types';
 import type { FollowUpItem } from '../follow-ups';
@@ -118,6 +119,20 @@ export const METRICS: MetricDef[] = [
     description: 'Product units in the returns above.' }),
   { key: 'return_rate', label: 'Return rate', area: 'Returns and complaints', unit: 'pct', better: 'down', access: [...REVIEWS, 'order_desk'], num: 'returned_units', den: 'online_units', scale: 100,
     description: 'Units returned ÷ units sold online in the same period.' },
+  m<ReturnEntry>({ key: 'rto_parcels', label: 'Returned to origin (RTO)', area: 'Delivery', unit: 'count', better: 'down', access: [...ONLINE, ...REVIEWS], source: 'orderIssues', agg: 'count',
+    where: (r) => ticketTypeOf(r) === 'RTO' && ticketStageOf(r) !== 'REJECTED', description: 'Parcels marked returned-to-warehouse after a failed delivery, by the day they were marked.' }),
+  { key: 'rto_rate', label: 'RTO rate', area: 'Delivery', unit: 'pct', better: 'down', access: [...ONLINE, ...REVIEWS], num: 'rto_parcels', den: 'online_orders', scale: 100,
+    description: 'RTO parcels ÷ online orders in the same period.' },
+  m<ReturnEntry>({ key: 'rto_not_back', label: 'RTO parcels not back', area: 'Delivery', unit: 'count', better: 'down', access: [...ONLINE, ...REVIEWS], snapshot: true, source: 'orderIssues', agg: 'count',
+    where: (r) => ticketTypeOf(r) === 'RTO' && awaitingGoods(r), description: 'RTO parcels not yet checked in at the warehouse, right now.' }),
+  m<ReturnEntry>({ key: 'packing_errors', label: 'Packing errors', area: 'Returns and complaints', unit: 'count', better: 'down', access: [...REVIEWS, 'order_desk', ...ONLINE], source: 'orderIssues', agg: 'count',
+    where: (r) => (ticketTypeOf(r) === 'SHORT_SHIPPED' || ticketTypeOf(r) === 'WRONG_ITEM') && ticketStageOf(r) !== 'REJECTED', description: 'Short-shipped and wrong-item tickets logged in the period. Not counted as returns.' }),
+  { key: 'packing_error_rate', label: 'Packing error rate', area: 'Returns and complaints', unit: 'pct', better: 'down', access: [...REVIEWS, 'order_desk', ...ONLINE], num: 'packing_errors', den: 'online_orders', scale: 100,
+    description: 'Packing errors ÷ online orders in the same period.' },
+  m<ReturnEntry>({ key: 'open_tickets', label: 'Open order-issue tickets', area: 'Returns and complaints', unit: 'count', better: 'down', access: [...REVIEWS, 'order_desk'], snapshot: true, source: 'orderIssues', agg: 'count',
+    where: (r) => OPEN_STAGES.includes(ticketStageOf(r)), description: 'Returns, exchanges, packing errors and RTO tickets still being worked, right now.' }),
+  m<ReturnEntry>({ key: 'tickets_awaiting_goods', label: 'Goods not back yet', area: 'Returns and complaints', unit: 'count', better: 'down', access: [...REVIEWS, 'order_desk'], snapshot: true, source: 'orderIssues', agg: 'count',
+    where: (r) => awaitingGoods(r), description: 'Tickets where products are expected back at the warehouse and have not been checked in.' }),
   m<FeedbackEntry>({ key: 'complaints', label: 'Complaints', area: 'Returns and complaints', unit: 'count', better: 'down', access: REVIEWS, source: 'feedback', agg: 'count', where: (f) => f.type === 'COMPLAINT',
     description: 'Complaints received in the period.' }),
   { key: 'complaints_per_100', label: 'Complaints per 100 orders', area: 'Returns and complaints', unit: 'per100', better: 'down', access: REVIEWS, num: 'complaints', den: 'online_orders', scale: 100,

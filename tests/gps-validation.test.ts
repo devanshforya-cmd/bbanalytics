@@ -35,17 +35,19 @@ test('native receiver rejects invalid fixes, missing coordinates and stale/futur
   }
 });
 
-test('beat assignment never invents store pins and validates all stops before making changes', () => {
+test('beat assignment never invents store pins, does not require one, and validates all stops before making changes', () => {
   const db = new DatabaseService({ server: true });
   db.hydrateSnapshot({ retailers: [
-    { id: 'pinned', name: 'Pinned store', lat: 0, lng: 0, contacts: [], brandsStocked: [] },
+    { id: 'pinned', name: 'Pinned store', lat: 27.7, lng: 85.3, contacts: [], brandsStocked: [] },
+    { id: 'zero', name: 'Saved without a pin', lat: 0, lng: 0, contacts: [], brandsStocked: [] },
     { id: 'unpinned', name: 'Unpinned store', contacts: [], brandsStocked: [] },
   ] }, DEFAULT_SUPER_ADMIN);
-  assert.deepEqual(db.getUnifiedStoreById('pinned')?.coordinates, { lat: 0, lng: 0 });
-  assert.throws(() => db.addOneTimeBeatOverride(DEFAULT_SUPER_ADMIN.id, 'unpinned', '2026-10-29'), /Pin the store/);
-  assert.throws(() => db.createAndAssignBeatRoute({ officerId: DEFAULT_SUPER_ADMIN.id, dateAd: '2026-10-29', storeIds: ['pinned', 'unpinned'] }), /pinned store location/);
-  assert.equal(db.getBeatItems().length, 0);
-  const stops = db.createAndAssignBeatRoute({ officerId: DEFAULT_SUPER_ADMIN.id, dateAd: '2026-10-29', storeIds: ['pinned'] });
-  assert.equal(stops[0].lat, 0);
-  assert.equal(stops[0].lng, 0);
+  assert.deepEqual(db.getUnifiedStoreById('pinned')?.coordinates, { lat: 27.7, lng: 85.3 });
+  assert.equal(db.getUnifiedStoreById('zero')?.coordinates, undefined, '(0, 0) means no pin');
+  assert.throws(() => db.createAndAssignBeatRoute({ officerId: DEFAULT_SUPER_ADMIN.id, dateAd: '2026-10-29', storeIds: ['pinned', 'missing'] }), /no longer exists/);
+  assert.equal(db.getBeatItems().length, 0, 'nothing is saved when one stop is wrong');
+  const stops = db.createAndAssignBeatRoute({ officerId: DEFAULT_SUPER_ADMIN.id, dateAd: '2026-10-29', storeIds: ['pinned', 'unpinned', 'zero'] });
+  assert.deepEqual(stops.map((stop) => [stop.lat, stop.lng]), [[27.7, 85.3], [undefined, undefined], [undefined, undefined]]);
+  const single = db.addOneTimeBeatOverride(DEFAULT_SUPER_ADMIN.id, 'unpinned', '2026-10-29');
+  assert.equal(single.lat, undefined);
 });

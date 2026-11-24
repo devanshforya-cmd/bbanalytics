@@ -202,6 +202,7 @@ export default function LogReturnForm({ onClose, onSaved, onViewCustomer, initia
             ))}
           </div>
           {errors.reason && <p className="mt-1 text-[11px] font-medium text-rose-600">{errors.reason}</p>}
+          {reason === 'Wrong product sent' && <p className="mt-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-[11px] text-orange-900">If we packed the wrong product, cancel and use <strong>Log packing error</strong> instead. That keeps it off the customer’s return count and karma, and tracks what should have been sent.</p>}
         </section>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

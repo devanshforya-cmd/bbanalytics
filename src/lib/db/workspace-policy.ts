@@ -21,7 +21,7 @@ const FEATURES: Record<WorkspaceCollection, AccessKey[]> = {
   retailers: ['stores'], beatItems: ['beat_plans'], visits: ['beat_plans'], dispatches: ['dispatches'],
   stockCounts: ['beat_plans', 'stock_counts'], shelfPhotos: ['shelf_photos'], callLogs: ['call_tracker'],
   cheques: ['cheque_tracker'], documents: ['document_handover'], orders: ['orderflow', 'order_desk'],
-  deliveryFailures: ['orderflow', 'order_desk'], returns: ['reviews', 'order_desk'], reviewCategories: ['reviews'],
+  deliveryFailures: ['orderflow', 'order_desk'], returns: ['reviews', 'order_desk', 'orderflow'], reviewCategories: ['reviews'],
   feedbackEntries: ['reviews'], customers: ['customers', 'orderflow', 'order_desk'], tasks: ['tasks'],
   notifications: [], activityLogs: ['activity'], staffLiveLocations: ['gps_tracking'],
   holidays: ['p.settings_holidays'], seasonalPatterns: ['dashboard'], taskTemplates: ['p.settings_task_templates'],

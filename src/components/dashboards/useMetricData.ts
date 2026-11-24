@@ -11,7 +11,7 @@ export function readMetricData(): MetricData {
   const all = 'ALL' as BrandCode;
   return {
     today: getTodayAd(), brands: db.getBrands('ALL'), users: db.getUsers(), products: db.getProducts(all),
-    orders: db.getOrders(all), deliveryFailures: db.getDeliveryFailures(all), returns: db.getReturns(all), feedback: db.getFeedback(all),
+    orders: db.getOrders(all), deliveryFailures: db.getDeliveryFailures(all), returns: db.getReturns(all), orderIssues: db.getOrderIssues(all), feedback: db.getFeedback(all),
     customers: db.getCustomers(), customerCalls: db.getCustomerCalls(), followUpPlan: db.getFollowUpPlan(),
     storeOrders: db.getSecondaryOrders({ allBrands: true }), dispatches: db.getDispatches(), cheques: db.getCheques(), visits: db.getVisits(),
     beatItems: db.getBeatItems(), stockCounts: db.getStockCounts(), storeCalls: db.getCalls(), tasks: db.getTasks(), marketingSends: db.getMarketingSends(),

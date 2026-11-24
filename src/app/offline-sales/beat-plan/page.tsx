@@ -45,6 +45,9 @@ import CheckOutSummary from './components/CheckOutSummary';
 import ShelfCountSheet from '@/components/stock/ShelfCountSheet';
 import InlineOrderForm, { MultiProductOrderData } from './components/InlineOrderForm';
 import EndOfDayModal from './components/EndOfDayModal';
+import WeeklyRoutesBoard from './components/WeeklyRoutesBoard';
+import { AssignJobPanel, DayJobsList } from './components/DayJobs';
+import { getTodayAd } from '@/lib/nepali-calendar';
 
 export default function BeatPlanPage() {
   const router = useRouter();
@@ -64,7 +67,9 @@ export default function BeatPlanPage() {
   const [targetBeat, setTargetBeat] = useState<BeatItem | null>(null);
   const [currentGpsCoords, setCurrentGpsCoords] = useState<GpsFix | null>(null);
   const [overrideReason, setOverrideReason] = useState('');
-  const calculatedDistance = currentGpsCoords && targetBeat ? Math.round(db.calculateDistance(currentGpsCoords.lat, currentGpsCoords.lng, targetBeat.lat, targetBeat.lng)) : 0;
+  // A stop with no pinned store location has no distance to check: the check-in is recorded where it happened.
+  const targetPinned = !!targetBeat && targetBeat.lat !== undefined && targetBeat.lng !== undefined;
+  const calculatedDistance = currentGpsCoords && targetBeat && targetPinned ? Math.round(db.calculateDistance(currentGpsCoords.lat, currentGpsCoords.lng, targetBeat.lat!, targetBeat.lng!)) : 0;
 
   // Slide-up Form States
   const [activeActionModal, setActiveActionModal] = useState<
@@ -106,6 +111,8 @@ export default function BeatPlanPage() {
   const isAdmin = isSuperAdmin(currentUser)
     || (currentUser.role === 'ADMIN' && canPerform(currentUser, 'beat_plans', 'CREATE') && getScope(currentUser, 'beat_plans') !== 'OWN');
   const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>('ALL');
+  const [pageView, setPageView] = useState<'today' | 'weekly'>('today');
+  const [showAssignJob, setShowAssignJob] = useState(false);
 
   // One-Time Beat Override State (Section 7)
   const [showOverrideModal, setShowOverrideModal] = useState(false);
@@ -117,7 +124,7 @@ export default function BeatPlanPage() {
   // Assign Beat Route Modal State
   const [showAssignRouteModal, setShowAssignRouteModal] = useState(false);
   const [routeOfficerId, setRouteOfficerId] = useState(currentUser.id);
-  const [routeDate, setRouteDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [routeDate, setRouteDate] = useState(() => getTodayAd());
   const [routePriority, setRoutePriority] = useState<'HIGH' | 'MEDIUM' | 'ROUTINE'>('HIGH');
   const [routeNotes, setRouteNotes] = useState('');
   const [selectedStoreIds, setSelectedStoreIds] = useState<Set<string>>(new Set());
@@ -170,7 +177,7 @@ export default function BeatPlanPage() {
       toast.error('Please select a target store.');
       return;
     }
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayAd();
     try { db.addOneTimeBeatOverride(
       overrideOfficerId,
       overrideStoreId,
@@ -259,9 +266,12 @@ export default function BeatPlanPage() {
       refreshTasks();
     };
 
+    // Today's standing weekly stops join the route once (a manager adds them for the team, a rider for themselves).
+    const addWeekly = () => { try { const me = db.getCurrentUser(); const manager = isSuperAdmin(me) || getScope(me, 'beat_plans') !== 'OWN'; db.ensureWeeklyBeats(getTodayAd(), manager ? undefined : [me.id]); } catch { /* planning is best effort */ } };
+    addWeekly();
     refreshData();
     if (typeof window !== 'undefined') {
-      db.syncWithSupabase().catch(() => {}).then(() => refreshData());
+      db.syncWithSupabase().catch(() => {}).then(() => { addWeekly(); refreshData(); });
       db.syncTasksFromSupabase().then(() => refreshTasks()).catch(() => {});
     }
     window.addEventListener('bb-db-updated', refreshData);
@@ -334,7 +344,7 @@ export default function BeatPlanPage() {
       targetBeat.id,
       lat,
       lng,
-      calculatedDistance,
+      targetPinned ? calculatedDistance : undefined,
       calculatedDistance > 150,
       calculatedDistance > 150 ? overrideReason : undefined,
       photoUrl
@@ -509,7 +519,13 @@ export default function BeatPlanPage() {
     toast.success('Day concluded. Field operations summary generated.');
   };
 
-  const pendingTasksCount = assignedTasks.filter((t) => t.status === 'PENDING').length;
+  // The day's plan for the rider being shown: stops with their jobs, and the other jobs in priority order.
+  const planOfficerId = isAdmin && selectedStaffFilter !== 'ALL' ? selectedStaffFilter : currentUser.id;
+  const plan = db.getDayPlan(planOfficerId);
+  const jobsByBeat = Object.fromEntries(plan.stops.map((stop) => [stop.beat.id, stop.jobs]));
+  const today = getTodayAd();
+  const laterTasks = db.getTasks().filter((t) => t.assignedTo === planOfficerId && t.status !== 'COMPLETED' && t.dueDateAd > today).length;
+  const pendingTasksCount = plan.errands.length;
   const pendingBeatCount = beatItems.filter((b) => b.status === 'PENDING').length;
 
   return (
@@ -546,6 +562,9 @@ export default function BeatPlanPage() {
                   }} className="btn btn-secondary">
                   <MapPin />Add one-time stop
                 </button>
+                <button type="button" onClick={() => setShowAssignJob(true)} className="btn btn-secondary">
+                  <CheckSquare />Give a job
+                </button>
                 <button type="button" onClick={() => setShowAssignRouteModal(true)} className="btn btn-primary">
                   <Navigation />Assign beat route
                 </button>
@@ -563,6 +582,16 @@ export default function BeatPlanPage() {
           </div>
         </div>
 
+        {isAdmin && (
+          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Beat plan view">
+            {([['today', 'Today'], ['weekly', 'Weekly routes']] as const).map(([key, label]) => (
+              <button key={key} type="button" role="tab" aria-selected={pageView === key} onClick={() => setPageView(key)}
+                className={`rounded-xl px-3.5 py-2 text-xs font-bold transition ${pageView === key ? 'bg-slate-900 text-white' : 'border border-black/[0.08] bg-white text-slate-700 hover:border-slate-400'}`}>{label}</button>
+            ))}
+          </div>
+        )}
+        {isAdmin && pageView === 'weekly' && <WeeklyRoutesBoard initialOfficerId={selectedStaffFilter !== 'ALL' ? selectedStaffFilter : undefined} />}
+        {(!isAdmin || pageView === 'today') && <>
         {/* Manager/Admin Staff Filter Banner */}
         {isAdmin && db.getUsers().length > 1 && (
           <div className="flex flex-wrap items-center justify-between gap-3 text-[13px]">
@@ -592,67 +621,22 @@ export default function BeatPlanPage() {
           </div>
         )}
 
-        {/* Assigned Directives & Tasks */}
+        {/* The day's other jobs: cash clearing, document deposits, deliveries, tasks */}
         <div className="rounded-2xl border border-black/[0.08] bg-white p-4 sm:p-5 space-y-3.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-[15px] font-medium text-slate-900">Today&apos;s tasks</h2>
-                  {pendingTasksCount > 0 && <span className="font-mono text-xs text-slate-500">{pendingTasksCount} open</span>}
-                </div>
-                <p className="mt-0.5 text-[13px] text-slate-500">Assigned to you by the office for today</p>
-              </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-[15px] font-medium text-slate-900">Today&apos;s jobs</h2>
+              {pendingTasksCount > 0 && <span className="font-mono text-xs text-slate-500">{pendingTasksCount} open</span>}
             </div>
+            <p className="mt-0.5 text-[13px] text-slate-500">{isAdmin ? <>For <strong className="font-medium text-slate-700">{db.getUsers().find((u) => u.id === planOfficerId)?.fullName || 'you'}</strong>{selectedStaffFilter === 'ALL' ? ' (choose a rider above to see theirs)' : ''}. </> : null}Jobs that are not at one of today&apos;s stops, highest priority first. Jobs at a store on the route show on that stop.</p>
           </div>
-
-          <div className="space-y-2">
-            {assignedTasks.length === 0 ? (
-              <div className="py-6 text-center text-slate-500 text-xs bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                <CheckSquare className="w-5 h-5 mx-auto mb-1 text-slate-300" />
-                <p className="font-medium text-slate-600">No directives assigned for today.</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">Tasks assigned to your account will appear here.</p>
-              </div>
-            ) : (
-              assignedTasks.map((task) => {
-                const isDone = task.status === 'COMPLETED';
-                return (
-                  <div
-                    key={task.id}
-                    onClick={() => handleToggleTask(task)}
-                    className={`flex items-start justify-between gap-3 p-3 rounded-xl border transition cursor-pointer ${
-                      isDone
-                        ? 'bg-slate-50/70 border-slate-200 text-slate-500'
-                        : 'bg-white border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-start gap-2.5 min-w-0">
-                      <input
-                        type="checkbox"
-                        checked={isDone}
-                        onChange={() => handleToggleTask(task)}
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mt-0.5"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <div className="min-w-0">
-                        <p className={`text-xs font-semibold ${isDone ? 'line-through text-slate-500' : 'text-slate-800'}`}>
-                          {task.title}
-                        </p>
-                        {task.description && (
-                          <p className="text-[11px] text-slate-500 mt-0.5">{task.description}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <DayJobsList jobs={plan.errands} laterCount={laterTasks} onToggleTask={(taskId) => { const task = db.getTasks().find((t) => t.id === taskId); if (task) handleToggleTask(task); }} />
         </div>
 
         {/* 58a. Modular Beat Route List */}
         <BeatRouteList
           beatItems={beatItems}
+          jobsByBeat={jobsByBeat}
           activeBeatId={activeBeatId}
           onSelectBeat={(item) => setActiveBeatId(item.id)}
           onOpenCheckIn={handleOpenCheckIn}
@@ -663,6 +647,8 @@ export default function BeatPlanPage() {
           onOptimizeRoute={handleOptimizeRoute}
           isOptimizing={isOptimizing}
         />
+        </>}
+        {showAssignJob && <AssignJobPanel defaultOfficerId={selectedStaffFilter !== 'ALL' ? selectedStaffFilter : undefined} onClose={() => setShowAssignJob(false)} onSaved={() => { setShowAssignJob(false); refreshTasks(); }} />}
 
         {/* Modular Flows and Modals */}
         <CheckInFlow
@@ -671,6 +657,7 @@ export default function BeatPlanPage() {
           showStoreActionDashboard={showStoreActionDashboard}
           targetBeat={targetBeat}
           calculatedDistance={calculatedDistance}
+          storePinned={targetPinned}
           gpsReady={freshGpsFix(currentGpsCoords) && (currentGpsCoords.accuracy === undefined || currentGpsCoords.accuracy <= 200)}
           gpsMessage={gpsError || (currentGpsCoords ? `GPS accuracy ±${Math.round(currentGpsCoords.accuracy || 0)} m` : 'Waiting for location.')}
           overrideReason={overrideReason}

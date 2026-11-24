@@ -302,15 +302,23 @@ export interface Retailer {
   lastVisitDaysAgo?: number;
 }
 
+export type Weekday = 'SUN' | 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT';
+
+/** A standing beat stop: this rider visits this store on these weekdays, until a manager changes it. */
 export interface RecurringScheduleEntry {
   id: string;
   officerId: string;
   storeId: string;
   storeName: string;
   entityType: 'BRANCH' | 'RETAILER';
-  daysOfWeek: ('MON' | 'TUE' | 'WED' | 'THU' | 'FRI')[];
+  daysOfWeek: Weekday[];
   priority: 'HIGH' | 'MEDIUM' | 'ROUTINE';
   managerNote?: string;
+  /** Off pauses the stop without losing it. */
+  active?: boolean;
+  /** Optional window (AD). Without one it applies every week. */
+  startDateAd?: string;
+  endDateAd?: string;
 }
 
 export interface SecondaryOrderItem {
@@ -403,8 +411,9 @@ export interface BeatItem {
   branchName?: string;
   storeType: string;
   address: string;
-  lat: number;
-  lng: number;
+  /** The store's pinned location. Missing when the store has no pin: check-in then skips the distance check. */
+  lat?: number;
+  lng?: number;
   contactName: string;
   contactPhone: string;
   contacts: VendorContact[];
@@ -423,6 +432,8 @@ export interface BeatItem {
   suspiciousFlags?: string[];
   checkInPhotoUrl?: string;
   oneTimeOverride?: boolean;
+  /** Made from this standing weekly stop. */
+  scheduleId?: string;
   priority?: 'HIGH' | 'MEDIUM' | 'ROUTINE';
   managerNotes?: string;
   urgencySignals?: {
@@ -933,6 +944,8 @@ export interface DeliveryFailure {
   reattemptDateBs?: string;
   assignedTo?: string;
   remarks?: string;
+  /** When the parcel was marked returned to the warehouse (AD). */
+  rtoDateAd?: string;
   createdAt: string;
 }
 
@@ -963,7 +976,11 @@ export type ReturnReason =
   | 'Quality defect'
   | 'Size issue'
   | 'Color mismatch'
-  | 'Changed mind';
+  | 'Changed mind'
+  /** Our side, logged as order-issue tickets rather than customer returns. */
+  | 'Short shipped'
+  | 'Wrong item packed'
+  | 'Returned to origin';
 
 export interface ReturnEntry {
   id: string;
@@ -994,6 +1011,28 @@ export interface ReturnEntry {
   comboName?: string;
   /** When the resolution was last decided (AD). */
   resolvedDateAd?: string;
+  // Ticket fields (see lib/order-tickets). Rows saved before tickets have none of them.
+  ticketType?: import('./order-tickets').TicketType;
+  stage?: import('./order-tickets').TicketStage;
+  lines?: import('./order-tickets').TicketLine[];
+  expectGoodsBack?: boolean;
+  fault?: import('./order-tickets').TicketFault;
+  /** Who packed the parcel, for packing errors. */
+  packedBy?: string;
+  courier?: string;
+  pickupTrackingNo?: string;
+  pickupDateAd?: string;
+  /** Goods checked in at the warehouse. */
+  receivedDateAd?: string;
+  receivedBy?: string;
+  resolution?: import('./order-tickets').TicketResolution;
+  /** Order sent to put a packing error right (NPR 0, not a sale). */
+  resendOrderId?: string;
+  resendOrderNumber?: string;
+  deliveryFailureId?: string;
+  assignedTo?: string;
+  timeline?: import('./order-tickets').TicketEvent[];
+  ticketNo?: string;
   createdAt: string;
 }
 
@@ -1111,6 +1150,11 @@ export interface Task {
   relatedTo?: string;
   relatedId?: string;
   relatedEntityType?: 'STORE' | 'CHEQUE' | 'COMPLAINT' | 'CALL';
+  /** Field jobs: shown on the rider's day plan in priority order. */
+  kind?: 'CASH_CLEARING' | 'DOCUMENT_DEPOSIT' | 'ORDER_DISPATCH' | 'COLLECT_PAYMENT' | 'VISIT' | 'OTHER';
+  /** The store it is done at, if any. It joins that stop when the store is on the day's route. */
+  storeId?: string;
+  storeName?: string;
   status: TaskStatus;
   autoCreated: boolean;
   autoTriggerType?: 'CHEQUE_OVERDUE' | 'STORE_DORMANT' | 'CALL_FOLLOWUP' | 'COMPLAINT_ASSIGNED' | 'MANUAL';

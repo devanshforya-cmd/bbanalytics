@@ -175,6 +175,8 @@ export const TEMPLATES: { key: string; name: string; description: string; widget
       w('online_units', 'donut', { split: 'subBrand', title: 'Units sold by sub-brand' }),
       w('delivery_failures', 'bar', { split: 'reason', title: 'Why deliveries fail' }),
       w('returns', 'bar', { split: 'reason', title: 'Why customers return' }),
+      w('rto_rate'), w('rto_not_back'), w('packing_error_rate'), w('tickets_awaiting_goods'),
+      w('rto_parcels', 'bar', { split: 'courier', title: 'RTO parcels by courier' }),
       w('online_units', 'top', { split: 'product', limit: 8, title: 'Best-selling products' }),
       w('online_orders', 'bar', { split: 'hour', title: 'When orders come in' }),
       w('open_complaints'), w('avg_rating'), w('customer_reach_rate'), w('online_cod_share'),

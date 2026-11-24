@@ -3,9 +3,10 @@ import { validateCampaign } from '../offers';
 import { isOtherReason, failureReasonLabel } from '../failure-reason';
 import { normalizePhoneNumber } from '../auth-utils';
 import { installWorkspaceFetch } from '../workspace-reset-client';
-import { validGpsCoordinates } from '../gps-validation';
+import { pinnedLocation, validGpsCoordinates } from '../gps-validation';
 import {
   getScope,
+  isSuperAdmin,
   canPerform,
   canWorkOrders,
   canManageSales,
@@ -17,6 +18,8 @@ import { defaultOrderOptions, validateOrderOptions, assertActiveOrderOption, typ
 import { brandPrefix, pendingDocumentId, validateBrandPrefix, RESERVED_PREFIXES } from '../document-ids';
 import { historyEntries } from '../order-history';
 import { phoneDigits } from '../customer-lookup';
+import { beatItemFromSchedule, dayPlan, schedulesOn, setStoreDays, sortDay, weeklyBeatId, type DayPlan, type StopPriority } from '../weekly-beat';
+import { buildRtoTicket, canClose, isCustomerReturn, legacyStatusFor, resolutionFromLegacy, returnRowsForMetrics, ticketLinesOf, ticketStageOf, ticketTypeOf, validateReceipt, validateTicketLines, OPEN_STAGES, RESOLUTION_LABEL, TICKET_STAGE_LABEL, TICKET_TYPE_LABEL, type GoodsCondition, type TicketEvent, type TicketFault, type TicketLine, type TicketResolutionType, type TicketStage, type TicketType } from '../order-tickets';
 import { DEFAULT_CONTENT_PLATFORMS, DEFAULT_FAILURE_REASONS, DEFAULT_REACH_OUT_PLATFORMS, lookupId, sameName } from '../marketing';
 
 const ANONYMOUS_USER: User = { id: '', fullName: '', email: '', phone: '', role: 'OFFICE_STAFF', active: false, isSuperAdmin: false, dutyStatus: 'OFFLINE', assignedBrands: [], permissions: {}, customPermissions: {} };
@@ -91,20 +94,12 @@ import {
   StoreMargin,
 } from '../types';
 
-export interface RecurringScheduleEntry {
-  id: string;
-  officerId: string;
-  storeId: string;
-  storeName: string;
-  entityType: 'BRANCH' | 'RETAILER';
-  daysOfWeek: ('MON' | 'TUE' | 'WED' | 'THU' | 'FRI')[];
-  priority: 'HIGH' | 'MEDIUM' | 'ROUTINE';
-  managerNote?: string;
-}
+export type { RecurringScheduleEntry } from '../types';
+import type { RecurringScheduleEntry } from '../types';
 
 import { syncManager } from '../offline-sync';
 import { applyKarmaEvent, KARMA_RULES } from '../karma-calculator';
-import { adToBs, getTodayAd, getTodayBs } from '../nepali-calendar';
+import { adToBs, formatBsDateOnly, getTodayAd, getTodayBs } from '../nepali-calendar';
 import { canMoveTo, dispatchFromOrder, dispatchStatus, dispatchValue, paymentDueDate, statusLabel, type StoreRef } from '../dispatch-flow';
 
 export interface OrderRealtimeEvent {
@@ -1267,7 +1262,7 @@ export class DatabaseService {
         creditPeriodDays: Number(/(\d+)/.exec(dist?.creditTerms || '')?.[1] || 0),
         paymentTerms: dist?.creditTerms,
         outstandingBalance: branch.outstandingBalance || 0,
-        coordinates: validGpsCoordinates(branch.lat, branch.lng) ? { lat: branch.lat, lng: branch.lng } : undefined,
+        coordinates: pinnedLocation(branch.lat, branch.lng) ? { lat: branch.lat, lng: branch.lng } : undefined,
         assignedOfficerId: branch.assignedOfficerId || '',
         assignedOfficerName: branch.assignedOfficerName || '',
         defaultMargins: branch.defaultMargins || dist?.defaultMargins,
@@ -1295,7 +1290,7 @@ export class DatabaseService {
         creditPeriodDays: (retailer as any).creditDays || (retailer as any).creditPeriodDays || 0,
         paymentTerms: retailer.creditTerms,
         outstandingBalance: retailer.outstandingBalance || 0,
-        coordinates: validGpsCoordinates(retailer.lat, retailer.lng) ? { lat: retailer.lat, lng: retailer.lng } : undefined,
+        coordinates: pinnedLocation(retailer.lat, retailer.lng) ? { lat: retailer.lat, lng: retailer.lng } : undefined,
         assignedOfficerId: retailer.assignedOfficerId || '',
         assignedOfficerName: retailer.assignedOfficerName || '',
         defaultMargins: retailer.defaultMargins,
@@ -1769,6 +1764,64 @@ export class DatabaseService {
     this.persistState();
   }
 
+  /**
+   * Turn a weekday on or off for a rider and store. The stop stays every week until changed.
+   * Today's stop is added or taken off straight away when today is the day being changed and the stop is untouched.
+   */
+  public setWeeklyStop(input: { officerId: string; storeId: string; day: import('../types').Weekday; on: boolean; priority?: StopPriority; managerNote?: string }): RecurringScheduleEntry | null {
+    if (!canPerform(this.currentUser, 'beat_plans', 'EDIT') && !canPerform(this.currentUser, 'beat_plans', 'CREATE')) throw new Error('You do not have permission to change beat routes.');
+    const store = this.getUnifiedStoreById(input.storeId);
+    if (!store || store.type === 'DISTRIBUTOR') throw new Error('Choose a store or outlet that still exists.');
+    if (!this.users.some((user) => user.id === input.officerId)) throw new Error('Choose a staff member who still exists.');
+    const change = setStoreDays(this.recurringSchedules, { ...input, storeName: store.name, entityType: store.type === 'BRANCH' ? 'BRANCH' : 'RETAILER', newId: () => this.generateId('schedule') });
+    if (change.remove) this.recurringSchedules = this.recurringSchedules.filter((entry) => entry.id !== change.remove);
+    if (change.save) {
+      const index = this.recurringSchedules.findIndex((entry) => entry.id === change.save!.id);
+      if (index === -1) this.recurringSchedules.push(change.save); else this.recurringSchedules[index] = change.save;
+    }
+    const today = getTodayAd();
+    const scheduleId = change.save?.id || change.remove;
+    if (scheduleId) {
+      const todays = this.beatItems.find((beat) => beat.id === weeklyBeatId(scheduleId, today));
+      const stillToday = change.save && schedulesOn([change.save], today).length > 0;
+      if (todays && !stillToday && todays.status === 'PENDING') this.beatItems = this.beatItems.filter((beat) => beat !== todays);
+      if (todays && stillToday && change.save) { todays.priority = change.save.priority; todays.managerNotes = change.save.managerNote; }
+    }
+    this.persistState();
+    if (change.save) this.ensureWeeklyBeats(today, [input.officerId]);
+    return change.save || null;
+  }
+
+  /**
+   * Add the day's standing stops to the beat, once each. Safe to call on every page load:
+   * the stop id is fixed per standing stop and day, and a store already on the day (for example a one-time stop) is not added twice.
+   */
+  public ensureWeeklyBeats(dateAd: string = getTodayAd(), officerIds?: string[]): BeatItem[] {
+    const mayPlanOthers = isSuperAdmin(this.currentUser) || getScope(this.currentUser, 'beat_plans') !== 'OWN';
+    if (!canPerform(this.currentUser, 'beat_plans', 'CREATE') && !isSuperAdmin(this.currentUser)) return [];
+    const added: BeatItem[] = [];
+    const dateBs = formatBsDateOnly(`${dateAd}T12:00:00`);
+    for (const entry of schedulesOn(this.recurringSchedules, dateAd)) {
+      if (officerIds && !officerIds.includes(entry.officerId)) continue;
+      if (!mayPlanOthers && entry.officerId !== this.currentUser.id) continue;
+      const id = weeklyBeatId(entry.id, dateAd);
+      if (this.beatItems.some((beat) => beat.id === id || (beat.officerId === entry.officerId && beat.entityId === entry.storeId && beat.dateAd === dateAd))) continue;
+      const store = this.getUnifiedStoreById(entry.storeId);
+      if (!store) continue;
+      const item = beatItemFromSchedule(entry, { ...store, type: store.type === 'BRANCH' ? 'BRANCH' : 'RETAILER' }, dateAd, dateBs, added.length + 1);
+      this.beatItems.push(item);
+      added.push(item);
+    }
+    if (added.length) this.persistState();
+    return added;
+  }
+
+  /** The rider's stops and other jobs for a day, in priority order. */
+  public getDayPlan(officerId: string, dateAd: string = getTodayAd()): DayPlan {
+    const ownStoreIds = new Set([...this.retailers.filter((r) => r.assignedOfficerId === officerId).map((r) => r.id), ...this.branches.filter((b) => b.assignedOfficerId === officerId).map((b) => b.id)]);
+    return dayPlan({ officerId, dateAd, beats: this.getBeatItemsFor(officerId), tasks: this.tasks, cheques: this.cheques, documents: this.documents, dispatches: this.dispatches, ownStoreIds });
+  }
+
   public addOneTimeBeatOverride(
     officerId: string,
     storeId: string,
@@ -1777,24 +1830,24 @@ export class DatabaseService {
     managerNote?: string
   ): BeatItem {
     const store = this.getUnifiedStoreById(storeId);
-    if (!store?.coordinates) throw new Error('Pin the store location before assigning a beat stop.');
-    const storeName = store ? store.name : storeId;
+    if (!store) throw new Error('Choose a store that still exists.');
+    const storeName = store.name;
     const isBranch = store?.type === 'BRANCH';
     const newBeat: BeatItem = {
       id: this.generateId('beat_override'),
       officerId,
       dateAd,
-      dateBs: getTodayBs(),
+      dateBs: formatBsDateOnly(`${dateAd}T12:00:00`),
       sequence: this.beatItems.length + 1,
       entityType: isBranch ? 'BRANCH' : 'RETAILER',
-      entityId: store ? store.id : storeId,
+      entityId: store.id,
       storeName,
-      storeType: store?.subType || 'Store',
-      address: store?.address || 'Kathmandu',
-      lat: store.coordinates.lat,
-      lng: store.coordinates.lng,
-      contactName: store?.primaryContactName || 'Manager',
-      contactPhone: store?.primaryContactPhone || '+977-9800000000',
+      storeType: store.subType || 'Store',
+      address: store.address || '',
+      // No pin is fine: the stop is still planned and check-in skips the distance check.
+      ...(store.coordinates ? { lat: store.coordinates.lat, lng: store.coordinates.lng } : {}),
+      contactName: store.primaryContactName || '',
+      contactPhone: store.primaryContactPhone || '',
       contacts: store?.contacts || [],
       lastVisitDaysAgo: 0,
       pendingTasks: [],
@@ -1816,9 +1869,9 @@ export class DatabaseService {
     managerNotes?: string;
   }): BeatItem[] {
     const { officerId, dateAd, storeIds, priority = 'HIGH', managerNotes } = params;
-    if (storeIds.some(id => !this.getUnifiedStoreById(id)?.coordinates)) throw new Error('Every beat stop needs a pinned store location before assignment.');
+    if (storeIds.some(id => !this.getUnifiedStoreById(id))) throw new Error('One of the chosen stores no longer exists.');
     const newItems: BeatItem[] = [];
-    const dateBs = getTodayBs();
+    const dateBs = formatBsDateOnly(`${dateAd}T12:00:00`);
 
     for (let i = 0; i < storeIds.length; i++) {
       const storeId = storeIds[i];
@@ -1834,11 +1887,10 @@ export class DatabaseService {
         entityId: store ? store.id : storeId,
         storeName: store ? store.name : storeId,
         storeType: store?.subType || 'Store',
-        address: store?.address || 'Kathmandu Valley',
-        lat: store!.coordinates!.lat,
-        lng: store!.coordinates!.lng,
-        contactName: store?.primaryContactName || 'Store Manager',
-        contactPhone: store?.primaryContactPhone || '+977-9800000000',
+        address: store?.address || '',
+        ...(store?.coordinates ? { lat: store.coordinates.lat, lng: store.coordinates.lng } : {}),
+        contactName: store?.primaryContactName || '',
+        contactPhone: store?.primaryContactPhone || '',
         contacts: store?.contacts || [],
         lastVisitDaysAgo: 0,
         pendingTasks: [],
@@ -1955,7 +2007,8 @@ export class DatabaseService {
   /** Today's planned stops (Nepal date). Past days stay in the history, not on today's list. */
   public getTodayBeat(officerId?: string): BeatItem[] {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kathmandu' });
-    return this.getBeatItemsFor(officerId).filter((b) => !b.dateAd || b.dateAd === today);
+    // In the priority the manager gave each stop, then the planned order.
+    return sortDay(this.getBeatItemsFor(officerId).filter((b) => !b.dateAd || b.dateAd === today));
   }
 
   // Section 5: Silent GPS Check-In
@@ -1978,10 +2031,12 @@ export class DatabaseService {
 
     // Silent distance calculation from store coordinates
     let dist = distanceMeters;
-    if (dist === undefined && beat.lat && beat.lng) {
-      dist = Math.round(this.calculateDistance(lat, lng, beat.lat, beat.lng));
+    const pinned = beat.lat !== undefined && beat.lng !== undefined;
+    if (dist === undefined && pinned) {
+      dist = Math.round(this.calculateDistance(lat, lng, beat.lat!, beat.lng!));
     }
-    beat.checkInDistanceM = dist || 0;
+    // No pin: there is no distance to record, only where the check-in happened.
+    if (pinned) beat.checkInDistanceM = dist || 0; else delete beat.checkInDistanceM;
 
     const visit: Visit = {
       id: this.generateId('vis'),
@@ -2083,7 +2138,7 @@ export class DatabaseService {
       }
       beat.suspiciousFlags = flags;
 
-      this.updateStaffPing(beat.officerId, beat.lat, beat.lng, 'IN_TRANSIT');
+      if (beat.lat !== undefined && beat.lng !== undefined) this.updateStaffPing(beat.officerId, beat.lat, beat.lng, 'IN_TRANSIT');
       this.persistState();
     }
   }
@@ -2105,8 +2160,8 @@ export class DatabaseService {
           checkInTime: b.checkedInAt!,
           checkOutTime: b.checkedOutAt,
           durationMinutes: minutes,
-          lat: b.lat,
-          lng: b.lng,
+          lat: b.lat ?? 0,
+          lng: b.lng ?? 0,
           distanceMeters: b.checkInDistanceM ?? 0,
           overrideFlag: !!b.oneTimeOverride,
           dateAd: b.dateAd,
@@ -3061,10 +3116,16 @@ export class DatabaseService {
         assignedTo: updates.assignedTo,
       });
     } else if (updates.status === 'RETURNED_TO_WAREHOUSE') {
+      if (!failure.rtoDateAd) failure.rtoDateAd = getTodayAd();
       this.logActivity('SETTING_CHANGED', 'ORDER', failure.orderId, {
         action: 'RETURNED_TO_WAREHOUSE_RTO',
         orderNumber: failure.orderNumber,
       });
+      // The parcel is now on its way back: one RTO ticket tracks it until it is checked in.
+      if (!this.returns.some((entry) => entry.deliveryFailureId === failure.id) && this.canWorkReturns('CREATE')) {
+        const ticket = buildRtoTicket(failure, this.getOrderById(failure.orderId), { todayAd: getTodayAd(), todayBs: getTodayBs(), nowIso: new Date().toISOString(), by: this.currentUser.fullName });
+        this.returns.unshift({ ...ticket, id: this.generateId('ret_item'), createdAt: new Date().toISOString() });
+      }
     } else if (updates.status === 'CANCELLED') {
       this.logActivity('SETTING_CHANGED', 'ORDER', failure.orderId, {
         action: 'DELIVERY_CANCELLED_BY_CUSTOMER',
@@ -3082,7 +3143,13 @@ export class DatabaseService {
   }
 
   // Returns
+  /** Customer returns and exchanges, one row per product: what return rates, karma and product metrics count. */
   public getReturns(brandCode?: BrandCode): ReturnEntry[] {
+    return returnRowsForMetrics(this.getOrderIssues(brandCode));
+  }
+
+  /** Every ticket: customer returns, packing errors and RTO parcels. */
+  public getOrderIssues(brandCode?: BrandCode): ReturnEntry[] {
     const user = this.getCurrentUser();
     let list = this.returns;
     if (!user.is_super_admin && !user.isSuperAdmin && user.assignedBrands && user.assignedBrands.length > 0 && !user.assignedBrands.includes('ALL')) {
@@ -3097,12 +3164,22 @@ export class DatabaseService {
   }
 
   public addReturn(ret: Omit<ReturnEntry, 'id' | 'createdAt'>): ReturnEntry {
+    const now = new Date().toISOString();
+    const type: TicketType = ret.ticketType || (ret.orderStatus === 'Exchanged' ? 'EXCHANGE' : 'RETURN');
+    // A new return is a ticket from the start: decided or not, the goods still have to come back.
+    const stage: TicketStage = ret.stage || (ret.orderStatus === 'Pending' ? 'OPEN' : ret.orderStatus === 'Rejected' ? 'REJECTED' : 'RESOLVED');
+    const resolutionType = ret.resolution?.type || resolutionFromLegacy(ret.orderStatus);
     const newRet: ReturnEntry = {
       ...ret,
+      ticketType: type, stage, expectGoodsBack: ret.expectGoodsBack ?? true,
+      ...(resolutionType && stage === 'RESOLVED' && !ret.resolution ? { resolution: { type: resolutionType, dateAd: ret.dateAd, by: this.currentUser.fullName } } : {}),
+      ...(stage === 'RESOLVED' && !ret.resolvedDateAd ? { resolvedDateAd: getTodayAd() } : {}),
+      timeline: ret.timeline || [{ at: now, by: this.currentUser.fullName, stage, note: `${TICKET_TYPE_LABEL[type]} logged: ${ret.quantity}× ${ret.productName} (${ret.reasonCategory}).` }],
       id: this.generateId('ret_item'),
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     };
     this.returns.unshift(newRet);
+    if (!isCustomerReturn(newRet)) { this.persistState(); return newRet; }
 
     for (const catName of newRet.issueCategories) {
       const found = this.reviewCategories.find((c) => c.name === catName);
@@ -3133,12 +3210,19 @@ export class DatabaseService {
     returnId: string,
     resolution: ReturnEntry['orderStatus']
   ): ReturnEntry | null {
-    const ret = this.returns.find((r) => r.id === returnId);
+    const ret = this.returns.find((r) => r.id === returnId.split('#')[0]);
     if (!ret) return null;
     if (ret.orderStatus === resolution) return ret;
 
     ret.orderStatus = resolution;
     ret.resolvedDateAd = getTodayAd();
+    // Keep the ticket in step with the old resolution control.
+    if (ret.stage) {
+      const type = resolutionFromLegacy(resolution);
+      const stage: TicketStage = resolution === 'Rejected' ? 'REJECTED' : resolution === 'Pending' ? (ret.receivedDateAd ? 'RECEIVED' : 'OPEN') : 'RESOLVED';
+      if (type) ret.resolution = { type, dateAd: getTodayAd(), by: this.currentUser.fullName }; else delete ret.resolution;
+      this.ticketEvent(ret, stage, `Resolution set to ${resolution}.`);
+    }
     // No longer an exchange: the replacement order stays (it may already be on its way) but is unlinked.
     if (resolution !== 'Exchanged' && ret.exchangeOrderId) this.unlinkExchange(ret);
 
@@ -3153,13 +3237,168 @@ export class DatabaseService {
   }
 
   private canWorkReturns(action: 'CREATE' | 'EDIT' = 'EDIT') {
-    return canPerform(this.currentUser, 'reviews', action) || canPerform(this.currentUser, 'order_desk', action);
+    return canPerform(this.currentUser, 'reviews', action) || canPerform(this.currentUser, 'order_desk', action) || canPerform(this.currentUser, 'orderflow', action);
+  }
+
+  public canWorkTickets(action: 'CREATE' | 'EDIT' = 'EDIT') { return this.canWorkReturns(action); }
+
+  private ticketEvent(ret: ReturnEntry, stage: TicketStage | undefined, note: string) {
+    const event: TicketEvent = { at: new Date().toISOString(), by: this.currentUser.fullName, ...(stage ? { stage } : {}), note };
+    ret.timeline = [...(ret.timeline || []), event];
+    if (stage) {
+      ret.stage = stage;
+      ret.orderStatus = legacyStatusFor(stage, ret.resolution?.type);
+    }
+  }
+
+  private editableTicket(id: string) {
+    if (!this.canWorkReturns()) throw new Error('You do not have permission to update order issues.');
+    const ret = this.returns.find((entry) => entry.id === id.split('#')[0]);
+    if (!ret) throw new Error('This ticket no longer exists.');
+    // An old row becomes a tracked ticket the first time someone works it.
+    if (!ret.stage) { ret.stage = ticketStageOf(ret); ret.ticketType = ticketTypeOf(ret); ret.lines = ticketLinesOf(ret); if (ret.expectGoodsBack === undefined) ret.expectGoodsBack = true; }
+    return ret;
+  }
+
+  public getOrderIssue(id: string): ReturnEntry | undefined {
+    return this.getOrderIssues('ALL').find((entry) => entry.id === id.split('#')[0]);
+  }
+
+  /** A packing error or other order issue that is not a customer return: no karma, not a return. */
+  public addOrderIssue(input: {
+    type: TicketType; order: Order; lines: TicketLine[]; dateAd: string; dateBs: string; reason?: ReturnEntry['reasonCategory'];
+    fault?: TicketFault; packedBy?: string; expectGoodsBack?: boolean; remarks?: string; evidenceUrl?: string; assignedTo?: string; valley?: 'Inside' | 'Outside';
+  }): ReturnEntry {
+    if (!this.canWorkReturns('CREATE')) throw new Error('You do not have permission to log order issues.');
+    const problem = validateTicketLines(input.type, input.lines, input.order);
+    if (problem) throw new Error(problem);
+    if (input.dateAd < input.order.orderDateAd) throw new Error('The issue cannot be before the order date.');
+    const first = input.lines.find((line) => line.kind === 'MISSING' || line.kind === 'SHOULD_HAVE_SENT') || input.lines[0];
+    const reason = input.reason || (input.type === 'SHORT_SHIPPED' ? 'Short shipped' : input.type === 'WRONG_ITEM' ? 'Wrong item packed' : input.type === 'RTO' ? 'Returned to origin' : 'Damage');
+    const back = input.lines.some((line) => line.kind === 'BACK' || line.kind === 'SENT_WRONG');
+    const units = input.lines.filter((line) => line.kind !== 'SENT_WRONG').reduce((sum, line) => sum + line.quantity, 0);
+    const describe = input.type === 'WRONG_ITEM'
+      ? `Sent ${input.lines.filter((l) => l.kind === 'SENT_WRONG').map((l) => `${l.quantity}× ${l.productName}`).join(', ')} instead of ${input.lines.filter((l) => l.kind === 'SHOULD_HAVE_SENT').map((l) => `${l.quantity}× ${l.productName}`).join(', ')}.`
+      : `${input.lines.map((l) => `${l.quantity}× ${l.productName}`).join(', ')} missing from the parcel.`;
+    return this.addReturn({
+      orderId: input.order.id, orderNumber: input.order.orderNumber, brandCode: (first.brandCode || input.order.brandCode) as BrandCode,
+      productId: first.productId, productName: input.lines.length > 1 ? `${first.productName} +${input.lines.length - 1} more` : first.productName,
+      customerName: input.order.customerName, customerPhone: input.order.customerPhone, dateAd: input.dateAd, dateBs: input.dateBs,
+      orderProcessedDateAd: input.order.orderDateAd, orderProcessedDateBs: input.order.orderDateBs, platform: input.order.platform,
+      quantity: units || 1, reasonCategory: reason, orderStatus: 'Pending', valley: input.valley || (/kathmandu|lalitpur|bhaktapur/i.test(input.order.district || '') ? 'Inside' : 'Outside'),
+      issueCategories: [], ...(input.remarks?.trim() ? { remarks: input.remarks.trim().slice(0, 500) } : {}), ...(input.evidenceUrl ? { evidenceUrl: input.evidenceUrl } : {}),
+      ticketType: input.type, stage: 'OPEN', lines: input.lines, expectGoodsBack: (input.expectGoodsBack ?? back) && back,
+      fault: input.fault || (input.type === 'SHORT_SHIPPED' || input.type === 'WRONG_ITEM' ? 'PACKING' : 'UNKNOWN'),
+      ...(input.packedBy?.trim() ? { packedBy: input.packedBy.trim().slice(0, 120) } : {}),
+      ...(input.assignedTo ? { assignedTo: input.assignedTo } : {}),
+      timeline: [{ at: new Date().toISOString(), by: this.currentUser.fullName, stage: 'OPEN', note: `${TICKET_TYPE_LABEL[input.type]} logged. ${describe}` }],
+    });
+  }
+
+  public arrangeTicketPickup(id: string, pickup: { courier?: string; trackingNo?: string; dateAd?: string; inTransit?: boolean }): ReturnEntry {
+    const ret = this.editableTicket(id);
+    const stage = ticketStageOf(ret);
+    if (ret.receivedDateAd) throw new Error('The goods are already back.');
+    if (stage === 'CLOSED' || stage === 'REJECTED') throw new Error('Reopen the ticket first.');
+    if (pickup.courier !== undefined) ret.courier = pickup.courier.trim().slice(0, 80) || undefined;
+    if (pickup.trackingNo !== undefined) ret.pickupTrackingNo = pickup.trackingNo.trim().slice(0, 80) || undefined;
+    if (pickup.dateAd) ret.pickupDateAd = pickup.dateAd;
+    const next: TicketStage | undefined = stage === 'RESOLVED' ? undefined : pickup.inTransit ? 'IN_TRANSIT' : 'PICKUP_ARRANGED';
+    this.ticketEvent(ret, next, pickup.inTransit ? `On the way back${ret.courier ? ` with ${ret.courier}` : ''}${ret.pickupTrackingNo ? ` (tracking ${ret.pickupTrackingNo})` : ''}.` : `Pickup arranged${ret.courier ? ` with ${ret.courier}` : ''}${ret.pickupDateAd ? ` for ${ret.pickupDateAd}` : ''}.`);
+    this.persistState();
+    return ret;
+  }
+
+  /** Check the goods in: quantity and condition per product. Good units are noted for restocking. */
+  public receiveTicketGoods(id: string, input: { dateAd: string; lines: { index: number; receivedQty: number; condition: GoodsCondition }[]; note?: string }): ReturnEntry {
+    const ret = this.editableTicket(id);
+    if (ret.receivedDateAd) throw new Error('These goods were already checked in.');
+    const problem = validateReceipt(ret, input.lines);
+    if (problem) throw new Error(problem);
+    if (input.dateAd > getTodayAd()) throw new Error('The received date cannot be in the future.');
+    if (input.dateAd < ret.dateAd) throw new Error('The goods cannot arrive before the ticket was opened.');
+    const lines = ticketLinesOf(ret).map((line) => ({ ...line }));
+    for (const row of input.lines) Object.assign(lines[row.index], { receivedQty: row.receivedQty, condition: row.condition });
+    ret.lines = lines; ret.receivedDateAd = input.dateAd; ret.receivedBy = this.currentUser.fullName;
+    const summary = input.lines.filter((row) => row.receivedQty > 0).map((row) => `${row.receivedQty}× ${lines[row.index].productName} (${row.condition.toLowerCase()})`).join(', ');
+    const short = input.lines.filter((row) => row.receivedQty < lines[row.index].quantity).map((row) => `${lines[row.index].quantity - row.receivedQty}× ${lines[row.index].productName}`);
+    const stage = ticketStageOf(ret);
+    this.ticketEvent(ret, stage === 'RESOLVED' ? undefined : 'RECEIVED', `Received in-house: ${summary}.${short.length ? ` Not in the parcel: ${short.join(', ')}.` : ''}${input.note?.trim() ? ` ${input.note.trim().slice(0, 300)}` : ''}`);
+    this.persistState();
+    return ret;
+  }
+
+  public resolveTicket(id: string, input: { type: TicketResolutionType; amount?: number; note?: string }): ReturnEntry {
+    const ret = this.editableTicket(id);
+    const stage = ticketStageOf(ret);
+    if (!OPEN_STAGES.includes(stage)) throw new Error('Only an open ticket can be resolved. Reopen it first.');
+    const amount = input.amount === undefined ? undefined : Math.round(Number(input.amount) * 100) / 100;
+    if (amount !== undefined && (!Number.isFinite(amount) || amount < 0)) throw new Error('Enter a refund amount of 0 or more.');
+    if (input.type === 'REFUND' && !amount) throw new Error('Enter the refund amount.');
+    if (input.type === 'EXCHANGE' && !ret.exchangeOrderId) {
+      // The replacement is linked through the exchange panel; the resolution waits for it.
+    }
+    ret.resolution = { type: input.type, ...(amount !== undefined ? { amount } : {}), ...(input.note?.trim() ? { note: input.note.trim().slice(0, 300) } : {}), dateAd: getTodayAd(), by: this.currentUser.fullName };
+    ret.resolvedDateAd = getTodayAd();
+    this.ticketEvent(ret, 'RESOLVED', `Resolved: ${RESOLUTION_LABEL[input.type]}${amount ? ` (NPR ${amount.toLocaleString()})` : ''}.${input.note?.trim() ? ` ${input.note.trim().slice(0, 300)}` : ''}`);
+    this.persistState();
+    return ret;
+  }
+
+  public moveTicket(id: string, stage: TicketStage, note?: string): ReturnEntry {
+    const ret = this.editableTicket(id);
+    const current = ticketStageOf(ret);
+    if (stage === current) return ret;
+    if (stage === 'CLOSED') { const check = canClose(ret); if (!check.ok) throw new Error(check.reason); }
+    if (stage === 'RECEIVED' || stage === 'RESOLVED') throw new Error(stage === 'RECEIVED' ? 'Use Mark received to check the goods in.' : 'Use Resolve to choose how it was settled.');
+    if (stage === 'REJECTED' && !note?.trim()) throw new Error('Write why the ticket is rejected.');
+    if (stage === 'OPEN') { delete ret.resolution; delete ret.resolvedDateAd; }
+    this.ticketEvent(ret, stage, `${stage === 'OPEN' ? 'Reopened' : TICKET_STAGE_LABEL[stage]}.${note?.trim() ? ` ${note.trim().slice(0, 300)}` : ''}`);
+    this.persistState();
+    return ret;
+  }
+
+  public updateTicketDetails(id: string, patch: { assignedTo?: string; packedBy?: string; fault?: TicketFault; note?: string }): ReturnEntry {
+    const ret = this.editableTicket(id);
+    const notes: string[] = [];
+    if (patch.assignedTo !== undefined && patch.assignedTo !== (ret.assignedTo || '')) { ret.assignedTo = patch.assignedTo || undefined; notes.push(patch.assignedTo ? `Assigned to ${patch.assignedTo}.` : 'Unassigned.'); }
+    if (patch.packedBy !== undefined && patch.packedBy.trim() !== (ret.packedBy || '')) { ret.packedBy = patch.packedBy.trim().slice(0, 120) || undefined; notes.push(`Packed by ${ret.packedBy || 'not recorded'}.`); }
+    if (patch.fault && patch.fault !== ret.fault) { ret.fault = patch.fault; notes.push(`Fault: ${patch.fault.toLowerCase()}.`); }
+    if (patch.note?.trim()) notes.push(patch.note.trim().slice(0, 500));
+    if (!notes.length) return ret;
+    this.ticketEvent(ret, undefined, notes.join(' '));
+    this.persistState();
+    return ret;
+  }
+
+  /** Send what should have gone: a NPR 0 order linked to the ticket, so it is dispatched but never counted as a sale. */
+  public createResendOrder(id: string, input: { items: { productId: string; productName: string; brandCode: string; quantity: number }[]; notes?: string }): Order {
+    const ret = this.editableTicket(id);
+    if (!canWorkOrders(this.currentUser, 'CREATE') && !canPerform(this.currentUser, 'order_desk', 'CREATE')) throw new Error('You do not have permission to create orders.');
+    if (ret.resendOrderId && this.getOrderById(ret.resendOrderId)) throw new Error('This ticket already has a resend order.');
+    const original = ret.orderId ? this.getOrderById(ret.orderId) : undefined;
+    if (!original) throw new Error('The original order could not be found.');
+    if (!input.items.length || input.items.some((item) => !Number.isSafeInteger(item.quantity) || item.quantity < 1)) throw new Error('Add at least one product to send.');
+    const order = this.addOrder({
+      brandCode: original.brandCode, orderDateAd: getTodayAd(), orderDateBs: getTodayBs(), platform: original.platform,
+      customerName: original.customerName, customerPhone: original.customerPhone, ...(original.alternatePhone ? { alternatePhone: original.alternatePhone } : {}),
+      province: original.province, district: original.district, address: original.address, deliveryMethod: original.deliveryMethod,
+      paymentTerms: 'Prepaid', orderType: 'REPEAT',
+      items: input.items.map((item) => ({ productId: item.productId, productName: item.productName, brandCode: item.brandCode as BrandCode, quantity: item.quantity, unitPrice: 0, totalPrice: 0 })),
+      totalAmount: 0, status: 'PENDING', source: 'MANUAL', assignedToId: this.currentUser.id,
+      exchangeReturnId: ret.id, exchangeOfOrderId: original.id,
+      notes: [`Resend for ${original.orderNumber} (${TICKET_TYPE_LABEL[ticketTypeOf(ret)].toLowerCase()}).`, input.notes?.trim()].filter(Boolean).join(' '),
+    });
+    ret.resendOrderId = order.id; ret.resendOrderNumber = order.orderNumber;
+    this.ticketEvent(ret, undefined, `Resend order ${order.orderNumber} created: ${input.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')}.`);
+    this.persistState();
+    return order;
   }
 
   /** Link a return resolved as Exchanged to the replacement order that was already created. */
   public linkExchangeOrder(returnId: string, orderId: string): ReturnEntry {
     if (!this.canWorkReturns()) throw new Error('You do not have permission to update returns.');
-    const ret = this.returns.find((entry) => entry.id === returnId);
+    const ret = this.returns.find((entry) => entry.id === returnId.split('#')[0]);
     if (!ret) throw new Error('This return no longer exists.');
     const order = this.getOrderById(orderId);
     if (!order) throw new Error('Choose an order that still exists.');
@@ -3169,6 +3408,7 @@ export class DatabaseService {
     if (other) throw new Error(`This order is already the exchange for another return (${other.productName}).`);
     if (ret.exchangeOrderId && ret.exchangeOrderId !== order.id) this.unlinkExchange(ret);
     Object.assign(ret, { orderStatus: 'Exchanged' as const, exchangeOrderId: order.id, exchangeOrderNumber: order.orderNumber, resolvedDateAd: ret.resolvedDateAd || getTodayAd() });
+    if (ret.stage) { ret.resolution = { type: 'EXCHANGE', dateAd: getTodayAd(), by: this.currentUser.fullName }; this.ticketEvent(ret, OPEN_STAGES.includes(ret.stage) ? 'RESOLVED' : undefined, `Exchange order ${order.orderNumber} linked.`); }
     if (canWorkOrders(this.currentUser) && order.exchangeReturnId !== ret.id) this.updateOrder(order.id, { exchangeReturnId: ret.id, exchangeOfOrderId: ret.orderId }, undefined, 'Linked as exchange');
     this.persistState();
     return ret;
@@ -3181,7 +3421,7 @@ export class DatabaseService {
    */
   public createExchangeOrder(returnId: string, input: { items: { productId: string; productName: string; brandCode: string; quantity: number }[]; amountToCollect: number; deliveryMethod?: string; notes?: string }): Order {
     if (!this.canWorkReturns() || !canWorkOrders(this.currentUser, 'CREATE')) throw new Error('You do not have permission to create a replacement order.');
-    const ret = this.returns.find((entry) => entry.id === returnId);
+    const ret = this.returns.find((entry) => entry.id === returnId.split('#')[0]);
     if (!ret) throw new Error('This return no longer exists.');
     if (ret.exchangeOrderId && this.getOrderById(ret.exchangeOrderId)) throw new Error('This return already has a replacement order.');
     const original = ret.orderId ? this.getOrderById(ret.orderId) : undefined;
@@ -3210,6 +3450,7 @@ export class DatabaseService {
       notes: [`Exchange for ${original.orderNumber}: ${ret.quantity}× ${ret.productName} returned (${ret.reasonCategory}).`, input.notes?.trim()].filter(Boolean).join(' '),
     });
     Object.assign(ret, { orderStatus: 'Exchanged' as const, exchangeOrderId: order.id, exchangeOrderNumber: order.orderNumber, resolvedDateAd: ret.resolvedDateAd || today });
+    if (ret.stage) { ret.resolution = { type: 'EXCHANGE', dateAd: today, by: this.currentUser.fullName }; this.ticketEvent(ret, OPEN_STAGES.includes(ret.stage) ? 'RESOLVED' : undefined, `Exchange order ${order.orderNumber} created.`); }
     this.persistState();
     return order;
   }
@@ -4183,7 +4424,8 @@ export class DatabaseService {
         let closestIdx = 0;
         let minDist = Infinity;
         remaining.forEach((item, idx) => {
-          const dist = haversine(currentLat, currentLng, item.lat, item.lng);
+          // A store with no pin goes last in its tier: its distance is unknown.
+          const dist = item.lat === undefined || item.lng === undefined ? Number.MAX_SAFE_INTEGER - idx : haversine(currentLat, currentLng, item.lat, item.lng);
           if (dist < minDist) {
             minDist = dist;
             closestIdx = idx;
@@ -4191,10 +4433,9 @@ export class DatabaseService {
         });
 
         const chosen = remaining.splice(closestIdx, 1)[0];
-        chosen.distanceFromPreviousKm = minDist;
+        if (chosen.lat !== undefined && chosen.lng !== undefined) { chosen.distanceFromPreviousKm = minDist; currentLat = chosen.lat; currentLng = chosen.lng; }
+        else delete chosen.distanceFromPreviousKm;
         chosen.estimatedVisitMinutes = 25;
-        currentLat = chosen.lat;
-        currentLng = chosen.lng;
         ordered.push(chosen);
       }
     };

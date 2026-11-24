@@ -19,6 +19,12 @@ import {
 import LogReturnForm from './components/LogReturnForm';
 import ExchangePanel from '@/components/orders/ExchangePanel';
 import ExchangeAnalysisPanel from './components/ExchangeAnalysisPanel';
+import OrderIssueForm from '@/components/tickets/OrderIssueForm';
+import TicketDrawer from '@/components/tickets/TicketDrawer';
+import TicketList from '@/components/tickets/TicketList';
+import TicketReports from '@/components/tickets/TicketReports';
+import { TicketStageBadge } from '@/components/tickets/TicketBadges';
+import { awaitingGoods, ticketCounts, ticketStageOf } from '@/lib/order-tickets';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusControl';
 import { exchangeNeedsLink, RETURN_RESOLUTIONS } from '@/lib/exchange';
 import { countsAsSale } from '@/lib/order-status';
@@ -69,6 +75,18 @@ const RESOLUTION_OPTIONS: Array<'Exchanged' | 'Refunded' | 'Pending' | 'Rejected
 export default function ReturnsPage() {
   const router = useRouter();
   const [returnsList, setReturnsList] = useState<ReturnEntry[]>(db.getReturns());
+  const [tickets, setTickets] = useState<ReturnEntry[]>(() => db.getOrderIssues());
+  const [view, setView] = useState<'tickets' | 'returns' | 'reports'>('tickets');
+  const [openTicketId, setOpenTicketId] = useState<string | null>(null);
+  const [showIssueForm, setShowIssueForm] = useState(false);
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const v = params.get('view'); if (v === 'returns' || v === 'reports' || v === 'tickets') setView(v);
+      const t = params.get('ticket'); if (t) setOpenTicketId(t);
+      if (params.get('product')) setView('returns');
+    } catch { /* no query */ }
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   // Opened from a product page: start filtered to that product.
   useEffect(() => {
@@ -84,7 +102,7 @@ export default function ReturnsPage() {
   const canEditReturns = canPerform(db.getCurrentUser(), 'reviews', 'EDIT');
   // Stay in step with saves from other screens and other devices.
   useEffect(() => {
-    const refresh = () => setReturnsList([...db.getReturns()]);
+    const refresh = () => { setReturnsList([...db.getReturns()]); setTickets([...db.getOrderIssues()]); };
     window.addEventListener('bb-db-updated', refresh);
     return () => window.removeEventListener('bb-db-updated', refresh);
   }, []);
@@ -178,27 +196,41 @@ export default function ReturnsPage() {
       <Breadcrumbs
         items={[
           { label: 'Reviews & returns', href: '/reviews/feedback' },
-          { label: 'Returns' },
+          { label: 'Returns & order issues' },
         ]}
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Returns</h1>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Returns &amp; order issues</h1>
           <p className="mt-0.5 text-xs text-slate-500">
-            Products that came back after delivery. Parcels that never arrived are logged in{' '}
+            Every return, exchange, packing error and returned-to-origin parcel is a ticket, open until the goods are back and it is settled. Failed deliveries start in{' '}
             <Link href="/orderflow/delivery-failures" className="font-semibold text-blue-700 hover:underline">Delivery failures</Link>.
           </p>
         </div>
-          <DownloadButton datasets={['returns']} records={{ returns: filtered } as any} />
-        <button
-          type="button"
-          onClick={() => { setShowLogModal(true); setSaveSuccess(null); }}
-          className="inline-flex items-center gap-1.5 self-start rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 sm:self-auto"
-        >
-          <Plus className="h-4 w-4" /> Log return
-        </button>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {view === 'returns' && <DownloadButton datasets={['returns']} records={{ returns: filtered } as any} />}
+          {db.canWorkTickets('CREATE') && <button type="button" onClick={() => setShowIssueForm(true)} className="btn btn-secondary"><AlertTriangle className="h-4 w-4" /> Log packing error</button>}
+          <button type="button" onClick={() => { setShowLogModal(true); setSaveSuccess(null); }} className="btn btn-primary"><Plus className="h-4 w-4" /> Log return</button>
+        </div>
       </div>
+
+      {(() => { const counts = ticketCounts(tickets); return (
+        <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Returns view">
+          {([['tickets', 'Tickets', counts.open], ['returns', 'Customer returns', returnsList.length], ['reports', 'Reports', null]] as const).map(([key, label, count]) => (
+            <button key={key} type="button" role="tab" aria-selected={view === key} onClick={() => setView(key)}
+              className={`rounded-xl px-3.5 py-2 text-xs font-bold transition ${view === key ? 'bg-slate-900 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-700 hover:border-slate-400'}`}>
+              {label}{count !== null && <span className={`ml-1.5 tabular-nums ${view === key ? 'text-slate-300' : 'text-slate-400'}`}>{count}</span>}
+            </button>
+          ))}
+          {counts.awaitingGoods > 0 && <span className="text-[11px] font-semibold text-amber-700">{counts.awaitingGoods} waiting for goods to come back</span>}
+        </div>
+      ); })()}
+
+      {view === 'tickets' && <TicketList tickets={tickets} onOpen={(entry) => setOpenTicketId(entry.id)} />}
+      {view === 'reports' && <TicketReports tickets={tickets} failures={db.getDeliveryFailures()} orders={db.getOrders()} />}
+
+      {view === 'returns' && <>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
@@ -437,6 +469,9 @@ export default function ReturnsPage() {
                             </select>
                           ) : <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${tone}`}>{ret.orderStatus}</span>;
                         })()}
+                        <button type="button" onClick={(event) => { event.stopPropagation(); setOpenTicketId(ret.id); }} className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-blue-700" title="Open the ticket">
+                          <TicketStageBadge stage={ticketStageOf(ret)} />{awaitingGoods(ret) && <span className="text-amber-700">goods not back</span>}
+                        </button>
                         {ret.orderStatus === 'Exchanged' && (() => {
                           const replacement = ret.exchangeOrderId ? db.getOrderById(ret.exchangeOrderId) : undefined;
                           if (replacement) return (
@@ -450,6 +485,7 @@ export default function ReturnsPage() {
                         })()}
                       </td>
 
+                      {/* Ticket stage: where the goods are */}
                       {/* Timeline */}
                       <td className="py-3.5 px-4 text-[11px]">
                         <div className="font-semibold text-slate-800">{ret.dateAd}</div>
@@ -509,6 +545,8 @@ export default function ReturnsPage() {
         </div>
       </div>
 
+      </>}
+
       {/* Lightbox Modal */}
       {lightboxImg && (
         <div
@@ -531,11 +569,13 @@ export default function ReturnsPage() {
       {showLogModal && (
         <LogReturnForm onClose={() => setShowLogModal(false)} onViewCustomer={(phone) => router.push(`/customers/${phone}`)}
           onSaved={(summary) => {
-            setReturnsList([...db.getReturns()]); setShowLogModal(false); setSaveSuccess(summary);
+            setReturnsList([...db.getReturns()]); setTickets([...db.getOrderIssues()]); setShowLogModal(false); setSaveSuccess(summary);
             if (summary.resolution === 'Exchanged' && !summary.exchangeLinked) { const saved = db.getReturns('ALL').find((entry) => entry.id === summary.returnId); if (saved) setExchangeFor(saved); }
           }} />
       )}
-      {exchangeFor && <ExchangePanel ret={exchangeFor} onClose={() => setExchangeFor(null)} onDone={() => setReturnsList([...db.getReturns()])} />}
+      {exchangeFor && <ExchangePanel ret={exchangeFor} onClose={() => setExchangeFor(null)} onDone={() => { setReturnsList([...db.getReturns()]); setTickets([...db.getOrderIssues()]); }} />}
+      {openTicketId && <TicketDrawer ticketId={openTicketId} onClose={() => setOpenTicketId(null)} onExchange={(entry) => setExchangeFor(entry)} />}
+      {showIssueForm && <OrderIssueForm onClose={() => setShowIssueForm(false)} onSaved={(ticket) => { setShowIssueForm(false); setTickets([...db.getOrderIssues()]); setView('tickets'); setOpenTicketId(ticket.id); }} />}
 
       {/* Bulk Action Bar */}
       <BulkActionBar
