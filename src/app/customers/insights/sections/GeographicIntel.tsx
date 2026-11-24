@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import Money from '@/components/common/Money';
 import React from 'react';
 import { MapPin } from 'lucide-react';
@@ -51,7 +52,7 @@ export default function GeographicIntel({ geographicIntel }: GeographicIntelProp
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {geographicIntel.map((row) => (
+            {<PagedList items={geographicIntel} label="areas" pageSize={10} asRow render={(pageRows) => pageRows.map((row) => (
               <tr key={row.city} className="hover:bg-slate-50 transition">
                 <td className="py-3 px-3">
                   <div className="font-bold text-slate-900 flex items-center gap-1.5">
@@ -80,7 +81,7 @@ export default function GeographicIntel({ geographicIntel }: GeographicIntelProp
                   </span>
                 </td>
               </tr>
-            ))}
+            ))} />}
           </tbody>
         </table>
       </div>

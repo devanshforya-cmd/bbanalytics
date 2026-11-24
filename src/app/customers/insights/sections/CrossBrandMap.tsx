@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import React from 'react';
 import Link from 'next/link';
 import { Lightbulb, ChevronRight } from 'lucide-react';
@@ -89,7 +90,7 @@ export default function CrossBrandMap({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {crossBrandMap.crossSellOpportunities.map((item) => (
+                {<PagedList items={crossBrandMap.crossSellOpportunities} label="customers" pageSize={10} asRow render={(pageRows) => pageRows.map((item) => (
                   <tr key={item.customer.id} className="hover:bg-slate-50 transition">
                     <td className="py-3 px-3">
                       <Link
@@ -121,7 +122,7 @@ export default function CrossBrandMap({
                       </Link>
                     </td>
                   </tr>
-                ))}
+                ))} />}
               </tbody>
             </table>
           </div>

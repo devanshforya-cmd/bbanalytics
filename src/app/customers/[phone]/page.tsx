@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import Money from '@/components/common/Money';
 import { failureReasonLabel } from '@/lib/failure-reason';
 import React, { useState, useMemo } from 'react';
@@ -459,7 +460,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-blue-100/60 bg-white/80 rounded-xl overflow-hidden">
-                {karmaLedger.map((item) => (
+                {<PagedList items={karmaLedger} label="karma events" pageSize={10} asRow render={(pageRows) => pageRows.map((item) => (
                   <tr key={item.id} className="hover:bg-blue-50/50 transition">
                     <td className="py-2 px-3 font-semibold text-slate-800">
                       {item.event}
@@ -484,7 +485,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
                       {item.runningTotal}
                     </td>
                   </tr>
-                ))}
+                ))} />}
               </tbody>
             </table>
           </div>
@@ -702,7 +703,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
           </div>
         ) : (
           <div className="relative border-l-2 border-slate-200 ml-4 pl-6 space-y-6 text-xs">
-            {filteredTimelineItems.map((item) => {
+            {<PagedList items={filteredTimelineItems} label="events" pageSize={10} render={(pageRows) => pageRows.map((item) => {
               if (item.type === 'ORDER') {
                 const ord = item.data;
                 return (
@@ -904,7 +905,7 @@ function CustomerDetailContent({ customer }: { customer: Customer }) {
               }
 
               return null;
-            })}
+            })} />}
           </div>
         )}
       </div>

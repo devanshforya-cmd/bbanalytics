@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db/db-service';
 import type { Brand, DataImportRecord } from '@/lib/types';
@@ -116,7 +117,7 @@ export default function DataImportSection() {
       <div className="space-y-2 border-t pt-4">
         <h3 className="font-semibold">Import history</h3>
         <p className="text-xs text-slate-500">Older import receipts do not prove that their records were saved or rolled back.</p>
-        {!history.length ? <p className="text-sm text-slate-500">No import batches recorded.</p> : <div className="overflow-auto"><table className="w-full text-left text-sm"><thead><tr><th className="p-2">File</th><th className="p-2">Type</th><th className="p-2">Records</th><th className="p-2">Confirmation</th></tr></thead><tbody>{history.map((record) => <tr key={record.id} className="border-t"><td className="p-2">{record.fileName}<span className="block text-xs text-slate-500">{new Date(record.importedAt).toLocaleString()}</span></td><td className="p-2">{record.sourceType}</td><td className="p-2">{record.importedCount}</td><td className="p-2">{record.persistence === 'CONFIRMED' ? 'Server confirmed' : 'Legacy receipt — unverified'}</td></tr>)}</tbody></table></div>}
+        {!history.length ? <p className="text-sm text-slate-500">No import batches recorded.</p> : <div className="overflow-auto"><table className="w-full text-left text-sm"><thead><tr><th className="p-2">File</th><th className="p-2">Type</th><th className="p-2">Records</th><th className="p-2">Confirmation</th></tr></thead><tbody>{<PagedList items={history} label="imports" pageSize={10} asRow render={(pageRows) => pageRows.map((record) => <tr key={record.id} className="border-t"><td className="p-2">{record.fileName}<span className="block text-xs text-slate-500">{new Date(record.importedAt).toLocaleString()}</span></td><td className="p-2">{record.sourceType}</td><td className="p-2">{record.importedCount}</td><td className="p-2">{record.persistence === 'CONFIRMED' ? 'Server confirmed' : 'Legacy receipt — unverified'}</td></tr>)} />}</tbody></table></div>}
       </div>
     </section>
   );

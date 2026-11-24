@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/components/common/Toast';
@@ -105,7 +106,7 @@ export default function PromotionsSection() {
 
       {/* Promotions List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {promotions.map((promo) => {
+        {<PagedList items={promotions} label="promotions" pageSize={10} render={(pageRows) => pageRows.map((promo) => {
           const typeBadgeColor =
             promo.offerType === 'BUY_X_GET_Y'
               ? 'bg-purple-50 text-purple-700 border-purple-200'
@@ -175,7 +176,7 @@ export default function PromotionsSection() {
               </div>
             </div>
           );
-        })}
+        })} />}
       </div>
 
       {/* Create Promotion Modal */}

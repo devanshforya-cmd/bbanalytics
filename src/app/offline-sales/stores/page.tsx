@@ -593,7 +593,7 @@ export default function StoresPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredDistributors.map((dist) => {
+              {<PagedList items={filteredDistributors} label="distributors" pageSize={10} render={(pageRows) => pageRows.map((dist) => {
                 const distBranches = branches.filter(
                   (b) =>
                     b.distributorId === dist.id &&
@@ -728,7 +728,7 @@ export default function StoresPage() {
                     </div>
                   </div>
                 );
-              })}
+              })} />}
             </div>
           </div>
         )}

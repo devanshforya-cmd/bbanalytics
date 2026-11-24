@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -179,7 +180,7 @@ export default function InfluencerDetailPage() {
             </div>
           ) : (
             <ul className="space-y-3">
-              {sends.map((send) => {
+              {<PagedList items={sends} label="sends" pageSize={10} asItem render={(pageRows) => pageRows.map((send) => {
                 const status = sendStatusLabel(send, allContent, today);
                 const linked = content.filter((piece) => piece.sendId === send.id);
                 return (
@@ -209,7 +210,7 @@ export default function InfluencerDetailPage() {
                     )}
                   </li>
                 );
-              })}
+              })} />}
             </ul>
           )}
         </section>
@@ -231,7 +232,7 @@ export default function InfluencerDetailPage() {
             </div>
           ) : (
             <ul className="space-y-3">
-              {content.map((piece) => {
+              {<PagedList items={content} label="content pieces" pageSize={10} asItem render={(pageRows) => pageRows.map((piece) => {
                 const links = contentLinks(piece);
                 const post = POST_STATUS[piece.postStatus || 'UNKNOWN'];
                 const send = piece.sendId ? sends.find((entry) => entry.id === piece.sendId) : undefined;
@@ -263,7 +264,7 @@ export default function InfluencerDetailPage() {
                     {piece.notes && <p className="mt-1 text-[11px] text-slate-600">{piece.notes}</p>}
                   </li>
                 );
-              })}
+              })} />}
             </ul>
           )}
         </section>

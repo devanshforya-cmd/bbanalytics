@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -273,7 +274,7 @@ export default function Combo360Page() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {recentOrders.map((order) => (
+                  {<PagedList items={recentOrders} label="orders" pageSize={10} asRow render={(pageRows) => pageRows.map((order) => (
                     <tr key={order.id} className="hover:bg-slate-50">
                       <td className="p-3"><Link href={`/orderflow/orders/${order.id}`} className="font-mono font-bold text-blue-700 hover:underline">{displayDocumentId(order.orderNumber)}</Link></td>
                       <td className="p-3">{order.customerPhone ? <Link href={`/customers/${order.customerPhone}`} className="text-slate-800 hover:text-blue-600 hover:underline">{order.customerName}</Link> : order.customerName}</td>
@@ -282,7 +283,7 @@ export default function Combo360Page() {
                       <td className="p-3 text-right font-mono font-bold">{order.items.filter((line) => line.productId === combo.id && !line.isGift).reduce((s, line) => s + line.quantity, 0)}</td>
                       <td className="p-3 text-center"><OrderStatusBadge status={order.status} /></td>
                     </tr>
-                  ))}
+                  ))} />}
                 </tbody>
               </table>
             </div>
@@ -294,7 +295,7 @@ export default function Combo360Page() {
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2"><MessageSquare className="w-4 h-4 text-brand-600" />Reviews and complaints ({m.feedback.entries.length})</h3>
           {recentFeedback.length === 0 ? <p className="p-6 text-center text-xs text-slate-500">No reviews or complaints for this combo yet.</p> : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {recentFeedback.map((item) => (
+              {<PagedList items={recentFeedback} label="reviews" pageSize={10} render={(pageRows) => pageRows.map((item) => (
                 <div key={item.id} className="p-3.5 rounded-2xl border border-slate-200/80 bg-slate-50/50 text-xs space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-900">{item.customerName}</span>
@@ -305,7 +306,7 @@ export default function Combo360Page() {
                     <span>{item.productId === combo.id ? 'About the combo' : `About ${item.productName}`}</span><span>{item.dateReceivedBs || item.dateReceivedAd}</span>
                   </div>
                 </div>
-              ))}
+              ))} />}
             </div>
           )}
         </div>

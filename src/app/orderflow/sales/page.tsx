@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, BadgePercent, Copy, MoreHorizontal, Pause, Play, Plus, Square, Trash2 } from 'lucide-react';
@@ -37,7 +38,7 @@ function Timeline({ campaigns, now }: { campaigns: SaleCampaign[]; now: string }
           {days.map((day) => <div key={day} className={`border-l border-slate-100 pl-0.5 ${day === now.slice(0, 10) ? 'font-bold text-blue-700' : ''}`}>{day.endsWith('-01') || day === first ? new Date(`${day}T00:00:00Z`).toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' }) : ''}<span className="block">{Number(day.slice(8))}</span></div>)}
         </div>
         <div className="mt-1 space-y-1">
-          {shown.map((campaign) => {
+          {<PagedList items={shown} label="sales" pageSize={10} render={(pageRows) => pageRows.map((campaign) => {
             const state = campaignState(campaign, now);
             const from = index(campaign.startsAt.slice(0, 10)), to = index(campaign.endsAt.slice(0, 10));
             return (
@@ -45,7 +46,7 @@ function Timeline({ campaigns, now }: { campaigns: SaleCampaign[]; now: string }
                 <Link href={`/orderflow/sales/${campaign.id}`} style={{ gridColumn: `${from + 1} / ${to + 2}` }} className={`truncate rounded-md px-1.5 py-1 text-[11px] font-semibold ${STATE_STYLE[state]} hover:opacity-80`} title={`${campaign.name}: ${when(campaign.startsAt)} – ${when(campaign.endsAt)}`}>{campaign.name}</Link>
               </div>
             );
-          })}
+          })} />}
         </div>
       </div>
     </section>

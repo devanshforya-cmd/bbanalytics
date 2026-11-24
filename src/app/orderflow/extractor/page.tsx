@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import Money from '@/components/common/Money';
 import ProgressRing, { ButtonRing } from '@/components/common/ProgressRing';
@@ -1014,7 +1015,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {history.map((item) => (
+                  {<PagedList items={history} label="saves" pageSize={10} asRow render={(pageRows) => pageRows.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/50">
                       <td className="py-2.5 px-3 text-slate-500">{item.timestamp}</td>
                       <td className="py-2.5 px-3 font-semibold text-slate-800">
@@ -1043,7 +1044,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         {item.orderNumber || '—'}
                       </td>
                     </tr>
-                  ))}
+                  ))} />}
                 </tbody>
               </table>
             </div>

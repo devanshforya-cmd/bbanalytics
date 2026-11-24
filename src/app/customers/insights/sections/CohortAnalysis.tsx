@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import React from 'react';
 import Link from 'next/link';
 import { Clock, ChevronRight } from 'lucide-react';
@@ -100,7 +101,7 @@ export default function CohortAnalysis({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {timingPatterns.overdueList.map((item) => (
+                {<PagedList items={timingPatterns.overdueList} label="customers" pageSize={10} asRow render={(pageRows) => pageRows.map((item) => (
                   <tr key={item.customer.id} className="hover:bg-slate-50 transition">
                     <td className="py-3 px-3">
                       <Link
@@ -132,7 +133,7 @@ export default function CohortAnalysis({
                       </Link>
                     </td>
                   </tr>
-                ))}
+                ))} />}
               </tbody>
             </table>
           </div>

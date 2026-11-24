@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
@@ -683,11 +684,11 @@ function ScorecardContent() {
               <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4 font-bold text-slate-900">Operational metric</th>
-                  {displayScorecards.map((sc) => (
+                  {<PagedList items={displayScorecards} label="staff" pageSize={25} render={(pageRows) => pageRows.map((sc) => (
                     <th key={sc.officerId} className="py-3 px-4 text-center font-bold text-slate-900">
                       {sc.officerName}
                     </th>
-                  ))}
+                  ))} />}
                   {displayScorecards.length > 1 && (
                     <th className="py-3 px-4 text-center font-black text-slate-900">Best leader</th>
                   )}
@@ -712,7 +713,7 @@ function ScorecardContent() {
                   return (
                     <tr key={metric.name} className="hover:bg-slate-50/70 transition">
                       <td className="py-3 px-4 font-bold text-slate-900">{metric.name}</td>
-                      {displayScorecards.map((sc) => {
+                      {<PagedList items={displayScorecards} label="staff" pageSize={25} asRow render={(pageRows) => pageRows.map((sc) => {
                         const rawVal = metric.extract(sc);
                         const formatted = metric.formatter ? metric.formatter(rawVal) : rawVal;
                         const isBest =
@@ -731,7 +732,7 @@ function ScorecardContent() {
                             {formatted}
                           </td>
                         );
-                      })}
+                      })} />}
 
                       {displayScorecards.length > 1 && (
                         <td className="py-3 px-4 text-center">
@@ -934,7 +935,7 @@ function ScorecardContent() {
                     <span className="font-bold">{officerStores.length} Stores Total</span>
                   </div>
                   <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
-                    {officerStores.map((st) => (
+                    {<PagedList items={officerStores} label="stores" pageSize={10} render={(pageRows) => pageRows.map((st) => (
                       <div key={st.id} className="p-3 flex items-center justify-between hover:bg-slate-50">
                         <div>
                           <Link
@@ -960,7 +961,7 @@ function ScorecardContent() {
                           </span>
                         </div>
                       </div>
-                    ))}
+                    ))} />}
                   </div>
                 </div>
               )}
@@ -1017,7 +1018,7 @@ function ScorecardContent() {
                     <span className="font-bold">{officerTasks.length} Active Tasks</span>
                   </div>
                   <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
-                    {officerTasks.map((t) => (
+                    {<PagedList items={officerTasks} label="tasks" pageSize={10} render={(pageRows) => pageRows.map((t) => (
                       <div key={t.id} className="p-3 flex items-start justify-between hover:bg-slate-50 gap-3">
                         <div className="space-y-1">
                           <div className="font-bold text-slate-900">{t.title}</div>
@@ -1034,7 +1035,7 @@ function ScorecardContent() {
                           {t.priority}
                         </span>
                       </div>
-                    ))}
+                    ))} />}
                   </div>
                 </div>
               )}

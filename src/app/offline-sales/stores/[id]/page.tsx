@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import Money, { canSeeMoney } from '@/components/common/Money';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -612,7 +613,7 @@ export default function StoreDetailPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-4" aria-labelledby="supplied-stores-title">
           <h2 id="supplied-stores-title" className="text-sm font-bold text-slate-900">Stores this distributor supplies ({suppliedStores.length})</h2>
           <ul className="mt-2 flex flex-wrap gap-2 text-xs">
-            {suppliedStores.map((r) => <li key={r.id}><Link href={`/offline-sales/stores/${r.id}`} className="inline-block rounded-lg border border-slate-200 px-2.5 py-1 font-semibold text-blue-700 hover:bg-blue-50">{r.name}<span className="ml-1 font-normal text-slate-500">{r.area}</span></Link></li>)}
+            {<PagedList items={suppliedStores} label="stores" pageSize={25} asItem render={(pageRows) => pageRows.map((r) => <li key={r.id}><Link href={`/offline-sales/stores/${r.id}`} className="inline-block rounded-lg border border-slate-200 px-2.5 py-1 font-semibold text-blue-700 hover:bg-blue-50">{r.name}<span className="ml-1 font-normal text-slate-500">{r.area}</span></Link></li>)} />}
           </ul>
         </section>
       )}
@@ -675,7 +676,7 @@ export default function StoreDetailPage() {
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {visits.map((v) => (
+              {<PagedList items={visits} label="visits" pageSize={10} render={(pageRows) => pageRows.map((v) => (
                 <div key={v.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
@@ -710,7 +711,7 @@ export default function StoreDetailPage() {
                     </div>
                   )}
                 </div>
-              ))}
+              ))} />}
             </div>
           )}
         </div>
@@ -869,7 +870,7 @@ export default function StoreDetailPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {stockCounts.map((sc) => (
+              {<PagedList items={stockCounts} label="stock counts" pageSize={10} render={(pageRows) => pageRows.map((sc) => (
                 <div key={sc.id} className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 text-xs space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
@@ -905,7 +906,7 @@ export default function StoreDetailPage() {
                     ))}
                   </div>
                 </div>
-              ))}
+              ))} />}
             </div>
           )}
         </div>
@@ -927,7 +928,7 @@ export default function StoreDetailPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {shelfPhotos.map((p) => {
+              {<PagedList items={shelfPhotos} label="photos" pageSize={12} render={(pageRows) => pageRows.map((p) => {
                 const img = p.afterPhotoUrls?.[0] || p.beforePhotoUrls?.[0];
                 return (
                   <div
@@ -960,7 +961,7 @@ export default function StoreDetailPage() {
                     </div>
                   </div>
                 );
-              })}
+              })} />}
             </div>
           )}
         </div>
@@ -999,7 +1000,7 @@ export default function StoreDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {cheques.map((c) => (
+                  {<PagedList items={cheques} label="cheques" pageSize={10} asRow render={(pageRows) => pageRows.map((c) => (
                     <tr key={c.id} className="hover:bg-slate-50">
                       <td className="p-2.5 font-mono font-bold text-blue-600">
                         {/* 7e: Link to Cheque detail */}
@@ -1039,7 +1040,7 @@ export default function StoreDetailPage() {
                         </Link>
                       </td>
                     </tr>
-                  ))}
+                  ))} />}
                 </tbody>
               </table>
             </div>
@@ -1066,7 +1067,7 @@ export default function StoreDetailPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {documents.map((d) => (
+              {<PagedList items={documents} label="documents" pageSize={10} render={(pageRows) => pageRows.map((d) => (
                 <div key={d.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 text-xs space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-900">{d.documentType}</span>
@@ -1102,7 +1103,7 @@ export default function StoreDetailPage() {
                     </div>
                   )}
                 </div>
-              ))}
+              ))} />}
             </div>
           )}
         </div>
@@ -1124,7 +1125,7 @@ export default function StoreDetailPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {secondaryOrders.map((ord) => (
+              {<PagedList items={secondaryOrders} label="orders" pageSize={10} render={(pageRows) => pageRows.map((ord) => (
                 <div key={ord.id} className="rounded-xl border border-slate-200 bg-white p-4 text-xs space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2">
@@ -1160,7 +1161,7 @@ export default function StoreDetailPage() {
                     ))}
                   </div>
                 </div>
-              ))}
+              ))} />}
             </div>
           )}
         </div>
