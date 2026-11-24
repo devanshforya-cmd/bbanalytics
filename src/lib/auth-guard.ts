@@ -127,7 +127,10 @@ export async function requireAuth(request: Request, allowedRoles?: UserRole[]): 
     try {
       const state = await readWorkspaceResetState();
       const navigation = request.method === 'GET' && request.headers.get('sec-fetch-mode') === 'navigate';
-      if (state.resetting || !navigation && !workspaceEpochMatches(request.headers.get('x-workspace-epoch'), state)) {
+      // Photos are shown with <img> tags, which cannot send the dataset header. Reading a file changes
+      // nothing, and the file route still checks the person's access, so these GETs skip the dataset check.
+      const fileRead = request.method === 'GET' && /^\/api\/drive\/files\/[A-Za-z0-9_-]+$/.test(new URL(request.url).pathname);
+      if (state.resetting || !navigation && !fileRead && !workspaceEpochMatches(request.headers.get('x-workspace-epoch'), state)) {
         const error = state.resetting ? 'Workspace reset is in progress.' : 'Workspace was reset. Reload and sign in again.';
         return { error, response: NextResponse.json({ success: false, error, code: 'WORKSPACE_RESET' }, { status: state.resetting ? 503 : 409 }) };
       }
