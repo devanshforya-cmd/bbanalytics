@@ -25,6 +25,8 @@ interface CheckInFlowProps {
   showStoreActionDashboard: boolean;
   targetBeat: BeatItem | null;
   calculatedDistance: number;
+  /** False when the store has no pinned location: no distance check, the check-in place is still recorded. */
+  storePinned?: boolean;
   gpsReady: boolean;
   gpsMessage: string;
   overrideReason: string;
@@ -40,7 +42,7 @@ export default function CheckInFlow({
   showCheckInModal,
   showStoreActionDashboard,
   targetBeat,
-  calculatedDistance, gpsReady, gpsMessage, overrideReason, setOverrideReason,
+  calculatedDistance, storePinned = true, gpsReady, gpsMessage, overrideReason, setOverrideReason,
   completedActions,
   onConfirmArrival,
   onDismissCheckIn,
@@ -130,7 +132,7 @@ export default function CheckInFlow({
               </div>
             </div>
 
-            <div role="status" className={`rounded-xl p-3 text-xs ${gpsReady ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'}`}>{gpsMessage}{gpsReady ? ` · ${calculatedDistance} m from store` : ' Check-in needs a fresh fix with accuracy within 200 m.'}</div>
+            <div role="status" className={`rounded-xl p-3 text-xs ${gpsReady ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'}`}>{gpsMessage}{gpsReady ? (storePinned ? ` · ${calculatedDistance} m from store` : ' · This store has no pinned location, so there is no distance check. Your check-in location is saved.') : ' Check-in needs a fresh fix with accuracy within 200 m.'}</div>
             {gpsReady && calculatedDistance > 150 && <label className="block text-xs font-semibold text-slate-700">You are more than 150 m from the store. Explain this check-in.<textarea value={overrideReason} onChange={event => setOverrideReason(event.target.value)} className="mt-1 block w-full rounded-xl border p-2" required maxLength={500} /></label>}
             {/* Section 10: Mandatory Entrance Photo if configured */}
             {photoRequired && (

@@ -48,7 +48,14 @@ test('online orders, customers, failures, returns, calls and reviews agree with 
   assert.ok(numbers.every((n) => /^[A-Z]{2,4}-9\d{3}$/.test(n)));
   const byId = new Map(orders.map((o) => [o.id, o]));
   for (const f of of('deliveryFailures')) assert.ok(byId.has(f.orderId));
-  for (const r of of('returns')) assert.equal(byId.get(r.orderId)?.status, 'RETURNED');
+  for (const r of of('returns').filter((r) => !r.ticketType || r.ticketType === 'RETURN')) assert.equal(byId.get(r.orderId)?.status, 'RETURNED');
+  // Tickets: RTO parcels come from failed deliveries; packing errors are on delivered orders.
+  const failures = new Map(of('deliveryFailures').map((f) => [f.id, f]));
+  const rto = of('returns').filter((r) => r.ticketType === 'RTO');
+  assert.ok(rto.length > 0 && rto.every((r) => failures.get(r.deliveryFailureId)?.status === 'RETURNED_TO_WAREHOUSE' && failures.get(r.deliveryFailureId)?.orderId === r.orderId), 'RTO tickets match their failures');
+  assert.ok(rto.some((r) => r.receivedDateAd) && rto.some((r) => !r.receivedDateAd), 'some RTO parcels are back, some are not');
+  const packing = of('returns').filter((r) => r.ticketType === 'SHORT_SHIPPED' || r.ticketType === 'WRONG_ITEM');
+  assert.ok(packing.length > 0 && packing.every((r) => byId.get(r.orderId)?.status === 'DELIVERED'), 'packing errors on delivered orders');
   for (const c of of('customerCalls')) assert.ok(byId.has(c.orderId));
   assert.ok(of('customerCalls').some((c) => c.followUpStepId === 'fu_check'), 'follow-up calls logged');
   for (const customer of of('customers')) {

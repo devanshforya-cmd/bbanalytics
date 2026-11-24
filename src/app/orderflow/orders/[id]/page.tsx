@@ -30,6 +30,9 @@ import ExchangePanel from '@/components/orders/ExchangePanel';
 import OrderFollowUps from '@/components/customer-calls/OrderFollowUps';
 import LogFailureForm from '@/app/orderflow/delivery-failures/components/LogFailureForm';
 import LogReturnForm from '@/app/reviews/returns/components/LogReturnForm';
+import OrderIssueForm from '@/components/tickets/OrderIssueForm';
+import { TicketBadges } from '@/components/tickets/TicketBadges';
+import { ticketRef } from '@/lib/order-tickets';
 import { AlertCircle, AlertTriangle, ArrowLeft, ArrowRight, Check, History, Layers, Minus, PackageX, Plus, Search, Trash2, Undo2, X } from 'lucide-react';
 
 const field = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500';
@@ -73,7 +76,7 @@ export default function OrderPage() {
   const [showPicker, setShowPicker] = useState(false);
   const loadedVersion = useRef<string>('');
   const [changedElsewhere, setChangedElsewhere] = useState(false);
-  const [panel, setPanel] = useState<'FAILURE' | 'RETURN' | null>(null);
+  const [panel, setPanel] = useState<'FAILURE' | 'RETURN' | 'PACKING' | null>(null);
   const [exchangeFor, setExchangeFor] = useState<ReturnEntry | null>(null);
 
   const order = db.getOrderById(orderId);
@@ -141,7 +144,8 @@ export default function OrderPage() {
   const assignees = d2cAssignees(user, db.getUsers(), brandCode);
   const assigneeOptions = [...assignees, ...db.getUsers().filter((entry) => entry.id === order.assignedToId && !assignees.some((option) => option.id === entry.id))];
   const attachedFailure = db.getDeliveryFailures('ALL').filter((failure) => failure.orderId === order.id || failure.orderNumber === order.orderNumber).length;
-  const attachedReturn = db.getReturns('ALL').filter((entry) => entry.orderId === order.id || entry.orderNumber === order.orderNumber).length;
+  const orderTickets = db.getOrderIssues('ALL').filter((entry) => entry.orderId === order.id || entry.orderNumber === order.orderNumber);
+  const attachedReturn = orderTickets.length;
 
   // ----- Line items -----
   const setItems = (items: OrderItem[]) => set({ items });
@@ -281,6 +285,9 @@ export default function OrderPage() {
               {(canPerform(user, 'reviews', 'CREATE') || canPerform(user, 'order_desk', 'CREATE')) && order.status !== 'CANCELLED' && (
                 <button type="button" onClick={() => setPanel('RETURN')} className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-amber-800 hover:bg-amber-50"><Undo2 className="h-3.5 w-3.5" /> Log return or exchange</button>
               )}
+              {(canPerform(user, 'reviews', 'CREATE') || canPerform(user, 'order_desk', 'CREATE') || canPerform(user, 'orderflow', 'CREATE')) && ['DELIVERED', 'RETURNED', 'EXCHANGED'].includes(order.status) && (
+                <button type="button" onClick={() => setPanel('PACKING')} className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-orange-800 hover:bg-orange-50"><PackageX className="h-3.5 w-3.5" /> Log packing error</button>
+              )}
             </div>
           </div>
         </section>
@@ -288,6 +295,19 @@ export default function OrderPage() {
         {panel === 'RETURN' && <LogReturnForm initialOrder={order} onClose={() => setPanel(null)}
           onSaved={(summary) => { setPanel(null); setVersion((value) => value + 1); if (summary.resolution === 'Exchanged' && !summary.exchangeLinked) { const saved = db.getReturns('ALL').find((entry) => entry.id === summary.returnId); if (saved) setExchangeFor(saved); } }} />}
         {exchangeFor && <ExchangePanel ret={exchangeFor} onClose={() => setExchangeFor(null)} onDone={() => setVersion((value) => value + 1)} />}
+        {panel === 'PACKING' && <OrderIssueForm initialOrder={order} onClose={() => setPanel(null)} onSaved={() => { setPanel(null); setVersion((value) => value + 1); }} />}
+        {orderTickets.length > 0 && (
+          <section aria-labelledby="order-tickets" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <h2 id="order-tickets" className="text-sm font-bold text-slate-900">Issues on this order</h2>
+            <ul className="mt-2 divide-y divide-slate-100 text-xs">
+              {orderTickets.map((entry) => (
+                <li key={entry.id}><Link href={`/reviews/returns?ticket=${encodeURIComponent(entry.id)}`} className="flex flex-wrap items-center justify-between gap-2 py-2 hover:text-blue-700">
+                  <span><span className="font-mono font-bold">{ticketRef(entry)}</span> <span className="text-slate-600">{entry.productName} · {entry.dateAd}</span></span><TicketBadges entry={entry} />
+                </Link></li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {!canEdit && <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">You can view this order. Editing needs the OrderFlow edit permission.</p>}
         {changedElsewhere && (

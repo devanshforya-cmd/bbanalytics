@@ -4,6 +4,7 @@
  * star ratings, and a few notifications. One simulated history, so the numbers agree with each
  * other: a customer's totals match their orders, a failed order has a failure record, and so on.
  */
+import type { TicketStage } from '../order-tickets';
 import { brandPrefix } from '../document-ids';
 import { calculateCustomerSegment, evaluateCustomerFlags } from '../karma-calculator';
 import { DEFAULT_FAILURE_REASONS } from '../marketing';
@@ -80,6 +81,7 @@ export function generateOnlineSample(ctx: OnlineContext) {
   const orders: Order[] = [];
   const failures: DeliveryFailure[] = [];
   const returns: ReturnEntry[] = [];
+  const rtoTickets: ReturnEntry[] = [];
   let deskTurn = 0;
 
   const makeOrder = (sim: Sim, offset: number, first: boolean) => {
@@ -130,13 +132,34 @@ export function generateOnlineSample(ctx: OnlineContext) {
       const failedAd = addDays(dateAd, inside ? 2 : 4);
       const recovered = status === 'DELIVERED';
       const recent = offset <= 10 && !recovered;
+      // Older failures that were never delivered went back to the warehouse (RTO); most are checked in, a few are still on the way.
+      const rto = !recovered && offset > 14 && chance(0.6);
+      const rtoAd = addDays(failedAd, 3);
+      const backAd = rto && offset > 20 && chance(0.75) ? addDays(rtoAd, between(2, 6)) : undefined;
+      if (rto) {
+        const lines = items.map((i) => ({ productId: i.productId, productName: i.productName, brandCode: i.brandCode, kind: 'BACK' as const, quantity: i.quantity,
+          ...(backAd ? { receivedQty: i.quantity, condition: chance(0.85) ? 'GOOD' as const : 'DAMAGED' as const } : {}) }));
+        rtoTickets.push(add<ReturnEntry>('returns', {
+          id: `sample_rto_${rtoTickets.length + 1}`, orderId: order.id, orderNumber: order.orderNumber, brandCode: brand, productId: items[0].productId,
+          productName: items.length > 1 ? `${items[0].productName} +${items.length - 1} more` : items[0].productName, customerName: sim.name, customerPhone: sim.phone,
+          dateAd: rtoAd, dateBs: bs(rtoAd), orderProcessedDateAd: dateAd, orderProcessedDateBs: bs(dateAd), platform: order.platform, quantity: items.reduce((s, i) => s + i.quantity, 0),
+          reasonCategory: 'Returned to origin', orderStatus: backAd ? 'Returned' : 'Pending', valley: sim.place.valley, issueCategories: [],
+          ticketType: 'RTO', stage: backAd ? 'CLOSED' : 'IN_TRANSIT', lines, expectGoodsBack: true, fault: 'COURIER', courier: order.deliveryMethod,
+          deliveryFailureId: `sample_df_${failures.length + 1}`,
+          ...(backAd ? { receivedDateAd: backAd, receivedBy: handler.name, resolution: { type: 'NO_ACTION' as const, dateAd: backAd, by: handler.name }, resolvedDateAd: backAd } : {}),
+          timeline: [{ at: at(rtoAd, 12), by: handler.name, stage: 'IN_TRANSIT' as const, note: `Delivery failed (${reason}). Parcel is coming back to the warehouse.` },
+            ...(backAd ? [{ at: at(backAd, 15), by: handler.name, stage: 'CLOSED' as const, note: `Received in-house: ${lines.map((l) => `${l.quantity}× ${l.productName}`).join(', ')}. Back to stock.` }] : [])],
+          createdAt: at(rtoAd, 12),
+        }));
+      }
       failures.push(add<DeliveryFailure>('deliveryFailures', {
         id: `sample_df_${failures.length + 1}`, orderId: order.id, orderNumber: order.orderNumber, brandCode: brand, customerName: sim.name, customerPhone: sim.phone,
         productName: items.map((i) => `${i.quantity}× ${i.productName}`).join(', '), deliveryMethod: order.deliveryMethod, dateAd: failedAd, dateBs: bs(failedAd), reason,
         valley: sim.place.valley, attempts: recovered ? 2 : 1, address: sim.address, district: sim.place.district, platform: order.platform, orderDateAd: dateAd,
         products: items.map((i) => ({ productName: i.productName, quantity: i.quantity })),
         attemptLog: [{ attempt: 1, dateAd: failedAd, dateBs: bs(failedAd), reason, loggedAt: at(failedAd, 17), loggedBy: handler.name }] as DeliveryFailure['attemptLog'],
-        status: recovered ? 'DELIVERED' : recent && chance(0.5) ? 'REATTEMPT_SCHEDULED' : 'FAILED',
+        status: recovered ? 'DELIVERED' : rto ? 'RETURNED_TO_WAREHOUSE' : recent && chance(0.5) ? 'REATTEMPT_SCHEDULED' : 'FAILED',
+        ...(rto ? { rtoDateAd: rtoAd } : {}),
         ...(recent ? { reattemptDateAd: addDays(today, 1), reattemptDateBs: bs(addDays(today, 1)) } : {}),
         assignedTo: handler.name, createdAt: at(failedAd, 17),
       }));
@@ -145,11 +168,47 @@ export function generateOnlineSample(ctx: OnlineContext) {
       const line = items[0];
       const returnedAd = addDays(delivered!, between(1, 4));
       const recent = offset <= 12;
+      const status = recent && chance(0.5) ? 'Pending' : pick(['Returned', 'Refunded', 'Refunded'] as const);
+      // Tracked as a ticket: an open one is on its way back or waiting for pickup; a settled one was checked in.
+      const stage: TicketStage = status === 'Pending' ? pick(['OPEN', 'PICKUP_ARRANGED', 'IN_TRANSIT'] as const) : recent ? 'RESOLVED' : 'CLOSED';
+      const backAd = stage === 'CLOSED' || (stage === 'RESOLVED' && chance(0.5)) ? addDays(returnedAd, between(1, 3)) : undefined;
+      const amount = line.totalPrice;
       returns.push(add<ReturnEntry>('returns', {
         id: `sample_return_${returns.length + 1}`, orderId: order.id, orderNumber: order.orderNumber, brandCode: brand, productId: line.productId, productName: line.productName,
         customerName: sim.name, customerPhone: sim.phone, dateAd: returnedAd, dateBs: bs(returnedAd), orderProcessedDateAd: dateAd, orderProcessedDateBs: bs(dateAd),
-        platform: order.platform, quantity: line.quantity, reasonCategory: weighted(RETURN_REASONS), orderStatus: recent && chance(0.5) ? 'Pending' : pick(['Returned', 'Refunded', 'Refunded'] as const),
-        valley: sim.place.valley, issueCategories: [], resolvedDateAd: recent ? undefined : addDays(returnedAd, 2), createdAt: at(returnedAd, 14),
+        platform: order.platform, quantity: line.quantity, reasonCategory: weighted(RETURN_REASONS), orderStatus: status,
+        valley: sim.place.valley, issueCategories: [], resolvedDateAd: status === 'Pending' ? undefined : addDays(returnedAd, 2), createdAt: at(returnedAd, 14),
+        ticketType: 'RETURN', stage, expectGoodsBack: true,
+        lines: [{ productId: line.productId, productName: line.productName, brandCode: line.brandCode, kind: 'BACK', quantity: line.quantity, ...(backAd ? { receivedQty: line.quantity, condition: chance(0.7) ? 'GOOD' as const : 'DAMAGED' as const } : {}) }],
+        ...(stage === 'PICKUP_ARRANGED' || stage === 'IN_TRANSIT' ? { courier: order.deliveryMethod, pickupDateAd: addDays(returnedAd, 1) } : {}),
+        ...(backAd ? { receivedDateAd: backAd, receivedBy: handler.name } : {}),
+        ...(status !== 'Pending' ? { resolution: { type: status === 'Refunded' ? 'REFUND' as const : 'STORE_CREDIT' as const, ...(status === 'Refunded' ? { amount } : {}), dateAd: addDays(returnedAd, 2), by: handler.name } } : {}),
+        timeline: [{ at: at(returnedAd, 14), by: handler.name, stage: 'OPEN' as const, note: `Return logged: ${line.quantity}× ${line.productName}.` },
+          ...(backAd ? [{ at: at(backAd, 16), by: handler.name, stage: 'RECEIVED' as const, note: `Received in-house: ${line.quantity}× ${line.productName}.` }] : []),
+          ...(status !== 'Pending' ? [{ at: at(addDays(returnedAd, 2), 11), by: handler.name, stage: stage, note: `Resolved: ${status === 'Refunded' ? `Refund (NPR ${amount.toLocaleString()})` : 'Store credit'}.` }] : [])],
+      }));
+    }
+    // Packing errors: a unit short, or the wrong product in the box. They are our mistakes, not customer returns.
+    if (status === 'DELIVERED' && offset > 4 && chance(0.05)) {
+      const short = items.some((i) => i.quantity > 1) && chance(0.5);
+      const reportedAd = addDays(delivered!, 1);
+      const settled = offset > 15;
+      const packer = pick(desk.length ? desk : [manager]);
+      const right = short ? items.find((i) => i.quantity > 1)! : items[0];
+      const wrongProduct = range.find((p) => !items.some((i) => i.productId === p.id)) || products.find((p) => p.id !== right.productId && !p.isCombo);
+      const lines = short
+        ? [{ productId: right.productId, productName: right.productName, brandCode: right.brandCode, kind: 'MISSING' as const, quantity: 1 }]
+        : [...(wrongProduct ? [{ productId: wrongProduct.id, productName: wrongProduct.name, brandCode: wrongProduct.brandCode, kind: 'SENT_WRONG' as const, quantity: 1, ...(settled ? { receivedQty: 1, condition: 'GOOD' as const } : {}) }] : []),
+          { productId: right.productId, productName: right.productName, brandCode: right.brandCode, kind: 'SHOULD_HAVE_SENT' as const, quantity: 1 }];
+      const wrong = !short && !!wrongProduct;
+      returns.push(add<ReturnEntry>('returns', {
+        id: `sample_pack_${returns.length + 1}`, orderId: order.id, orderNumber: order.orderNumber, brandCode: brand, productId: right.productId, productName: right.productName,
+        customerName: sim.name, customerPhone: sim.phone, dateAd: reportedAd, dateBs: bs(reportedAd), orderProcessedDateAd: dateAd, orderProcessedDateBs: bs(dateAd),
+        platform: order.platform, quantity: 1, reasonCategory: wrong ? 'Wrong item packed' : 'Short shipped', orderStatus: settled ? 'Returned' : 'Pending',
+        valley: sim.place.valley, issueCategories: [], createdAt: at(reportedAd, 12),
+        ticketType: wrong ? 'WRONG_ITEM' : 'SHORT_SHIPPED', stage: settled ? 'CLOSED' : 'OPEN', lines, expectGoodsBack: wrong, fault: 'PACKING', packedBy: packer.name,
+        ...(settled ? { resolution: { type: 'RESEND' as const, dateAd: addDays(reportedAd, 1), by: packer.name }, resolvedDateAd: addDays(reportedAd, 1), ...(wrong ? { receivedDateAd: addDays(reportedAd, 3), receivedBy: packer.name } : {}) } : {}),
+        timeline: [{ at: at(reportedAd, 12), by: handler.name, stage: 'OPEN' as const, note: wrong ? `Wrong item logged. Sent ${wrongProduct!.name} instead of ${right.productName}.` : `Short shipped logged. 1× ${right.productName} missing from the parcel.` }],
       }));
     }
     return order;

@@ -519,7 +519,8 @@ async function notifyRecordChange(user: User, mutation: WorkspaceMutation, conte
           title: 'Task for you', message: `${String(d.title || 'A task')}${d.dueDateAd ? `, due ${d.dueDateAd}` : ''}. From ${user.fullName}.`, link: '/opscore/tasks', entityType: 'tasks', entityId: mutation.id, priority: d.priority });
         break;
       case 'beatItems':
-        if (d.officerId && (created || was.officerId !== d.officerId)) await notifyEvent(user, 'visit_assigned', users, { dedupeKey: key, personIds: [d.officerId],
+        // Standing weekly stops are made every day; the rider already knows them, so only one-off and reassigned stops notify.
+        if (d.officerId && ((created && !d.scheduleId) || (!created && was.officerId !== d.officerId))) await notifyEvent(user, 'visit_assigned', users, { dedupeKey: key, personIds: [d.officerId],
           title: 'Store visit added to your beat', message: `${d.storeName || 'A store'} on ${d.dateAd || 'your beat'}. Added by ${user.fullName}.`, link: '/offline-sales/beat-plan', entityType: 'beatItems', entityId: mutation.id });
         break;
       case 'secondaryOrders':
@@ -534,8 +535,9 @@ async function notifyRecordChange(user: User, mutation: WorkspaceMutation, conte
         break;
       case 'returns':
         if (created) await notifyEvent(user, 'return_new', users, { dedupeKey: key,
-          title: `${d.type === 'EXCHANGE' ? 'Exchange' : 'Return'} logged${d.orderNumber ? ` for ${d.orderNumber}` : ''}`, message: `${d.customerName || 'Customer'}${d.reason ? `: ${String(d.reason).slice(0, 100)}` : ''}. Logged by ${user.fullName}.`,
-          link: '/reviews/returns', entityType: 'returns', entityId: mutation.id });
+          title: `${({ EXCHANGE: 'Exchange', SHORT_SHIPPED: 'Short shipment', WRONG_ITEM: 'Wrong item sent', RTO: 'RTO parcel' } as Record<string, string>)[String(d.ticketType || (d.orderStatus === 'Exchanged' ? 'EXCHANGE' : ''))] || 'Return'} logged${d.orderNumber ? ` for ${d.orderNumber}` : ''}`,
+          message: `${d.customerName || 'Customer'}${d.reasonCategory ? `: ${String(d.reasonCategory).slice(0, 100)}` : ''}. Logged by ${user.fullName}.`,
+          link: `/reviews/returns?ticket=${encodeURIComponent(mutation.id)}`, entityType: 'returns', entityId: mutation.id });
         break;
       case 'feedbackEntries':
         if (created && d.type === 'COMPLAINT') await notifyEvent(user, 'complaint_new', users, { dedupeKey: key, priority: d.priority === 'URGENT' ? 'URGENT' : 'HIGH',

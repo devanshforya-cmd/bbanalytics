@@ -28,6 +28,7 @@ import OrderStatusControl from '@/components/orders/OrderStatusControl';
 import ExchangePanel from '@/components/orders/ExchangePanel';
 import LogFailureForm from '@/app/orderflow/delivery-failures/components/LogFailureForm';
 import LogReturnForm from '@/app/reviews/returns/components/LogReturnForm';
+import OrderIssueForm from '@/components/tickets/OrderIssueForm';
 
 type StatusFilter = 'OPEN' | 'ALL' | 'UNCONFIRMED' | Order['status'];
 /** Dispatched this many days ago and still not marked delivered: probably delivered, needs confirming. */
@@ -56,6 +57,7 @@ export default function AllOrdersPage() {
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [failureFor, setFailureFor] = useState<Order | null>(null);
   const [returnFor, setReturnFor] = useState<Order | null>(null);
+  const [packingFor, setPackingFor] = useState<Order | null>(null);
   const [exchangeReturnFor, setExchangeReturnFor] = useState<Order | null>(null);
   const [exchangeFor, setExchangeFor] = useState<ReturnEntry | null>(null);
 
@@ -231,6 +233,9 @@ export default function AllOrdersPage() {
                                 {canReturn && order.status !== 'CANCELLED' && !order.exchangeRequested && (
                                   <button role="menuitem" type="button" onClick={() => { setMenuFor(null); setReturnFor(order); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-50"><Undo2 className="h-3.5 w-3.5" /> Log return or exchange</button>
                                 )}
+                                {canReturn && ['DELIVERED', 'RETURNED', 'EXCHANGED'].includes(order.status) && !order.exchangeRequested && (
+                                  <button role="menuitem" type="button" onClick={() => { setMenuFor(null); setPackingFor(order); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-orange-800 hover:bg-orange-50"><PackageX className="h-3.5 w-3.5" /> Log packing error</button>
+                                )}
                                 {unlinked && canReturn && (
                                   <button role="menuitem" type="button" onClick={() => { setMenuFor(null); setExchangeFor(unlinked); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-purple-700 hover:bg-purple-50"><Repeat className="h-3.5 w-3.5" /> Link replacement order</button>
                                 )}
@@ -260,6 +265,7 @@ export default function AllOrdersPage() {
         )}
 
         {failureFor && <LogFailureForm initialOrder={failureFor} onClose={() => setFailureFor(null)} onSaved={() => setFailureFor(null)} onViewCustomer={(phone) => router.push(`/customers/${phone}`)} />}
+        {packingFor && <OrderIssueForm initialOrder={packingFor} onClose={() => setPackingFor(null)} onSaved={(ticket) => { setPackingFor(null); router.push(`/reviews/returns?ticket=${encodeURIComponent(ticket.id)}`); }} />}
         {returnFor && (
           <LogReturnForm initialOrder={returnFor} onClose={() => setReturnFor(null)} onViewCustomer={(phone) => router.push(`/customers/${phone}`)}
             onSaved={(summary) => { setReturnFor(null); if (summary.resolution === 'Exchanged' && !summary.exchangeLinked) { const saved = db.getReturns('ALL').find((entry) => entry.id === summary.returnId); if (saved) setExchangeFor(saved); } }} />

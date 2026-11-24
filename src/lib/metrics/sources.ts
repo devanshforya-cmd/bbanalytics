@@ -3,6 +3,7 @@
  * One place decides what a sale is, who a new customer is, which store type a branch has, and so on,
  * so the same question gets the same answer on every page and dashboard.
  */
+import { TICKET_STAGE_LABEL, TICKET_TYPE_LABEL, ticketStageOf, ticketTypeOf } from '../order-tickets';
 import type {
   Brand, CallLog, Cheque, Customer, CustomerCall, DeliveryFailure, Dispatch, FeedbackEntry, MarketingSend, Order, OrderItem, Product,
   ReturnEntry, SecondaryOrder, SecondaryOrderItem, StockCount, StockCountItem, Task, User, Visit, BeatItem, Distributor, Branch, Retailer,
@@ -28,6 +29,8 @@ export interface MetricData {
   storeOrders: SecondaryOrder[]; dispatches: Dispatch[]; cheques: Cheque[]; visits: Visit[]; beatItems: BeatItem[];
   stockCounts: StockCount[]; storeCalls: CallLog[]; tasks: Task[]; marketingSends: MarketingSend[];
   distributors: Distributor[]; branches: Branch[]; retailers: Retailer[];
+  /** Every ticket (customer returns, packing errors, RTO). Optional so older callers still work. */
+  orderIssues?: ReturnEntry[];
 }
 
 interface StoreInfo { id: string; name: string; type: string; area: string; city: string; officerId?: string; distributorId?: string; distributorName?: string }
@@ -197,6 +200,14 @@ const returns: SourceDef<ReturnEntry> = {
   describe: (r) => ({ id: r.id, date: r.dateAd, title: `${r.productName} · ${r.customerName}`, detail: `${r.quantity} units · ${r.reasonCategory} · ${r.orderStatus}`, href: '/reviews/returns' }),
 };
 
+const orderIssues: SourceDef<ReturnEntry> = {
+  key: 'orderIssues', noun: 'tickets',
+  rows: (p) => p.data.orderIssues || [], date: (r) => r.dateAd,
+  dims: { brand: (r, p) => brand(r.brandCode, p), type: (r) => g(ticketTypeOf(r), TICKET_TYPE_LABEL[ticketTypeOf(r)]), status: (r) => g(ticketStageOf(r), TICKET_STAGE_LABEL[ticketStageOf(r)]),
+    reason: (r) => text(r.reasonCategory), courier: (r) => text(r.courier), staff: (r) => text(r.packedBy, 'Packer not recorded'), channel: (r) => text(r.platform) },
+  describe: (r) => ({ id: r.id, date: r.dateAd, title: `${TICKET_TYPE_LABEL[ticketTypeOf(r)]} · ${r.customerName}`, detail: `${r.productName} · ${TICKET_STAGE_LABEL[ticketStageOf(r)]}`, href: `/reviews/returns?ticket=${encodeURIComponent(r.id)}` }),
+};
+
 const feedback: SourceDef<FeedbackEntry> = {
   key: 'feedback', noun: 'feedback entries',
   rows: (p) => p.data.feedback, date: (f) => f.dateReceivedAd,
@@ -357,7 +368,7 @@ const stores: SourceDef<StoreInfo> = {
 };
 
 export const SOURCES = {
-  orders, orderLines, deliveryFailures, returns, feedback, customers, customerCalls, followUps, storeOrders, storeOrderLines,
+  orders, orderLines, deliveryFailures, returns, orderIssues, feedback, customers, customerCalls, followUps, storeOrders, storeOrderLines,
   dispatches, cheques, visits, beatItems, stockLines, latestStock, storeCalls, tasks, marketingSends, stores,
 } satisfies Record<string, SourceDef<any>>;
 export type SourceKey = keyof typeof SOURCES;

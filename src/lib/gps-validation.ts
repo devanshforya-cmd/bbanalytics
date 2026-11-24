@@ -4,6 +4,11 @@ export function validGpsCoordinates(lat: unknown, lng: unknown): lat is number {
   return typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 }
 
+/** A real pinned place. (0, 0) is what older forms saved for "no pin", so it does not count. */
+export function pinnedLocation(lat: unknown, lng: unknown): lat is number {
+  return validGpsCoordinates(lat, lng) && !(lat === 0 && lng === 0);
+}
+
 export function freshGpsFix(fix: GpsFix | null | undefined, now = Date.now()): fix is GpsFix {
   if (!fix || !validGpsCoordinates(fix.lat, fix.lng)) return false;
   const age = now - Date.parse(fix.capturedAt);

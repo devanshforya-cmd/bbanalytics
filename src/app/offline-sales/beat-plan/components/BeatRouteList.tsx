@@ -13,6 +13,8 @@ import {
   Phone,
 } from 'lucide-react';
 import { BeatItem } from '@/lib/types';
+import { JOB_LABEL, type DayJob } from '@/lib/weekly-beat';
+import { MapPinOff } from 'lucide-react';
 import { priorityColor as getPriorityColor } from '@/lib/ui-utils';
 
 interface BeatRouteListProps {
@@ -23,6 +25,8 @@ interface BeatRouteListProps {
   onResumeWorkspace: (item: BeatItem) => void;
   onOptimizeRoute: () => void;
   isOptimizing?: boolean;
+  /** Jobs to do at each stop (payment to collect, order to deliver, tasks there). */
+  jobsByBeat?: Record<string, DayJob[]>;
 }
 
 export default function BeatRouteList({
@@ -33,6 +37,7 @@ export default function BeatRouteList({
   onResumeWorkspace,
   onOptimizeRoute,
   isOptimizing,
+  jobsByBeat = {},
 }: BeatRouteListProps) {
   const visitedCount = beatItems.filter((b) => b.status === 'VISITED').length;
   const totalCount = beatItems.length;
@@ -70,7 +75,7 @@ export default function BeatRouteList({
             <Compass className="w-8 h-8 text-slate-300 mx-auto" />
             <h4 className="text-sm font-bold text-slate-800">No beat visits scheduled today</h4>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              There are no stores queued on your route for today. You can add a one-time visit using the Override action above or assign stores from the Stores directory.
+              There are no stores queued on your route for today. A manager can set this rider’s weekly routes, or add a one-time stop.
             </p>
           </div>
         ) : (
@@ -171,6 +176,12 @@ export default function BeatRouteList({
                         ? 'Medium'
                         : 'Routine'}
                     </span>
+                    {item.scheduleId && (
+                      <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">Weekly</span>
+                    )}
+                    {(item.lat === undefined || item.lng === undefined) && (
+                      <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200" title="No pinned location: check-in skips the distance check"><MapPinOff className="h-3 w-3" />No pin</span>
+                    )}
                     {item.oneTimeOverride && (
                       <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
                         Added by admin
@@ -198,6 +209,15 @@ export default function BeatRouteList({
                     )}
                   </div>
 
+                  {(jobsByBeat[item.id] || []).length > 0 && (
+                    <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Jobs at this stop">
+                      {jobsByBeat[item.id].map((job) => (
+                        <li key={job.id} className={`rounded-lg border px-2 py-1 text-[11px] font-semibold ${job.priority === 'HIGH' ? 'border-red-200 bg-red-50 text-red-800' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
+                          {job.kind === 'TASK' ? job.label : `${JOB_LABEL[job.kind]}${job.amount ? ` · NPR ${Math.round(job.amount).toLocaleString()}` : ''}`}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   {item.managerNotes && (
                     <div className="mt-2.5 p-2.5 rounded-xl bg-amber-50/90 border border-amber-200 text-xs text-amber-900 font-medium">
                       <strong className="text-amber-800">Manager directive:</strong> &ldquo;{item.managerNotes}&rdquo;
