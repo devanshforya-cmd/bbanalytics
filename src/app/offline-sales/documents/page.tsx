@@ -1,5 +1,6 @@
 'use client';
 
+import StoredPhoto from '@/components/common/StoredPhoto';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import React, { useState, useMemo, useEffect } from 'react';
@@ -761,11 +762,7 @@ export default function DocumentsPage() {
                         className="group relative h-28 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 cursor-pointer shadow-sm hover:shadow-md transition"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={doc.photoUrls[0]}
-                          alt={doc.documentType}
-                          className="h-full w-full object-cover object-center transition-transform duration-300"
-                        />
+                        <StoredPhoto src={doc.photoUrls[0]} alt={doc.documentType} imgClassName="h-full w-full object-cover object-center transition-transform duration-300" />
                         <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[1px]">
                           <Eye className="h-4 w-4" />
                           <span>View full res</span>

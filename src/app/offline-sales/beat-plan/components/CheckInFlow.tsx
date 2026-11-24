@@ -1,5 +1,6 @@
 'use client';
 
+import StoredPhoto from '@/components/common/StoredPhoto';
 import Portal from '@/components/common/Portal';
 import React, { useState, useEffect } from 'react';
 import { capturePhoto } from '@/lib/photo-capture';
@@ -152,11 +153,7 @@ export default function CheckInFlow({
 
                 {photoUrl ? (
                   <div className="relative rounded-xl overflow-hidden border border-emerald-300 h-36 bg-slate-900">
-                    <img
-                      src={photoUrl}
-                      alt="Store Entrance"
-                      className="w-full h-full object-cover"
-                    />
+                    <StoredPhoto src={photoUrl} alt="Store Entrance" imgClassName="w-full h-full object-cover" />
                     <label className="absolute bottom-2 right-2 px-3 py-1.5 rounded-lg bg-slate-900/80 text-white text-xs font-semibold cursor-pointer hover:bg-slate-900 transition flex items-center gap-1.5">
                       <Camera className="w-3.5 h-3.5" /> Retake
                       <input

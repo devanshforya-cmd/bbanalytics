@@ -1,5 +1,7 @@
 'use client';
 
+import StoredPhoto from '@/components/common/StoredPhoto';
+import { usePhotoUploads } from '@/hooks/usePhotoUploads';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
@@ -33,6 +35,7 @@ import EmptyState from '@/components/common/EmptyState';
 import { getScope } from '@/lib/permissions';
 
 export default function ShelfPhotosPage() {
+  const shelfUploading = usePhotoUploads('shelf_photos');
   const [photos, setPhotos] = useState<ShelfPhoto[]>([]);
   const [retailers, setRetailers] = useState<Retailer[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -252,11 +255,7 @@ export default function ShelfPhotosPage() {
                       }
                       className="group relative h-36 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 cursor-pointer shadow-2xs hover:ring-2 hover:ring-amber-500 transition"
                     >
-                      <img
-                        src={url}
-                        alt={`Before shelf angle ${idx + 1}`}
-                        className="h-full w-full object-cover transition-transform duration-200"
-                      />
+                      <StoredPhoto src={url} alt={`Before shelf angle ${idx + 1}`} imgClassName="h-full w-full object-cover transition-transform duration-200" />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                         <ZoomIn className="w-5 h-5" />
                       </div>
@@ -292,11 +291,7 @@ export default function ShelfPhotosPage() {
                       }
                       className="group relative h-36 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 cursor-pointer shadow-2xs hover:ring-2 hover:ring-emerald-500 transition"
                     >
-                      <img
-                        src={url}
-                        alt={`After shelf angle ${idx + 1}`}
-                        className="h-full w-full object-cover transition-transform duration-200"
-                      />
+                      <StoredPhoto src={url} alt={`After shelf angle ${idx + 1}`} imgClassName="h-full w-full object-cover transition-transform duration-200" />
                       <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                         <ZoomIn className="w-5 h-5" />
                       </div>
@@ -426,7 +421,7 @@ export default function ShelfPhotosPage() {
                           compareBeforeIdx === i ? 'border-amber-400 scale-105' : 'border-slate-800 opacity-60 hover:opacity-100'
                         }`}
                       >
-                        <img src={url} alt={`Before ${i + 1}`} className="w-full h-full object-cover" />
+                        <StoredPhoto src={url} alt={`Before ${i + 1}`} imgClassName="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -464,7 +459,7 @@ export default function ShelfPhotosPage() {
                           compareAfterIdx === i ? 'border-emerald-400 scale-105' : 'border-slate-800 opacity-60 hover:opacity-100'
                         }`}
                       >
-                        <img src={url} alt={`After ${i + 1}`} className="w-full h-full object-cover" />
+                        <StoredPhoto src={url} alt={`After ${i + 1}`} imgClassName="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -586,9 +581,10 @@ export default function ShelfPhotosPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-sm"
+                  disabled={shelfUploading > 0}
+                  className="px-5 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-sm disabled:opacity-60"
                 >
-                  Save multi-angle photos
+                  {shelfUploading > 0 ? 'Uploading photos…' : 'Save multi-angle photos'}
                 </button>
               </div>
             </form>

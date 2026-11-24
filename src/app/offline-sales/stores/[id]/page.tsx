@@ -1,5 +1,6 @@
 'use client';
 
+import StoredPhoto from '@/components/common/StoredPhoto';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import Money, { canSeeMoney } from '@/components/common/Money';
@@ -939,11 +940,7 @@ export default function StoreDetailPage() {
                     <div className="h-44 w-full overflow-hidden flex items-center justify-center bg-slate-100">
                       {img ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={img}
-                          alt="Shelf"
-                          className="h-full w-full object-cover transition-transform duration-300"
-                        />
+                        <StoredPhoto src={img} alt="Shelf" imgClassName="h-full w-full object-cover transition-transform duration-300" />
                       ) : (
                         <Camera className="w-8 h-8 text-slate-400" />
                       )}

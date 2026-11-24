@@ -1,5 +1,6 @@
 'use client';
 
+import StoredPhoto from '@/components/common/StoredPhoto';
 import PagedList from '@/components/common/PagedList';
 import { confirmAction } from '@/components/common/confirm';
 import DownloadButton from '@/components/common/DownloadButton';
@@ -506,11 +507,7 @@ export default function ReturnsPage() {
                             className="group relative inline-block h-9 w-9 rounded-lg overflow-hidden border border-slate-200 shadow-xs hover:ring-2 hover:ring-blue-400"
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={ret.evidenceUrl}
-                              alt="Defect Proof"
-                              className="h-full w-full object-cover transition-transform"
-                            />
+                            <StoredPhoto src={ret.evidenceUrl} alt="Defect Proof" imgClassName="h-full w-full object-cover transition-transform" />
                             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white">
                               <Eye className="h-3 w-3" />
                             </div>
