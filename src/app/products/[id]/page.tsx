@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -486,7 +487,7 @@ export default function Product360Page() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {relatedOrders.map((ord) => {
+                {<PagedList items={relatedOrders} label="store orders" pageSize={10} asRow render={(pageRows) => pageRows.map((ord) => {
                   const item = ord.items.find(
                     (i) =>
                       i.productId === product.id
@@ -524,7 +525,7 @@ export default function Product360Page() {
                       </td>
                     </tr>
                   );
-                })}
+                })} />}
               </tbody>
             </table>
           </div>
@@ -566,7 +567,7 @@ export default function Product360Page() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {productStores.map((s) => {
+                {<PagedList items={productStores} label="stores" pageSize={10} asRow render={(pageRows) => pageRows.map((s) => {
                   const isOutOfStock = s.unitsOnShelf === 0;
                   const isCountStale = s.daysSinceCount >= 7;
 
@@ -615,7 +616,7 @@ export default function Product360Page() {
                       </td>
                     </tr>
                   );
-                })}
+                })} />}
               </tbody>
             </table>
           </div>

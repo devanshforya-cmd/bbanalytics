@@ -11,15 +11,18 @@ const SIZES = [25, 50, 100];
  * In a table body pass `asRow` (with the table's column count if you know it) so the page
  * controls sit in a row of their own. Goes back to page 1 when the list changes (a new filter).
  */
-export default function PagedList<T>({ items, render, asRow = false, columns = 99, pageSize = 25, label = 'items' }: {
+export default function PagedList<T>({ items, render, asRow = false, asItem = false, columns = 99, pageSize = 25, label = 'items' }: {
   items: T[];
   render: (page: T[]) => React.ReactNode;
   asRow?: boolean;
+  /** Inside a <ul>/<ol>: the controls go in a list item of their own. */
+  asItem?: boolean;
   columns?: number;
   pageSize?: number;
   label?: string;
 }) {
   const [size, setSize] = useState(pageSize);
+  const sizes = [...new Set([pageSize, ...SIZES])].sort((a, b) => a - b);
   const [page, setPage] = useState(1);
   const anchor = useRef<HTMLElement | null>(null);
   const pages = Math.max(1, Math.ceil(items.length / size));
@@ -40,7 +43,7 @@ export default function PagedList<T>({ items, render, asRow = false, columns = 9
     });
   };
 
-  const controls = items.length > SIZES[0] || items.length > size ? (
+  const controls = items.length > sizes[0] ? (
     <nav aria-label={`Pages of ${label}`} className="flex flex-wrap items-center justify-between gap-3 py-3 text-[13px] text-slate-600">
       <span className="tabular-nums">
         {start + 1}–{Math.min(start + size, items.length)} of {items.length.toLocaleString()} {label}
@@ -49,7 +52,7 @@ export default function PagedList<T>({ items, render, asRow = false, columns = 9
         <label className="mr-2 flex items-center gap-1.5 text-xs text-slate-500">
           Show
           <select value={size} onChange={(e) => setSize(Number(e.target.value))} className="h-8 rounded-lg border border-black/[0.08] bg-white px-2 text-[13px] text-slate-800">
-            {SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
+            {sizes.map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
         </label>
         <button type="button" onClick={() => go(current - 1)} disabled={current === 1} aria-label="Previous page"
@@ -69,6 +72,14 @@ export default function PagedList<T>({ items, render, asRow = false, columns = 9
       <>
         {render(slice)}
         {controls && <tr ref={(el) => { anchor.current = el; }} className="bb-pager-row"><td colSpan={columns} className="px-3">{controls}</td></tr>}
+      </>
+    );
+  }
+  if (asItem) {
+    return (
+      <>
+        {render(slice)}
+        {controls && <li ref={(el) => { anchor.current = el; }} className="list-none">{controls}</li>}
       </>
     );
   }

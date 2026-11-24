@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import { confirmAction } from '@/components/common/confirm';
 
@@ -184,7 +185,7 @@ export default function HolidayCalendarSection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {holidays.map((h) => (
+              {<PagedList items={holidays} label="holidays" pageSize={25} asRow render={(pageRows) => pageRows.map((h) => (
                 <tr key={h.id} className="hover:bg-slate-50 transition-colors">
                   <td className="py-3 px-3 font-bold text-slate-900">{h.dateBs}</td>
                   <td className="py-3 px-3 text-slate-500 font-mono">{h.dateAd}</td>
@@ -214,7 +215,7 @@ export default function HolidayCalendarSection() {
                     </button>
                   </td>
                 </tr>
-              ))}
+              ))} />}
             </tbody>
           </table>
         </div>

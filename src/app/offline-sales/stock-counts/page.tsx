@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ClipboardList, Download, Search } from 'lucide-react';
@@ -147,7 +148,7 @@ export default function StockCountsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {shown.map((row) => (
+                  {<PagedList items={shown} label="stock counts" pageSize={25} asRow render={(pageRows) => pageRows.map((row) => (
                     <tr key={row.id} className="hover:bg-slate-50/70">
                       <td className="p-3">
                         <Link href={`/offline-sales/stores/${row.id}`} className="font-semibold text-slate-900 hover:text-blue-700 hover:underline">{row.name}</Link>
@@ -169,7 +170,7 @@ export default function StockCountsPage() {
                           className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-50"><ClipboardList className="h-3.5 w-3.5 text-blue-600" /> Count</button>
                       </td>
                     </tr>
-                  ))}
+                  ))} />}
                 </tbody>
               </table>
             </div>
@@ -180,7 +181,7 @@ export default function StockCountsPage() {
           <h2 className="text-sm font-bold text-slate-900">Recent counts</h2>
           {data.recent.length === 0 ? <p className="mt-2 text-sm text-slate-500">No counts yet.</p> : (
             <ul className="mt-3 divide-y divide-slate-100">
-              {data.recent.map((count) => {
+              {<PagedList items={data.recent} label="stock counts" pageSize={10} asItem render={(pageRows) => pageRows.map((count) => {
                 const open = openCount === count.id;
                 const forecast = open ? shelfForecast(data.counts.filter((c) => c.entityId === count.entityId), data.orders.filter((o) => o.entityId === count.entityId && o.status !== 'CANCELLED')) : [];
                 const out = count.items.filter((item) => item.shelfQty === 0).length;
@@ -217,7 +218,7 @@ export default function StockCountsPage() {
                     )}
                   </li>
                 );
-              })}
+              })} />}
             </ul>
           )}
         </section>

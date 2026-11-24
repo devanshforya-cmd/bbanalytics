@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import React, { useState } from 'react';
 import {
@@ -280,7 +281,7 @@ export default function FieldSalesSettings() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {schedules.map((entry) => {
+                {<PagedList items={schedules} label="standing stops" pageSize={25} asRow render={(pageRows) => pageRows.map((entry) => {
                   const officer = officers.find((o) => o.id === entry.officerId);
                   return (
                     <tr key={entry.id} className="hover:bg-slate-50/50">
@@ -307,7 +308,7 @@ export default function FieldSalesSettings() {
                       </td>
                     </tr>
                   );
-                })}
+                })} />}
               </tbody>
             </table>
           </div>

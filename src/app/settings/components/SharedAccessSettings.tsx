@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import { confirmAction } from '@/components/common/confirm';
 import React, { useEffect, useState } from 'react';
@@ -231,7 +232,7 @@ export default function SharedAccessSettings() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                {links.map((link) => {
+                {<PagedList items={links} label="links" pageSize={10} asRow render={(pageRows) => pageRows.map((link) => {
                   const isExpired = link.expiresAt && new Date(link.expiresAt) < new Date();
                   const isLive = link.isActive && !isExpired;
                   const isPending = pendingIds.includes(link.id);
@@ -376,7 +377,7 @@ export default function SharedAccessSettings() {
                       </td>
                     </tr>
                   );
-                })}
+                })} />}
               </tbody>
             </table>
           </div>

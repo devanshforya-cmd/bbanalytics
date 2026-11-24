@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import { nprText } from '@/components/common/Money';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -439,7 +440,7 @@ export default function OrderPage() {
               <p className="mt-0.5 text-[11px] text-slate-500">Recorded by the system on every save. It cannot be edited.</p>
               {!grouped.length ? <p className="mt-3 rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-500">This order has not been edited.</p> : (
                 <ol className="mt-3 space-y-3">
-                  {grouped.map((group) => (
+                  {<PagedList items={grouped} label="changes" pageSize={10} asItem render={(pageRows) => pageRows.map((group) => (
                     <li key={group.key} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs">
                       <p className="font-bold text-slate-900">{group.entries[0].changedBy}</p>
                       <p className="text-[11px] text-slate-500">{stamp(group.entries[0].timestamp)}</p>
@@ -452,7 +453,7 @@ export default function OrderPage() {
                       </ul>
                       {group.entries[0].reason && <p className="mt-2 text-[11px] text-slate-600">Reason: {group.entries[0].reason}</p>}
                     </li>
-                  ))}
+                  ))} />}
                 </ol>
               )}
             </section>

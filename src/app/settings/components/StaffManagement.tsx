@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import React, { useState } from 'react';
 import {
@@ -241,7 +242,7 @@ export default function StaffManagement() {
 
       {/* Staff Cards List */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs divide-y divide-slate-100">
-        {users.map((u) => {
+        {<PagedList items={users} label="staff" pageSize={25} render={(pageRows) => pageRows.map((u) => {
           const isActive = u.active !== false;
           const reportsToUser = users.find((mgr) => mgr.id === u.reportsToId);
 
@@ -343,7 +344,7 @@ export default function StaffManagement() {
               </div>
             </div>
           );
-        })}
+        })} />}
       </div>
 
       </>}

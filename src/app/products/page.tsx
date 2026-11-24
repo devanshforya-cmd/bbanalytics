@@ -790,7 +790,7 @@ export default function ProductsPage() {
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredCombos.map((c) => {
+          {<PagedList items={filteredCombos} label="combos" pageSize={10} render={(pageRows) => pageRows.map((c) => {
             const kitsStock = c.stockQty;
             const currentMrp = c.items.reduce((sum, part) => sum + (products.find(product => product.id === part.productId)?.mrp ?? part.mrp) * part.quantity, 0);
             const currentSavings = currentMrp > 0 ? Math.max(0, Math.round((1 - c.comboPrice / currentMrp) * 1000) / 10) : 0;
@@ -922,7 +922,7 @@ export default function ProductsPage() {
                 <CatalogEditor item={c} kind="combos" products={products} onChanged={loadCatalog} />
               </div>
             );
-          })}
+          })} />}
         </div>
         )
       )}

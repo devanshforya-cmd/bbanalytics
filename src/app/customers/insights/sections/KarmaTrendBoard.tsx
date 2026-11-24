@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import React from 'react';
 import Link from 'next/link';
 import { Customer } from '@/lib/types';
@@ -43,7 +44,7 @@ export default function KarmaTrendBoard({ karmaTrendBoard }: KarmaTrendBoardProp
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {karmaTrendBoard.map((item) => (
+            {<PagedList items={karmaTrendBoard} label="customers" pageSize={10} asRow render={(pageRows) => pageRows.map((item) => (
               <tr key={item.customer.id} className="hover:bg-slate-50 transition">
                 <td className="py-3 px-3">
                   <Link
@@ -69,7 +70,7 @@ export default function KarmaTrendBoard({ karmaTrendBoard }: KarmaTrendBoardProp
                 </td>
                 <td className="py-3 px-3 text-right font-semibold text-slate-700">{item.action}</td>
               </tr>
-            ))}
+            ))} />}
           </tbody>
         </table>
       </div>
