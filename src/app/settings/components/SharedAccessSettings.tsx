@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import { confirmAction } from '@/components/common/confirm';
 import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db/db-service';
@@ -384,7 +385,7 @@ export default function SharedAccessSettings() {
 
       {/* Generator Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 border border-slate-200 max-h-[90vh] overflow-y-auto">
             {createdLinkUrl ? (
               <div className="space-y-4 text-center py-4">
@@ -600,10 +601,10 @@ export default function SharedAccessSettings() {
               </form>
             )}
           </div>
-        </div>
+        </div></Portal>
       )}
       {passwordFor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="shared-password-title">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="shared-password-title">
           <form onSubmit={(event) => { event.preventDefault(); void savePassword(); }} className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-2xl">
             <div>
               <h3 id="shared-password-title" className="text-base font-semibold text-slate-900">Password for “{passwordFor.name}”</h3>
@@ -619,7 +620,7 @@ export default function SharedAccessSettings() {
               <button type="submit" disabled={saving} className="btn btn-primary disabled:opacity-60">{saving ? 'Saving…' : 'Save password'}</button>
             </div>
           </form>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

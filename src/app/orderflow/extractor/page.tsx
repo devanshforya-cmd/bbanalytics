@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import Money from '@/components/common/Money';
 import ProgressRing, { ButtonRing } from '@/components/common/ProgressRing';
 import InfoTip from '@/components/common/InfoTip';
@@ -1051,7 +1052,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
 
         {/* Confirmation Modal */}
         {showConfirmModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
             <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-900">Confirm batch push</h3>
@@ -1093,7 +1094,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                 </button>
               </div>
             </div>
-          </div>
+          </div></Portal>
         )}
       </div>
     </PageGuard>

@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import { confirmAction } from '@/components/common/confirm';
 
 import React, { useState, useEffect } from 'react';
@@ -221,7 +222,7 @@ export default function HolidayCalendarSection() {
 
       {/* Add Holiday Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in backdrop-blur-xs">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in backdrop-blur-xs">
           <div className="w-full max-w-md bg-white rounded-3xl p-6 space-y-4 shadow-2xl border border-slate-200">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-slate-900 text-sm">Register new holiday</h3>
@@ -312,7 +313,7 @@ export default function HolidayCalendarSection() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

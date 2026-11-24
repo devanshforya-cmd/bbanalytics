@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState, useEffect } from 'react';
 import { FilterCriteria, BrandCode, User } from '@/lib/types';
 import { NEPALI_MONTHS, adToBs, bsToAd, BS_MONTH_DAYS } from '@/lib/nepali-calendar';
@@ -504,7 +505,7 @@ export default function AdvancedFilterBar({
       {/* 3. SPACIOUS SLIDE-OUT DRAWER (COMFORTABLE 1-COL & 2-COL LAYOUT) */}
       {/* ========================================================================= */}
       {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <Portal><div className="fixed inset-0 z-50 overflow-hidden">
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
@@ -845,7 +846,7 @@ export default function AdvancedFilterBar({
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

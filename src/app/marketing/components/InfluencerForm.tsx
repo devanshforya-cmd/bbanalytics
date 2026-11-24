@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -58,7 +59,7 @@ export default function InfluencerForm({ influencer, onClose, onSaved }: Influen
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-xs sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="influencer-form-title">
+    <Portal><div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-xs sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="influencer-form-title">
       <div className="flex max-h-[94vh] w-full max-w-2xl flex-col rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <div>
@@ -143,6 +144,6 @@ export default function InfluencerForm({ influencer, onClose, onSaved }: Influen
           </button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db/db-service';
 import { addBrand as apiAddBrand, isBrandStorageLocalPreview } from '@/lib/db/brands-service';
@@ -212,7 +213,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+    <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="relative w-full max-w-2xl rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Header Strip */}
         <div className="bg-slate-900 px-6 py-5 text-white flex items-center justify-between">
@@ -634,6 +635,6 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
           </button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }

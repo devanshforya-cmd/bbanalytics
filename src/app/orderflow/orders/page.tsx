@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import InfoTip from '@/components/common/InfoTip';
 import DownloadButton from '@/components/common/DownloadButton';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -185,7 +186,7 @@ export default function AllOrdersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {shown.map((order) => {
+                  {<PagedList items={shown} label="orders" asRow render={(pageRows) => pageRows.map((order) => {
                     const orderReturns = returns.filter((entry) => entry.orderId === order.id);
                     const unlinked = orderReturns.find(exchangeNeedsLink);
                     const openFailure = failures.find((entry) => entry.orderId === order.id && ['FAILED', 'REATTEMPT_SCHEDULED', undefined].includes(entry.status as any));
@@ -240,7 +241,7 @@ export default function AllOrdersPage() {
                         </td>
                       </tr>
                     );
-                  })}
+                  })} />}
                 </tbody>
               </table>
             </div>

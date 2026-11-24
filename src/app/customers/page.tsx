@@ -1,5 +1,7 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
+import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
 import DownloadButton from '@/components/common/DownloadButton';
 import React, { useEffect, useState } from 'react';
@@ -262,7 +264,7 @@ export default function CustomersPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filtered.map((c) => {
+            {<PagedList items={filtered} label="customers" asRow render={(pageRows) => pageRows.map((c) => {
               const cleanPhone = encodeURIComponent(c.phone.replace(/[^0-9+]/g, ''));
               return (
                 <tr key={c.id} className="hover:bg-slate-50">
@@ -325,7 +327,7 @@ export default function CustomersPage() {
                   </td>
                 </tr>
               );
-            })}
+            })} />}
           </tbody>
         </table>
         </div>
@@ -335,7 +337,7 @@ export default function CustomersPage() {
       {/* MODAL: ONBOARD NEW CUSTOMER */}
       {/* ======================================================== */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -438,14 +440,14 @@ export default function CustomersPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ======================================================== */}
       {/* MODAL: EDIT EXISTING CUSTOMER */}
       {/* ======================================================== */}
       {editingCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -564,7 +566,7 @@ export default function CustomersPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
       </div>
     </PageGuard>

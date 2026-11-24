@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState, useRef } from 'react';
 import { compressImage, uploadImage, UploadResult } from '@/lib/file-upload';
 import {
@@ -338,7 +339,7 @@ export default function CameraCapture({
 
       {/* Lightbox Modal */}
       {lightboxUrl && (
-        <div
+        <Portal><div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs animate-in fade-in"
           onClick={() => setLightboxUrl(null)}
         >
@@ -360,7 +361,7 @@ export default function CameraCapture({
               className="max-h-[80vh] w-auto max-w-full object-contain rounded-xl mx-auto"
             />
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import InfoTip from '@/components/common/InfoTip';
 import DownloadButton from '@/components/common/DownloadButton';
 import React, { useEffect, useState } from 'react';
@@ -126,7 +127,7 @@ export default function MarketingSendsPage() {
                   <tr><th className="px-4 py-2.5">Send</th><th className="px-3 py-2.5">Sent</th><th className="px-3 py-2.5">Influencer</th><th className="px-3 py-2.5">Brands</th><th className="px-3 py-2.5">Products</th><th className="px-3 py-2.5">Responsible</th><th className="px-3 py-2.5">Content due</th><th className="px-3 py-2.5">Status</th><th className="px-3 py-2.5" /></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.map((send) => {
+                  {<PagedList items={filtered} label="sends" asRow render={(pageRows) => pageRows.map((send) => {
                     const label = sendStatusLabel(send, content, today);
                     const open = () => router.push(`/marketing/influencers/${send.influencerId}`);
                     return (
@@ -142,7 +143,7 @@ export default function MarketingSendsPage() {
                         <td className="px-3 py-3 text-slate-300"><ChevronRight className="h-4 w-4" /></td>
                       </tr>
                     );
-                  })}
+                  })} />}
                 </tbody>
               </table>
             </div>

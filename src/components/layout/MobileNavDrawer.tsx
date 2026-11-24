@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import BrandLogo from './BrandLogo';
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -65,7 +66,7 @@ export default function MobileNavDrawer({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
+    <Portal><div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in"
@@ -135,6 +136,6 @@ export default function MobileNavDrawer({
           </div>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }

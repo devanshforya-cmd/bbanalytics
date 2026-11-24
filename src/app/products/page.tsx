@@ -1,5 +1,7 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
+import Portal from '@/components/common/Portal';
 import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import { countsAsSale } from '@/lib/order-status';
@@ -595,7 +597,7 @@ export default function ProductsPage() {
           <div className="space-y-3">
           {/* Mobile Cards Feed (< md) */}
           <div className="grid grid-cols-1 gap-3 md:hidden">
-            {filteredProducts.map((p) => {
+            {<PagedList items={filteredProducts} label="products" render={(pageRows) => pageRows.map((p) => {
               const m = getProductMetrics(p);
               return (
                 <div
@@ -692,7 +694,7 @@ export default function ProductsPage() {
                   </div>
                 </div>
               );
-            })}
+            })} />}
           </div>
 
           {/* Desktop Table (>= md) */}
@@ -711,7 +713,7 @@ export default function ProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredProducts.map((p) => {
+                {<PagedList items={filteredProducts} label="products" asRow render={(pageRows) => pageRows.map((p) => {
                   const m = getProductMetrics(p);
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
@@ -770,7 +772,7 @@ export default function ProductsPage() {
                       </td>
                     </tr>
                   );
-                })}
+                })} />}
               </tbody>
             </table>
           </div>
@@ -927,7 +929,7 @@ export default function ProductsPage() {
 
       {/* Quick Product Performance Drawer / Modal */}
       {selectedPerfProduct && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
+        <Portal><div className="fixed inset-0 z-50 overflow-hidden">
           <div
             className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
             onClick={() => setSelectedPerfProduct(null)}
@@ -1122,7 +1124,7 @@ export default function ProductsPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Add Single Product Drawer */}

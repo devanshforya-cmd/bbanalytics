@@ -457,3 +457,6 @@ svg.lucide-bell { transform-origin: 50% 10%; }
   .bb-aurora::before { animation: none !important; }
   .btn:hover, a.rounded-2xl:hover, .cursor-pointer.rounded-2xl:hover { transform: none !important; }
 }
+
+/* The page-controls row of a paged table is not a data row */
+table tbody tr.bb-pager-row:hover { background-color: transparent !important; box-shadow: none; }

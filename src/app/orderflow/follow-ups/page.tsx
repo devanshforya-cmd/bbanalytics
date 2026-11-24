@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Phone, PhoneCall, Search, Settings2 } from 'lucide-react';
@@ -146,7 +147,7 @@ export default function FollowUpsPage() {
             description={view === 'TODAY' ? 'New orders get their first call on the day the plan sets.' : 'Calls appear here as orders come in.'} />
         ) : (
           <ul className="space-y-2.5">
-            {shown.map((item) => {
+            {<PagedList items={shown} label="calls due" render={(pageRows) => pageRows.map((item) => {
               const late = item.status === 'DUE' && item.overdueDays > 0;
               return (
                 <li key={item.key} className={`rounded-xl border bg-white p-4 text-xs ${late ? 'border-rose-200' : 'border-slate-200'}`}>
@@ -177,7 +178,7 @@ export default function FollowUpsPage() {
                   </div>
                 </li>
               );
-            })}
+            })} />}
           </ul>
         )}
       </div>

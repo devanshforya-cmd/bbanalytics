@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState } from 'react';
 import { db } from '@/lib/db/db-service';
 import { ReviewCategory } from '@/lib/types';
@@ -84,7 +85,7 @@ export default function DynamicCheckboxes({
 
       {/* Modal to organically create new category */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl space-y-3 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <h4 className="font-bold text-slate-900 text-sm">Create issue category</h4>
@@ -125,7 +126,7 @@ export default function DynamicCheckboxes({
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

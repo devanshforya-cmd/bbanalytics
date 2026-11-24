@@ -1,5 +1,7 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
+import Portal from '@/components/common/Portal';
 import { confirmAction } from '@/components/common/confirm';
 import DownloadButton from '@/components/common/DownloadButton';
 import InfoTip from '@/components/common/InfoTip';
@@ -508,7 +510,7 @@ function FeedbackContent() {
 
       {/* Grid of Feedbacks */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((item) => {
+        {<PagedList items={filtered} label="entries" render={(pageRows) => pageRows.map((item) => {
           const isReview = item.type === 'REVIEW';
           const isComplaint = item.type === 'COMPLAINT';
           const isSelected = selectedIds.includes(item.id);
@@ -647,12 +649,12 @@ function FeedbackContent() {
               </div>
             </div>
           );
-        })}
+        })} />}
       </div>
 
       {/* Feedback Detail & Complaint Resolution Modal */}
       {selectedEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div className="flex items-center gap-2">
@@ -891,12 +893,12 @@ function FeedbackContent() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Log Feedback Modal */}
       {showLogModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
@@ -1157,12 +1159,12 @@ function FeedbackContent() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Full-Resolution Lightbox Zoom Modal (PRD v2.2) */}
       {lightboxImageUrl && (
-        <div
+        <Portal><div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md animate-fade-in cursor-zoom-out"
           onClick={() => setLightboxImageUrl(null)}
         >
@@ -1190,7 +1192,7 @@ function FeedbackContent() {
               className="max-h-[80vh] max-w-full rounded-2xl shadow-2xl object-contain border border-white/10"
             />
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Bulk Action Bar */}

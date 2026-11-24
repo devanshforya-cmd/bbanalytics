@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import { nprText } from '@/components/common/Money';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -451,7 +452,7 @@ export default function OrderPage() {
         )}
 
         {confirming && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-xs sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-edit-title">
+          <Portal><div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-xs sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="confirm-edit-title">
             <div className="flex max-h-[92vh] w-full max-w-xl flex-col rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
               <div className="border-b border-slate-100 px-5 py-4">
                 <h2 id="confirm-edit-title" className="text-base font-bold text-slate-900">Save changes to {displayDocumentId(order.orderNumber)}?</h2>
@@ -484,7 +485,7 @@ export default function OrderPage() {
                 </button>
               </div>
             </div>
-          </div>
+          </div></Portal>
         )}
       </div>
     </PageGuard>

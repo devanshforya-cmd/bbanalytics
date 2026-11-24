@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
@@ -86,7 +87,7 @@ export default function NotificationHistoryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4">
+    <Portal><div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4">
       {openMessage && <MessageModal message={openMessage} onClose={() => setOpenMessage(null)} />}
       {/* Backdrop */}
       <div
@@ -297,6 +298,6 @@ export default function NotificationHistoryModal({
           Showing {filteredNotifications.length} of {notifications.length} audit logs
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }

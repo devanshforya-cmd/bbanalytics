@@ -1,5 +1,7 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
+import Portal from '@/components/common/Portal';
 import { confirmAction } from '@/components/common/confirm';
 import DownloadButton from '@/components/common/DownloadButton';
 import InfoTip from '@/components/common/InfoTip';
@@ -677,7 +679,7 @@ export default function DeliveryFailuresPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((df) => {
+                <PagedList items={filtered} label="failures" asRow render={(pageRows) => pageRows.map((df) => {
                   const daysSince = getDaysSince(df.dateAd);
                   const status = df.status || 'FAILED';
 
@@ -889,7 +891,7 @@ export default function DeliveryFailuresPage() {
                       </td>
                     </tr>
                   );
-                })
+                })} />
               )}
             </tbody>
           </table>
@@ -898,7 +900,7 @@ export default function DeliveryFailuresPage() {
 
       {/* 6c. Schedule Reattempt Modal */}
       {reattemptModalItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
@@ -981,7 +983,7 @@ export default function DeliveryFailuresPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {showLogModal && (
@@ -991,7 +993,7 @@ export default function DeliveryFailuresPage() {
 
       {/* Proof of Delivery Lightbox / Fraud Alert Modal (Fix 41) */}
       {selectedPodProof && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-rose-700 font-bold text-sm">
@@ -1050,12 +1052,12 @@ export default function DeliveryFailuresPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Upload Proof of Delivery Modal (Fix 41) */}
       {showUploadPodModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 text-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
@@ -1127,7 +1129,7 @@ export default function DeliveryFailuresPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
       </div>
     </PageGuard>

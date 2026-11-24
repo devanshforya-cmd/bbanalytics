@@ -1,5 +1,7 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
+import Portal from '@/components/common/Portal';
 import React, { useState, useMemo, useEffect } from 'react';
 import DownloadButton from '@/components/common/DownloadButton';
 import Link from 'next/link';
@@ -662,7 +664,7 @@ export default function DocumentsPage() {
             }}
           />
         ) : (
-          filteredDocs.map((doc) => {
+          <PagedList items={filteredDocs} label="documents" render={(pageRows) => pageRows.map((doc) => {
             const isOverdue = isDocOverdue(doc);
             const daysAgo = getDaysSinceDoc(doc.docDateAd);
 
@@ -965,13 +967,13 @@ export default function DocumentsPage() {
                 </div>
               </div>
             );
-          })
+          })} />
         )}
       </div>
 
       {/* 5b. Zoomable Full-Resolution Lightbox Modal */}
       {lightboxDoc && lightboxDoc.photoUrls && lightboxDoc.photoUrls.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
           <div className="relative flex flex-col h-[92vh] w-full max-w-5xl rounded-2xl bg-slate-900 border border-slate-700 overflow-hidden shadow-2xl text-white">
             {/* Lightbox Header */}
             <div className="flex items-center justify-between px-5 py-3.5 bg-slate-800/80 border-b border-slate-700 shrink-0">
@@ -1099,12 +1101,12 @@ export default function DocumentsPage() {
               )}
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* 5c. Handover Action Modal */}
       {handoverModalDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
@@ -1184,12 +1186,12 @@ export default function DocumentsPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* 5c. Permanent Filing Action Modal */}
       {filingModalDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
@@ -1259,12 +1261,12 @@ export default function DocumentsPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* 5c. Mark as Missing Modal */}
       {missingModalDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
@@ -1322,12 +1324,12 @@ export default function DocumentsPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* 5e. Upload Document Modal with Searchable Store Dropdown & Clean Form */}
       {showUploadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <form
             onSubmit={handleUploadSubmit}
             className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4 text-xs max-h-[90vh] overflow-y-auto"
@@ -1548,7 +1550,7 @@ export default function DocumentsPage() {
               </button>
             </div>
           </form>
-        </div>
+        </div></Portal>
       )}
     </div>
     </PageGuard>

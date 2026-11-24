@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React from 'react';
 import { AlertTriangle, X, Info, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -54,7 +55,7 @@ export default function ConfirmModal({
   const cfg = variantConfig[isDestructive ? 'danger' : variant];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+    <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-start justify-between p-5 pb-4">
@@ -120,6 +121,6 @@ export default function ConfirmModal({
           </button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }

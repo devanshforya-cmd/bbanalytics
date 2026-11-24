@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState } from 'react';
 import { Copy, Pencil, Plus, Trash2, X } from 'lucide-react';
 import AccessGrid from './AccessGrid';
@@ -114,7 +115,7 @@ export default function RolesManager({ roles, people, onChanged }: { roles: Staf
       )}
 
       {draft && (
-        <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/50 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="role-editor-title">
+        <Portal><div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-900/50 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="role-editor-title">
           <div className="flex max-h-dvh w-full max-w-5xl flex-col bg-slate-50 shadow-2xl sm:max-h-[92vh] sm:rounded-3xl">
             <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3.5 sm:rounded-t-3xl">
               <h3 id="role-editor-title" className="text-base font-semibold text-slate-900">{draft.id ? `Edit role: ${draft.name || 'Untitled'}` : 'New role'}</h3>
@@ -151,7 +152,7 @@ export default function RolesManager({ roles, people, onChanged }: { roles: Staf
               <button type="button" onClick={save} disabled={saving} className="btn btn-primary disabled:opacity-60">{saving ? 'Saving…' : draft.id ? 'Save role' : 'Create role'}</button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState, useEffect, useMemo } from 'react';
 import { capturePhoto } from '@/lib/photo-capture';
 import {
@@ -255,7 +256,7 @@ export default function InlineOrderForm({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4">
+    <Portal><div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4">
       <div className="w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in slide-in-from-bottom duration-300">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white shrink-0">
@@ -712,6 +713,6 @@ export default function InlineOrderForm({
           )}
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }

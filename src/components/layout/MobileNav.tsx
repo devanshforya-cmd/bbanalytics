@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -72,7 +73,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
     <>
       {/* Floating Action Drawer for Mobile Quick Actions */}
       {showFabDrawer && (
-        <div
+        <Portal><div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col justify-end lg:hidden animate-fade-in"
           onClick={() => setShowFabDrawer(false)}
         >
@@ -215,7 +216,7 @@ export default function MobileNav({ pending = false }: { pending?: boolean }) {
               )}
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Primary Mobile Bottom Navigation Bar (Dynamic from user permissions) */}

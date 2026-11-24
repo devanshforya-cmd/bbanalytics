@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import InfoTip from '@/components/common/InfoTip';
 import DownloadButton from '@/components/common/DownloadButton';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -160,7 +161,7 @@ export default function InfluencerDirectoryPage() {
               <span>Influencer</span><span>Niches</span><span>Rating</span><span className="text-right">Sends</span><span className="text-right">Content</span><span>Last send</span><span className="w-28" />
             </div>
             <ul className="divide-y divide-slate-100">
-              {filtered.map(({ influencer, stats, nicheNames, contentCount, overdue }) => (
+              {<PagedList items={filtered} label="influencers" render={(pageRows) => pageRows.map(({ influencer, stats, nicheNames, contentCount, overdue }) => (
                 <li key={influencer.id}>
                   <div role="link" tabIndex={0} onClick={() => router.push(`/marketing/influencers/${influencer.id}`)} onKeyDown={(event) => { if (event.key === 'Enter') router.push(`/marketing/influencers/${influencer.id}`); }}
                     className={`grid cursor-pointer grid-cols-1 gap-2 px-4 py-3 text-xs transition hover:bg-slate-50 focus:bg-blue-50 focus:outline-none lg:grid-cols-[2fr_1.4fr_1fr_0.8fr_0.8fr_1.1fr_auto] lg:items-center lg:gap-3 ${influencer.isActive === false ? 'opacity-60' : ''}`}>
@@ -182,7 +183,7 @@ export default function InfluencerDirectoryPage() {
                     </div>
                   </div>
                 </li>
-              ))}
+              ))} />}
             </ul>
           </div>
         )}

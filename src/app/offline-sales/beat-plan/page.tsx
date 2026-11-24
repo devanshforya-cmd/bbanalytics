@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -706,7 +707,7 @@ export default function BeatPlanPage() {
 
         {/* In-Store Cheque Collection Modal */}
         {activeActionModal === 'COLLECT_CHEQUE' && targetBeat && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-xs p-0 sm:p-4">
+          <Portal><div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-xs p-0 sm:p-4">
             <div className="w-full max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom duration-200">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
                 <div className="flex items-center gap-2.5">
@@ -847,12 +848,12 @@ export default function BeatPlanPage() {
                 </button>
               </div>
             </div>
-          </div>
+          </div></Portal>
         )}
 
         {/* In-Store Shelf Photos Modal */}
         {activeActionModal === 'SHELF_PHOTOS' && targetBeat && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-xs p-0 sm:p-4">
+          <Portal><div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-xs p-0 sm:p-4">
             <div className="w-full max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom duration-200">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
                 <div className="flex items-center gap-2.5">
@@ -963,12 +964,12 @@ export default function BeatPlanPage() {
                 </button>
               </div>
             </div>
-          </div>
+          </div></Portal>
         )}
 
         {/* Admin One-Time Beat Override Modal (Section 7) */}
         {showOverrideModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
             <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
@@ -1055,12 +1056,12 @@ export default function BeatPlanPage() {
                 </div>
               </form>
             </div>
-          </div>
+          </div></Portal>
         )}
 
         {/* Manager Create & Assign Beat Route Modal */}
         {showAssignRouteModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
             <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between border-b border-slate-100 p-5 bg-slate-50/50">
                 <div className="flex items-center gap-2.5">
@@ -1259,12 +1260,12 @@ export default function BeatPlanPage() {
                 </div>
               </form>
             </div>
-          </div>
+          </div></Portal>
         )}
 
         {/* Staff Leave & Relief Coverage Reassignment Modal */}
         {showLeaveModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
             <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between border-b border-slate-100 p-5 bg-amber-50/50">
                 <div className="flex items-center gap-2.5">
@@ -1395,7 +1396,7 @@ export default function BeatPlanPage() {
                 </div>
               </form>
             </div>
-          </div>
+          </div></Portal>
         )}
 
         <EndOfDayModal

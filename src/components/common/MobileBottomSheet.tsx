@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
@@ -36,7 +37,7 @@ export default function MobileBottomSheet({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
+    <Portal><div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity"
@@ -82,6 +83,6 @@ export default function MobileBottomSheet({
           </div>
         )}
       </div>
-    </div>
+    </div></Portal>
   );
 }

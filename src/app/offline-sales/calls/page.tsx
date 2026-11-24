@@ -1,5 +1,7 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
+import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
 import DownloadButton from '@/components/common/DownloadButton';
 import React, { useState, useEffect } from 'react';
@@ -201,7 +203,7 @@ export default function CallsPage() {
               description="Click 'Log Call' to record order-taking or payment follow-up calls."
             />
           ) : (
-            filteredCalls.map((c) => (
+            <PagedList items={filteredCalls} label="calls" render={(pageRows) => pageRows.map((c) => (
             <div
               key={c.id}
               className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-2 text-xs"
@@ -252,13 +254,13 @@ export default function CallsPage() {
                 )}
               </div>
             </div>
-          ))
+          ))} />
         )}
       </div>
 
       {/* Log Call Modal */}
       {showLogModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
@@ -470,7 +472,7 @@ export default function CallsPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
     </PageGuard>
