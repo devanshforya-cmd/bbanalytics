@@ -1,5 +1,7 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
+import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/db/db-service';
@@ -175,7 +177,7 @@ export default function ShelfPhotosPage() {
             description="No before/after shelf share photos match your filter criteria or officer assignment."
           />
         ) : (
-          filtered.map((item) => (
+          <PagedList items={filtered} label="photos" render={(pageRows) => pageRows.map((item) => (
           <div
             key={item.id}
             className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-5"
@@ -307,7 +309,7 @@ export default function ShelfPhotosPage() {
               </div>
             </div>
           </div>
-        ))
+        ))} />
         )}
       </div>
 
@@ -315,7 +317,7 @@ export default function ShelfPhotosPage() {
       {/* FULL RESOLUTION PHOTO LIGHTBOX MODAL */}
       {/* ======================================================== */}
       {activeModalImage && (
-        <div
+        <Portal><div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
           onClick={() => setActiveModalImage(null)}
         >
@@ -347,14 +349,14 @@ export default function ShelfPhotosPage() {
               />
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ======================================================== */}
       {/* SIDE-BY-SIDE BEFORE / AFTER COMPARISON MODAL */}
       {/* ======================================================== */}
       {comparePhoto && (
-        <div
+        <Portal><div
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-fade-in"
           onClick={() => setComparePhoto(null)}
         >
@@ -481,14 +483,14 @@ export default function ShelfPhotosPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ======================================================== */}
       {/* UPLOAD MULTI-PHOTO EVIDENCE MODAL */}
       {/* ======================================================== */}
       {showUploadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -591,7 +593,7 @@ export default function ShelfPhotosPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
     </PageGuard>

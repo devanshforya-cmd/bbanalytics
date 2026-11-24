@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import Money, { canSeeMoney } from '@/components/common/Money';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -469,7 +470,7 @@ export default function StoreDetailPage() {
 
       {/* Add Contact Modal */}
       {showAddContactModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-slate-900 text-base">
@@ -561,7 +562,7 @@ export default function StoreDetailPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {storeRecord && <StoreAreaEditor key={`${store.type}:${store.id}`} record={storeRecord} entityType={store.type === 'BRANCH' ? 'BRANCH' : 'RETAILER'} />}

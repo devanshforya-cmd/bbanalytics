@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Tag, Plus, Edit2, Ban, CheckCircle, X, Trash2, AlertTriangle, AlertCircle } from 'lucide-react';
@@ -435,7 +436,7 @@ export default function BrandSettings() {
 
       {/* Add / Edit Brand Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-md w-full max-h-[92vh] overflow-y-auto p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-slate-900 text-base">
@@ -567,12 +568,12 @@ export default function BrandSettings() {
               </div>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Blocked Deletion Modal (Has associated data) */}
       {deleteBlockedData && brandToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 space-y-4">
             <div className="flex items-center gap-3 text-amber-600">
               <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
@@ -627,12 +628,12 @@ export default function BrandSettings() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Confirmation Modal for Permanent Delete (0 data) */}
       {showConfirmDeleteModal && brandToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 space-y-4">
             <div className="flex items-center gap-3 text-rose-600">
               <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
@@ -683,7 +684,7 @@ export default function BrandSettings() {
               />
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState } from 'react';
 import {
   Camera,
@@ -315,7 +316,7 @@ export default function FieldSalesSettings() {
 
       {/* One-Time Beat Override Modal */}
       {showOverrideModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-slate-900 text-base">Add one-time beat override</h3>
@@ -410,12 +411,12 @@ export default function FieldSalesSettings() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Leave Coverage Modal */}
       {showLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-slate-900 text-base">Officer leave &amp; route coverage</h3>
@@ -502,7 +503,7 @@ export default function FieldSalesSettings() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

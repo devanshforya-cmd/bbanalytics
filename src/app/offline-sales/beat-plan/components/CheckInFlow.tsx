@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState, useEffect } from 'react';
 import { capturePhoto } from '@/lib/photo-capture';
 import {
@@ -99,7 +100,7 @@ export default function CheckInFlow({
     const canCheckIn = !savingPhoto && gpsReady && (!photoRequired || Boolean(photoUrl)) && (calculatedDistance <= 150 || Boolean(overrideReason.trim()));
 
     return (
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4">
+      <Portal><div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4">
         <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
           <div className="p-6 space-y-4">
             <div className="flex items-start justify-between">
@@ -208,7 +209,7 @@ export default function CheckInFlow({
             </button>
           </div>
         </div>
-      </div>
+      </div></Portal>
     );
   }
 
@@ -246,7 +247,7 @@ export default function CheckInFlow({
     ];
 
     return (
-      <div className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
+      <Portal><div className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4">
         <div className="w-full max-w-2xl max-h-[92vh] bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
           {/* Active Store Workspace Header with Live Timer (Section 5) */}
           <div className="bg-slate-900 text-white px-5 sm:px-6 py-4 flex items-center justify-between">
@@ -333,7 +334,7 @@ export default function CheckInFlow({
             </button>
           </div>
         </div>
-      </div>
+      </div></Portal>
     );
   }
 

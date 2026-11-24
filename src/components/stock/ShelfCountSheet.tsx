@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Plus, X } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -69,7 +70,7 @@ export default function ShelfCountSheet({ target, onClose, onSaved }: { target: 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 sm:p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="count-title">
+    <Portal><div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 sm:p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="count-title">
       <div className="flex max-h-[94vh] w-full max-w-xl flex-col rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div>
@@ -152,6 +153,6 @@ export default function ShelfCountSheet({ target, onClose, onSaved }: { target: 
           )}
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }

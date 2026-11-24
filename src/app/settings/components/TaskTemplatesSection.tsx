@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState, useEffect } from 'react';
 import { CheckSquare, Plus, Edit2, CheckCircle2, Clock, Trash2 } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -160,7 +161,7 @@ export default function TaskTemplatesSection() {
 
       {/* New Template Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in backdrop-blur-xs">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-3xl p-6 space-y-4 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-slate-900 text-sm">Create SOP task template</h3>
@@ -284,7 +285,7 @@ export default function TaskTemplatesSection() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

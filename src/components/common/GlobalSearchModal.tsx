@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import { nprText } from '@/components/common/Money';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -335,7 +336,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
   if (!isOpen) return null;
 
   return (
-    <div
+    <Portal><div
       className="fixed inset-0 z-50 flex items-start justify-center pt-8 sm:pt-20 px-3 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-150"
       onClick={onClose}
     >
@@ -645,7 +646,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
           </div>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }
 

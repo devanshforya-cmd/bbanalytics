@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useState } from 'react';
 import {
   Users,
@@ -349,7 +350,7 @@ export default function StaffManagement() {
 
       {/* Account Creation / Permissions Editor Modal (Section 1d) */}
       {showAddStaffModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-5xl w-full my-6 p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
@@ -566,7 +567,7 @@ export default function StaffManagement() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

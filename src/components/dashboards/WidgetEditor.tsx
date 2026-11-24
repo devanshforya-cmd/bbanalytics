@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -71,7 +72,7 @@ export default function WidgetEditor({ prepared, filters, initial, onSave, onClo
   const tableColumns = metrics.filter((m) => m.key !== (typeof widget.metric === 'string' ? widget.metric : '') && metricDimensions(m).includes(widget.split as DimensionKey));
 
   return (
-    <div className="fixed inset-0 z-[70] flex justify-end bg-slate-900/40" role="dialog" aria-modal="true" aria-labelledby="editor-title" onClick={onClose}>
+    <Portal><div className="fixed inset-0 z-[70] flex justify-end bg-slate-900/40" role="dialog" aria-modal="true" aria-labelledby="editor-title" onClick={onClose}>
       <div ref={panelRef} className="flex h-full w-full max-w-5xl flex-col bg-slate-50 shadow-2xl lg:flex-row" onClick={(event) => event.stopPropagation()}>
         <div className="flex min-h-0 flex-1 flex-col bg-white lg:max-w-md">
           <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
@@ -228,7 +229,7 @@ export default function WidgetEditor({ prepared, filters, initial, onSave, onClo
           {metric ? <WidgetCard prepared={prepared} widget={widget} filters={filters} preview /> : <p className="text-sm text-slate-500">Choose a number to see the preview.</p>}
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }
 

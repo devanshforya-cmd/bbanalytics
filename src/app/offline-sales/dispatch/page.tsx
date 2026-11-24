@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
 import DownloadButton from '@/components/common/DownloadButton';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -353,7 +354,7 @@ export default function DispatchPage() {
 
         {/* New dispatch order */}
         {showForm && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="new-dispatch-title">
+          <Portal><div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="new-dispatch-title">
             <div className="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
               <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
                 <div>
@@ -421,7 +422,7 @@ export default function DispatchPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </div></Portal>
         )}
 
         <ConfirmModal
@@ -442,7 +443,7 @@ export default function DispatchPage() {
 
         {/* Move to the next step */}
         {moving && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true" aria-labelledby="move-title">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true" aria-labelledby="move-title">
             <div className="w-full max-w-md space-y-4 rounded-2xl bg-white p-5 text-xs shadow-2xl">
               <div>
                 <h3 id="move-title" className="text-base font-bold text-slate-900">{STEP_ACTION[moving.to].label}: {moving.dispatch.dispatchNumber || 'order'}</h3>
@@ -466,17 +467,17 @@ export default function DispatchPage() {
                 <button type="button" onClick={confirmMove} disabled={isSubmitting} className={`rounded-lg px-4 py-2 font-bold disabled:opacity-50 ${STEP_ACTION[moving.to].style}`}>{STEP_ACTION[moving.to].label}</button>
               </div>
             </div>
-          </div>
+          </div></Portal>
         )}
 
         {lightbox && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setLightbox(null)} role="dialog" aria-modal="true" aria-label="Signed challan">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setLightbox(null)} role="dialog" aria-modal="true" aria-label="Signed challan">
             <div className="relative max-h-[90vh] max-w-2xl rounded-2xl bg-white p-2" onClick={(e) => e.stopPropagation()}>
               <button type="button" onClick={() => setLightbox(null)} aria-label="Close" className="absolute right-4 top-4 z-10 rounded-full bg-slate-900/70 p-1.5 text-white hover:bg-slate-900"><X className="h-5 w-5" /></button>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={lightbox} alt="Signed challan" className="mx-auto max-h-[80vh] w-auto max-w-full rounded-xl object-contain" />
             </div>
-          </div>
+          </div></Portal>
         )}
       </div>
     </PageGuard>

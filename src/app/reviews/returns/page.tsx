@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import { confirmAction } from '@/components/common/confirm';
 import DownloadButton from '@/components/common/DownloadButton';
 import React, { useEffect, useState, useMemo } from 'react';
@@ -353,7 +354,7 @@ export default function ReturnsPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((ret) => {
+                <PagedList items={filtered} label="returns" asRow render={(pageRows) => pageRows.map((ret) => {
                   // Time-to-return
                   const daysToReturn = ret.orderProcessedDateAd
                     ? Math.max(
@@ -501,7 +502,7 @@ export default function ReturnsPage() {
                       </td>
                     </tr>
                   );
-                })
+                })} />
               )}
             </tbody>
           </table>

@@ -1,5 +1,6 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Phone, PhoneCall, Plus, Search } from 'lucide-react';
@@ -120,7 +121,7 @@ export default function CustomerCallsPage() {
             description={calls.length ? 'Change the dates or filters.' : 'Calls logged here or from Follow-up calls show up in this list.'} />
         ) : (
           <ul className="space-y-2">
-            {shown.map((call) => {
+            {<PagedList items={shown} label="calls" render={(pageRows) => pageRows.map((call) => {
               const info = outcomeInfo(call.outcome);
               const order = call.orderId ? orders.get(call.orderId) : undefined;
               return (
@@ -145,7 +146,7 @@ export default function CustomerCallsPage() {
                   <p className="mt-2 text-[11px] text-slate-500">{call.officerName} · {call.dateBs || call.dateAd} ({call.dateAd}){call.createdAt ? `, ${new Date(call.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kathmandu' })}` : ''}{call.durationMinutes ? ` · ${call.durationMinutes} min` : ''}</p>
                 </li>
               );
-            })}
+            })} />}
           </ul>
         )}
       </div>

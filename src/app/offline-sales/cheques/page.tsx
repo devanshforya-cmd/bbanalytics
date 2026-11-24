@@ -1,5 +1,7 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
+import Portal from '@/components/common/Portal';
 import Money, { nprText } from '@/components/common/Money';
 import DownloadButton from '@/components/common/DownloadButton';
 import { confirmAction } from '@/components/common/confirm';
@@ -416,7 +418,7 @@ function ChequesContent() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredCheques.map((chq) => {
+        {<PagedList items={filteredCheques} label="cheques" render={(pageRows) => pageRows.map((chq) => {
           const isFieldHeld = chq.status === 'COLLECTED_IN_FIELD';
           const isCashed = chq.status === 'CASHED';
           const isBounced = chq.status === 'BOUNCED';
@@ -494,13 +496,13 @@ function ChequesContent() {
               </div>
             </div>
           );
-        })}
+        })} />}
       </div>
       )}
 
       {/* Cheque Detail & Two-Step Handover Modal */}
       {selectedCheque && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <div>
@@ -723,12 +725,12 @@ function ChequesContent() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Add Cheque Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-3 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-slate-900 text-base">Add new cheque entry</h3>
@@ -865,7 +867,7 @@ function ChequesContent() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Bulk Action Bar */}

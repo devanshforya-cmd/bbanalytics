@@ -1,5 +1,7 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
+import Portal from '@/components/common/Portal';
 import { confirmAction } from '@/components/common/confirm';
 import DownloadButton from '@/components/common/DownloadButton';
 import InfoTip from '@/components/common/InfoTip';
@@ -317,7 +319,7 @@ export default function TasksPage() {
 
       {/* Tasks List */}
       <div className="space-y-3">
-        {filtered.map((task) => {
+        {<PagedList items={filtered} label="tasks" render={(pageRows) => pageRows.map((task) => {
           const isDone = task.status === 'COMPLETED';
           const isSelected = selectedIds.includes(task.id);
           return (
@@ -388,7 +390,7 @@ export default function TasksPage() {
               </div>
             </div>
           );
-        })}
+        })} />}
 
         {filtered.length === 0 && (
           <EmptyState
@@ -403,7 +405,7 @@ export default function TasksPage() {
 
       {/* SOP Template Modal (Fix 37b) */}
       {showTemplateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -515,12 +517,12 @@ export default function TasksPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Create Task Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-3 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-slate-900 text-base">Create new task</h3>
@@ -647,12 +649,12 @@ export default function TasksPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Staff Leave & Relief Coverage Reassignment Modal */}
       {showLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 p-5 bg-amber-50/50">
               <div className="flex items-center gap-2.5">
@@ -783,7 +785,7 @@ export default function TasksPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* Bulk Action Bar */}

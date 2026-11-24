@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -68,7 +69,7 @@ export default function AddOutletModal({ chain, onClose, onSaved }: { chain: Dis
 
   const field = 'mt-1 block w-full rounded-lg border border-slate-300 p-2 text-sm';
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-3" role="dialog" aria-modal="true" aria-labelledby="add-outlet-title">
+    <Portal><div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-3" role="dialog" aria-modal="true" aria-labelledby="add-outlet-title">
       <form onSubmit={save} className="my-6 w-full max-w-lg space-y-3 rounded-2xl bg-white p-5 text-xs shadow-2xl">
         <div className="flex items-start justify-between">
           <div>
@@ -98,6 +99,6 @@ export default function AddOutletModal({ chain, onClose, onSaved }: { chain: Dis
           <button type="submit" disabled={saving} className="btn btn-primary disabled:opacity-50">Add outlet</button>
         </div>
       </form>
-    </div>
+    </div></Portal>
   );
 }

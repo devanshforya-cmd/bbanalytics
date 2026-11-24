@@ -1,5 +1,7 @@
 'use client';
 
+import PagedList from '@/components/common/PagedList';
+import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
 import DownloadButton from '@/components/common/DownloadButton';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -738,7 +740,7 @@ export default function StoresPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredRetailers.map((ret) => (
+              {<PagedList items={filteredRetailers} label="stores" render={(pageRows) => pageRows.map((ret) => (
                 <div key={ret.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-3.5 flex flex-col justify-between">
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
@@ -853,14 +855,14 @@ export default function StoresPage() {
                     </a>
                   </div>
                 </div>
-              ))}
+              ))} />}
             </div>
           </div>
         )}
 
         {/* SECTION 2c: SALES OFFICER FIELD ADD STORE MODAL */}
         {showFieldAddModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
             <div className="bg-white rounded-3xl max-w-lg w-full my-6 p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
                 <div>
@@ -1106,12 +1108,12 @@ export default function StoresPage() {
                 </div>
               </form>
             </div>
-          </div>
+          </div></Portal>
         )}
 
         {/* SECTION 2d: SUPER ADMIN ADD STORE MODAL */}
         {showAdminAddModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
             <div className="bg-white rounded-3xl max-w-xl w-full my-6 p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
                 <div>
@@ -1337,12 +1339,12 @@ export default function StoresPage() {
                 </div>
               </form>
             </div>
-          </div>
+          </div></Portal>
         )}
 
         {/* SECTION 3: FLAG CONTACT FOR REMOVAL MODAL */}
         {flagModalTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
             <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
@@ -1391,12 +1393,12 @@ export default function StoresPage() {
                 </div>
               </form>
             </div>
-          </div>
+          </div></Portal>
         )}
 
         {/* SECTION 3c: ADMIN PENDING CONTACT REMOVALS MODAL */}
         {showPendingRemovalsModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
             <div className="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
                 <div>
@@ -1476,12 +1478,12 @@ export default function StoresPage() {
                 )}
               </div>
             </div>
-          </div>
+          </div></Portal>
         )}
 
         {/* SECTION 4: COMMERCIAL TERMS & MARGINS MODAL */}
         {commercialTermsStore && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
             <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
@@ -1602,12 +1604,12 @@ export default function StoresPage() {
                 </div>
               </form>
             </div>
-          </div>
+          </div></Portal>
         )}
 
         {/* ADD CONTACT MODAL */}
         {targetStoreForContact && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
             <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-200">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
@@ -1693,7 +1695,7 @@ export default function StoresPage() {
                 </div>
               </form>
             </div>
-          </div>
+          </div></Portal>
         )}
       </div>
       {outletChain && <AddOutletModal chain={outletChain} onClose={() => setOutletChain(null)} onSaved={refreshData} />}

@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
@@ -559,7 +560,7 @@ export default function ReviewCategoriesPage() {
 
       {/* 12c: Analytics Drawer / Modal */}
       {selectedAnalyticsCat && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -642,12 +643,12 @@ export default function ReviewCategoriesPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* 12b: Merge Modal */}
       {showMergeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -726,12 +727,12 @@ export default function ReviewCategoriesPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* 12d: Create New Category Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -802,7 +803,7 @@ export default function ReviewCategoriesPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* FIX 50d: Archive Category Confirmation Modal */}

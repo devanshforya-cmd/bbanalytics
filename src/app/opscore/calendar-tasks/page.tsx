@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import { nprText } from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect } from 'react';
@@ -1077,7 +1078,7 @@ export default function CalendarTasksPage() {
       {/* DRAWER / MODAL: DAY AGENDA DETAIL */}
       {/* ======================================================== */}
       {selectedDayEvents && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 max-h-[85vh] overflow-y-auto space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
@@ -1189,14 +1190,14 @@ export default function CalendarTasksPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ======================================================== */}
       {/* 16c. TASK ASSIGNMENT & CREATION / EDIT MODAL */}
       {/* ======================================================== */}
       {showTaskModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -1373,7 +1374,7 @@ export default function CalendarTasksPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
     </PageGuard>

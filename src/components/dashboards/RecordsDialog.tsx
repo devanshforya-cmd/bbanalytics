@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Download, X } from 'lucide-react';
@@ -33,7 +34,7 @@ export default function RecordsDialog({ prepared, query, title, subtitle, only, 
   }], `${title.replace(/[^\w -]+/g, '').slice(0, 40) || 'records'}.xlsx`, { title });
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-900/50 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="records-title" onClick={onClose}>
+    <Portal><div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-900/50 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="records-title" onClick={onClose}>
       <div className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div className="min-w-0">
@@ -67,6 +68,6 @@ export default function RecordsDialog({ prepared, query, title, subtitle, only, 
           {lines.length > limit && <button type="button" onClick={() => setLimit((n) => n + 200)} className="mx-3 my-2 text-xs font-semibold text-blue-700 hover:underline">Show {Math.min(200, lines.length - limit)} more</button>}
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }

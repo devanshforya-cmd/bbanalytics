@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React from 'react';
 import { X, CheckCircle2, AlertTriangle, Send, Trophy } from 'lucide-react';
 import { BeatItem, SkipReason, FieldOfficerDailySummary } from '@/lib/types';
@@ -33,7 +34,7 @@ export default function EndOfDayModal({
   // If summary modal is active, show the Daily Summary Celebration Card (Fix 38)
   if (showSummaryModal && dailySummary) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+      <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
         <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
           <div className="bg-blue-700 p-6 text-white text-center">
             <Trophy className="w-12 h-12 mx-auto text-amber-300 mb-2" />
@@ -85,14 +86,14 @@ export default function EndOfDayModal({
             </button>
           </div>
         </div>
-      </div>
+      </div></Portal>
     );
   }
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+    <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
       <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
@@ -156,6 +157,6 @@ export default function EndOfDayModal({
           </button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }

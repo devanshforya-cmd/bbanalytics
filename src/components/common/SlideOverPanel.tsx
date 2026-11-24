@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React, { useEffect, useRef, useCallback } from 'react';
 import { X, ArrowLeft } from 'lucide-react';
 
@@ -50,7 +51,7 @@ export default function SlideOverPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <Portal><div className="fixed inset-0 z-50 flex justify-end">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] transition-opacity"
@@ -106,6 +107,6 @@ export default function SlideOverPanel({
           </div>
         )}
       </div>
-    </div>
+    </div></Portal>
   );
 }

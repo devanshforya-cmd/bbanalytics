@@ -1,4 +1,6 @@
 'use client';
+import PagedList from '@/components/common/PagedList';
+import Portal from '@/components/common/Portal';
 import { orderHistoryOf } from '@/lib/metrics/sources';
 
 import Money from '@/components/common/Money';
@@ -477,7 +479,7 @@ export default function DailyOrdersPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
-                    {visibleOrders.map((ord) => {
+                    {<PagedList items={visibleOrders} label="orders" asRow render={(pageRows) => pageRows.map((ord) => {
                       const isInserted = recentlyInsertedIds.has(ord.id);
                       const isUpdated = recentlyUpdatedIds.has(ord.id);
                       const totalQty = ord.items.reduce((sum, it) => sum + (it.isGift ? 0 : it.quantity), 0);
@@ -616,7 +618,7 @@ export default function DailyOrdersPage() {
                           </td>
                         </tr>
                       );
-                    })}
+                    })} />}
                   </tbody>
                 </table>
               </div>
@@ -731,7 +733,7 @@ export default function DailyOrdersPage() {
 
         {/* Delete Confirmation Modal */}
         {orderToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
             <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex items-center gap-3 text-rose-600">
                 <AlertTriangle className="w-5 h-5" />
@@ -757,7 +759,7 @@ export default function DailyOrdersPage() {
                 </button>
               </div>
             </div>
-          </div>
+          </div></Portal>
         )}
       </div>
     </PageGuard>

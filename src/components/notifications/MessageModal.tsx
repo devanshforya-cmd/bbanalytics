@@ -1,12 +1,13 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import { X } from 'lucide-react';
 import type { Notification } from '@/lib/types';
 
 /** A written message, shown in full. */
 export default function MessageModal({ message, onClose }: { message: Notification; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true" aria-labelledby="message-title" onClick={onClose}>
+    <Portal><div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true" aria-labelledby="message-title" onClick={onClose}>
       <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -20,6 +21,6 @@ export default function MessageModal({ message, onClose }: { message: Notificati
           <button type="button" onClick={onClose} className="btn btn-primary">Done</button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }

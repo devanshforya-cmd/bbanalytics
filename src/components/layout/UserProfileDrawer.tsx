@@ -1,4 +1,5 @@
 'use client';
+import Portal from '@/components/common/Portal';
 import GpsSharingPanel from './GpsSharingPanel';
 import { getTodayAd } from '@/lib/nepali-calendar';
 
@@ -134,7 +135,7 @@ export default function UserProfileDrawer({
   const DutyIcon = dutyConfig.icon;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <Portal><div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300"
@@ -468,6 +469,6 @@ export default function UserProfileDrawer({
           </div>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }

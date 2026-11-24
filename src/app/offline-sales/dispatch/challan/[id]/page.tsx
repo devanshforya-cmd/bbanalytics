@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Printer, X } from 'lucide-react';
@@ -65,7 +66,7 @@ export default function ChallanPage() {
           .no-print { display: none !important; }
         }
       `}</style>
-      <div className="fixed inset-0 z-[80] overflow-y-auto bg-slate-100 print:bg-white">
+      <Portal><div className="fixed inset-0 z-[80] overflow-y-auto bg-slate-100 print:bg-white">
         <div className="no-print sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3">
           <p className="text-sm font-semibold text-slate-800">Order challan {dispatch.dispatchNumber}</p>
           <div className="flex gap-2">
@@ -159,7 +160,7 @@ export default function ChallanPage() {
           </section>
           <p className="mt-6 text-[11px] text-slate-500">Printed {new Date().toLocaleString('en-GB', { timeZone: 'Asia/Kathmandu' })} from Brand Bucket Analytics.</p>
         </article>
-      </div>
+      </div></Portal>
     </PageGuard>
   );
 }

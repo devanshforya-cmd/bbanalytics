@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useMemo, useEffect } from 'react';
@@ -990,7 +991,7 @@ export default function ManualOrderEntryPage() {
 
       {/* Invoice Details Modal */}
       {showOrderModal && savedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
@@ -1043,7 +1044,7 @@ export default function ManualOrderEntryPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
     </PageGuard>

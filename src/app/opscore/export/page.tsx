@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import { nprText } from '@/components/common/Money';
 import { adToBs as adToBsForLabel, NEPALI_MONTHS } from '@/lib/nepali-calendar';
 import { bsMonthRange } from '@/lib/export/ranges';
@@ -1227,7 +1228,7 @@ export default function SheetsExportPage() {
 
       {/* Data Peek / Preview Modal */}
       {previewTab && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
@@ -1295,7 +1296,7 @@ export default function SheetsExportPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
       </div>
     </PageGuard>

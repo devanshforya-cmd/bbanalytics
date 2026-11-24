@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import React from 'react';
 import { X, CheckCircle2, Clock, MapPin, ChevronRight, AlertCircle } from 'lucide-react';
 import { BeatItem } from '@/lib/types';
@@ -43,7 +44,7 @@ export default function CheckOutSummary({
     : `${durationMinutes} minute${durationMinutes === 1 ? '' : 's'}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+    <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="bg-emerald-600 px-6 py-5 text-white">
@@ -121,6 +122,6 @@ export default function CheckOutSummary({
           </button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }

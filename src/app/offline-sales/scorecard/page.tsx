@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useMemo, Suspense } from 'react';
@@ -333,7 +334,7 @@ function ScorecardContent() {
 
       {/* Custom Date Range Modal */}
       {showCustomModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl max-w-md w-full space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -390,7 +391,7 @@ function ScorecardContent() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ========================================================================= */}
@@ -867,7 +868,7 @@ function ScorecardContent() {
       {/* 3d. DRILL-DOWN OFFICER PERFORMANCE 360° MODAL / DRAWER                     */}
       {/* ========================================================================= */}
       {drilldownOfficerId && selectedOfficerSc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto">
           <div className="rounded-2xl border border-slate-200 bg-white shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
@@ -1147,14 +1148,14 @@ function ScorecardContent() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       {/* ========================================================================= */}
       {/* 3e. SKIPPED STORES ANALYSIS MODAL                                        */}
       {/* ========================================================================= */}
       {showSkipModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+        <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
           <div className="rounded-2xl border border-slate-200 bg-white shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
               <div>
@@ -1254,7 +1255,7 @@ function ScorecardContent() {
               </button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
     </div>
   );

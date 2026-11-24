@@ -1,5 +1,6 @@
 'use client';
 
+import Portal from '@/components/common/Portal';
 import { useMemo, useState } from 'react';
 import { Send, X } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -77,7 +78,7 @@ export default function ComposeMessage({ onClose, inline = false }: { onClose?: 
 
   if (inline) return body;
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true" aria-labelledby="compose-title">
+    <Portal><div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true" aria-labelledby="compose-title">
       <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
         <div className="mb-3 flex items-center justify-between">
           <h2 id="compose-title" className="text-base font-bold text-slate-900">Send a message</h2>
@@ -85,6 +86,6 @@ export default function ComposeMessage({ onClose, inline = false }: { onClose?: 
         </div>
         {body}
       </div>
-    </div>
+    </div></Portal>
   );
 }
