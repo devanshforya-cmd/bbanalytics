@@ -6,6 +6,7 @@ import { readWorkspaceContext } from '@/lib/db/server-workspace';
 import { recordBrandCodes } from '@/lib/db/workspace-policy';
 import { isLocalPreviewAuthEnabled, LOCAL_PREVIEW_USER } from '@/lib/local-preview-auth';
 import { normalizeSubBrands } from '@/lib/sub-brands';
+import { renameBrandCodeInData } from '@/lib/brand-code-rename';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,6 +99,39 @@ async function getBrandUsage(code: string) {
     counts,
     error,
   };
+}
+
+/** Rewrite the brand code in every workspace record, staff assignment and legacy table that uses it. */
+async function moveRecordsToBrandCode(from: string, to: string): Promise<number> {
+  let moved = 0;
+  const pageSize = 1000;
+  for (let start = 0; ; start += pageSize) {
+    const { data: rows, error } = await supabaseAdmin.from('workspace_records').select('collection,id,data,version').order('collection').order('id').range(start, start + pageSize - 1);
+    if (error) throw new Error(error.message);
+    for (const row of rows || []) {
+      const next = renameBrandCodeInData(row.data || {}, from, to);
+      if (!next) continue;
+      const result = await supabaseAdmin.from('workspace_records').update({ data: next, version: row.version + 1, last_mutation_id: `brand_code_${from}_${to}_${row.version}`.slice(0, 170), updated_at: new Date().toISOString() })
+        .eq('collection', row.collection).eq('id', row.id).eq('version', row.version);
+      if (result.error) throw new Error(result.error.message);
+      moved += 1;
+    }
+    if (!rows || rows.length < pageSize) break;
+  }
+  const { data: people, error: peopleError } = await supabaseAdmin.from('users').select('id,assigned_brands');
+  if (peopleError) throw new Error(peopleError.message);
+  for (const person of people || []) {
+    const list = Array.isArray(person.assigned_brands) ? person.assigned_brands : [];
+    if (!list.some((code: string) => String(code).toUpperCase() === from)) continue;
+    const next = [...new Set(list.map((code: string) => String(code).toUpperCase() === from ? to : code))];
+    const result = await supabaseAdmin.from('users').update({ assigned_brands: next }).eq('id', person.id);
+    if (result.error) throw new Error(result.error.message);
+  }
+  for (const table of ['orders', 'feedback_entries', 'returns']) {
+    const result = await supabaseAdmin.from(table).update({ brand_code: to }).eq('brand_code', from);
+    if (result.error && !isMissingColumn(result.error)) throw new Error(result.error.message);
+  }
+  return moved;
 }
 
 export async function GET(request: Request) {
@@ -235,6 +269,7 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
+    let renameFrom = '';
     if (!body.id) return NextResponse.json({ success: false, error: 'Brand ID is required.' }, { status: 400 });
     if (body.name !== undefined && (!String(body.name).trim() || String(body.name).length > 160)) return NextResponse.json({ success: false, error: 'Enter a valid brand name.' }, { status: 400 });
     if (body.code !== undefined) {
@@ -244,9 +279,10 @@ export async function PATCH(request: Request) {
       if (existing.error) return unavailable(existing.error);
       if (!existing.data) return NextResponse.json({ success: false, error: 'Brand not found.' }, { status: 404 });
       if (existing.data.code !== code) {
-        const usage = await getBrandUsage(existing.data.code);
-        if (usage.error) return unavailable(usage.error);
-        if (Object.values(usage.counts).some((count) => count > 0)) return NextResponse.json({ success: false, error: 'A brand code with linked records cannot be changed. You can change its display name.' }, { status: 409 });
+        const taken = await supabaseAdmin.from('brands').select('id').eq('code', code).neq('id', body.id).maybeSingle();
+        if (taken.error) return unavailable(taken.error);
+        if (taken.data) return NextResponse.json({ success: false, error: `Another brand already uses the code ${code}.` }, { status: 409 });
+        renameFrom = existing.data.code;
       }
     }
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -291,7 +327,16 @@ export async function PATCH(request: Request) {
       ({ data, error } = await supabaseAdmin.from('brands').update(legacyUpdates).eq('id', body.id).select('*').maybeSingle());
     }
     if (error || !data) return NextResponse.json({ success: false, error: 'Brand could not be updated.' }, { status: error ? 400 : 404 });
-    return NextResponse.json({ success: true, data: mapBrand(data) });
+    let moved = 0;
+    if (renameFrom) {
+      // Everything that named the old code follows the brand to its new code.
+      try { moved = await moveRecordsToBrandCode(renameFrom, String(updates.code)); }
+      catch (problem) {
+        console.error('Brand code rename: records not moved', problem instanceof Error ? problem.message : 'unknown');
+        return NextResponse.json({ success: false, error: 'The code changed, but some records still use the old code. Save again to finish moving them.' }, { status: 500 });
+      }
+    }
+    return NextResponse.json({ success: true, data: mapBrand(data), moved });
   } catch {
     return NextResponse.json({ success: false, error: 'Invalid brand payload.' }, { status: 400 });
   }

@@ -42,7 +42,11 @@ interface DraftLineItem {
   unitType: 'CASES' | 'PIECES';
   quantity: number;
   scheme: string;
+  /** Pieces per case for this order. Starts at the product's case size; the rep can change it when the pack size differs. */
+  caseSize?: number;
 }
+
+const DEFAULT_CASE = 24;
 
 export default function InlineOrderForm({
   isOpen,
@@ -140,9 +144,10 @@ export default function InlineOrderForm({
   };
 
   // Calculate totals and secondary order items
+  const casePcs = (item: DraftLineItem) => item.caseSize || products.find((p) => p.id === item.productId)?.caseSize || DEFAULT_CASE;
   const calculatedItems: SecondaryOrderItem[] = lineItems.map((item) => {
     const prod = products.find((p) => p.id === item.productId);
-    const unitsPerCase = prod?.caseSize || 24;
+    const unitsPerCase = casePcs(item);
     const storePaysUnit = getStoreUnitPrice(item.productId);
 
     const isCases = item.unitType === 'CASES';
@@ -177,7 +182,7 @@ export default function InlineOrderForm({
   const grandMrpValue = lineItems.reduce((sum, it) => {
     const prod = products.find((p) => p.id === it.productId);
     const mrp = prod?.mrp || 0;
-    const upc = prod?.caseSize || 24;
+    const upc = casePcs(it);
     const units = it.unitType === 'CASES' ? it.quantity * upc : it.quantity;
     return sum + mrp * units;
   }, 0);
@@ -209,6 +214,7 @@ export default function InlineOrderForm({
 
         if (updates.productId) {
           const prod = products.find((p) => p.id === updates.productId);
+          delete updated.caseSize; // A new product starts from its own case size.
           if (prod?.orderUnitMode === 'PIECES') updated.unitType = 'PIECES';
           if (prod?.orderUnitMode === 'CASES') updated.unitType = 'CASES';
         }
@@ -312,7 +318,8 @@ export default function InlineOrderForm({
                 <div className="space-y-3">
                   {lineItems.map((item, index) => {
                     const prod = products.find((p) => p.id === item.productId);
-                    const unitsPerCase = prod?.caseSize || 24;
+                    const unitsPerCase = casePcs(item);
+                    const catalogCase = prod?.caseSize || DEFAULT_CASE;
                     const prodMode = prod?.orderUnitMode || 'BOTH';
                     const storePaysUnit = getStoreUnitPrice(item.productId);
                     const isCases = item.unitType === 'CASES';
@@ -361,7 +368,7 @@ export default function InlineOrderForm({
                         </div>
 
                         {/* Quantity and Unit Mode */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 items-end">
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 items-end">
                           <div>
                             <label className="text-[11px] font-bold text-slate-500 ">
                               Unit mode
@@ -376,7 +383,7 @@ export default function InlineOrderForm({
                               }
                               className="w-full mt-1 p-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                             >
-                              <option value="CASES">Cases ({unitsPerCase} pcs)</option>
+                              <option value="CASES">Cases</option>
                               <option value="PIECES">Pieces</option>
                             </select>
                           </div>
@@ -397,6 +404,22 @@ export default function InlineOrderForm({
                               className="w-full mt-1 p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 text-center"
                             />
                           </div>
+
+                          {isCases && (
+                            <div>
+                              <label htmlFor={`case-size-${item.id}`} className="text-[11px] font-bold text-slate-500">Pcs per case</label>
+                              <input id={`case-size-${item.id}`} type="number" min={1} max={1000} inputMode="numeric"
+                                value={unitsPerCase}
+                                onChange={(e) => {
+                                  const next = Math.min(1000, Math.max(1, parseInt(e.target.value) || 1));
+                                  handleUpdateLineItem(item.id, { caseSize: next === catalogCase ? undefined : next });
+                                }}
+                                className={`w-full mt-1 p-2 bg-white border rounded-xl text-xs font-bold text-center ${unitsPerCase !== catalogCase ? 'border-amber-400 text-amber-800' : 'border-slate-200 text-slate-900'}`} />
+                              {unitsPerCase !== catalogCase && (
+                                <button type="button" onClick={() => handleUpdateLineItem(item.id, { caseSize: undefined })} className="mt-0.5 text-[11px] font-semibold text-amber-700 underline">Usual: {catalogCase}</button>
+                              )}
+                            </div>
+                          )}
 
                           <div>
                             <label htmlFor="inlineorderform-promotional-scheme" className="text-[11px] font-bold text-slate-500 ">
@@ -619,7 +642,7 @@ export default function InlineOrderForm({
                       <div>
                         <div className="font-bold text-slate-900">{item.productName}</div>
                         <div className="text-[11px] text-slate-500">
-                          {item.cases > 0 ? `${item.cases} cases ` : ''}
+                          {item.cases > 0 ? `${item.cases} cases × ${item.unitsPerCase} pcs ` : ''}
                           ({item.totalUnits} total pcs @ Rs. {item.unitPrice})
                           {item.freeUnits ? (
                             <span className="text-emerald-600 font-bold ml-1">
