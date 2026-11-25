@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
@@ -1213,8 +1214,8 @@ export default function StoresPage() {
                   <label className="font-semibold">Area<input value={adminArea} onChange={event => setAdminArea(event.target.value)} required={storeChannel(adminStoreType).account === 'retailers'} className="block mt-1 w-full rounded-lg border p-2" /></label>
                   <label className="font-semibold col-span-2">Address<input value={adminAddress} onChange={event => setAdminAddress(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
                   {storeChannel(adminStoreType).account === 'retailers' && <>
-                    <label className="font-semibold">Latitude <span className="font-normal text-slate-500">(optional)</span><input type="number" step="any" min="-90" max="90" value={adminLat} onChange={event => setAdminLat(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
-                    <label className="font-semibold">Longitude <span className="font-normal text-slate-500">(optional)</span><input type="number" step="any" min="-180" max="180" value={adminLng} onChange={event => setAdminLng(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
+                    <label className="font-semibold">Latitude <span className="font-normal text-slate-500">(optional)</span><NumberInput type="number" step="any" min="-90" max="90" value={adminLat} onChange={event => setAdminLat(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
+                    <label className="font-semibold">Longitude <span className="font-normal text-slate-500">(optional)</span><NumberInput type="number" step="any" min="-180" max="180" value={adminLng} onChange={event => setAdminLng(event.target.value)} className="block mt-1 w-full rounded-lg border p-2" /></label>
                     <button type="button" className="col-span-2 rounded-lg border p-2 font-semibold text-blue-700" onClick={() => {
                       if (!navigator.geolocation) { toast.error('This browser does not support GPS. Enter the store coordinates.'); return; }
                       navigator.geolocation.getCurrentPosition(position => {
@@ -1245,7 +1246,7 @@ export default function StoresPage() {
                             <span className="font-bold text-slate-800">{b.name}</span>
                           <div className="flex items-center gap-2">
                             <div className="flex items-center gap-1">
-                              <input
+                              <NumberInput
                                 type="number"
                                 value={cur.pct}
                                 onChange={(e) => {
@@ -1527,7 +1528,7 @@ export default function StoresPage() {
                         <div key={b} className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50">
                           <span className="font-bold text-slate-800">{brandObj.name}</span>
                         <div className="flex items-center gap-2">
-                          <input
+                          <NumberInput
                             type="number"
                             value={cur.pct}
                             onChange={(e) => {

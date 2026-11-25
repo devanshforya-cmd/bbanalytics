@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import Portal from '@/components/common/Portal';
 import React, { useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
@@ -113,7 +114,7 @@ export default function InfluencerForm({ influencer, onClose, onSaved }: Influen
                     {[...new Set([...platformNames, row.platform])].filter(Boolean).map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
                   <input aria-label="Handle" value={row.handle} maxLength={80} placeholder="@handle" onChange={(event) => setPlatforms((rows) => rows.map((entry, i) => i === index ? { ...entry, handle: event.target.value } : entry))} className={`${field} font-mono`} />
-                  <input aria-label="Followers" type="number" min={0} value={row.followers} placeholder="Followers" onChange={(event) => setPlatforms((rows) => rows.map((entry, i) => i === index ? { ...entry, followers: event.target.value } : entry))} className={field} />
+                  <NumberInput aria-label="Followers" type="number" min={0} value={row.followers} placeholder="Followers" onChange={(event) => setPlatforms((rows) => rows.map((entry, i) => i === index ? { ...entry, followers: event.target.value } : entry))} className={field} />
                   <button type="button" aria-label="Remove platform" onClick={() => setPlatforms((rows) => rows.filter((_, i) => i !== index))} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               ))}

@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import Portal from '@/components/common/Portal';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -148,7 +149,7 @@ export default function LogCustomerCallModal({ order: givenOrder, followUp, onCl
 
           <div className="grid grid-cols-[6rem_1fr] gap-3">
             <label className="text-xs font-bold text-slate-700">Minutes
-              <input type="number" min={0} max={600} value={minutes} onChange={(e) => setMinutes(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" />
+              <NumberInput type="number" min={0} max={600} value={minutes} onChange={(e) => setMinutes(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" />
             </label>
             <label className="text-xs font-bold text-slate-700">Notes
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} rows={2} placeholder="What they said" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" />

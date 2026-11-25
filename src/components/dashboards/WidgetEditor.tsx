@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import Portal from '@/components/common/Portal';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
@@ -178,14 +179,14 @@ export default function WidgetEditor({ prepared, filters, initial, onSave, onClo
               {(widget.view === 'top' || widget.view === 'table' || widget.view === 'bar') && widget.split && (
                 <div className="flex gap-3 text-xs">
                   <label className="font-semibold text-slate-700">Rows
-                    <input type="number" min={3} max={50} value={widget.limit || (widget.view === 'top' ? 8 : widget.view === 'table' ? 15 : 10)} onChange={(e) => set({ limit: Math.max(3, Math.min(50, Math.round(Number(e.target.value) || 8))) })} className="ml-2 w-16 rounded-lg border border-slate-300 px-2 py-1 font-normal" />
+                    <NumberInput type="number" min={3} max={50} value={widget.limit || (widget.view === 'top' ? 8 : widget.view === 'table' ? 15 : 10)} onChange={(e) => set({ limit: Math.max(3, Math.min(50, Math.round(Number(e.target.value) || 8))) })} className="ml-2 w-16 rounded-lg border border-slate-300 px-2 py-1 font-normal" />
                   </label>
                   <label className="flex items-center gap-1.5 font-semibold text-slate-700"><input type="checkbox" checked={!!widget.lowestFirst} onChange={(e) => set({ lowestFirst: e.target.checked || undefined })} /> Lowest first</label>
                 </div>
               )}
               {widget.view === 'target' && (
                 <label className="block text-xs font-semibold text-slate-700">{metric?.better === 'down' ? 'Limit for the period' : 'Target for the period'}
-                  <input type="number" min={0} step="any" value={widget.target ?? ''} onChange={(e) => set({ target: Number(e.target.value) || undefined })} placeholder={metric?.unit === 'npr' ? 'e.g. 500000' : 'e.g. 400'} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" />
+                  <NumberInput type="number" min={0} step="any" value={widget.target ?? ''} onChange={(e) => set({ target: Number(e.target.value) || undefined })} placeholder={metric?.unit === 'npr' ? 'e.g. 500000' : 'e.g. 400'} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 font-normal" />
                   <span className="mt-1 block font-normal text-slate-500">It applies to the dates chosen at the top of the dashboard. While the period is still running, the chart says whether you’re on pace.</span>
                 </label>
               )}

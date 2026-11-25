@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, Plus, Search, Trash2, X } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -110,8 +111,8 @@ function OfferCard({ offer, brands, onChange, onRemove, open, onToggle }: { offe
 
           <section><p className="mb-1.5 flex items-center gap-1 text-[11px] font-bold text-slate-800">When <InfoTip label="About conditions">Leave everything empty and the offer always applies while the sale runs. Every condition you fill in must be met.</InfoTip></p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <div><label className={label}>At least units</label><input aria-label="At least units" type="number" min={1} value={condition.minUnits ?? ''} onChange={(event) => setCondition({ minUnits: number(event.target.value) })} className={field} placeholder="Any" /></div>
-              <div><label className={label}>Order total at least (NPR)</label><input aria-label="Order total at least (NPR)" type="number" min={1} value={condition.minOrderValue ?? ''} onChange={(event) => setCondition({ minOrderValue: number(event.target.value) })} className={field} placeholder="Any" /></div>
+              <div><label className={label}>At least units</label><NumberInput aria-label="At least units" type="number" min={1} value={condition.minUnits ?? ''} onChange={(event) => setCondition({ minUnits: number(event.target.value) })} className={field} placeholder="Any" /></div>
+              <div><label className={label}>Order total at least (NPR)</label><NumberInput aria-label="Order total at least (NPR)" type="number" min={1} value={condition.minOrderValue ?? ''} onChange={(event) => setCondition({ minOrderValue: number(event.target.value) })} className={field} placeholder="Any" /></div>
               <div><label className={label}>Code word in the message</label><input aria-label="Code word in the message" value={condition.codeWord ?? ''} maxLength={40} onChange={(event) => setCondition({ codeWord: event.target.value.toUpperCase() || undefined })} className={field} placeholder="e.g. DASHAIN10" /></div>
               <div><label className={label}>Daily hours from</label><input aria-label="Daily hours from" type="time" value={condition.hours?.from ?? ''} onChange={(event) => setCondition({ hours: event.target.value ? { from: event.target.value, to: condition.hours?.to || '23:59' } : undefined })} className={field} /></div>
               <div><label className={label}>to</label><input aria-label="to" type="time" value={condition.hours?.to ?? ''} disabled={!condition.hours} onChange={(event) => setCondition({ hours: condition.hours ? { ...condition.hours, to: event.target.value } : undefined })} className={field} /></div>
@@ -128,21 +129,21 @@ function OfferCard({ offer, brands, onChange, onRemove, open, onToggle }: { offe
           <section><p className="mb-1.5 text-[11px] font-bold text-slate-800">Gets</p>
             <select value={reward.type} onChange={(event) => set({ reward: defaultReward(event.target.value as OfferReward['type']) })} className={`${field} mb-2 sm:w-64`} aria-label="What the customer gets">{REWARDS.map(([type, title]) => <option key={type} value={type}>{title}</option>)}</select>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {reward.type === 'PERCENT_OFF' && <div><label className={label}>Percent off</label><input aria-label="Percent off" type="number" min={0.01} max={100} step="0.01" value={reward.percent} onChange={(event) => setReward({ percent: Number(event.target.value) })} className={field} /></div>}
-              {(reward.type === 'AMOUNT_OFF_EACH' || reward.type === 'ORDER_AMOUNT_OFF') && <div><label className={label}>NPR off</label><input aria-label="NPR off" type="number" min={1} value={reward.amount} onChange={(event) => setReward({ amount: Number(event.target.value) })} className={field} /></div>}
-              {reward.type === 'FIXED_PRICE' && <div><label className={label}>Sale price (NPR each)</label><input aria-label="Sale price (NPR each)" type="number" min={0} value={reward.price} onChange={(event) => setReward({ price: Number(event.target.value) })} className={field} /></div>}
+              {reward.type === 'PERCENT_OFF' && <div><label className={label}>Percent off</label><NumberInput aria-label="Percent off" type="number" min={0.01} max={100} step="0.01" value={reward.percent} onChange={(event) => setReward({ percent: Number(event.target.value) })} className={field} /></div>}
+              {(reward.type === 'AMOUNT_OFF_EACH' || reward.type === 'ORDER_AMOUNT_OFF') && <div><label className={label}>NPR off</label><NumberInput aria-label="NPR off" type="number" min={1} value={reward.amount} onChange={(event) => setReward({ amount: Number(event.target.value) })} className={field} /></div>}
+              {reward.type === 'FIXED_PRICE' && <div><label className={label}>Sale price (NPR each)</label><NumberInput aria-label="Sale price (NPR each)" type="number" min={0} value={reward.price} onChange={(event) => setReward({ price: Number(event.target.value) })} className={field} /></div>}
               {reward.type === 'BUY_X_GET_Y' && <>
-                <div><label className={label}>Buy</label><input aria-label="Buy" type="number" min={1} value={reward.buy} onChange={(event) => setReward({ buy: Number(event.target.value) })} className={field} /></div>
-                <div><label className={label}>Get</label><input aria-label="Get" type="number" min={1} value={reward.get} onChange={(event) => setReward({ get: Number(event.target.value) })} className={field} /></div>
-                <div><label className={label}>% off the extra (100 = free)</label><input aria-label="% off the extra (100 = free)" type="number" min={1} max={100} value={reward.percent} onChange={(event) => setReward({ percent: Number(event.target.value) })} className={field} /></div>
+                <div><label className={label}>Buy</label><NumberInput aria-label="Buy" type="number" min={1} value={reward.buy} onChange={(event) => setReward({ buy: Number(event.target.value) })} className={field} /></div>
+                <div><label className={label}>Get</label><NumberInput aria-label="Get" type="number" min={1} value={reward.get} onChange={(event) => setReward({ get: Number(event.target.value) })} className={field} /></div>
+                <div><label className={label}>% off the extra (100 = free)</label><NumberInput aria-label="% off the extra (100 = free)" type="number" min={1} max={100} value={reward.percent} onChange={(event) => setReward({ percent: Number(event.target.value) })} className={field} /></div>
               </>}
               {reward.type === 'BUNDLE_PRICE' && <>
-                <div><label className={label}>Any</label><input aria-label="Any" type="number" min={2} value={reward.pick} onChange={(event) => setReward({ pick: Number(event.target.value) })} className={field} /></div>
-                <div><label className={label}>For NPR</label><input aria-label="For NPR" type="number" min={0} value={reward.price} onChange={(event) => setReward({ price: Number(event.target.value) })} className={field} /></div>
+                <div><label className={label}>Any</label><NumberInput aria-label="Any" type="number" min={2} value={reward.pick} onChange={(event) => setReward({ pick: Number(event.target.value) })} className={field} /></div>
+                <div><label className={label}>For NPR</label><NumberInput aria-label="For NPR" type="number" min={0} value={reward.price} onChange={(event) => setReward({ price: Number(event.target.value) })} className={field} /></div>
               </>}
               {reward.type === 'FREE_GIFT' && <>
                 <div className="col-span-2"><label className={label}>Gift product</label><ItemPicker brands={brands} productsOnly single value={reward.giftItemId ? [reward.giftItemId] : []} onChange={(ids) => setReward({ giftItemId: ids[0] || '' })} placeholder="Search the gift product" /></div>
-                <div><label className={label}>Quantity</label><input aria-label="Quantity" type="number" min={1} value={reward.quantity} onChange={(event) => setReward({ quantity: Number(event.target.value) })} className={field} /></div>
+                <div><label className={label}>Quantity</label><NumberInput aria-label="Quantity" type="number" min={1} value={reward.quantity} onChange={(event) => setReward({ quantity: Number(event.target.value) })} className={field} /></div>
               </>}
             </div>
             {reward.type === 'TIERED' && (
@@ -150,8 +151,8 @@ function OfferCard({ offer, brands, onChange, onRemove, open, onToggle }: { offe
                 <div className="flex gap-1.5">{(['ORDER_VALUE', 'UNITS'] as const).map((basis) => <button key={basis} type="button" className={chip(reward.basis === basis)} onClick={() => setReward({ basis })}>{basis === 'UNITS' ? 'By units' : 'By order total'}</button>)}</div>
                 {reward.tiers.map((tier, index) => (
                   <div key={index} className="flex items-center gap-2">
-                    <span className="text-slate-500">{reward.basis === 'UNITS' ? 'From' : 'From NPR'}</span><input type="number" min={0} value={tier.min} onChange={(event) => setReward({ tiers: reward.tiers.map((entry, i) => i === index ? { ...entry, min: Number(event.target.value) } : entry) })} className={`${field} w-28`} aria-label={`Tier ${index + 1} minimum`} />
-                    <span className="text-slate-500">→</span><input type="number" min={0.01} max={100} value={tier.percent} onChange={(event) => setReward({ tiers: reward.tiers.map((entry, i) => i === index ? { ...entry, percent: Number(event.target.value) } : entry) })} className={`${field} w-20`} aria-label={`Tier ${index + 1} percent`} /><span className="text-slate-500">% off</span>
+                    <span className="text-slate-500">{reward.basis === 'UNITS' ? 'From' : 'From NPR'}</span><NumberInput type="number" min={0} value={tier.min} onChange={(event) => setReward({ tiers: reward.tiers.map((entry, i) => i === index ? { ...entry, min: Number(event.target.value) } : entry) })} className={`${field} w-28`} aria-label={`Tier ${index + 1} minimum`} />
+                    <span className="text-slate-500">→</span><NumberInput type="number" min={0.01} max={100} value={tier.percent} onChange={(event) => setReward({ tiers: reward.tiers.map((entry, i) => i === index ? { ...entry, percent: Number(event.target.value) } : entry) })} className={`${field} w-20`} aria-label={`Tier ${index + 1} percent`} /><span className="text-slate-500">% off</span>
                     <button type="button" aria-label={`Remove tier ${index + 1}`} disabled={reward.tiers.length < 2} onClick={() => setReward({ tiers: reward.tiers.filter((_, i) => i !== index) })} className="p-1 text-slate-500 hover:text-rose-600 disabled:opacity-30"><X className="h-3.5 w-3.5" /></button>
                   </div>
                 ))}
@@ -169,11 +170,11 @@ function OfferCard({ offer, brands, onChange, onRemove, open, onToggle }: { offe
 
           <section><p className="mb-1.5 text-[11px] font-bold text-slate-800">Limits</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <div><label className={label}>Uses per customer</label><input aria-label="Uses per customer" type="number" min={1} value={offer.limits?.perCustomer ?? ''} onChange={(event) => set({ limits: { ...offer.limits, perCustomer: number(event.target.value) } })} className={field} placeholder="No limit" /></div>
-              <div><label className={label}>Total uses</label><input aria-label="Total uses" type="number" min={1} value={offer.limits?.totalUses ?? ''} onChange={(event) => set({ limits: { ...offer.limits, totalUses: number(event.target.value) } })} className={field} placeholder="No limit" /></div>
-              {reward.type === 'FREE_GIFT' && <div><label className={label}>Gifts in stock</label><input aria-label="Gifts in stock" type="number" min={0} value={offer.limits?.giftStock ?? ''} onChange={(event) => set({ limits: { ...offer.limits, giftStock: number(event.target.value) } })} className={field} placeholder="No limit" /></div>}
-              <div><label className={label}>Never below % of MRP</label><input aria-label="Never below % of MRP" type="number" min={1} max={100} value={offer.floorPercent ?? ''} onChange={(event) => set({ floorPercent: number(event.target.value) })} className={field} placeholder="No floor" /></div>
-              <div><label className={label}>Order (lower runs first)</label><input aria-label="Order (lower runs first)" type="number" min={0} value={offer.priority} onChange={(event) => set({ priority: Number(event.target.value) || 0 })} className={field} /></div>
+              <div><label className={label}>Uses per customer</label><NumberInput aria-label="Uses per customer" type="number" min={1} value={offer.limits?.perCustomer ?? ''} onChange={(event) => set({ limits: { ...offer.limits, perCustomer: number(event.target.value) } })} className={field} placeholder="No limit" /></div>
+              <div><label className={label}>Total uses</label><NumberInput aria-label="Total uses" type="number" min={1} value={offer.limits?.totalUses ?? ''} onChange={(event) => set({ limits: { ...offer.limits, totalUses: number(event.target.value) } })} className={field} placeholder="No limit" /></div>
+              {reward.type === 'FREE_GIFT' && <div><label className={label}>Gifts in stock</label><NumberInput aria-label="Gifts in stock" type="number" min={0} value={offer.limits?.giftStock ?? ''} onChange={(event) => set({ limits: { ...offer.limits, giftStock: number(event.target.value) } })} className={field} placeholder="No limit" /></div>}
+              <div><label className={label}>Never below % of MRP</label><NumberInput aria-label="Never below % of MRP" type="number" min={1} max={100} value={offer.floorPercent ?? ''} onChange={(event) => set({ floorPercent: number(event.target.value) })} className={field} placeholder="No floor" /></div>
+              <div><label className={label}>Order (lower runs first)</label><NumberInput aria-label="Order (lower runs first)" type="number" min={0} value={offer.priority} onChange={(event) => set({ priority: Number(event.target.value) || 0 })} className={field} /></div>
               <div><label className={label}>Website coupon code</label><input aria-label="Website coupon code" value={offer.websiteCode ?? ''} maxLength={40} onChange={(event) => set({ websiteCode: event.target.value.toUpperCase() || undefined })} className={field} placeholder="For the website import" /></div>
             </div>
           </section>

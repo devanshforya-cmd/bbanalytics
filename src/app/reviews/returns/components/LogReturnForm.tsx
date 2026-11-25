@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import React, { useRef, useState } from 'react';
 import { AlertTriangle, Camera } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -184,7 +185,7 @@ export default function LogReturnForm({ onClose, onSaved, onViewCustomer, initia
               {item && remaining > 1 && (
                 <div className="mt-2 max-w-[160px]">
                   <label htmlFor="return-quantity" className="mb-1 block font-bold text-slate-700">Quantity returned</label>
-                  <input id="return-quantity" type="number" min={1} max={remaining} value={quantity} onChange={(event) => setQuantity(Math.round(Number(event.target.value)) || 1)} className={`${field} ${errors.quantity ? 'border-rose-400' : ''}`} />
+                  <NumberInput id="return-quantity" type="number" min={1} max={remaining} value={quantity} onChange={(event) => setQuantity(Math.round(Number(event.target.value)) || 1)} className={`${field} ${errors.quantity ? 'border-rose-400' : ''}`} />
                   {errors.quantity && <p className="mt-1 text-[11px] font-medium text-rose-600">{errors.quantity}</p>}
                 </div>
               )}

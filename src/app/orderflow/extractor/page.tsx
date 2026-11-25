@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import Money from '@/components/common/Money';
@@ -835,7 +836,7 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                               )}
                               <span className="font-semibold text-slate-900">{item.name}</span>
                               <span className="text-slate-500">Catalogue <Money>{item.unitPrice.toLocaleString()}</Money></span>
-                              <label className="text-slate-600">Selling price per unit (NPR)<input aria-label={`Selling price per unit for ${item.name}`} type="number" min="0" max={item.unitPrice} step="0.01" value={item.saleUnitPrice ?? ''} placeholder={String(item.unitPrice)} onChange={event => handleUpdateItemPrice(ord.id, itIdx, event.target.value)} className="ml-2 w-24 rounded-lg border border-slate-200 p-1" /></label>
+                              <label className="text-slate-600">Selling price per unit (NPR)<NumberInput aria-label={`Selling price per unit for ${item.name}`} type="number" min="0" max={item.unitPrice} step="0.01" value={item.saleUnitPrice ?? ''} placeholder={String(item.unitPrice)} onChange={event => handleUpdateItemPrice(ord.id, itIdx, event.target.value)} className="ml-2 w-24 rounded-lg border border-slate-200 p-1" /></label>
                             </div>
 
                             <div className="flex items-center gap-3">
@@ -886,9 +887,9 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                         </div>
                         <div>
                           <label className="text-slate-500" htmlFor={`amount_${ord.id}`}>{ord.entryKind === 'EXCHANGE' ? 'Amount to collect (NPR)' : 'Stated total (NPR)'}</label>
-                          <input id={`amount_${ord.id}`} type="number" min="0" step="0.01" value={ord.statedPrice.provided ? ord.statedPrice.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, statedPrice: { ...order.statedPrice, provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-28 rounded-lg border border-slate-200 p-1" placeholder="Optional" />
+                          <NumberInput id={`amount_${ord.id}`} type="number" min="0" step="0.01" value={ord.statedPrice.provided ? ord.statedPrice.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, statedPrice: { ...order.statedPrice, provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-28 rounded-lg border border-slate-200 p-1" placeholder="Optional" />
                         </div>
-                        {ord.entryKind !== 'EXCHANGE' && <div><label className="text-slate-500" htmlFor={`discount_${ord.id}`}>Order discount (%)</label><input id={`discount_${ord.id}`} type="number" min="0" max="100" step="0.01" value={ord.discountPercent?.provided ? ord.discountPercent.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, discountPercent: { confidence: 'HIGH', provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-20 rounded-lg border border-slate-200 p-1" placeholder="Optional" /></div>}
+                        {ord.entryKind !== 'EXCHANGE' && <div><label className="text-slate-500" htmlFor={`discount_${ord.id}`}>Order discount (%)</label><NumberInput id={`discount_${ord.id}`} type="number" min="0" max="100" step="0.01" value={ord.discountPercent?.provided ? ord.discountPercent.value : ''} onChange={event => { const value = event.target.value; setExtractedOrders(previous => previous.map(order => order.id === ord.id ? refreshOrder({ ...order, discountPercent: { confidence: 'HIGH', provided: value !== '', value: Number(value) } }) : order)); }} className="ml-2 w-20 rounded-lg border border-slate-200 p-1" placeholder="Optional" /></div>}
                         <div><span className="text-slate-500">{ord.entryKind === 'EXCHANGE' ? 'To collect: ' : 'Order total: '}</span><span className="font-bold text-slate-900"><Money>{ord.totalAmount.value.toLocaleString()}</Money></span>
                           {ord.entryKind !== 'EXCHANGE' && extractedDiscount(ord).amount > 0 && <span className="ml-1.5 text-emerald-700">− <Money>{extractedDiscount(ord).amount.toLocaleString()}</Money> ({extractedDiscount(ord).percent}% off)</span>}
                           {ord.entryKind !== 'EXCHANGE' && ord.trail && (ord.trail.offerDiscount > 0 || ord.trail.customerDiscount > 0) && (

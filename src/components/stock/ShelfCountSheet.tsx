@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import Portal from '@/components/common/Portal';
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Plus, X } from 'lucide-react';
@@ -103,7 +104,7 @@ export default function ShelfCountSheet({ target, onClose, onSaved }: { target: 
                       </div>
                       <div className="flex shrink-0 items-center rounded-xl border border-slate-300 bg-white">
                         <button type="button" aria-label={`One fewer ${row.label}`} onClick={() => set(row.productId, (qty ?? 0) - 1)} className="h-10 w-10 text-lg text-slate-600 hover:bg-slate-100 rounded-l-xl">−</button>
-                        <input aria-label={`Shelf count of ${row.label}`} type="number" inputMode="numeric" min={0} placeholder="–" value={qty ?? ''}
+                        <NumberInput aria-label={`Shelf count of ${row.label}`} type="number" inputMode="numeric" min={0} placeholder="–" value={qty ?? ''}
                           onChange={(e) => set(row.productId, e.target.value === '' ? null : parseInt(e.target.value) || 0)}
                           className="h-10 w-14 border-x border-slate-200 text-center text-base font-bold outline-none placeholder:text-slate-300" />
                         <button type="button" aria-label={`One more ${row.label}`} onClick={() => set(row.productId, (qty ?? 0) + 1)} className="h-10 w-10 text-lg text-slate-600 hover:bg-slate-100 rounded-r-xl">+</button>

@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
@@ -319,7 +320,7 @@ export default function CallsPage() {
                 </div>
                 <div>
                   <label htmlFor="calls-duration-minutes" className="block font-bold text-slate-700 mb-1">Duration (minutes)</label>
-                  <input id="calls-duration-minutes"
+                  <NumberInput id="calls-duration-minutes"
                     type="number"
                     min="1"
                     value={durationMinutes}
@@ -388,7 +389,7 @@ export default function CallsPage() {
                     </div>
                     <div>
                       <label className="block font-bold text-emerald-900 mb-1">Quantity</label>
-                      <input aria-label="Quantity"
+                      <NumberInput aria-label="Quantity"
                         type="number"
                         min="1"
                         value={orderQuantity}

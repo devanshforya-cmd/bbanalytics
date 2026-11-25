@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import { nprText } from '@/components/common/Money';
@@ -358,7 +359,7 @@ export default function OrderPage() {
                     </span>
                     <span className="flex shrink-0 items-center gap-1">
                       <button type="button" aria-label={`One fewer ${item.productName}`} onClick={() => setQuantity(index, item.quantity - 1)} disabled={item.quantity <= 1} className="rounded-lg border border-slate-200 p-1 text-slate-600 hover:bg-slate-50 disabled:opacity-40"><Minus className="h-3 w-3" /></button>
-                      <input aria-label={`Quantity of ${item.productName}`} type="number" min={1} max={9999} value={item.quantity} onChange={(event) => setQuantity(index, Number(event.target.value))} className="w-14 rounded-lg border border-slate-200 py-1 text-center font-bold disabled:bg-slate-50" />
+                      <NumberInput aria-label={`Quantity of ${item.productName}`} type="number" min={1} max={9999} value={item.quantity} onChange={(event) => setQuantity(index, Number(event.target.value))} className="w-14 rounded-lg border border-slate-200 py-1 text-center font-bold disabled:bg-slate-50" />
                       <button type="button" aria-label={`One more ${item.productName}`} onClick={() => setQuantity(index, item.quantity + 1)} className="rounded-lg border border-slate-200 p-1 text-slate-600 hover:bg-slate-50"><Plus className="h-3 w-3" /></button>
                       <span className="w-24 text-right font-bold text-slate-900">{money(item.totalPrice)}</span>
                       <button type="button" aria-label={`Remove ${item.productName}`} onClick={() => setItems(draft.items.filter((_, i) => i !== index))} className="rounded-lg p-1 text-slate-500 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" /></button>
