@@ -141,7 +141,16 @@ export default function BrandSettings() {
     try {
       if (editingBrand) {
         // Update existing brand
+        const codeChanged = cleanCode !== editingBrand.code;
+        if (codeChanged) {
+          if (db.getBrands('ALL').some((brand) => brand.id !== editingBrand.id && brand.code.toUpperCase() === cleanCode)) {
+            toast.error(`Brand code ${cleanCode} is already used by another brand.`);
+            return;
+          }
+          if (!window.confirm(`Change the brand code from ${editingBrand.code} to ${cleanCode}? Its products, orders, stores and staff access move to the new code. Order IDs already issued do not change.`)) return;
+        }
         const updates: Partial<Brand> = {
+          ...(codeChanged ? { code: cleanCode as BrandCode } : {}),
           name: brandName.trim(),
           color: brandColor,
           category: brandCategory,
@@ -149,7 +158,12 @@ export default function BrandSettings() {
           subBrands: withPendingSubBrand(editingBrand.code),
         };
         await apiUpdateBrand(editingBrand.id, updates);
-        toast.success(`Brand "${brandName}" updated successfully`);
+        if (codeChanged) {
+          if (db.getActiveBrandFilter() === editingBrand.code) db.setActiveBrandFilter(cleanCode as BrandCode);
+          // Pull the moved records down now, so every screen shows the new code.
+          try { await db.syncWithSupabase(); } catch { /* The next sync brings them. */ }
+          toast.success(`Brand code changed to ${cleanCode}`, `${brandName} and everything linked to it now use ${cleanCode}.`);
+        } else toast.success(`Brand "${brandName}" updated successfully`);
       } else {
         if (db.getBrands('ALL').some((brand) => brand.code.toUpperCase() === cleanCode)) {
           toast.error(`Brand code ${cleanCode} already exists. Edit that brand instead.`);
@@ -466,7 +480,7 @@ export default function BrandSettings() {
 
               <div>
                 <label htmlFor="brandsettings-brand-code-auto-generated" className="block font-bold text-slate-700 mb-1">
-                  Brand Code * <span className="text-slate-500 font-normal">(Auto-generated)</span>
+                  Brand Code * <span className="text-slate-500 font-normal">{editingBrand ? '(changing it moves the brand’s products and records to the new code)' : '(Auto-generated)'}</span>
                 </label>
                 <input id="brandsettings-brand-code-auto-generated"
                   type="text"

@@ -478,6 +478,8 @@ export interface DispatchItem {
   orderedQty?: number;
   /** Price per unit the store pays, when known. */
   unitPrice?: number;
+  /** Units per carton used for this dispatch, when it was set on the order. */
+  unitsPerCarton?: number;
 }
 
 /** Where a dispatch order is in its life. Older dispatches have no status and count as DISPATCHED. */

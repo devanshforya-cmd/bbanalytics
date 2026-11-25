@@ -39,7 +39,7 @@ const STEP_ACTION: Record<DispatchStatus, { label: string; icon: typeof Send; st
   CANCELLED: { label: 'Cancel order', icon: Ban, style: 'border border-rose-200 text-rose-700 hover:bg-rose-50' },
 };
 
-type Line = { productId: string; cartons: number; units: number };
+type Line = { productId: string; cartons: number; units: number; /** Units per carton for this dispatch, when it differs from the product's usual size. */ cartonSize?: number };
 
 export default function DispatchPage() {
   const { isSubmitting, guardedSubmit } = useSubmitGuard();
@@ -104,7 +104,8 @@ export default function DispatchPage() {
   const [lines, setLines] = useState<Line[]>([{ productId: '', cartons: 0, units: 0 }]);
   const dest = destinations.find((d) => d.value === destId);
   const caseSize = (id: string) => products.find((p) => p.id === id)?.caseSize || 0;
-  const lineUnits = (line: Line) => line.cartons * caseSize(line.productId) + line.units;
+  const lineCarton = (line: Line) => line.cartonSize || caseSize(line.productId);
+  const lineUnits = (line: Line) => line.cartons * lineCarton(line) + line.units;
   const priceFor = (productId: string) => {
     const p = products.find((x) => x.id === productId);
     if (!p?.mrp) return 0;
@@ -127,7 +128,7 @@ export default function DispatchPage() {
     if (!dest) return;
     const items: DispatchItem[] = filled.map((l) => {
       const p = products.find((x) => x.id === l.productId)!;
-      return { productId: p.id, productName: p.name, brandCode: p.brandCode, subBrandId: p.subBrandId, quantity: lineUnits(l), quantityPcs: lineUnits(l), unitPrice: priceFor(p.id) || undefined };
+      return { productId: p.id, productName: p.name, brandCode: p.brandCode, subBrandId: p.subBrandId, quantity: lineUnits(l), quantityPcs: lineUnits(l), unitPrice: priceFor(p.id) || undefined, ...(l.cartons && lineCarton(l) ? { unitsPerCarton: lineCarton(l) } : {}) };
     });
     const created = db.addDispatch({
       status: 'ORDER_RECEIVED',
@@ -374,15 +375,21 @@ export default function DispatchPage() {
                 <section>
                   <div className="mb-2 flex items-baseline justify-between">
                     <span className="font-semibold text-slate-700">Products *</span>
-                    <span className="text-[11px] text-slate-500">Cartons use each product&apos;s carton size.</span>
+                    <span className="text-[11px] text-slate-500">Per carton starts at the product&apos;s usual size. Change it if this pack differs.</span>
                   </div>
                   <ul className="space-y-2">
                     {lines.map((line, idx) => {
-                      const size = caseSize(line.productId);
+                      const usual = caseSize(line.productId);
+                      const size = lineCarton(line);
                       const taken = new Set(lines.filter((_, i) => i !== idx).map((l) => l.productId));
                       return (
-                        <li key={idx} className="grid grid-cols-[minmax(0,1fr)_76px_76px_32px] items-end gap-2 rounded-xl border border-slate-200 p-2">
-                          <SearchSelect label={`Product ${idx + 1}`} options={productOptions.filter((o) => !taken.has(o.value))} value={line.productId} onChange={(v) => setLines((rows) => rows.map((r, i) => i === idx ? { ...r, productId: v } : r))} placeholder="Search product or short name" />
+                        <li key={idx} className="grid grid-cols-[minmax(0,1fr)_64px_64px_64px_32px] items-end gap-2 rounded-xl border border-slate-200 p-2">
+                          <SearchSelect label={`Product ${idx + 1}`} options={productOptions.filter((o) => !taken.has(o.value))} value={line.productId} onChange={(v) => setLines((rows) => rows.map((r, i) => i === idx ? { ...r, productId: v, cartonSize: undefined } : r))} placeholder="Search product or short name" />
+                          <label className="block text-[11px] font-semibold text-slate-600">Per carton
+                            <input type="number" min={1} max={1000} disabled={!line.productId} value={size || ''} placeholder="—" title={usual ? `Usually ${usual} per carton` : 'No carton size on the product'}
+                              onChange={(e) => { const next = Math.min(1000, Math.max(0, parseInt(e.target.value) || 0)); setLines((rows) => rows.map((r, i) => i === idx ? { ...r, cartonSize: next && next !== usual ? next : undefined } : r)); }}
+                              className={`mt-1 w-full rounded-lg border px-2 py-2 text-center font-semibold disabled:bg-slate-50 ${line.cartonSize ? 'border-amber-400 text-amber-800' : 'border-slate-300'}`} />
+                          </label>
                           <label className="block text-[11px] font-semibold text-slate-600">Cartons
                             <input type="number" min={0} disabled={!size} value={line.cartons || ''} title={size ? `${size} units per carton` : 'No carton size set'} onChange={(e) => setLines((rows) => rows.map((r, i) => i === idx ? { ...r, cartons: Math.max(0, parseInt(e.target.value) || 0) } : r))} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-center font-semibold disabled:bg-slate-50" />
                           </label>
@@ -390,7 +397,7 @@ export default function DispatchPage() {
                             <input type="number" min={0} value={line.units || ''} onChange={(e) => setLines((rows) => rows.map((r, i) => i === idx ? { ...r, units: Math.max(0, parseInt(e.target.value) || 0) } : r))} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-center font-semibold" />
                           </label>
                           <button type="button" aria-label={`Remove product ${idx + 1}`} onClick={() => setLines((rows) => rows.length > 1 ? rows.filter((_, i) => i !== idx) : [{ productId: '', cartons: 0, units: 0 }])} className="mb-1.5 rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-4 w-4" /></button>
-                          {lineUnits(line) > 0 && <span className="col-span-4 text-right text-[11px] text-slate-600">{lineUnits(line)} units{seesMoney && priceFor(line.productId) ? ` × ${priceFor(line.productId)} = NPR ${(lineUnits(line) * priceFor(line.productId)).toLocaleString()}` : ''}</span>}
+                          {lineUnits(line) > 0 && <span className="col-span-5 text-right text-[11px] text-slate-600">{lineUnits(line)} units{seesMoney && priceFor(line.productId) ? ` × ${priceFor(line.productId)} = NPR ${(lineUnits(line) * priceFor(line.productId)).toLocaleString()}` : ''}</span>}
                         </li>
                       );
                     })}
@@ -432,7 +439,7 @@ export default function DispatchPage() {
           confirmLabel={alreadySent ? 'Log as dispatched' : 'Create order'}
           cancelLabel="Back to edit"
           details={[
-            ...filled.map((l) => ({ label: productName(l.productId, 'Product'), value: `${lineUnits(l)} units${l.cartons ? ` (${l.cartons} × ${caseSize(l.productId)}${l.units ? ` + ${l.units}` : ''})` : ''}` })),
+            ...filled.map((l) => ({ label: productName(l.productId, 'Product'), value: `${lineUnits(l)} units${l.cartons ? ` (${l.cartons} × ${lineCarton(l)}${l.units ? ` + ${l.units}` : ''})` : ''}` })),
             { label: 'Total', value: `${totalUnits.toLocaleString()} units${seesMoney && totalValue ? `, NPR ${totalValue.toLocaleString()}` : ''}` },
             { label: 'Payment terms', value: dest?.terms || 'None on file' },
           ]}

@@ -47,7 +47,7 @@ export default function ChallanPage() {
 
   const lines = dispatch.items.map((item) => {
     const product = products.find((p) => p.id === item.productId);
-    const size = product?.caseSize || 0;
+    const size = item.unitsPerCarton || product?.caseSize || 0;
     return { item, product, size, cartons: size ? Math.floor(item.quantity / size) : 0, loose: size ? item.quantity % size : item.quantity };
   }).sort((a, b) => (a.item.brandCode + productLabel(a.product, a.item.productName)).localeCompare(b.item.brandCode + productLabel(b.product, b.item.productName)));
   const units = dispatch.items.reduce((sum, item) => sum + item.quantity, 0);
