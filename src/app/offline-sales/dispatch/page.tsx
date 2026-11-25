@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
 import DownloadButton from '@/components/common/DownloadButton';
@@ -293,7 +294,7 @@ export default function DispatchPage() {
                                   <div className="flex items-center gap-2">
                                     <div className="inline-flex items-center rounded-lg border border-slate-300 bg-white">
                                       <button type="button" aria-label={`Fewer ${item.productName}`} onClick={() => setCorrections((c) => ({ ...c, [item.productId]: Math.max(0, next - 1) }))} className="px-2.5 py-1.5 text-slate-600 hover:bg-slate-100">−</button>
-                                      <input aria-label={`Corrected units of ${item.productName}`} type="number" min={0} value={next} onChange={(e) => setCorrections((c) => ({ ...c, [item.productId]: Math.max(0, parseInt(e.target.value) || 0) }))} className="w-16 border-x border-slate-200 py-1.5 text-center font-bold outline-none" />
+                                      <NumberInput aria-label={`Corrected units of ${item.productName}`} type="number" min={0} value={next} onChange={(e) => setCorrections((c) => ({ ...c, [item.productId]: Math.max(0, parseInt(e.target.value) || 0) }))} className="w-16 border-x border-slate-200 py-1.5 text-center font-bold outline-none" />
                                       <button type="button" aria-label={`More ${item.productName}`} onClick={() => setCorrections((c) => ({ ...c, [item.productId]: next + 1 }))} className="px-2.5 py-1.5 text-slate-600 hover:bg-slate-100">+</button>
                                     </div>
                                     {diff !== 0 && <span className={`text-[11px] font-bold ${diff > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{diff > 0 ? '+' : ''}{diff}</span>}
@@ -386,15 +387,15 @@ export default function DispatchPage() {
                         <li key={idx} className="grid grid-cols-[minmax(0,1fr)_64px_64px_64px_32px] items-end gap-2 rounded-xl border border-slate-200 p-2">
                           <SearchSelect label={`Product ${idx + 1}`} options={productOptions.filter((o) => !taken.has(o.value))} value={line.productId} onChange={(v) => setLines((rows) => rows.map((r, i) => i === idx ? { ...r, productId: v, cartonSize: undefined } : r))} placeholder="Search product or short name" />
                           <label className="block text-[11px] font-semibold text-slate-600">Per carton
-                            <input type="number" min={1} max={1000} disabled={!line.productId} value={size || ''} placeholder="—" title={usual ? `Usually ${usual} per carton` : 'No carton size on the product'}
+                            <NumberInput type="number" min={1} max={1000} disabled={!line.productId} value={size || ''} placeholder="—" title={usual ? `Usually ${usual} per carton` : 'No carton size on the product'}
                               onChange={(e) => { const next = Math.min(1000, Math.max(0, parseInt(e.target.value) || 0)); setLines((rows) => rows.map((r, i) => i === idx ? { ...r, cartonSize: next && next !== usual ? next : undefined } : r)); }}
                               className={`mt-1 w-full rounded-lg border px-2 py-2 text-center font-semibold disabled:bg-slate-50 ${line.cartonSize ? 'border-amber-400 text-amber-800' : 'border-slate-300'}`} />
                           </label>
                           <label className="block text-[11px] font-semibold text-slate-600">Cartons
-                            <input type="number" min={0} disabled={!size} value={line.cartons || ''} title={size ? `${size} units per carton` : 'No carton size set'} onChange={(e) => setLines((rows) => rows.map((r, i) => i === idx ? { ...r, cartons: Math.max(0, parseInt(e.target.value) || 0) } : r))} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-center font-semibold disabled:bg-slate-50" />
+                            <NumberInput type="number" min={0} disabled={!size} value={line.cartons || ''} title={size ? `${size} units per carton` : 'No carton size set'} onChange={(e) => setLines((rows) => rows.map((r, i) => i === idx ? { ...r, cartons: Math.max(0, parseInt(e.target.value) || 0) } : r))} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-center font-semibold disabled:bg-slate-50" />
                           </label>
                           <label className="block text-[11px] font-semibold text-slate-600">Units
-                            <input type="number" min={0} value={line.units || ''} onChange={(e) => setLines((rows) => rows.map((r, i) => i === idx ? { ...r, units: Math.max(0, parseInt(e.target.value) || 0) } : r))} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-center font-semibold" />
+                            <NumberInput type="number" min={0} value={line.units || ''} onChange={(e) => setLines((rows) => rows.map((r, i) => i === idx ? { ...r, units: Math.max(0, parseInt(e.target.value) || 0) } : r))} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-center font-semibold" />
                           </label>
                           <button type="button" aria-label={`Remove product ${idx + 1}`} onClick={() => setLines((rows) => rows.length > 1 ? rows.filter((_, i) => i !== idx) : [{ productId: '', cartons: 0, units: 0 }])} className="mb-1.5 rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-4 w-4" /></button>
                           {lineUnits(line) > 0 && <span className="col-span-5 text-right text-[11px] text-slate-600">{lineUnits(line)} units{seesMoney && priceFor(line.productId) ? ` × ${priceFor(line.productId)} = NPR ${(lineUnits(line) * priceFor(line.productId)).toLocaleString()}` : ''}</span>}

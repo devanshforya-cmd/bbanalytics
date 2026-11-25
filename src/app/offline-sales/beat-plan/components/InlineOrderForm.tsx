@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import Portal from '@/components/common/Portal';
 import React, { useState, useEffect, useMemo } from 'react';
 import { capturePhoto } from '@/lib/photo-capture';
@@ -392,7 +393,7 @@ export default function InlineOrderForm({
                             <label htmlFor="inlineorderform-quantity" className="text-[11px] font-bold text-slate-500 ">
                               Quantity ({item.unitType === 'CASES' ? 'Cases' : 'Pcs'})
                             </label>
-                            <input id="inlineorderform-quantity"
+                            <NumberInput id="inlineorderform-quantity"
                               type="number"
                               min={1}
                               value={item.quantity}
@@ -408,7 +409,7 @@ export default function InlineOrderForm({
                           {isCases && (
                             <div>
                               <label htmlFor={`case-size-${item.id}`} className="text-[11px] font-bold text-slate-500">Pcs per case</label>
-                              <input id={`case-size-${item.id}`} type="number" min={1} max={1000} inputMode="numeric"
+                              <NumberInput id={`case-size-${item.id}`} type="number" min={1} max={1000} inputMode="numeric"
                                 value={unitsPerCase}
                                 onChange={(e) => {
                                   const next = Math.min(1000, Math.max(1, parseInt(e.target.value) || 1));
@@ -489,7 +490,7 @@ export default function InlineOrderForm({
                             <label className="text-[11px] text-slate-500 font-semibold">
                               Margin %
                             </label>
-                            <input aria-label="Margin %"
+                            <NumberInput aria-label="Margin %"
                               type="number"
                               min={0}
                               max={60}

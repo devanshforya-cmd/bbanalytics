@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import Portal from '@/components/common/Portal';
 import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db/db-service';
@@ -417,7 +418,7 @@ export default function SetupWizard({ onComplete, onDismiss }: SetupWizardProps)
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 mb-1">MRP (rs)</label>
                     <div className="flex items-center gap-2">
-                      <input
+                      <NumberInput
                         type="number"
                         value={newProdMrp}
                         onChange={(e) => setNewProdMrp(Number(e.target.value))}

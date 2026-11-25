@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import Money from '@/components/common/Money';
 import React, { useMemo, useState } from 'react';
 import { Link2, Minus, PackagePlus, Plus, Repeat, Search, Trash2 } from 'lucide-react';
@@ -150,7 +151,7 @@ export default function ExchangePanel({ ret, onClose, onDone }: ExchangePanelPro
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label htmlFor="exchange-amount" className="mb-1 block font-bold text-slate-700">Amount to collect (NPR)</label>
-                <input id="exchange-amount" type="number" min={0} step="1" value={amount} onChange={(event) => setAmount(event.target.value)} className={field} />
+                <NumberInput id="exchange-amount" type="number" min={0} step="1" value={amount} onChange={(event) => setAmount(event.target.value)} className={field} />
                 <p className="mt-1 text-[11px] text-slate-500">0 for a free replacement. Any price difference is collected on delivery.</p>
               </div>
               <div>

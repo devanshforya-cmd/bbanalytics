@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import Money from '@/components/common/Money';
 import { useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
@@ -93,7 +94,7 @@ export default function CatalogEditor({ item, kind, products, onChanged }: { ite
                 <option value="">Select product</option>{!available.some(product => product.id === part.productId) && <option value={part.productId} disabled>Unavailable product — choose another</option>}
                 {available.map(product => <option key={product.id} value={product.id}>{product.name} — <Money>{product.mrp}</Money></option>)}
               </select></label>
-              <label className="w-20 text-xs font-semibold">Quantity<input className={inputClass} type="number" min="1" step="1" value={part.quantity} onChange={e => setParts(parts.map((entry, i) => i === index ? { ...entry, quantity: Number(e.target.value) } : entry))} /></label>
+              <label className="w-20 text-xs font-semibold">Quantity<NumberInput className={inputClass} type="number" min="1" step="1" value={part.quantity} onChange={e => setParts(parts.map((entry, i) => i === index ? { ...entry, quantity: Number(e.target.value) } : entry))} /></label>
               <button type="button" aria-label={`Remove product ${index + 1}`} className="min-h-[44px] text-rose-700" onClick={() => setParts(parts.filter((_, i) => i !== index))}><Trash2 className="h-4 w-4" /></button>
             </div>)}
             <button type="button" className="text-sm font-semibold text-blue-700" onClick={() => setParts([...parts, { productId: '', quantity: 1 }])}>+ Add product</button>

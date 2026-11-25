@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import React, { useRef, useState } from 'react';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -180,7 +181,7 @@ export default function OrderIssueForm({ onClose, onSaved, initialOrder = null, 
                     <div className="min-w-0 flex-1">
                       <SearchSelect id={`wrong-${index}`} options={productOptions} value={row.productId} placeholder="Search products" onChange={(value) => setSentWrong((current) => current.map((entry, i) => i === index ? { ...entry, productId: value } : entry))} />
                     </div>
-                    <input aria-label="Units sent by mistake" type="number" min={1} value={row.quantity} onChange={(event) => setSentWrong((current) => current.map((entry, i) => i === index ? { ...entry, quantity: Math.max(1, Math.round(Number(event.target.value)) || 1) } : entry))} className="w-20 shrink-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+                    <NumberInput aria-label="Units sent by mistake" type="number" min={1} value={row.quantity} onChange={(event) => setSentWrong((current) => current.map((entry, i) => i === index ? { ...entry, quantity: Math.max(1, Math.round(Number(event.target.value)) || 1) } : entry))} className="w-20 shrink-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
                     {sentWrong.length > 1 && <button type="button" aria-label="Remove this product" onClick={() => setSentWrong((current) => current.filter((_, i) => i !== index))} className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>}
                   </div>
                 ))}

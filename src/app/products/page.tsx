@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import Money from '@/components/common/Money';
@@ -1224,7 +1225,7 @@ export default function ProductsPage() {
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Case box units (pcs)
               </label>
-              <input aria-label="Case box units (pcs)"
+              <NumberInput aria-label="Case box units (pcs)"
                 type="number"
                 value={newProd.caseSize}
                 onChange={(e) => setNewProd({ ...newProd, caseSize: Number(e.target.value) })}
@@ -1281,7 +1282,7 @@ export default function ProductsPage() {
               <label htmlFor="products-mrp-catalog-price" className="block text-xs font-bold text-slate-700 mb-1">
                 MRP (catalog price) *
               </label>
-              <input id="products-mrp-catalog-price"
+              <NumberInput id="products-mrp-catalog-price"
                 type="number"
                 value={newProd.mrp}
                 onChange={(e) => setNewProd({ ...newProd, mrp: Number(e.target.value) })}
@@ -1293,7 +1294,7 @@ export default function ProductsPage() {
               <label htmlFor="products-threshold-alert-qty" className="block text-xs font-bold text-slate-700 mb-1">
                 Threshold alert qty
               </label>
-              <input id="products-threshold-alert-qty"
+              <NumberInput id="products-threshold-alert-qty"
                 type="number"
                 value={newProd.thresholdQty}
                 onChange={(e) =>
@@ -1490,7 +1491,7 @@ export default function ProductsPage() {
                   </option>
                 ))}
               </select>
-              <input
+              <NumberInput
                 type="number"
                 min="1"
                 value={newCombo.qty1}
@@ -1518,7 +1519,7 @@ export default function ProductsPage() {
                   </option>
                 ))}
               </select>
-              <input
+              <NumberInput
                 type="number"
                 min="1"
                 value={newCombo.qty2}
@@ -1545,7 +1546,7 @@ export default function ProductsPage() {
                   </option>
                 ))}
               </select>
-              <input
+              <NumberInput
                 type="number"
                 min="1"
                 value={newCombo.qty3}
@@ -1575,7 +1576,7 @@ export default function ProductsPage() {
             <label className="block text-xs font-bold text-slate-700 mb-1">
               Final bundled combo price (NPR) *
             </label>
-            <input aria-label="Final bundled combo price (NPR)"
+            <NumberInput aria-label="Final bundled combo price (NPR)"
               type="number"
               value={newCombo.comboPrice}
               onChange={(e) => setNewCombo({ ...newCombo, comboPrice: Number(e.target.value) })}

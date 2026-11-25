@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import React, { useState, useEffect } from 'react';
 import { Bell, AlertTriangle, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { toast } from '@/components/common/Toast';
@@ -64,7 +65,7 @@ export default function NotificationRules() {
                 <label htmlFor="notificationrules-cheque-overdue-alert-thresho" className="block font-semibold text-slate-700 mb-1">
                   Cheque overdue alert threshold (days)
                 </label>
-                <input id="notificationrules-cheque-overdue-alert-thresho"
+                <NumberInput id="notificationrules-cheque-overdue-alert-thresho"
                   type="number"
                   min="1"
                   max="15"
@@ -78,7 +79,7 @@ export default function NotificationRules() {
                 <label htmlFor="notificationrules-field-cheque-handover-gap-al" className="block font-semibold text-slate-700 mb-1">
                   Field cheque handover gap alert (days)
                 </label>
-                <input id="notificationrules-field-cheque-handover-gap-al"
+                <NumberInput id="notificationrules-field-cheque-handover-gap-al"
                   type="number"
                   min="1"
                   max="7"
@@ -92,7 +93,7 @@ export default function NotificationRules() {
                 <label htmlFor="notificationrules-store-unvisited-alert-thresh" className="block font-semibold text-slate-700 mb-1">
                   Store unvisited alert threshold (days)
                 </label>
-                <input id="notificationrules-store-unvisited-alert-thresh"
+                <NumberInput id="notificationrules-store-unvisited-alert-thresh"
                   type="number"
                   min="5"
                   max="30"
@@ -106,7 +107,7 @@ export default function NotificationRules() {
                 <label htmlFor="notificationrules-weekly-delivery-failure-rate" className="block font-semibold text-slate-700 mb-1">
                   Weekly delivery failure rate trigger (%)
                 </label>
-                <input id="notificationrules-weekly-delivery-failure-rate"
+                <NumberInput id="notificationrules-weekly-delivery-failure-rate"
                   type="number"
                   min="5"
                   max="50"

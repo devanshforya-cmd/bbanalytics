@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import StoredPhoto from '@/components/common/StoredPhoto';
 import Portal from '@/components/common/Portal';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -742,7 +743,7 @@ export default function BeatPlanPage() {
                   </div>
                   <div>
                     <label htmlFor="beat-plan-cheque-amount-npr" className="block font-semibold text-slate-700 mb-1">Cheque amount (NPR) *</label>
-                    <input id="beat-plan-cheque-amount-npr"
+                    <NumberInput id="beat-plan-cheque-amount-npr"
                       type="number"
                       placeholder="25000"
                       value={chequeAmount}

@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
@@ -524,7 +525,7 @@ export default function CustomersPage() {
                 </div>
                 <div>
                   <label htmlFor="customers-karma-score-0-100" className="block text-xs font-bold text-slate-700 mb-1">Karma score (0-100)</label>
-                  <input id="customers-karma-score-0-100"
+                  <NumberInput id="customers-karma-score-0-100"
                     type="number"
                     min="0"
                     max="100"

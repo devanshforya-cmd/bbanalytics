@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import { useMemo, useState } from 'react';
 import { PhoneCall, Plus, Trash2 } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -64,7 +65,7 @@ export default function FollowUpSettings() {
                   <input value={step.label} maxLength={60} disabled={!canEdit} onChange={(e) => setStep(step.id, { label: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" />
                 </label>
                 <label className="w-24 text-xs font-semibold text-slate-700">Days after
-                  <input type="number" min={0} max={365} value={step.daysAfter} disabled={!canEdit} onChange={(e) => setStep(step.id, { daysAfter: Math.max(0, Math.min(365, Math.round(Number(e.target.value) || 0))) })} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" />
+                  <NumberInput type="number" min={0} max={365} value={step.daysAfter} disabled={!canEdit} onChange={(e) => setStep(step.id, { daysAfter: Math.max(0, Math.min(365, Math.round(Number(e.target.value) || 0))) })} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" />
                 </label>
                 <label className="w-44 text-xs font-semibold text-slate-700">Counted from
                   <select value={step.from} disabled={!canEdit} onChange={(e) => setStep(step.id, { from: e.target.value as FollowUpStep['from'] })} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal">
@@ -101,7 +102,7 @@ export default function FollowUpSettings() {
 
       <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:grid-cols-2">
         <label className="text-xs font-semibold text-slate-700">Tries before giving up
-          <input type="number" min={1} max={10} value={plan.maxTries} disabled={!canEdit} onChange={(e) => update((draft) => { draft.maxTries = Math.max(1, Math.min(10, Math.round(Number(e.target.value) || 1))); })} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" />
+          <NumberInput type="number" min={1} max={10} value={plan.maxTries} disabled={!canEdit} onChange={(e) => update((draft) => { draft.maxTries = Math.max(1, Math.min(10, Math.round(Number(e.target.value) || 1))); })} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" />
           <span className="mt-1 block font-normal text-slate-500">After this many unanswered tries (no answer, switched off) a call is marked not reached. An unanswered call comes back the next day.</span>
         </label>
         <label className="text-xs font-semibold text-slate-700">Follow up orders placed from

@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import Portal from '@/components/common/Portal';
 import { useState } from 'react';
 import { X } from 'lucide-react';
@@ -85,8 +86,8 @@ export default function AddOutletModal({ chain, onClose, onSaved }: { chain: Dis
         </div>
         <label className="block font-semibold">Address<input value={address} onChange={(e) => setAddress(e.target.value)} className={field} /></label>
         <div className="grid grid-cols-2 gap-3">
-          <label className="block font-semibold">Latitude<input type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} className={field} /></label>
-          <label className="block font-semibold">Longitude<input type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} className={field} /></label>
+          <label className="block font-semibold">Latitude<NumberInput type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} className={field} /></label>
+          <label className="block font-semibold">Longitude<NumberInput type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} className={field} /></label>
         </div>
         <button type="button" onClick={useGps} className="w-full rounded-lg border border-slate-300 p-2 font-semibold text-blue-700">Use this device&apos;s GPS (when at the outlet)</button>
         <SearchSelect label="Field officer" options={officers.map((user) => ({ value: user.id, label: user.fullName, hint: user.role }))} value={officerId} onChange={setOfficerId} allowClear clearLabel="Not assigned yet" placeholder="Search staff" />

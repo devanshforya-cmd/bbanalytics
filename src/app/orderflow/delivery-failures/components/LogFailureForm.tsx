@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import React, { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, ChevronDown, PackageX } from 'lucide-react';
 import { failureReasonLabel, isOtherReason, REASON_DETAIL_MAX } from '@/lib/failure-reason';
@@ -190,7 +191,7 @@ export default function LogFailureForm({ onClose, onSaved, onViewCustomer, initi
                 <DualDateField id="failure-date" label="Failure date" valueAd={dateAd} maxAd={getTodayAd()} onChange={(ad, bs) => { if (ad) { setDateAd(ad); setDateBs(bs); } }} />
                 <div>
                   <label htmlFor="failure-attempt" className="mb-1 block font-bold text-slate-700">Attempt number</label>
-                  <input id="failure-attempt" type="number" min={1} max={20} disabled={!!openFailure} value={openFailure ? nextAttempt : attempt} placeholder={String(nextAttempt)} onChange={(event) => setAttempt(event.target.value)} className={`${field} disabled:bg-slate-50`} />
+                  <NumberInput id="failure-attempt" type="number" min={1} max={20} disabled={!!openFailure} value={openFailure ? nextAttempt : attempt} placeholder={String(nextAttempt)} onChange={(event) => setAttempt(event.target.value)} className={`${field} disabled:bg-slate-50`} />
                 </div>
               </div>
               <DualDateField id="failure-reattempt" label="Reattempt date" valueAd={reattemptAd} minAd={dateAd} allowClear error={errors.reattempt} helper="Leave empty if no reattempt is planned yet." onChange={(ad, bs) => { setReattemptAd(ad); setReattemptBs(bs); }} />

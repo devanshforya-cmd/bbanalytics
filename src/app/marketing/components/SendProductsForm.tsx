@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import React, { useMemo, useState } from 'react';
 import { Check, Minus, PackagePlus, Plus, Search, Trash2 } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
@@ -219,7 +220,7 @@ export default function SendProductsForm({ influencer, onClose, onSaved }: SendP
                     <span className="min-w-0"><span className="block truncate font-semibold text-slate-900">{product?.name}{product?.isCombo && <ComboBadge />}</span><span className="text-[11px] text-slate-500">{brandName(product?.brandCode || '')}</span></span>
                     <span className="flex shrink-0 items-center gap-1">
                       <button type="button" aria-label={`One fewer ${product?.name}`} onClick={() => setQuantity(row.productId, row.quantity - 1)} disabled={row.quantity <= 1} className="rounded-lg border border-slate-200 p-1 text-slate-600 hover:bg-slate-50 disabled:opacity-40"><Minus className="h-3 w-3" /></button>
-                      <input aria-label={`Quantity of ${product?.name}`} type="number" min={1} max={999} value={row.quantity} onChange={(event) => setQuantity(row.productId, Number(event.target.value))} className="w-12 rounded-lg border border-slate-200 py-1 text-center font-bold" />
+                      <NumberInput aria-label={`Quantity of ${product?.name}`} type="number" min={1} max={999} value={row.quantity} onChange={(event) => setQuantity(row.productId, Number(event.target.value))} className="w-12 rounded-lg border border-slate-200 py-1 text-center font-bold" />
                       <button type="button" aria-label={`One more ${product?.name}`} onClick={() => setQuantity(row.productId, row.quantity + 1)} className="rounded-lg border border-slate-200 p-1 text-slate-600 hover:bg-slate-50"><Plus className="h-3 w-3" /></button>
                       <button type="button" aria-label={`Remove ${product?.name}`} onClick={() => setItems((rows) => rows.filter((entry) => entry.productId !== row.productId))} className="ml-1 rounded-lg p-1 text-slate-500 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
                     </span>

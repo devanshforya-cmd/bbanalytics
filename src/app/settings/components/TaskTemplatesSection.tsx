@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import Portal from '@/components/common/Portal';
 import React, { useState, useEffect } from 'react';
 import { CheckSquare, Plus, Edit2, CheckCircle2, Clock, Trash2 } from 'lucide-react';
@@ -242,7 +243,7 @@ export default function TaskTemplatesSection() {
                         />
                       </div>
                       <div>
-                        <input
+                        <NumberInput
                           type="number"
                           min={1}
                           required

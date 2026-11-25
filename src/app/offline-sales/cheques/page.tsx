@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import StoredPhoto from '@/components/common/StoredPhoto';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
@@ -779,7 +780,7 @@ function ChequesContent() {
               </div>
               <div>
                 <label htmlFor="cheques-amount-npr" className="block font-bold text-slate-700 mb-1">Amount (NPR) *</label>
-                <input id="cheques-amount-npr"
+                <NumberInput id="cheques-amount-npr"
                   type="number"
                   placeholder="35000"
                   value={newAmount}

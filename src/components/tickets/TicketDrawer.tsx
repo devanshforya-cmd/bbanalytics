@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PackageCheck, Truck, CheckCircle2, RotateCcw, XCircle, Lock, Send, MessageSquarePlus } from 'lucide-react';
@@ -159,7 +160,7 @@ export default function TicketDrawer({ ticketId, onClose, onExchange }: Props) {
                 {backLines.map(({ line, index }) => { const row = received[index] || { qty: line.quantity, condition: 'GOOD' as GoodsCondition }; return (
                   <div key={index} className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_90px_170px]">
                     <span className="font-semibold text-slate-900">{line.productName}<span className="block text-[11px] font-normal text-slate-500">{line.quantity} expected</span></span>
-                    <input aria-label={`Units of ${line.productName} received`} type="number" min={0} max={line.quantity} value={row.qty} onChange={(event) => setReceived((current) => ({ ...current, [index]: { ...row, qty: Math.max(0, Math.min(line.quantity, Math.round(Number(event.target.value)) || 0)) } }))} className={field} />
+                    <NumberInput aria-label={`Units of ${line.productName} received`} type="number" min={0} max={line.quantity} value={row.qty} onChange={(event) => setReceived((current) => ({ ...current, [index]: { ...row, qty: Math.max(0, Math.min(line.quantity, Math.round(Number(event.target.value)) || 0)) } }))} className={field} />
                     <select aria-label={`Condition of ${line.productName}`} value={row.condition} onChange={(event) => setReceived((current) => ({ ...current, [index]: { ...row, condition: event.target.value as GoodsCondition } }))} className={field}>
                       {(Object.keys(CONDITION_LABEL) as GoodsCondition[]).map((key) => <option key={key} value={key}>{CONDITION_LABEL[key]}</option>)}
                     </select>
@@ -183,7 +184,7 @@ export default function TicketDrawer({ ticketId, onClose, onExchange }: Props) {
                 {resolution === 'EXCHANGE' && !replacement && <p className="text-[11px] text-purple-800">Use Exchange order to create or link the replacement. The ticket is resolved when it is linked.</p>}
                 {resolution === 'RESEND' && !resend && <p className="text-[11px] text-slate-600">Create the resend order too, so the parcel goes out with dispatch.</p>}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {(resolution === 'REFUND' || resolution === 'STORE_CREDIT') && <div><label htmlFor="t-amount" className="mb-1 block font-bold text-slate-700">Amount (NPR){resolution === 'REFUND' && <span className="text-rose-600"> *</span>}</label><input id="t-amount" type="number" min={0} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} className={field} /></div>}
+                  {(resolution === 'REFUND' || resolution === 'STORE_CREDIT') && <div><label htmlFor="t-amount" className="mb-1 block font-bold text-slate-700">Amount (NPR){resolution === 'REFUND' && <span className="text-rose-600"> *</span>}</label><NumberInput id="t-amount" type="number" min={0} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} className={field} /></div>}
                   <div className={resolution === 'REFUND' || resolution === 'STORE_CREDIT' ? '' : 'sm:col-span-2'}><label htmlFor="t-note" className="mb-1 block font-bold text-slate-700">Note</label><input id="t-note" value={note} onChange={(event) => setNote(event.target.value)} className={field} /></div>
                 </div>
                 <div className="flex justify-end"><button type="button" disabled={!resolution || (resolution === 'EXCHANGE' && !replacement)} onClick={() => resolution && run(() => db.resolveTicket(entry.id, { type: resolution, ...(amount !== '' ? { amount: Number(amount) } : {}), note }), 'Ticket resolved')} className="btn btn-primary disabled:opacity-50">Save resolution</button></div>

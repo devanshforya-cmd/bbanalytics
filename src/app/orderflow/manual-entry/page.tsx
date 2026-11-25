@@ -1,5 +1,6 @@
 'use client';
 
+import NumberInput from '@/components/common/NumberInput';
 import Portal from '@/components/common/Portal';
 import Money from '@/components/common/Money';
 import InfoTip from '@/components/common/InfoTip';
@@ -840,7 +841,7 @@ export default function ManualOrderEntryPage() {
                           >
                             -
                           </button>
-                          <input
+                          <NumberInput
                             type="number"
                             min="1"
                             value={item.quantity}
