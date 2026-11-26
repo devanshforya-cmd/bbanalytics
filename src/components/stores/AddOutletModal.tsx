@@ -1,5 +1,6 @@
 'use client';
 
+import PaymentTermsField from '@/components/stores/PaymentTermsField';
 import NumberInput from '@/components/common/NumberInput';
 import Portal from '@/components/common/Portal';
 import { useState } from 'react';
@@ -24,6 +25,9 @@ export default function AddOutletModal({ chain, onClose, onSaved }: { chain: Dis
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [saving, setSaving] = useState(false);
+  const [ownTerms, setOwnTerms] = useState(false);
+  const [terms, setTerms] = useState(chain.creditTerms || '30-day credit');
+  const [creditLimit, setCreditLimit] = useState<number | undefined>(undefined);
 
   const useGps = () => {
     if (!navigator.geolocation) { toast.error('This browser does not support GPS. Enter the coordinates.'); return; }
@@ -58,6 +62,8 @@ export default function AddOutletModal({ chain, onClose, onSaved }: { chain: Dis
         contacts: contactName.trim() || contactPhone.trim() ? [{ id: `cnt_${Date.now()}`, name: contactName.trim(), role: 'Store Manager', phone: contactPhone.trim(), isPrimary: true }] : [],
         brandsAvailable: chain.brandsCarried || [],
         defaultMargins: chain.defaultMargins,
+        ...(ownTerms ? { creditTerms: terms } : {}),
+        ...(creditLimit ? { creditLimit } : {}),
       });
       if (!chain.hasBranches) db.updateDistributor(chain.id, { hasBranches: true });
       toast.success(`Outlet "${name.trim()}" added to ${chain.name}.`);
@@ -94,6 +100,11 @@ export default function AddOutletModal({ chain, onClose, onSaved }: { chain: Dis
         <div className="grid grid-cols-2 gap-3">
           <label className="block font-semibold">Contact name<input value={contactName} onChange={(e) => setContactName(e.target.value)} className={field} /></label>
           <label className="block font-semibold">Contact phone<input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} inputMode="tel" className={field} /></label>
+        </div>
+        <div className="space-y-2 rounded-xl border border-slate-200 p-3">
+          <label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={ownTerms} onChange={(e) => setOwnTerms(e.target.checked)} />Different payment terms from {chain.name}</label>
+          {!ownTerms && <p className="text-[11px] text-slate-500">Uses the chain&apos;s terms: {chain.creditTerms || 'not set'}.</p>}
+          <PaymentTermsField idPrefix="outlet-terms" terms={ownTerms ? terms : (chain.creditTerms || terms)} onTermsChange={(next) => { setTerms(next); setOwnTerms(true); }} creditLimit={creditLimit} onCreditLimitChange={setCreditLimit} />
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 font-semibold text-slate-700 hover:bg-slate-100">Cancel</button>

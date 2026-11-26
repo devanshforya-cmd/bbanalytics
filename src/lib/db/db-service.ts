@@ -1259,8 +1259,8 @@ export class DatabaseService {
         primaryContactName: branch.contactName || branch.contacts?.[0]?.name || '',
         primaryContactPhone: branch.contactPhone || branch.contacts?.[0]?.phone || '',
         creditLimit: branch.creditLimit || 0,
-        creditPeriodDays: Number(/(\d+)/.exec(dist?.creditTerms || '')?.[1] || 0),
-        paymentTerms: dist?.creditTerms,
+        creditPeriodDays: Number(/(\d+)/.exec(branch.creditTerms || dist?.creditTerms || '')?.[1] || 0),
+        paymentTerms: branch.creditTerms || dist?.creditTerms,
         outstandingBalance: branch.outstandingBalance || 0,
         coordinates: pinnedLocation(branch.lat, branch.lng) ? { lat: branch.lat, lng: branch.lng } : undefined,
         assignedOfficerId: branch.assignedOfficerId || '',
@@ -1287,7 +1287,7 @@ export class DatabaseService {
         primaryContactName: retailer.contactName || retailer.contacts?.[0]?.name || '',
         primaryContactPhone: retailer.contactPhone || retailer.contacts?.[0]?.phone || '',
         creditLimit: retailer.creditLimit || 0,
-        creditPeriodDays: (retailer as any).creditDays || (retailer as any).creditPeriodDays || 0,
+        creditPeriodDays: Number(/(\d+)/.exec(retailer.creditTerms || '')?.[1] || 0) || (retailer as any).creditDays || (retailer as any).creditPeriodDays || 0,
         paymentTerms: retailer.creditTerms,
         outstandingBalance: retailer.outstandingBalance || 0,
         coordinates: pinnedLocation(retailer.lat, retailer.lng) ? { lat: retailer.lat, lng: retailer.lng } : undefined,
@@ -1314,7 +1314,7 @@ export class DatabaseService {
         contacts: distributor.contacts || [],
         primaryContactName: distributor.contactName || distributor.contacts?.[0]?.name || '',
         primaryContactPhone: distributor.contactPhone || distributor.contacts?.[0]?.phone || '',
-        creditLimit: (distributor as any).creditLimit || 0,
+        creditLimit: distributor.creditLimit || 0,
         creditPeriodDays: Number(/(\d+)/.exec(distributor.creditTerms || '')?.[1] || 0),
         paymentTerms: distributor.creditTerms,
         outstandingBalance: 0,
@@ -1636,25 +1636,18 @@ export class DatabaseService {
     entityType: 'DISTRIBUTOR' | 'BRANCH' | 'RETAILER',
     entityId: string,
     defaultMargins: DefaultMargins,
-    paymentTerms?: string
+    paymentTerms?: string,
+    /** null or 0 = no limit; undefined = leave as it is. */
+    creditLimit?: number | null
   ): boolean {
-    if (entityType === 'DISTRIBUTOR') {
-      const d = this.distributors.find((x) => x.id === entityId);
-      if (d) {
-        d.defaultMargins = defaultMargins;
-        if (paymentTerms) d.creditTerms = paymentTerms;
-      }
-    } else if (entityType === 'BRANCH') {
-      const b = this.branches.find((x) => x.id === entityId);
-      if (b) {
-        b.defaultMargins = defaultMargins;
-      }
-    } else {
-      const r = this.retailers.find((x) => x.id === entityId);
-      if (r) {
-        r.defaultMargins = defaultMargins;
-        if (paymentTerms) r.creditTerms = paymentTerms;
-      }
+    const store: { defaultMargins?: DefaultMargins; creditTerms?: string; creditLimit?: number } | undefined =
+      entityType === 'DISTRIBUTOR' ? this.distributors.find((x) => x.id === entityId)
+        : entityType === 'BRANCH' ? this.branches.find((x) => x.id === entityId)
+        : this.retailers.find((x) => x.id === entityId);
+    if (store) {
+      store.defaultMargins = defaultMargins;
+      if (paymentTerms) store.creditTerms = paymentTerms;
+      if (creditLimit !== undefined) { if (creditLimit && creditLimit > 0) store.creditLimit = Math.round(creditLimit); else delete store.creditLimit; }
     }
     this.persistState();
     return true;

@@ -1,5 +1,6 @@
 'use client';
 
+import { hasCreditLimit } from '@/lib/payment-terms';
 import StoredPhoto from '@/components/common/StoredPhoto';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
@@ -337,7 +338,7 @@ export default function StoreDetailPage() {
                   Credit limit
                 </span>
                 <div className="font-bold text-slate-900 text-sm">
-                  <Money>{(store.creditLimit || 0).toLocaleString()}</Money>
+                  {hasCreditLimit(store.creditLimit) ? <Money>{store.creditLimit.toLocaleString()}</Money> : 'No limit'}
                 </div>
                 <div className="text-[11px] text-slate-500">
                   Terms: {store.paymentTerms || 'Not set'}
@@ -825,7 +826,7 @@ export default function StoreDetailPage() {
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <span className="text-[11px] font-bold text-slate-500 block">Total credit line</span>
-                <p className="text-base font-bold text-slate-900 mt-0.5"><Money>{(store.creditLimit || 0).toLocaleString()}</Money></p>
+                <p className="text-base font-bold text-slate-900 mt-0.5">{hasCreditLimit(store.creditLimit) ? <Money>{store.creditLimit.toLocaleString()}</Money> : 'No limit'}</p>
               </div>
               <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
                 <span className="text-[11px] font-bold text-blue-600 block">Current outstanding</span>
@@ -834,7 +835,7 @@ export default function StoreDetailPage() {
               <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
                 <span className="text-[11px] font-bold text-emerald-600 block">Available balance</span>
                 <p className="text-base font-bold text-emerald-900 mt-0.5">
-                  <Money>{Math.max(0, (store.creditLimit || 0) - (store.outstandingBalance || 0)).toLocaleString()}</Money>
+                  {hasCreditLimit(store.creditLimit) ? <Money>{Math.max(0, store.creditLimit - (store.outstandingBalance || 0)).toLocaleString()}</Money> : 'No limit'}
                 </p>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
