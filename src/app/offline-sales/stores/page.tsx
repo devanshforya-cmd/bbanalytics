@@ -2,6 +2,9 @@
 
 import NumberInput from '@/components/common/NumberInput';
 import PaymentTermsField from '@/components/stores/PaymentTermsField';
+import SetLocationModal from '@/components/stores/SetLocationModal';
+import { pinnedLocation } from '@/lib/gps-validation';
+import { MapPinOff } from 'lucide-react';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
@@ -160,6 +163,10 @@ export default function StoresPage() {
 
   // Edit Store State
   const [editingStore, setEditingStore] = useState<Retailer | null>(null);
+  const [locationFor, setLocationFor] = useState<{ type: 'RETAILER' | 'BRANCH' | 'DISTRIBUTOR'; id: string; name: string; lat?: number; lng?: number } | null>(null);
+  const [outletSearch, setOutletSearch] = useState<Record<string, string>>({});
+  // Pinning a store: managers for any store, field staff for their own.
+  const canPin = (officerId?: string) => canEditStores || canEditAccounts || canCreateStores && (!isSalesOfficer || officerId === currentUser.id);
   const [editStoreName, setEditStoreName] = useState('');
   const [editStoreType, setEditStoreType] = useState<Retailer['type']>('GT');
   const [editStoreArea, setEditStoreArea] = useState('');
@@ -436,6 +443,26 @@ export default function StoresPage() {
     });
   };
 
+
+  const pinControl = (type: 'RETAILER' | 'BRANCH' | 'DISTRIBUTOR', store: { id: string; name: string; lat?: number; lng?: number; assignedOfficerId?: string }, compact = false) => {
+    const pinned = pinnedLocation(store.lat, store.lng);
+    return (
+      <span className="flex items-center gap-2">
+        {pinned && (
+          <a href={`https://www.google.com/maps/dir/?api=1&destination=${store.lat},${store.lng}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-bold text-blue-600 hover:underline">
+            <Navigation className="h-3.5 w-3.5" /><span>Navigate</span>
+          </a>
+        )}
+        {canPin(store.assignedOfficerId) ? (
+          <button type="button" onClick={() => setLocationFor({ type, id: store.id, name: store.name, lat: store.lat, lng: store.lng })}
+            className={`flex items-center gap-1 font-bold hover:underline ${pinned ? 'text-slate-500' : 'text-amber-700'}`} title={pinned ? 'Correct the location' : 'Add the location'}>
+            {pinned ? <MapPin className="h-3.5 w-3.5" /> : <MapPinOff className="h-3.5 w-3.5" />}<span>{pinned ? (compact ? 'Edit' : 'Edit location') : 'Add location'}</span>
+          </button>
+        ) : !pinned && <span className="flex items-center gap-1 text-amber-700"><MapPinOff className="h-3.5 w-3.5" />No location</span>}
+      </span>
+    );
+  };
+
   const areaAnalyses = useMemo(() => {
     const orders = canViewSelling ? db.getSecondaryOrders() : [];
     const products = db.getProducts();
@@ -604,7 +631,7 @@ export default function StoresPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 items-start md:grid-cols-2 gap-4">
               {<PagedList items={filteredDistributors} label="distributors" pageSize={10} render={(pageRows) => pageRows.map((dist) => {
                 const distBranches = branches.filter(
                   (b) =>
@@ -657,6 +684,12 @@ export default function StoresPage() {
                           <span>Terms</span>
                         </button>
 
+                        {canPin() && (
+                          <button type="button" onClick={() => setLocationFor({ type: 'DISTRIBUTOR', id: dist.id, name: dist.name, lat: dist.lat, lng: dist.lng })}
+                            className="rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1" title={pinnedLocation(dist.lat, dist.lng) ? 'Correct the location' : 'Add the location'}>
+                            {pinnedLocation(dist.lat, dist.lng) ? <MapPin className="w-3.5 h-3.5 text-slate-400" /> : <MapPinOff className="w-3.5 h-3.5 text-amber-600" />}<span>Location</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() =>
@@ -714,29 +747,32 @@ export default function StoresPage() {
                       {channelOfDistributor(dist) === 'CHAIN_STORE' && distBranches.length > 0 && (
                         <Link href={`/offline-sales/stores/${dist.id}`} className="mb-2 block text-[11px] font-semibold text-blue-700 hover:underline">See the whole chain&apos;s history →</Link>
                       )}
+                      {distBranches.length > 5 && (
+                        <input type="search" value={outletSearch[dist.id] || ''} onChange={(e) => setOutletSearch((current) => ({ ...current, [dist.id]: e.target.value }))}
+                          placeholder={`Search ${distBranches.length} outlets`} aria-label={`Search outlets of ${dist.name}`} className="mb-2 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs" />
+                      )}
                       <div className="space-y-1.5">
-                        {distBranches.map((branch) => (
+                        {(() => {
+                          const q = (outletSearch[dist.id] || '').trim().toLowerCase();
+                          const shown = q ? distBranches.filter((b) => `${b.name} ${b.address} ${b.area || ''}`.toLowerCase().includes(q)) : distBranches;
+                          if (!shown.length) return <p className="py-2 text-center text-[11px] text-slate-500">{q ? 'No outlet matches.' : 'No outlets yet.'}</p>;
+                          return <PagedList items={shown} label="outlets" pageSize={5} render={(rows) => rows.map((branch) => (
                           <div
                             key={branch.id}
-                            className="flex items-center justify-between rounded-xl bg-slate-50 p-2.5 text-xs hover:bg-slate-100/70"
+                            className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 p-2.5 text-xs hover:bg-slate-100/70"
                           >
-                            <div>
+                            <div className="min-w-0">
                               <Link href={`/offline-sales/stores/${branch.id}`} className="font-semibold text-blue-700 hover:underline">{branch.name}</Link>
-                              <div className="text-[11px] text-slate-500">{branch.address}</div>
+                              <div className="truncate text-[11px] text-slate-500">{branch.address}</div>
                               {canViewSelling && <Link href={`/offline-sales/stores/${branch.id}?tab=selling`} className="mt-1 block text-[11px] font-semibold text-blue-700 hover:underline">Area selling: {areaAnalyses.get('BRANCH:' + branch.id)?.opportunityScore == null ? 'Building evidence' : `${areaAnalyses.get('BRANCH:' + branch.id)!.opportunityScore}/100`}</Link>}
                             </div>
-                            <StoreDeleteButton id={branch.id} name={branch.name} onDeleted={refreshData} />
-                            <a
-                              href={`https://www.google.com/maps/dir/?api=1&destination=${branch.lat},${branch.lng}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 font-bold hover:underline flex items-center gap-1"
-                            >
-                              <Navigation className="w-3 h-3" />
-                              <span>Navigate</span>
-                            </a>
+                            <div className="flex shrink-0 flex-col items-end gap-1">
+                              {pinControl('BRANCH', branch, true)}
+                              <StoreDeleteButton id={branch.id} name={branch.name} onDeleted={refreshData} />
+                            </div>
                           </div>
-                        ))}
+                          ))} />;
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -861,15 +897,7 @@ export default function StoresPage() {
                     <span className="text-slate-500">
                       Officer: <strong className="text-slate-700">{ret.assignedOfficerName || 'Not assigned'}</strong>
                     </span>
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${ret.lat},${ret.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 font-bold hover:underline flex items-center gap-1"
-                    >
-                      <Navigation className="w-3.5 h-3.5" />
-                      <span>Navigate</span>
-                    </a>
+                    {pinControl('RETAILER', ret)}
                   </div>
                 </div>
               ))} />}
@@ -1700,6 +1728,7 @@ export default function StoresPage() {
           </div></Portal>
         )}
       </div>
+      {locationFor && <SetLocationModal {...locationFor} onClose={() => setLocationFor(null)} onSaved={refreshData} />}
       {outletChain && <AddOutletModal chain={outletChain} onClose={() => setOutletChain(null)} onSaved={refreshData} />}
     </PageGuard>
   );
