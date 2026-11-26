@@ -70,7 +70,9 @@ export default function ProductsPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [activeBrandsList, setActiveBrandsList] = useState(() => db.getBrands('ACTIVE'));
 
-  const [activeBrand, setActiveBrand] = useState<BrandCode>('ALL');
+  // One brand filter: the page follows the header's brand choice, and changing it here changes the header too.
+  const [activeBrand, setActiveBrandState] = useState<BrandCode>(() => db.getActiveBrandFilter() || 'ALL');
+  const setActiveBrand = (code: BrandCode) => { setActiveBrandState(code); if (db.getActiveBrandFilter() !== code) db.setActiveBrandFilter(code); };
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'ARCHIVED' | 'COMBOS'>('PRODUCTS');
   // Opened from a combo page: start on the Combos tab.
   useEffect(() => {
@@ -121,8 +123,10 @@ export default function ProductsPage() {
 
   const loadCatalog = () => {
     setCurrentUser(db.getCurrentUser());
-    setProducts(db.getProducts());
-    setCombos(db.getCombos());
+    // Every product the person may see; the brand pills below do the filtering, so nothing is hidden twice.
+    setProducts(db.getProducts('ALL'));
+    setCombos(db.getCombos('ALL'));
+    setActiveBrandState(db.getActiveBrandFilter() || 'ALL');
     setSecondaryOrders(db.getSecondaryOrders());
     setOrders(db.getOrders());
     setReturns(db.getReturns());
@@ -585,6 +589,13 @@ export default function ProductsPage() {
           ))}
         </div>
       </div>
+
+      {activeTab !== 'COMBOS' && (
+        <p className="text-xs text-slate-500" aria-live="polite">
+          Showing <strong className="text-slate-800 tabular-nums">{filteredProducts.length}</strong> of <span className="tabular-nums">{products.filter((p) => (activeTab === 'ARCHIVED' ? p.active === false : p.active !== false) && (!hasBrandRestrictions || assignedBrands.includes(p.brandCode))).length}</span> {activeTab === 'ARCHIVED' ? 'archived' : 'active'} products
+          {(activeBrand !== 'ALL' || searchQuery) && <> · <button type="button" onClick={() => { setActiveBrand('ALL' as BrandCode); setSearchQuery(''); }} className="font-semibold text-blue-700 hover:underline">Show all</button></>}
+        </p>
+      )}
 
       {/* Content View: Products Catalog */}
       {activeTab !== 'COMBOS' && (
