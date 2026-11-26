@@ -16,6 +16,7 @@ import { canDownload } from '@/lib/download-access';
 import { downloadStockCountWorkbook, downloadStoreOrderWorkbook } from '@/lib/export/record-downloads';
 import { dispatchStatus, statusLabel } from '@/lib/dispatch-flow';
 import StoreDeleteButton from '@/components/stores/StoreDeleteButton';
+import SetLocationModal from '@/components/stores/SetLocationModal';
 import StoreAreaEditor from '@/components/stores/StoreAreaEditor';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toast } from '@/components/common/Toast';
@@ -104,6 +105,7 @@ export default function StoreDetailPage() {
   // Lightbox for shelf photos
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [countOpen, setCountOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
   /** For an MT chain: which outlet's records to show ('ALL' combines every outlet and the head office). */
   const [outletFilter, setOutletFilter] = useState('ALL');
 
@@ -252,10 +254,13 @@ export default function StoreDetailPage() {
                 <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
                   <MapPin className="h-3.5 w-3.5 text-slate-400" />
                   <span>{store.address}</span>
-                  {store.coordinates && (
+                  {store.coordinates ? (
                     <span className="font-mono text-[11px] text-slate-500 ml-1">
                       ({store.coordinates.lat.toFixed(4)}, {store.coordinates.lng.toFixed(4)})
                     </span>
+                  ) : <span className="ml-1 font-semibold text-amber-700">No location</span>}
+                  {(canPerform(currentUser, 'stores', 'EDIT') || canPerform(currentUser, 'distributors', 'EDIT') || (canPerform(currentUser, 'stores', 'CREATE') && store.assignedOfficerId === currentUser.id)) && (
+                    <button type="button" onClick={() => setLocationOpen(true)} className="ml-1 font-semibold text-blue-700 hover:underline">{store.coordinates ? 'Edit location' : 'Add location'}</button>
                   )}
                 </div>
               </div>
@@ -1205,6 +1210,7 @@ export default function StoreDetailPage() {
         </div>
       )}
       </div>
+      {locationOpen && <SetLocationModal type={store.type === 'BRANCH' ? 'BRANCH' : store.type === 'DISTRIBUTOR' ? 'DISTRIBUTOR' : 'RETAILER'} id={store.id} name={store.name} lat={store.coordinates?.lat} lng={store.coordinates?.lng} onClose={() => setLocationOpen(false)} onSaved={() => refresh((v) => v + 1)} />}
       <ShelfCountSheet
         target={countOpen && store && (store.type === 'RETAILER' || store.type === 'BRANCH') ? { storeId: store.id, storeName: store.name, entityType: store.type as 'RETAILER' | 'BRANCH' } : null}
         onSaved={() => { setActiveTab('STOCK'); refresh((n) => n + 1); }}

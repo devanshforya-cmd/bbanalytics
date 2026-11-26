@@ -1236,6 +1236,25 @@ export class DatabaseService {
     return this.branches[idx];
   }
 
+  /**
+   * Set or clear a store's pinned location after it was created. Pending beat stops for the store
+   * pick up the new pin, so check-in measures against it from now on.
+   */
+  public setStoreLocation(type: 'RETAILER' | 'BRANCH' | 'DISTRIBUTOR', id: string, location: { lat: number; lng: number } | null): void {
+    if (location && !validGpsCoordinates(location.lat, location.lng)) throw new Error('Enter a real latitude (−90 to 90) and longitude (−180 to 180).');
+    const pin = location ? { lat: Math.round(location.lat * 1e7) / 1e7, lng: Math.round(location.lng * 1e7) / 1e7 } : null;
+    const store: { lat?: number; lng?: number } | undefined = type === 'RETAILER' ? this.retailers.find((r) => r.id === id) : type === 'BRANCH' ? this.branches.find((b) => b.id === id) : this.distributors.find((d) => d.id === id);
+    if (!store) throw new Error('This store no longer exists.');
+    // (0, 0) is how a store without a pin is saved.
+    store.lat = pin ? pin.lat : 0; store.lng = pin ? pin.lng : 0;
+    for (const beat of this.beatItems) {
+      if (beat.entityId !== id || beat.status !== 'PENDING') continue;
+      if (pin) { beat.lat = pin.lat; beat.lng = pin.lng; } else { delete beat.lat; delete beat.lng; }
+    }
+    this.logActivity('SETTING_CHANGED', 'STORE', id, { action: pin ? 'STORE_LOCATION_SET' : 'STORE_LOCATION_CLEARED' });
+    this.persistState();
+  }
+
   public getUnifiedStoreById(idOrName: string) {
     if (!idOrName) return null;
     const clean = decodeURIComponent(idOrName).trim().toLowerCase();
