@@ -232,6 +232,8 @@ export interface Distributor {
   hasBranches?: boolean;
   notes?: string;
   creditTerms?: string;
+  /** Empty = no limit. */
+  creditLimit?: number;
   /** For a distributor: the bigger distributor that supplies it, if any. */
   parentDistributorId?: string;
   parentDistributorName?: string;
@@ -255,6 +257,9 @@ export interface Branch {
   contacts: VendorContact[];
   brandsAvailable: BrandCode[];
   defaultMargins?: DefaultMargins;
+  /** The outlet's own payment terms; without them it follows its chain's. */
+  creditTerms?: string;
+  /** Empty = no limit. */
   creditLimit?: number;
   outstandingBalance?: number;
   overdueBalance?: number;

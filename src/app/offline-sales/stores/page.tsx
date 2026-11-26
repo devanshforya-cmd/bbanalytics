@@ -1,6 +1,7 @@
 'use client';
 
 import NumberInput from '@/components/common/NumberInput';
+import PaymentTermsField from '@/components/stores/PaymentTermsField';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
@@ -133,6 +134,9 @@ export default function StoresPage() {
   const [adminLng, setAdminLng] = useState('');
   const [adminHasBranches, setAdminHasBranches] = useState(false);
   const [adminPaymentTerms, setAdminPaymentTerms] = useState('15-day credit');
+  const [adminCreditLimit, setAdminCreditLimit] = useState<number | undefined>(undefined);
+  const [fieldTerms, setFieldTerms] = useState('COD');
+  const [fieldCreditLimit, setFieldCreditLimit] = useState<number | undefined>(undefined);
   const [adminDefaultMargins, setAdminDefaultMargins] = useState<DefaultMargins>(() => {
     const margins: DefaultMargins = {};
     systemBrands.forEach((b) => {
@@ -151,6 +155,7 @@ export default function StoresPage() {
     name: string;
     margins: DefaultMargins;
     paymentTerms: string;
+    creditLimit?: number;
   } | null>(null);
 
   // Edit Store State
@@ -257,6 +262,8 @@ export default function StoresPage() {
         distributorName: fieldParentDistributorId
           ? distributors.find((d) => d.id === fieldParentDistributorId)?.name
           : undefined,
+        creditTerms: fieldTerms,
+        ...(fieldCreditLimit ? { creditLimit: fieldCreditLimit } : {}),
         notes: fieldNotes,
       });
 
@@ -305,6 +312,7 @@ export default function StoresPage() {
           contactEmail: '',
           brandsCarried: systemBrands.map((b) => b.code),
           creditTerms: adminPaymentTerms,
+          ...(adminCreditLimit ? { creditLimit: adminCreditLimit } : {}),
           defaultMargins: adminDefaultMargins,
           hasBranches: adminHasBranches,
           contacts: adminContactName || adminContactPhone ? [{ id: `cnt_${Date.now()}`, name: adminContactName, role: adminContactRole as ContactRole, phone: adminContactPhone, isPrimary: true }] : [],
@@ -323,6 +331,7 @@ export default function StoresPage() {
           contactEmail: '',
           brandsCarried: systemBrands.map((b) => b.code),
           creditTerms: adminPaymentTerms,
+          ...(adminCreditLimit ? { creditLimit: adminCreditLimit } : {}),
           defaultMargins: adminDefaultMargins,
           hasBranches: true,
           contacts: adminContactName || adminContactPhone ? [{ id: `cnt_${Date.now()}`, name: adminContactName, role: adminContactRole as ContactRole, phone: adminContactPhone, isPrimary: true }] : [],
@@ -349,6 +358,7 @@ export default function StoresPage() {
           contacts: adminContactName || adminContactPhone ? [{ id: `cnt_${Date.now()}`, name: adminContactName, role: adminContactRole as ContactRole, phone: adminContactPhone, isPrimary: true }] : [],
           brandsStocked: systemBrands.map((b) => b.code),
           creditTerms: adminPaymentTerms,
+          ...(adminCreditLimit ? { creditLimit: adminCreditLimit } : {}),
           defaultMargins: adminDefaultMargins,
         });
         toast.success(`${channelLabel(adminStoreType)} "${adminStoreName}" added.`);
@@ -417,7 +427,8 @@ export default function StoresPage() {
         commercialTermsStore.entityType,
         commercialTermsStore.entityId,
         commercialTermsStore.margins,
-        commercialTermsStore.paymentTerms
+        commercialTermsStore.paymentTerms,
+        commercialTermsStore.creditLimit ?? null
       );
       toast.success(`Commercial terms updated for ${commercialTermsStore.name}.`);
       setCommercialTermsStore(null);
@@ -637,6 +648,7 @@ export default function StoresPage() {
                               name: dist.name,
                               margins: dist.defaultMargins || {},
                               paymentTerms: dist.creditTerms || '30-day credit',
+                              creditLimit: dist.creditLimit,
                             })
                           }
                           className="rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1"
@@ -766,6 +778,7 @@ export default function StoresPage() {
                               name: ret.name,
                               margins: ret.defaultMargins || {},
                               paymentTerms: ret.creditTerms || '15-day credit',
+                              creditLimit: ret.creditLimit,
                             })
                           }
                           className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600"
@@ -923,6 +936,10 @@ export default function StoresPage() {
                       ))}
                     </select>
                   ) : <p className="text-[11px] text-slate-500">No store categories set up yet. The office adds them in Settings → Lists &amp; categories.</p>}
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 p-3.5">
+                  <PaymentTermsField idPrefix="field-store-terms" terms={fieldTerms} onTermsChange={setFieldTerms} creditLimit={fieldCreditLimit} onCreditLimitChange={setFieldCreditLimit} />
                 </div>
 
                 {/* Location Section with GPS Pin */}
@@ -1190,17 +1207,7 @@ export default function StoresPage() {
                     )}
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Payment credit terms</label>
-                    <select aria-label="Payment credit terms"
-                      value={adminPaymentTerms}
-                      onChange={(e) => setAdminPaymentTerms(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white"
-                    >
-                      <option value="COD">Cash on delivery (COD)</option>
-                      <option value="7-day credit">7-Day net credit</option>
-                      <option value="15-day credit">15-Day net credit</option>
-                      <option value="30-day credit">30-Day net credit</option>
-                    </select>
+                    <PaymentTermsField idPrefix="new-store-terms" terms={adminPaymentTerms} onTermsChange={setAdminPaymentTerms} creditLimit={adminCreditLimit} onCreditLimitChange={setAdminCreditLimit} />
                   </div>
                 </div>
 
@@ -1501,19 +1508,10 @@ export default function StoresPage() {
 
               <form onSubmit={handleSaveCommercialTerms} className="py-4 space-y-4 text-xs">
                 <div>
-                  <label htmlFor="stores-payment-credit-terms" className="block font-bold text-slate-700 mb-1">Payment credit terms</label>
-                  <select id="stores-payment-credit-terms"
-                    value={commercialTermsStore.paymentTerms}
-                    onChange={(e) =>
-                      setCommercialTermsStore({ ...commercialTermsStore, paymentTerms: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-medium"
-                  >
-                    <option value="COD">Cash on delivery (COD)</option>
-                    <option value="7-day credit">7-Day net credit</option>
-                    <option value="15-day credit">15-Day net credit</option>
-                    <option value="30-day credit">30-Day net credit</option>
-                  </select>
+                  <PaymentTermsField key={commercialTermsStore.entityId} idPrefix="store-terms" terms={commercialTermsStore.paymentTerms}
+                    onTermsChange={(paymentTerms) => setCommercialTermsStore((current) => current ? { ...current, paymentTerms } : current)}
+                    creditLimit={commercialTermsStore.creditLimit}
+                    onCreditLimitChange={(creditLimit) => setCommercialTermsStore((current) => current ? { ...current, creditLimit } : current)} />
                 </div>
 
                 <div className="space-y-2">
