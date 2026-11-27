@@ -1,5 +1,7 @@
 'use client';
 
+import BankSelect from '@/components/common/BankSelect';
+
 import NumberInput from '@/components/common/NumberInput';
 import StoredPhoto from '@/components/common/StoredPhoto';
 import PagedList from '@/components/common/PagedList';
@@ -92,7 +94,7 @@ function ChequesContent() {
   const [newStoreName, setNewStoreName] = useState('');
   const [newChequeNumber, setNewChequeNumber] = useState('');
   const [newAmount, setNewAmount] = useState('');
-  const [newBank, setNewBank] = useState('Nabil Bank Ltd');
+  const [newBank, setNewBank] = useState('');
   const [newCashDate, setNewCashDate] = useState(getTodayAd());
   const [newChequePhoto, setNewChequePhoto] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -155,10 +157,11 @@ function ChequesContent() {
 
     const dateErr = validateRequired(newCashDate, 'Cash date');
     if (dateErr) errors.cashDate = dateErr;
+    if (!newBank.trim()) errors.bankName = 'Choose the bank.';
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      toast.error('Please fix the highlighted errors before saving.');
+      toast.error(errors.bankName && Object.keys(errors).length === 1 ? 'Choose the bank the cheque is drawn on.' : 'Please fix the highlighted errors before saving.');
       return;
     }
 
@@ -801,18 +804,8 @@ function ChequesContent() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="cheques-bank-name" className="block font-bold text-slate-700 mb-1">Bank name</label>
-                <select id="cheques-bank-name"
-                  value={newBank}
-                  onChange={(e) => setNewBank(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
-                >
-                  <option>Nabil bank ltd</option>
-                  <option>Nepal investment mega bank</option>
-                  <option>Standard chartered bank</option>
-                  <option>Global IME bank</option>
-                </select>
+              <div className="col-span-2">
+                <BankSelect id="cheques-bank-name" label="Bank name *" value={newBank} onChange={setNewBank} />
               </div>
               <div>
                 <label htmlFor="cheques-cash-date" className="block font-bold text-slate-700 mb-1">Cash date *</label>

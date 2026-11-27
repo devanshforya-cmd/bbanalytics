@@ -10,7 +10,7 @@ const RECORD_LABELS: Record<string, string> = {
   tasks: 'Task', retailers: 'Store', branches: 'Branch', distributors: 'Distributor', products: 'Product', combos: 'Combo', visits: 'Store visit',
   beatItems: 'Beat stop', shelfPhotos: 'Shelf photos', callLogs: 'Call', customerCalls: 'Customer call', documents: 'Document', customers: 'Customer', influencers: 'Influencer',
   marketingSends: 'Marketing send', campaigns: 'Sale', holidays: 'Holiday', sharedAccessLinks: 'Shared link', workspaceConfig: 'Settings',
-  secondaryOrders: 'Store order', notifications: 'Notification', userPreferences: 'Your preferences',
+  secondaryOrders: 'Store order', notifications: 'Notification', userPreferences: 'Your preferences', banks: 'Bank', stockCounts: 'Stock entry',
 };
 
 /** "Order FOR-0421", "Cheque 004512", "Duty status" — what a queued change is, in words. */

@@ -10,7 +10,8 @@ import { validGpsCoordinates } from '@/lib/gps-validation';
 import { hasAccess } from '@/lib/permissions';
 import { toast } from '@/components/common/Toast';
 import SearchSelect from '@/components/common/SearchSelect';
-import type { Distributor } from '@/lib/types';
+import BrandPicker from '@/components/stores/BrandPicker';
+import type { BrandCode, Distributor } from '@/lib/types';
 
 /** Add an outlet (branch) under an MT chain. */
 export default function AddOutletModal({ chain, onClose, onSaved }: { chain: Distributor; onClose: () => void; onSaved: () => void }) {
@@ -28,6 +29,9 @@ export default function AddOutletModal({ chain, onClose, onSaved }: { chain: Dis
   const [ownTerms, setOwnTerms] = useState(false);
   const [terms, setTerms] = useState(chain.creditTerms || '30-day credit');
   const [creditLimit, setCreditLimit] = useState<number | undefined>(undefined);
+  const brands = db.getBrands('ACTIVE').map((brand) => ({ code: brand.code, name: brand.name }));
+  // New outlets start with the chain's brands (all brands when the chain has none set).
+  const [brandCodes, setBrandCodes] = useState<string[]>(() => (chain.brandsCarried?.length ? chain.brandsCarried : brands.map((brand) => brand.code)).filter((code) => brands.some((brand) => brand.code === code)));
 
   const useGps = () => {
     if (!navigator.geolocation) { toast.error('This browser does not support GPS. Enter the coordinates.'); return; }
@@ -40,6 +44,7 @@ export default function AddOutletModal({ chain, onClose, onSaved }: { chain: Dis
   const save = (event: React.FormEvent) => {
     event.preventDefault();
     if (!name.trim() || !area.trim()) { toast.error('Enter the outlet name and area.'); return; }
+    if (brands.length && !brandCodes.length) { toast.error('Choose at least one brand for this outlet.'); return; }
     const hasGps = lat !== '' && lng !== '';
     if (hasGps && !validGpsCoordinates(Number(lat), Number(lng))) { toast.error('Those coordinates are not valid.'); return; }
     setSaving(true);
@@ -60,7 +65,7 @@ export default function AddOutletModal({ chain, onClose, onSaved }: { chain: Dis
         contactRole: 'Store Manager',
         contactPhone: contactPhone.trim(),
         contacts: contactName.trim() || contactPhone.trim() ? [{ id: `cnt_${Date.now()}`, name: contactName.trim(), role: 'Store Manager', phone: contactPhone.trim(), isPrimary: true }] : [],
-        brandsAvailable: chain.brandsCarried || [],
+        brandsAvailable: brandCodes as BrandCode[],
         defaultMargins: chain.defaultMargins,
         ...(ownTerms ? { creditTerms: terms } : {}),
         ...(creditLimit ? { creditLimit } : {}),
@@ -101,6 +106,7 @@ export default function AddOutletModal({ chain, onClose, onSaved }: { chain: Dis
           <label className="block font-semibold">Contact name<input value={contactName} onChange={(e) => setContactName(e.target.value)} className={field} /></label>
           <label className="block font-semibold">Contact phone<input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} inputMode="tel" className={field} /></label>
         </div>
+        <BrandPicker brands={brands} value={brandCodes} onChange={setBrandCodes} label="Brands given to this outlet" />
         <div className="space-y-2 rounded-xl border border-slate-200 p-3">
           <label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={ownTerms} onChange={(e) => setOwnTerms(e.target.checked)} />Different payment terms from {chain.name}</label>
           {!ownTerms && <p className="text-[11px] text-slate-500">Uses the chain&apos;s terms: {chain.creditTerms || 'not set'}.</p>}

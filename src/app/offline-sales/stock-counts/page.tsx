@@ -3,7 +3,7 @@
 import PagedList from '@/components/common/PagedList';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ClipboardList, Download, Search } from 'lucide-react';
+import { ClipboardList, Download, Search, ShoppingCart } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import DownloadButton from '@/components/common/DownloadButton';
 import { canDownload } from '@/lib/download-access';
@@ -14,6 +14,7 @@ import { db } from '@/lib/db/db-service';
 import { getScope } from '@/lib/permissions';
 import { formatDualDate } from '@/lib/nepali-calendar';
 import { storeStockStatus } from '@/lib/stock-count-sheet';
+import { currentStock } from '@/lib/store-stock';
 import { shelfForecast } from '@/lib/store-records';
 import { productLabel } from '@/lib/sub-brands';
 
@@ -49,7 +50,12 @@ export default function StockCountsPage() {
       ...db.getRetailers().map((r) => ({ id: r.id, name: r.name, entityType: 'RETAILER' as const, area: [r.area, r.city].filter(Boolean).join(', '), officerId: r.assignedOfficerId, officerName: r.assignedOfficerName, kind: 'Retailer' })),
       ...db.getBranches().map((b) => ({ id: b.id, name: b.name, entityType: 'BRANCH' as const, area: [b.area, b.city].filter(Boolean).join(', '), officerId: b.assignedOfficerId, officerName: b.assignedOfficerName, kind: 'Chain branch' })),
     ].filter((store) => scope !== 'OWN' || store.officerId === user.id);
-    const rows = stores.map((store) => ({ ...store, status: storeStockStatus(store.id, counts, orders, today) }));
+    const dispatches = db.getDispatches();
+    const rows = stores.map((store) => {
+      const stock = currentStock({ storeId: store.id, dispatches, secondaryOrders: orders, stockCounts: counts });
+      const units = [...stock.values()].reduce((sum, qty) => sum + Math.max(0, qty), 0);
+      return { ...store, status: storeStockStatus(store.id, counts, orders, today), stockUnits: stock.size ? units : null };
+    });
     const storeIds = new Set(stores.map((store) => store.id));
     const recent = counts.filter((count) => storeIds.has(count.entityId))
       .sort((a, b) => (b.dateAd || b.createdAt).localeCompare(a.dateAd || a.createdAt)).slice(0, 25);
@@ -86,9 +92,9 @@ export default function StockCountsPage() {
           <div>
             <h1 className="flex items-center gap-1.5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
               Stock counts
-              <InfoTip label="About this page">Shelf counts at every store. A store is due for a count after {DUE_AFTER_DAYS} days. Running low means about a week of stock or less at the current selling pace.</InfoTip>
+              <InfoTip label="About this page">Stock at every store: counts of what is on the shelf, and what each store sold. Open a store for its stock balance sheet. A store is due for a count after {DUE_AFTER_DAYS} days. Running low means about a week of stock or less at the current selling pace.</InfoTip>
             </h1>
-            <p className="mt-1 text-sm text-slate-500">Count a store&apos;s shelf, see who is out of stock, and which stores haven&apos;t been counted lately.</p>
+            <p className="mt-1 text-sm text-slate-500">Count a store&apos;s shelf or enter what it sold today. Both update the store&apos;s stock.</p>
           </div>
           <DownloadButton datasets={['stock_counts']} records={{ stockCounts: data.counts.filter((count) => shown.some((row) => row.id === count.entityId)) }} />
         </div>
@@ -142,6 +148,7 @@ export default function StockCountsPage() {
                     <th className="p-3 font-semibold">Store</th>
                     <th className="p-3 font-semibold">Officer</th>
                     <th className="p-3 font-semibold">Last counted</th>
+                    <th className="p-3 text-right font-semibold">In stock</th>
                     <th className="p-3 text-center font-semibold">Out of stock</th>
                     <th className="p-3 text-center font-semibold">Running low</th>
                     <th className="p-3" />
@@ -163,11 +170,16 @@ export default function StockCountsPage() {
                           </span>
                         ) : <span className="font-semibold text-amber-700">Never</span>}
                       </td>
+                      <td className="p-3 text-right tabular-nums">{row.stockUnits === null ? <span className="text-slate-400">–</span> : <Link href={`/offline-sales/stores/${row.id}?tab=stock`} className="font-bold text-slate-900 hover:text-blue-700 hover:underline">{row.stockUnits.toLocaleString()}</Link>}</td>
                       <td className="p-3 text-center">{row.status.outOfStock ? <span className="rounded-full bg-rose-50 px-2 py-0.5 font-bold text-rose-700">{row.status.outOfStock}</span> : <span className="text-slate-400">–</span>}</td>
                       <td className="p-3 text-center">{row.status.runningLow ? <span className="rounded-full bg-amber-50 px-2 py-0.5 font-bold text-amber-700">{row.status.runningLow}</span> : <span className="text-slate-400">–</span>}</td>
                       <td className="p-3 text-right">
-                        <button type="button" onClick={() => setTarget({ storeId: row.id, storeName: row.name, entityType: row.entityType })}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-50"><ClipboardList className="h-3.5 w-3.5 text-blue-600" /> Count</button>
+                        <span className="inline-flex gap-1.5">
+                          <button type="button" onClick={() => setTarget({ storeId: row.id, storeName: row.name, entityType: row.entityType, mode: 'COUNT' })}
+                            className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-50"><ClipboardList className="h-3.5 w-3.5 text-blue-600" /> Count</button>
+                          <button type="button" onClick={() => setTarget({ storeId: row.id, storeName: row.name, entityType: row.entityType, mode: 'SALES' })}
+                            className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-50"><ShoppingCart className="h-3.5 w-3.5 text-violet-600" /> Sold today</button>
+                        </span>
                       </td>
                     </tr>
                   ))} />}
@@ -178,7 +190,7 @@ export default function StockCountsPage() {
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
-          <h2 className="text-sm font-bold text-slate-900">Recent counts</h2>
+          <h2 className="text-sm font-bold text-slate-900">Recent counts and sales</h2>
           {data.recent.length === 0 ? <p className="mt-2 text-sm text-slate-500">No counts yet.</p> : (
             <ul className="mt-3 divide-y divide-slate-100">
               {<PagedList items={data.recent} label="stock counts" pageSize={10} asItem render={(pageRows) => pageRows.map((count) => {
@@ -189,7 +201,7 @@ export default function StockCountsPage() {
                   <li key={count.id} className="py-2.5">
                     <button type="button" onClick={() => setOpenCount(open ? null : count.id)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 text-left">
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold text-slate-900">{count.storeName}</span>
+                        <span className="block truncate text-sm font-semibold text-slate-900">{count.storeName} <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[11px] font-bold ${count.mode === 'SALES' ? 'bg-violet-100 text-violet-800' : 'bg-blue-100 text-blue-800'}`}>{count.mode === 'SALES' ? 'Sold' : 'Count'}</span></span>
                         <span className="text-[11px] text-slate-500">{count.dateBs || count.dateAd} · {count.officerName || 'not recorded'} · {count.items.length} {count.items.length === 1 ? 'product' : 'products'}{out ? ` · ${out} out of stock` : ''}</span>
                       </span>
                       <span className="shrink-0 text-xs font-semibold text-blue-700">{open ? 'Hide' : 'Show'}</span>
@@ -199,7 +211,7 @@ export default function StockCountsPage() {
                     )}
                     {open && (
                       <table className="mt-2 w-full text-left text-xs">
-                        <thead><tr className="text-[11px] text-slate-500"><th className="py-1 font-semibold">Product</th><th className="py-1 text-right font-semibold">Shelf</th><th className="py-1 text-right font-semibold">Before</th><th className="py-1 text-right font-semibold">Sells a day</th></tr></thead>
+                        <thead><tr className="text-[11px] text-slate-500"><th className="py-1 font-semibold">Product</th>{count.mode === 'SALES' && <th className="py-1 text-right font-semibold">Sold</th>}<th className="py-1 text-right font-semibold">{count.mode === 'SALES' ? 'Stock after' : 'Shelf'}</th><th className="py-1 text-right font-semibold">Before</th><th className="py-1 text-right font-semibold">Sells a day</th></tr></thead>
                         <tbody className="divide-y divide-slate-50">
                           {count.items.map((item) => {
                             const product = products.find((p) => p.id === item.productId);
@@ -207,6 +219,7 @@ export default function StockCountsPage() {
                             return (
                               <tr key={item.productId}>
                                 <td className="py-1.5 text-slate-800">{product ? productLabel(product) : item.productName}</td>
+                                {count.mode === 'SALES' && <td className="py-1.5 text-right font-bold text-violet-800">{item.soldQty || 0}</td>}
                                 <td className={`py-1.5 text-right font-bold ${item.shelfQty === 0 ? 'text-rose-700' : 'text-slate-900'}`}>{item.shelfQty}</td>
                                 <td className="py-1.5 text-right text-slate-500">{item.previousQty}</td>
                                 <td className="py-1.5 text-right text-slate-500">{pace == null ? '–' : pace}</td>

@@ -1,5 +1,7 @@
 'use client';
 
+import BankSelect from '@/components/common/BankSelect';
+
 import NumberInput from '@/components/common/NumberInput';
 import StoredPhoto from '@/components/common/StoredPhoto';
 import Portal from '@/components/common/Portal';
@@ -94,7 +96,7 @@ export default function BeatPlanPage() {
   // In-Store Cheque Collection Form State
   const [chequeNumber, setChequeNumber] = useState('');
   const [chequeAmount, setChequeAmount] = useState('');
-  const [chequeBank, setChequeBank] = useState('Nabil Bank');
+  const [chequeBank, setChequeBank] = useState('');
   const [chequeCashDate, setChequeCashDate] = useState('');
   const [chequePhotoUrl, setChequePhotoUrl] = useState('');
   const [chequeNotes, setChequeNotes] = useState('');
@@ -419,6 +421,7 @@ export default function BeatPlanPage() {
       toast.error('Please enter Cheque Number, Amount, and Expected Deposit Date.');
       return;
     }
+    if (!chequeBank.trim()) { toast.error('Choose the bank the cheque is drawn on.'); return; }
 
     db.addCheque({
       entityType: targetBeat.entityType,
@@ -755,21 +758,8 @@ export default function BeatPlanPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="beat-plan-bank-name" className="block font-semibold text-slate-700 mb-1">Bank name *</label>
-                    <select id="beat-plan-bank-name"
-                      value={chequeBank}
-                      onChange={(e) => setChequeBank(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="Nabil Bank">Nabil bank</option>
-                      <option value="Global IME Bank">Global IME bank</option>
-                      <option value="NIC Asia Bank">NIC asia bank</option>
-                      <option value="Nepal Investment Mega Bank">Nepal investment mega bank</option>
-                      <option value="Standard Chartered">Standard chartered</option>
-                      <option value="Siddhartha Bank">Siddhartha bank</option>
-                      <option value="Other Commercial Bank">Other commercial bank</option>
-                    </select>
+                  <div className="col-span-2">
+                    <BankSelect id="beat-plan-bank-name" label="Bank name *" value={chequeBank} onChange={setChequeBank} />
                   </div>
                   <div>
                     <label htmlFor="beat-plan-deposit-date" className="block font-semibold text-slate-700 mb-1">Deposit date *</label>

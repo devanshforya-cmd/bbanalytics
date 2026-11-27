@@ -36,6 +36,10 @@ export interface SheetInput {
   secondaryOrders: SecondaryOrder[];
   stockCounts: StockCount[];
   todayAd: string;
+  /** The store's brands; null or empty = all brands. */
+  brandCodes?: string[] | null;
+  /** Units the records say are in the store, per product. Products with stock there are listed too. */
+  stock?: Map<string, number>;
 }
 
 function storeCounts(input: SheetInput) {
@@ -45,14 +49,18 @@ function storeCounts(input: SheetInput) {
 
 /** The rows to count at a store, most-ordered first. */
 export function countSheet(input: SheetInput): { rows: SheetRow[]; others: Product[] } {
-  const active = input.products.filter((product) => product.active !== false);
+  const brands = input.brandCodes?.length ? input.brandCodes.map((code) => code.toUpperCase()) : null;
+  const active = input.products.filter((product) => product.active !== false && (!brands || brands.includes(String(product.brandCode).toUpperCase())));
   const orders = input.secondaryOrders.filter((order) => order.entityId === input.storeId && order.status !== 'CANCELLED');
   const counts = storeCounts(input);
   const forecast = shelfForecast(counts, orders);
   const ordered = new Map<string, number>();
   for (const order of orders) for (const item of order.items) ordered.set(item.productId, (ordered.get(item.productId) || 0) + (item.totalUnits || 0));
   const counted = new Set(counts.flatMap((count) => count.items.map((item) => item.productId)));
-  const carried = active.filter((product) => ordered.has(product.id) || counted.has(product.id));
+  const stocked = input.stock || new Map<string, number>();
+  const known = active.filter((product) => ordered.has(product.id) || counted.has(product.id) || stocked.has(product.id));
+  // A new store has no history yet: list every product of its brands so opening stock can be entered.
+  const carried = known.length ? known : (brands ? active : []);
 
   const rows = carried.map((product): SheetRow => {
     const last = [...counts].reverse().find((count) => count.items.some((item) => item.productId === product.id));
@@ -108,7 +116,8 @@ export function storeStockStatus(storeId: string, stockCounts: StockCount[], sec
   const counts = stockCounts.filter((count) => count.entityId === storeId);
   const orders = secondaryOrders.filter((order) => order.entityId === storeId && order.status !== 'CANCELLED');
   const rows = shelfForecast(counts, orders);
-  const lastCountAd = counts.map((count) => day(count.dateAd) || day(count.createdAt)).sort().pop() || null;
+  // "Sold today" entries update stock but are not shelf counts.
+  const lastCountAd = counts.filter((count) => count.mode !== 'SALES').map((count) => day(count.dateAd) || day(count.createdAt)).sort().pop() || null;
   return {
     storeId, lastCountAd, daysSinceCount: lastCountAd ? daysBetween(lastCountAd, todayAd) : null,
     outOfStock: rows.filter((row) => row.status === 'OUT').length,

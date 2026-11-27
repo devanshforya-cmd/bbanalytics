@@ -69,3 +69,18 @@ test('date ranges follow the BS calendar and the Shrawan fiscal year', () => {
   assert.equal(fy.label, 'FY 2082/83');
   assert.equal(resolveRange('THIS_FY', '2026-11-20').fromAd, fy.toAd ? new Date(Date.parse(`${fy.toAd}T00:00:00Z`) + 86400000).toISOString().slice(0, 10) : '');
 });
+
+test('delivery failures export shows whether each RTO parcel is back', () => {
+  const failures = [
+    { id: 'f1', orderId: 'o1', orderNumber: 'FOR-1', brandCode: 'FORYA', customerName: 'A', customerPhone: '98', dateAd: '2026-11-10', dateBs: '', reason: 'Customer refused', valley: 'Inside', status: 'RETURNED_TO_WAREHOUSE', rtoDateAd: '2026-11-11', rtoChases: [{ dateAd: '2026-11-15', byName: 'X', note: 'At hub' }], createdAt: '' },
+    { id: 'f2', orderId: 'o2', orderNumber: 'FOR-2', brandCode: 'FORYA', customerName: 'B', customerPhone: '97', dateAd: '2026-11-10', dateBs: '', reason: 'Customer refused', valley: 'Inside', status: 'RETURNED_TO_WAREHOUSE', rtoDateAd: '2026-11-11', createdAt: '' },
+  ] as any[];
+  const returns = [{ id: 't2', ticketType: 'RTO', deliveryFailureId: 'f2', dateAd: '2026-11-11', receivedDateAd: '2026-11-14' }] as any[];
+  const sheet = DATASETS.find((d) => d.key === 'delivery_failures')!.build({ ...source, deliveryFailures: failures, returns }, {});
+  const at = (header: string) => sheet.columns.findIndex((c) => c.header === header);
+  assert.equal(sheet.rows[0][at('RTO')], 'RTO pending');
+  assert.equal(sheet.rows[0][at('Courier said')], 'At hub');
+  assert.equal(sheet.rows[1][at('RTO')], 'Back');
+  assert.equal(sheet.rows[1][at('Days to come back')], 3);
+  assert.equal(sheet.rows[0][at('Status')], 'Returned to warehouse (RTO)');
+});

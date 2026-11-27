@@ -4,6 +4,7 @@ import { isOtherReason, failureReasonLabel } from '../failure-reason';
 import { normalizePhoneNumber } from '../auth-utils';
 import { installWorkspaceFetch } from '../workspace-reset-client';
 import { pinnedLocation, validGpsCoordinates } from '../gps-validation';
+import { cleanBrandList } from '../store-brands';
 import {
   getScope,
   isSuperAdmin,
@@ -20,6 +21,7 @@ import { historyEntries } from '../order-history';
 import { phoneDigits } from '../customer-lookup';
 import { beatItemFromSchedule, dayPlan, schedulesOn, setStoreDays, sortDay, weeklyBeatId, type DayPlan, type StopPriority } from '../weekly-beat';
 import { buildRtoTicket, canClose, isCustomerReturn, legacyStatusFor, resolutionFromLegacy, returnRowsForMetrics, ticketLinesOf, ticketStageOf, ticketTypeOf, validateReceipt, validateTicketLines, OPEN_STAGES, RESOLUTION_LABEL, TICKET_STAGE_LABEL, TICKET_TYPE_LABEL, type GoodsCondition, type TicketEvent, type TicketFault, type TicketLine, type TicketResolutionType, type TicketStage, type TicketType } from '../order-tickets';
+import { DEFAULT_BANKS } from '../banks';
 import { DEFAULT_CONTENT_PLATFORMS, DEFAULT_FAILURE_REASONS, DEFAULT_REACH_OUT_PLATFORMS, lookupId, sameName } from '../marketing';
 
 const ANONYMOUS_USER: User = { id: '', fullName: '', email: '', phone: '', role: 'OFFICE_STAFF', active: false, isSuperAdmin: false, dutyStatus: 'OFFLINE', assignedBrands: [], permissions: {}, customPermissions: {} };
@@ -34,6 +36,7 @@ import {
   Product,
   Distributor,
   DispatchStatus,
+  DispatchItem,
   Branch,
   Retailer,
   BeatItem,
@@ -82,6 +85,7 @@ import {
   MarketingOptionList,
   MarketingSend,
   FailureReason,
+  Bank,
   SaleCampaign,
   UserPreferenceRecord,
   DeliveryAttempt,
@@ -157,6 +161,7 @@ export class DatabaseService {
   private influencerNiches: InfluencerNiche[] = [];
   private marketingOptions: MarketingOption[] = [];
   private failureReasons: FailureReason[] = [];
+  private banks: Bank[] = [];
   private campaigns: SaleCampaign[] = [];
   private customerCalls: CustomerCall[] = [];
   private followUpPlan: FollowUpPlan | null = null;
@@ -483,7 +488,7 @@ export class DatabaseService {
         if (parsed.comparisonMode) this.comparisonMode = parsed.comparisonMode;
         if (parsed.influencers) this.influencers = parsed.influencers;
         if (parsed.influencerContent) this.influencerContent = parsed.influencerContent;
-        for (const key of ['marketingSends', 'influencerNiches', 'marketingOptions', 'failureReasons', 'userPreferences', 'campaigns', 'customerCalls'] as const) if (Array.isArray(parsed[key])) (this as any)[key] = parsed[key];
+        for (const key of ['marketingSends', 'influencerNiches', 'marketingOptions', 'failureReasons', 'userPreferences', 'campaigns', 'customerCalls', 'banks'] as const) if (Array.isArray(parsed[key])) (this as any)[key] = parsed[key];
         if (parsed.brandPrefixes && typeof parsed.brandPrefixes === 'object') this.brandPrefixes = parsed.brandPrefixes;
         if (parsed.followUpPlan) { try { this.followUpPlan = validateFollowUpPlan(parsed.followUpPlan); } catch { /* keep default */ } }
         if (Array.isArray(parsed.dashboardTemplates)) { try { this.dashboardTemplates = cleanTemplates(parsed.dashboardTemplates); } catch { /* ignore an old copy */ } }
@@ -645,6 +650,7 @@ export class DatabaseService {
         influencerNiches: this.influencerNiches,
         marketingOptions: this.marketingOptions,
         failureReasons: this.failureReasons,
+        banks: this.banks,
         userPreferences: this.userPreferences,
         campaigns: this.campaigns,
         customerCalls: this.customerCalls,
@@ -1255,6 +1261,31 @@ export class DatabaseService {
     this.persistState();
   }
 
+  /**
+   * Set the brands a store is given. For an MT chain, `outlets: true` gives every outlet the same
+   * brands; otherwise outlets keep their own lists.
+   */
+  public setStoreBrands(type: 'RETAILER' | 'BRANCH' | 'DISTRIBUTOR', id: string, codes: string[], options: { outlets?: boolean } = {}): string[] {
+    const list = cleanBrandList(codes, this.getBrands('ALL').map((brand) => brand.code)) as BrandCode[];
+    if (type === 'RETAILER') {
+      const store = this.retailers.find((r) => r.id === id);
+      if (!store) throw new Error('This store no longer exists.');
+      store.brandsStocked = list;
+    } else if (type === 'BRANCH') {
+      const store = this.branches.find((b) => b.id === id);
+      if (!store) throw new Error('This outlet no longer exists.');
+      store.brandsAvailable = list;
+    } else {
+      const store = this.distributors.find((d) => d.id === id);
+      if (!store) throw new Error('This account no longer exists.');
+      store.brandsCarried = list;
+      if (options.outlets) for (const branch of this.branches) if (branch.distributorId === id) branch.brandsAvailable = [...list];
+    }
+    this.logActivity('SETTING_CHANGED', 'STORE', id, { action: 'STORE_BRANDS_SET', brands: list.join(', ') });
+    this.persistState();
+    return list;
+  }
+
   public getUnifiedStoreById(idOrName: string) {
     if (!idOrName) return null;
     const clean = decodeURIComponent(idOrName).trim().toLowerCase();
@@ -1285,6 +1316,7 @@ export class DatabaseService {
         assignedOfficerId: branch.assignedOfficerId || '',
         assignedOfficerName: branch.assignedOfficerName || '',
         defaultMargins: branch.defaultMargins || dist?.defaultMargins,
+        brandCodes: (branch.brandsAvailable || []) as string[],
       };
     }
 
@@ -1313,6 +1345,7 @@ export class DatabaseService {
         assignedOfficerId: retailer.assignedOfficerId || '',
         assignedOfficerName: retailer.assignedOfficerName || '',
         defaultMargins: retailer.defaultMargins,
+        brandCodes: (retailer.brandsStocked || []) as string[],
       };
     }
 
@@ -1341,6 +1374,7 @@ export class DatabaseService {
         assignedOfficerId: '',
         assignedOfficerName: '',
         defaultMargins: distributor.defaultMargins,
+        brandCodes: (distributor.brandsCarried || []) as string[],
       };
     }
 
@@ -2665,6 +2699,29 @@ export class DatabaseService {
     this.persistState();
   }
 
+  /** Take a product off a dispatch order. The last product cannot go: cancel the order instead. */
+  public removeDispatchItem(dispatchId: string, productId: string, reason: string) {
+    const disp = this.dispatches.find((d) => d.id === dispatchId);
+    if (!disp) throw new Error('This dispatch order was not found. Refresh and try again.');
+    const item = disp.items.find((i) => i.productId === productId);
+    if (!item) return;
+    if (disp.items.length === 1) throw new Error('This is the last product on the order. Cancel the order instead, or add another product first.');
+    disp.items = disp.items.filter((i) => i.productId !== productId);
+    disp.edits = [...(disp.edits || []), { id: this.generateId('de'), dispatchId, productId, productName: item.productName, oldQty: item.quantity, newQty: 0, changedBy: this.currentUser.fullName, reason: `Removed: ${reason}`, createdAt: new Date().toISOString() }];
+    this.persistState();
+  }
+
+  /** Add a product to a dispatch order that is not sent yet. */
+  public addDispatchItem(dispatchId: string, item: DispatchItem, reason: string) {
+    const disp = this.dispatches.find((d) => d.id === dispatchId);
+    if (!disp) throw new Error('This dispatch order was not found. Refresh and try again.');
+    if (disp.items.some((i) => i.productId === item.productId)) throw new Error(`${item.productName} is already on this order. Change its quantity instead.`);
+    if (!(item.quantity > 0)) throw new Error(`Enter how many ${item.productName} to send.`);
+    disp.items = [...disp.items, { ...item, orderedQty: 0 }];
+    disp.edits = [...(disp.edits || []), { id: this.generateId('de'), dispatchId, productId: item.productId, productName: item.productName, oldQty: 0, newQty: item.quantity, changedBy: this.currentUser.fullName, reason: `Added: ${reason}`, createdAt: new Date().toISOString() }];
+    this.persistState();
+  }
+
   // Stock counts
   public getStockCounts(): StockCount[] {
     return this.stockCounts;
@@ -3032,6 +3089,25 @@ export class DatabaseService {
     return this.addLookup('failureReasons', 'reason', name, this.getFailureReasons(true)) as FailureReason;
   }
 
+  /** Banks for cheque forms: Nepal's banks, plus any staff added, A to Z. */
+  public getBanks(includeArchived = false): Bank[] {
+    const merged: Bank[] = [...this.banks];
+    for (const name of DEFAULT_BANKS) {
+      if (!this.banks.some((row) => sameName(row.name, name) || row.id === lookupId('bank', name))) merged.push({ id: lookupId('bank', name), name, isArchived: false, createdAt: '' });
+    }
+    // Names already used on cheques stay pickable.
+    for (const cheque of this.cheques) {
+      const name = (cheque.bankName || '').trim();
+      if (name && !merged.some((row) => sameName(row.name, name))) merged.push({ id: lookupId('bank', name), name, isArchived: false, createdAt: '' });
+    }
+    return merged.filter((row) => includeArchived || !row.isArchived).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** Adds the bank if the name is new (case ignored) and returns it; returns the existing one otherwise. */
+  public addBank(name: string): Bank {
+    return this.addLookup('banks', 'bank', name, this.getBanks(true)) as Bank;
+  }
+
   public getOpenDeliveryFailure(orderId: string): DeliveryFailure | undefined {
     return this.deliveryFailures.find((df) => df.orderId === orderId && (!df.status || df.status === 'FAILED' || df.status === 'REATTEMPT_SCHEDULED'));
   }
@@ -3096,6 +3172,17 @@ export class DatabaseService {
       customer.totalDeliveryFailures += 1;
       Object.assign(customer, applyKarmaEvent(customer, 'DELIVERY_FAILURE', KARMA_RULES.DELIVERY_FAILURE, `Delivery attempt ${number} failed: ${failureReasonLabel({ reason: attempt.reason, reasonDetail: detail })} (Order #${failure.orderNumber})`).updatedCustomer);
     }
+    this.persistState();
+    return failure;
+  }
+
+  /** Record that the courier was asked where a returning (RTO) parcel is, and what they said. */
+  public chaseRto(failureId: string, note: string): DeliveryFailure {
+    const failure = this.deliveryFailures.find((df) => df.id === failureId);
+    if (!failure) throw new Error('This delivery failure no longer exists.');
+    const text = note.trim().replace(/\s+/g, ' ').slice(0, 300);
+    if (!text) throw new Error('Write what the courier said, e.g. "In transit, back by Friday".');
+    failure.rtoChases = [...(failure.rtoChases || []), { dateAd: getTodayAd(), byName: this.currentUser.fullName, note: text }].slice(-30);
     this.persistState();
     return failure;
   }
@@ -4989,7 +5076,7 @@ export class DatabaseService {
 
   // ----- Shared lists: niches, reach-out platforms, content platforms, failure reasons -----
 
-  private addLookup(collection: 'influencerNiches' | 'marketingOptions' | 'failureReasons', prefix: string, rawName: string, existing: { id: string; name: string; isArchived: boolean; list?: string }[], extra: Record<string, unknown> = {}) {
+  private addLookup(collection: 'influencerNiches' | 'marketingOptions' | 'failureReasons' | 'banks', prefix: string, rawName: string, existing: { id: string; name: string; isArchived: boolean; list?: string }[], extra: Record<string, unknown> = {}) {
     const name = rawName.trim().replace(/\s+/g, ' ');
     if (!name) throw new Error('Enter a name.');
     if (name.length > 60) throw new Error('Use a name of at most 60 characters.');
@@ -5004,7 +5091,7 @@ export class DatabaseService {
     return row;
   }
 
-  private saveLookup(collection: 'influencerNiches' | 'marketingOptions' | 'failureReasons', row: { id: string; name: string; isArchived: boolean }) {
+  private saveLookup(collection: 'influencerNiches' | 'marketingOptions' | 'failureReasons' | 'banks', row: { id: string; name: string; isArchived: boolean }) {
     const list = (this as any)[collection] as { id: string }[];
     const index = list.findIndex((entry) => entry.id === row.id);
     if (index < 0) list.push({ ...row }); else list[index] = { ...list[index], ...row };
@@ -5024,10 +5111,10 @@ export class DatabaseService {
     return this.influencers.filter((inf) => (inf.nicheIds || []).includes(id)).length;
   }
 
-  public renameLookup(collection: 'influencerNiches' | 'marketingOptions' | 'failureReasons', id: string, rawName: string): void {
+  public renameLookup(collection: 'influencerNiches' | 'marketingOptions' | 'failureReasons' | 'banks', id: string, rawName: string): void {
     const name = rawName.trim().replace(/\s+/g, ' ');
     if (!name || name.length > 60) throw new Error('Enter a name of at most 60 characters.');
-    const all: { id: string; name: string; isArchived: boolean; list?: string }[] = collection === 'failureReasons' ? this.getFailureReasons(true)
+    const all: { id: string; name: string; isArchived: boolean; list?: string }[] = collection === 'failureReasons' ? this.getFailureReasons(true) : collection === 'banks' ? this.getBanks(true)
       : collection === 'influencerNiches' ? this.influencerNiches : this.getAllMarketingOptions();
     const row = all.find((entry) => entry.id === id);
     if (!row) throw new Error('This entry no longer exists.');
@@ -5035,8 +5122,8 @@ export class DatabaseService {
     this.saveLookup(collection, { ...row, name });
   }
 
-  public setLookupArchived(collection: 'influencerNiches' | 'marketingOptions' | 'failureReasons', id: string, isArchived: boolean): void {
-    const all: { id: string; name: string; isArchived: boolean }[] = collection === 'failureReasons' ? this.getFailureReasons(true)
+  public setLookupArchived(collection: 'influencerNiches' | 'marketingOptions' | 'failureReasons' | 'banks', id: string, isArchived: boolean): void {
+    const all: { id: string; name: string; isArchived: boolean }[] = collection === 'failureReasons' ? this.getFailureReasons(true) : collection === 'banks' ? this.getBanks(true)
       : collection === 'influencerNiches' ? this.influencerNiches : this.getAllMarketingOptions();
     const row = all.find((entry) => entry.id === id);
     if (!row) throw new Error('This entry no longer exists.');

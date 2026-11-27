@@ -15,10 +15,12 @@ export const WORKSPACE_COLLECTIONS = [
   'campaigns',
   // Calls to online customers: planned follow-ups and any other call. Separate from store calls.
   'customerCalls',
+  // Banks on cheque forms: a shared list staff extend inline.
+  'banks',
 ] as const;
 
 /** Shared pick-lists that staff can extend inline and admins manage in Settings. */
-export const LOOKUP_COLLECTIONS = ['influencerNiches', 'marketingOptions', 'failureReasons'] as const;
+export const LOOKUP_COLLECTIONS = ['influencerNiches', 'marketingOptions', 'failureReasons', 'banks'] as const;
 export function isLookupCollection(value: unknown): value is typeof LOOKUP_COLLECTIONS[number] {
   return (LOOKUP_COLLECTIONS as readonly unknown[]).includes(value);
 }

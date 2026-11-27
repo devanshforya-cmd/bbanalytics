@@ -8,7 +8,7 @@ import { syncManager } from '@/lib/offline-sync';
 import ConfirmModal from '@/components/common/ConfirmModal';
 import { toast } from '@/components/common/Toast';
 
-type Collection = 'influencerNiches' | 'marketingOptions' | 'failureReasons';
+type Collection = 'influencerNiches' | 'marketingOptions' | 'failureReasons' | 'banks';
 interface Row { id: string; name: string; isArchived: boolean; usage?: number }
 interface Section { key: string; title: string; description: string; collection: Collection; noun: string; rows: () => Row[]; add: (name: string) => void; niche?: boolean }
 
@@ -36,6 +36,8 @@ export default function ListsSettings() {
       rows: () => db.getMarketingOptions('CONTENT_PLATFORM', true), add: (name) => { db.addMarketingOption('CONTENT_PLATFORM', name); } },
     { key: 'reason', title: 'Delivery failure reasons', description: 'Reasons offered on the delivery failure form. Saved failures keep the reason they were logged with.', collection: 'failureReasons', noun: 'reason',
       rows: () => db.getFailureReasons(true), add: (name) => { db.addFailureReason(name); } },
+    { key: 'bank', title: 'Banks', description: 'Banks offered on cheque forms. Staff can add a bank while entering a cheque. Saved cheques keep the bank name they were entered with.', collection: 'banks', noun: 'bank',
+      rows: () => db.getBanks(true), add: (name) => { db.addBank(name); } },
   ];
 
   /** One action at a time, with the result confirmed against the server. */

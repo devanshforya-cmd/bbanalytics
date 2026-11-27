@@ -344,6 +344,8 @@ export function prepareRecordData(user: User, mutation: WorkspaceMutation, prior
     // A new failure or attempt marked "Other" must say why. Older "Other" rows saved before this rule can still be updated.
     const newReason = !prior || prior.data.reason !== data.reason || (Number(data.attempts) || 1) > (Number(prior.data.attempts) || 1);
     if (newReason && isOtherReason(data.reason) && !data.reasonDetail) throw new WorkspaceError(400, 'Write the reason when Other is chosen.');
+    if (data.rtoChases !== undefined && (!Array.isArray(data.rtoChases) || data.rtoChases.length > 30
+      || data.rtoChases.some((entry: any) => !entry || typeof entry.note !== 'string' || entry.note.length > 300 || !/^\d{4}-\d{2}-\d{2}$/.test(String(entry.dateAd || ''))))) throw new WorkspaceError(400, 'Courier follow-ups could not be saved.');
   }
   if (mutation.collection === 'orders' && prior && !isSuperAdmin(user) && !canPerform(user, 'orderflow', 'EDIT')) {
     // Order Desk staff move orders along (status and exchange links); the order's details stay as entered.
