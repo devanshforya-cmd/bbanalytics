@@ -3,6 +3,7 @@
 import ProgressRing from '@/components/common/ProgressRing';
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import BrandFilterBanner from './BrandFilterBanner';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
@@ -119,6 +120,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="app-chrome contents"><Header /></div>
         <main id="main-content" tabIndex={-1} className="relative flex-1 overflow-y-auto focus:outline-none p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-8">
           <FieldGpsTracker />
+          {confirmed && pageAllowed && <BrandFilterBanner />}
           {confirmed && pageAllowed ? <div key={pathname} className="bb-page">{children}</div> : (
             <div role="status" aria-live="polite" className="flex h-64 items-center justify-center">
               <ProgressRing estimateMs={confirmed ? 600 : 1200} size={52} label={confirmed ? 'Opening your page' : 'Checking your access'} />

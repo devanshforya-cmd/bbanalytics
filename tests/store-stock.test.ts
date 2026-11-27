@@ -160,3 +160,10 @@ test('document types: defaults until changed, then add, rename, mark not-for-sto
   db.deleteDocumentType(added.id);
   assert.equal(db.getDocumentTypes().some((t) => t.id === added.id), false);
 });
+
+import { hiddenByBrandFilter } from '../src/lib/brand-filter.ts';
+
+test('the brand filter says what it hides', () => {
+  assert.equal(hiddenByBrandFilter({ orders: [1, 2], tickets: [1] }, { orders: [], tickets: [] }), '2 orders and 1 return or ticket');
+  assert.equal(hiddenByBrandFilter({ orders: [1], tickets: [] }, { orders: [1], tickets: [] }), '');
+});

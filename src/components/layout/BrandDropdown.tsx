@@ -150,7 +150,7 @@ export default function BrandDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-full border border-slate-200 bg-white px-3 text-[13px] font-semibold text-slate-800 shadow-xs hover:border-slate-300 hover:bg-slate-50/80 transition sm:h-auto sm:rounded-lg sm:py-1.5 sm:text-xs ${
+        className={`flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-full border px-3 text-[13px] font-semibold text-slate-800 shadow-xs transition sm:h-auto sm:rounded-lg sm:py-1.5 sm:text-xs ${currentBrand === 'ALL' ? 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/80' : 'border-amber-400 bg-amber-50 ring-1 ring-amber-300 hover:bg-amber-100'} ${
           isCompact ? 'sm:w-44' : 'sm:w-52'
         }`}
         aria-expanded={isOpen}

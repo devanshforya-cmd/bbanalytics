@@ -447,7 +447,11 @@ export default function DailyOrdersPage() {
           <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
             {filteredOrders.length === 0 ? (
               <div className="p-12 text-center text-slate-500 text-xs">
-                No orders recorded for <strong className="font-mono text-slate-600">{selectedDateAd}</strong>. Use the date arrows above to inspect other dates.
+                No orders recorded for <strong className="font-mono text-slate-600">{selectedDateAd}</strong>{db.getActiveBrandFilter() !== 'ALL' ? ' in the brand chosen at the top' : ''}. Use the date arrows above to inspect other dates.
+                {(() => {
+                  const hidden = db.getActiveBrandFilter() !== 'ALL' ? db.getOrders('ALL' as BrandCode).filter((o) => o.orderDateAd === selectedDateAd).length : 0;
+                  return hidden > 0 ? <span className="mt-2 block font-semibold text-amber-800">{hidden} {hidden === 1 ? 'order' : 'orders'} of other brands on this day {hidden === 1 ? 'is' : 'are'} hidden by the brand filter at the top. Use “Show all brands” above to see {hidden === 1 ? 'it' : 'them'}.</span> : null;
+                })()}
               </div>
             ) : visibleOrders.length === 0 ? (
               <div className="p-10 text-center text-xs text-slate-500">
