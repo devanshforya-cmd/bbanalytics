@@ -22,6 +22,7 @@ import { phoneDigits } from '../customer-lookup';
 import { beatItemFromSchedule, dayPlan, schedulesOn, setStoreDays, sortDay, weeklyBeatId, type DayPlan, type StopPriority } from '../weekly-beat';
 import { buildRtoTicket, canClose, isCustomerReturn, legacyStatusFor, resolutionFromLegacy, returnRowsForMetrics, ticketLinesOf, ticketStageOf, ticketTypeOf, validateReceipt, validateTicketLines, OPEN_STAGES, RESOLUTION_LABEL, TICKET_STAGE_LABEL, TICKET_TYPE_LABEL, type GoodsCondition, type TicketEvent, type TicketFault, type TicketLine, type TicketResolutionType, type TicketStage, type TicketType } from '../order-tickets';
 import { DEFAULT_BANKS } from '../banks';
+import { DEFAULT_DOCUMENT_TYPES } from '../document-types';
 import { DEFAULT_CONTENT_PLATFORMS, DEFAULT_FAILURE_REASONS, DEFAULT_REACH_OUT_PLATFORMS, lookupId, sameName } from '../marketing';
 
 const ANONYMOUS_USER: User = { id: '', fullName: '', email: '', phone: '', role: 'OFFICE_STAFF', active: false, isSuperAdmin: false, dutyStatus: 'OFFLINE', assignedBrands: [], permissions: {}, customPermissions: {} };
@@ -1707,8 +1708,10 @@ export class DatabaseService {
   }
 
   // Section 8: Document Types Configuration
+  /** Document types; the starting list until someone changes it. */
   public getDocumentTypes(): DocumentTypeConfig[] {
-    return this.documentTypes;
+    if (this.documentTypes.length) return this.documentTypes;
+    return DEFAULT_DOCUMENT_TYPES.map((type) => ({ id: lookupId('doctype', type.name), name: type.name, storeBased: type.storeBased, isActive: true }));
   }
 
   public getOrderOptions(): OrderOptions { return this.orderOptions ? structuredClone(this.orderOptions) : defaultOrderOptions(); }
@@ -1717,24 +1720,62 @@ export class DatabaseService {
   public getAlertRules(): AlertRules { return { ...this.alertRules }; }
   public setAlertRules(rules: AlertRules): void { this.alertRules = validateAlertRules(rules); this.persistState(); }
 
-  public addDocumentType(name: string): DocumentTypeConfig {
-    const newDocType: DocumentTypeConfig = {
-      id: this.generateId('doc'),
-      name: name.trim(),
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    };
+  /** The first change to document types saves the starting list, so it can be edited like any other. */
+  private ensureDocumentTypes() {
+    if (this.documentTypes.length) return;
+    const now = new Date().toISOString();
+    this.documentTypes = DEFAULT_DOCUMENT_TYPES.map((type) => ({ id: lookupId('doctype', type.name), name: type.name, storeBased: type.storeBased, isActive: true, createdAt: now }));
+  }
+
+  public addDocumentType(name: string, storeBased = true): DocumentTypeConfig {
+    const clean = name.trim().replace(/\s+/g, ' ').slice(0, 60);
+    if (!clean) throw new Error('Enter a name for the document type.');
+    this.ensureDocumentTypes();
+    const clash = this.documentTypes.find((type) => sameName(type.name, clean));
+    if (clash) throw new Error(`"${clash.name}" is already a document type.`);
+    const newDocType: DocumentTypeConfig = { id: this.generateId('doctype'), name: clean, storeBased, isActive: true, createdAt: new Date().toISOString() };
     this.documentTypes.push(newDocType);
     this.persistState();
     return newDocType;
   }
 
-  public toggleDocumentType(id: string): void {
-    const dt = this.documentTypes.find((x) => x.id === id);
-    if (dt) {
-      dt.isActive = !dt.isActive;
-      this.persistState();
+  public updateDocumentType(id: string, changes: { name?: string; storeBased?: boolean; isActive?: boolean }): DocumentTypeConfig {
+    this.ensureDocumentTypes();
+    const type = this.documentTypes.find((x) => x.id === id);
+    if (!type) throw new Error('This document type no longer exists.');
+    if (changes.name !== undefined) {
+      const clean = changes.name.trim().replace(/\s+/g, ' ').slice(0, 60);
+      if (!clean) throw new Error('Enter a name for the document type.');
+      if (this.documentTypes.some((x) => x.id !== id && sameName(x.name, clean))) throw new Error(`"${clean}" is already a document type.`);
+      // Documents keep the type name they were filed under; rename them along with the type.
+      if (clean !== type.name) for (const doc of this.documents) if (doc.documentTypeId === id || (!doc.documentTypeId && doc.documentType === type.name)) { doc.documentType = clean; doc.documentTypeId = id; }
+      type.name = clean;
     }
+    if (changes.storeBased !== undefined) type.storeBased = changes.storeBased;
+    if (changes.isActive !== undefined) type.isActive = changes.isActive;
+    this.persistState();
+    return type;
+  }
+
+  /** Delete a document type. Documents already filed under it keep its name. */
+  public deleteDocumentType(id: string): void {
+    this.ensureDocumentTypes();
+    const type = this.documentTypes.find((x) => x.id === id);
+    if (!type) return;
+    this.documentTypes = this.documentTypes.filter((x) => x.id !== id);
+    this.logActivity('SETTING_CHANGED', 'SETTINGS', id, { action: 'DOCUMENT_TYPE_DELETED', name: type.name });
+    this.persistState();
+  }
+
+  /** How many documents are filed under a type. */
+  public documentTypeUsage(type: DocumentTypeConfig): number {
+    return this.documents.filter((doc) => doc.documentTypeId === type.id || (!doc.documentTypeId && sameName(doc.documentType, type.name))).length;
+  }
+
+  public toggleDocumentType(id: string): void {
+    this.ensureDocumentTypes();
+    const dt = this.documentTypes.find((x) => x.id === id);
+    if (dt) this.updateDocumentType(id, { isActive: !dt.isActive });
   }
 
   // Section 11: Store Categories Configuration

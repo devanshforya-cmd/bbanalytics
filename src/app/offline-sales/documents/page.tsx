@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { db } from '@/lib/db/db-service';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import CameraCapture from '@/components/common/CameraCapture';
-import { HandoverDocument, CustodyEvent, Branch, Retailer } from '@/lib/types';
+import { HandoverDocument, CustodyEvent, DocumentTypeConfig } from '@/lib/types';
 import { getTodayAd, getTodayBs } from '@/lib/nepali-calendar';
 import { toast } from '@/components/common/Toast';
 import {
@@ -45,7 +45,11 @@ import {
 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
-import { getScope } from '@/lib/permissions';
+import { canPerform, getScope } from '@/lib/permissions';
+import StoreTargetPicker from '@/components/stores/StoreTargetPicker';
+import DocumentTypesManager from '@/components/documents/DocumentTypesManager';
+import { isStoreDocument } from '@/lib/document-types';
+import { targetLabel, type StoreTarget } from '@/lib/store-target';
 
 export default function DocumentsPage() {
   const [currentUser] = useState(() => db.getCurrentUser());
@@ -71,9 +75,11 @@ export default function DocumentsPage() {
 
   // Master lists
   const allStaff = useMemo(() => db.getUsers(), []);
-  const configuredDocTypes = useMemo(() => db.getDocumentTypes().filter((t) => t.isActive), []);
-  const branches: Branch[] = useMemo(() => db.getBranches(), []);
-  const retailers: Retailer[] = useMemo(() => db.getRetailers(), []);
+  const [docTypes, setDocTypes] = useState<DocumentTypeConfig[]>(() => [...db.getDocumentTypes()]);
+  useEffect(() => { const refresh = () => setDocTypes([...db.getDocumentTypes()]); window.addEventListener('bb-db-updated', refresh); return () => window.removeEventListener('bb-db-updated', refresh); }, []);
+  const configuredDocTypes = docTypes.filter((t) => t.isActive);
+  const canManageTypes = canPerform(currentUser, 'p.settings_lists', 'EDIT') || getScope(currentUser, 'document_handover') === 'ALL';
+  const [showTypesModal, setShowTypesModal] = useState(false);
 
   // Status Action Modals
   const [handoverModalDoc, setHandoverModalDoc] = useState<HandoverDocument | null>(null);
@@ -88,11 +94,12 @@ export default function DocumentsPage() {
   const [missingReason, setMissingReason] = useState('');
 
   // Upload Form State (Clean by default)
-  const [formStoreId, setFormStoreId] = useState('');
-  const [formStoreName, setFormStoreName] = useState('');
-  const [formStoreSearch, setFormStoreSearch] = useState('');
-  const [showStoreDropdown, setShowStoreDropdown] = useState(false);
-  const [formDocType, setFormDocType] = useState('Purchase Order');
+  const [formTarget, setFormTarget] = useState<StoreTarget | null>(null);
+  const [formAbout, setFormAbout] = useState('');
+  const [formKey, setFormKey] = useState(0);
+  const [formDocTypeId, setFormDocTypeId] = useState('');
+  const formType = configuredDocTypes.find((t) => t.id === formDocTypeId) || configuredDocTypes[0];
+  const formStoreBased = isStoreDocument(formType);
   const [formRefNumber, setFormRefNumber] = useState('');
   const [formOfficerName, setFormOfficerName] = useState(
     allStaff.find((u) => u.role === 'SALES_OFFICER' || u.permissions?.beat_plans?.access === 'FULL' || u.id.startsWith('user_'))?.fullName ||
@@ -103,13 +110,6 @@ export default function DocumentsPage() {
   const [formHandedTo, setFormHandedTo] = useState(allStaff[0]?.fullName || 'Operations Desk');
   const [formNotes, setFormNotes] = useState('');
   const [formPhotoUrls, setFormPhotoUrls] = useState<string[]>([]);
-
-  const allStores = useMemo(() => {
-    const list: { id: string; name: string; type: 'BRANCH' | 'RETAILER'; area?: string }[] = [];
-    branches.forEach((b) => list.push({ id: b.id, name: b.name, type: 'BRANCH', area: b.address }));
-    retailers.forEach((r) => list.push({ id: r.id, name: r.name, type: 'RETAILER', area: r.address }));
-    return list;
-  }, [branches, retailers]);
 
   // Helper for overdue calculation (> 2 days old with status COLLECTED)
   const getDaysSinceDoc = (docDateAd: string) => {
@@ -168,7 +168,7 @@ export default function DocumentsPage() {
       }
 
       // Store filter
-      if (filterStore !== 'ALL' && doc.storeName !== filterStore) return false;
+      if (filterStore === '__GENERAL__' ? doc.entityType !== 'GENERAL' : filterStore !== 'ALL' && doc.storeName !== filterStore) return false;
 
       // Document Type
       if (filterDocType !== 'ALL' && doc.documentType !== filterDocType) return false;
@@ -284,8 +284,9 @@ export default function DocumentsPage() {
   // Upload Form Handlers (5e)
   const handleUploadSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formStoreName.trim()) {
-      toast.error('Please select a store or distributor.');
+    if (!formType) { toast.error('Add a document type first.'); return; }
+    if (formStoreBased && !formTarget) {
+      toast.error('Choose the store, chain or outlet this document is from.');
       return;
     }
     if (formPhotoUrls.length === 0) {
@@ -293,6 +294,7 @@ export default function DocumentsPage() {
       return;
     }
 
+    const formStoreName = formStoreBased && formTarget ? targetLabel(formTarget) : formAbout.trim() || 'Not a store document';
     const isImmediateOffice = formInitialHolder === 'OFFICE';
     const newStatus = isImmediateOffice ? 'HANDED_OVER' : 'COLLECTED';
     const currentHolder = isImmediateOffice
@@ -325,10 +327,12 @@ export default function DocumentsPage() {
     }
 
     db.addDocument({
-      entityType: 'BRANCH',
-      entityId: formStoreId || 'store_custom',
+      entityType: formStoreBased && formTarget ? formTarget.entityType : 'GENERAL',
+      entityId: formStoreBased && formTarget ? formTarget.entityId : '',
+      ...(formStoreBased && formTarget?.chainId ? { chainId: formTarget.chainId, chainName: formTarget.chainName } : {}),
       storeName: formStoreName,
-      documentType: formDocType,
+      documentType: formType.name,
+      documentTypeId: formType.id,
       docDateAd: getTodayAd(),
       docDateBs: getTodayBs(),
       referenceNumber: formRefNumber.trim() || undefined,
@@ -348,9 +352,9 @@ export default function DocumentsPage() {
     toast.success('Document uploaded successfully with custody tracking.');
 
     // Reset form
-    setFormStoreId('');
-    setFormStoreName('');
-    setFormStoreSearch('');
+    setFormTarget(null);
+    setFormAbout('');
+    setFormKey((k) => k + 1);
     setFormRefNumber('');
     setFormNotes('');
     setFormPhotoUrls([]);
@@ -422,11 +426,17 @@ export default function DocumentsPage() {
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          {canManageTypes && (
+            <button type="button" onClick={() => setShowTypesModal(true)} className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+              <FileText className="h-4 w-4 text-slate-500" />
+              Document types
+            </button>
+          )}
           <button
             onClick={() => {
-              setFormStoreId('');
-              setFormStoreName('');
-              setFormStoreSearch('');
+              setFormTarget(null);
+              setFormAbout('');
+              setFormKey((k) => k + 1);
               setFormRefNumber('');
               setFormNotes('');
               setFormPhotoUrls([]);
@@ -536,7 +546,8 @@ export default function DocumentsPage() {
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
               <option value="ALL">All stores / accounts</option>
-              {Array.from(new Set(documents.map((d) => d.storeName))).map((s) => (
+              <option value="__GENERAL__">Not store documents</option>
+              {Array.from(new Set(documents.filter((d) => d.entityType !== 'GENERAL').map((d) => d.storeName))).sort().map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
@@ -552,13 +563,9 @@ export default function DocumentsPage() {
               className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs bg-white outline-none focus:border-blue-500"
             >
               <option value="ALL">All document types</option>
-              <option value="Purchase Order">Purchase order</option>
-              <option value="Signed Delivery Challan">Signed delivery challan</option>
-              <option value="Tax Invoice Copy">Tax invoice copy</option>
-              <option value="Stock Acknowledgment">Stock acknowledgment</option>
-              <option value="Return Authorization (RMA)">Return authorization (RMA)</option>
-              <option value="Credit Note">Credit note</option>
-              <option value="Store Agreement">Store agreement</option>
+              {Array.from(new Set([...docTypes.map((t) => t.name), ...documents.map((d) => d.documentType)])).sort().map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
             </select>
           </div>
 
@@ -685,12 +692,16 @@ export default function DocumentsPage() {
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Building2 className="h-4 w-4 text-slate-400 shrink-0" />
+                      {doc.entityType === 'GENERAL' || !doc.entityId ? (
+                        <span className="font-bold text-slate-900 text-base">{doc.storeName}<span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-slate-600">Not a store document</span></span>
+                      ) : (
                       <Link
-                        href={`/offline-sales/stores/${doc.entityId || encodeURIComponent(doc.storeName)}`}
+                        href={`/offline-sales/stores/${doc.entityId}`}
                         className="font-bold text-slate-900 text-base hover:text-blue-600 hover:underline inline-flex items-center gap-1"
                       >
                         {doc.storeName}
                       </Link>
+                      )}
                       <span className="rounded bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700 border border-blue-200">
                         {doc.documentType}
                       </span>
@@ -1325,6 +1336,22 @@ export default function DocumentsPage() {
       )}
 
       {/* 5e. Upload Document Modal with Searchable Store Dropdown & Clean Form */}
+      {showTypesModal && (
+        <Portal><div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-modal="true" aria-labelledby="doc-types-title">
+          <div className="w-full max-w-2xl space-y-3 rounded-2xl bg-white p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 id="doc-types-title" className="text-base font-bold text-slate-900">Document types</h3>
+                <p className="text-xs text-slate-500">Store documents ask which store, chain or outlet. Others don&apos;t show the store list.</p>
+              </div>
+              <button type="button" onClick={() => setShowTypesModal(false)} aria-label="Close" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+            </div>
+            <DocumentTypesManager compact />
+            <div className="flex justify-end"><button type="button" onClick={() => { setShowTypesModal(false); setDocTypes([...db.getDocumentTypes()]); }} className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white">Done</button></div>
+          </div>
+        </div></Portal>
+      )}
+
       {showUploadModal && (
         <Portal><div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <form
@@ -1350,91 +1377,40 @@ export default function DocumentsPage() {
               </button>
             </div>
 
-            {/* 5e: Searchable Store Dropdown */}
-            <div className="relative">
-              <label className="block font-bold text-slate-700 mb-1">
-                Store / retailer / branch *
-              </label>
-
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Type to search stores, branches, or supermarkets…"
-                  value={formStoreName || formStoreSearch}
-                  onChange={(e) => {
-                    setFormStoreSearch(e.target.value);
-                    setFormStoreName(e.target.value);
-                    setShowStoreDropdown(true);
-                  }}
-                  onFocus={() => setShowStoreDropdown(true)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 pr-8 outline-none focus:border-blue-500 text-xs font-medium"
-                  required
-                />
-                <ChevronDown className="absolute right-2.5 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
+            {/* Document type decides whether the store list shows */}
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <label htmlFor="doc-type" className="block font-bold text-slate-700">Document type *</label>
+                {canManageTypes && <button type="button" onClick={() => setShowTypesModal(true)} className="text-[11px] font-semibold text-blue-700 hover:underline">Add or edit types</button>}
               </div>
-
-              {/* Autocomplete suggestions */}
-              {showStoreDropdown && (
-                <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
-                  {allStores
-                    .filter((s) =>
-                      s.name.toLowerCase().includes((formStoreSearch || formStoreName).toLowerCase())
-                    )
-                    .slice(0, 10)
-                    .map((store) => (
-                      <div
-                        key={store.id}
-                        onClick={() => {
-                          setFormStoreId(store.id);
-                          setFormStoreName(store.name);
-                          setFormStoreSearch('');
-                          setShowStoreDropdown(false);
-                        }}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-blue-50 cursor-pointer text-xs"
-                      >
-                        <div>
-                          <div className="font-bold text-slate-900">{store.name}</div>
-                          {store.area && <div className="text-[11px] text-slate-500">{store.area}</div>}
-                        </div>
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-600">
-                          {store.type}
-                        </span>
-                      </div>
-                    ))}
-                </div>
-              )}
+              <select id="doc-type" value={formType?.id || ''} onChange={(e) => { setFormDocTypeId(e.target.value); }}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-blue-500">
+                {configuredDocTypes.length === 0 && <option value="">No document types. Add one first.</option>}
+                {configuredDocTypes.filter(isStoreDocument).length > 0 && (
+                  <optgroup label="Store documents">
+                    {configuredDocTypes.filter(isStoreDocument).map((dt) => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
+                  </optgroup>
+                )}
+                {configuredDocTypes.filter((t) => !isStoreDocument(t)).length > 0 && (
+                  <optgroup label="Not for a store">
+                    {configuredDocTypes.filter((t) => !isStoreDocument(t)).map((dt) => <option key={dt.id} value={dt.id}>{dt.name}</option>)}
+                  </optgroup>
+                )}
+              </select>
+              <p className="mt-1 text-[11px] text-slate-500">{formStoreBased ? 'A store document: choose the store, the whole chain, or one outlet.' : 'Not for a store: no store needed.'}</p>
             </div>
 
-            {/* Document Type and Ref Number (5e: clean refNumber) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {formStoreBased ? (
+              <StoreTargetPicker key={formKey} label="From which store *" value={formTarget} onChange={setFormTarget} />
+            ) : (
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Document type *</label>
-                <select aria-label="Document type"
-                  value={formDocType}
-                  onChange={(e) => setFormDocType(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none focus:border-blue-500"
-                >
-                  {configuredDocTypes.length > 0 ? (
-                    configuredDocTypes.map((dt) => (
-                      <option key={dt.id} value={dt.name}>
-                        {dt.name}
-                      </option>
-                    ))
-                  ) : (
-                    <>
-                      <option value="Purchase Order">Purchase order</option>
-                      <option value="Signed Delivery Challan">Signed delivery challan</option>
-                      <option value="Tax Invoice Copy">Tax invoice copy</option>
-                      <option value="Stock Acknowledgment">Stock acknowledgment</option>
-                      <option value="Return Authorization (RMA)">Return authorization (RMA)</option>
-                      <option value="Credit Note">Credit note</option>
-                      <option value="Store Agreement">Store agreement</option>
-                      <option value="Other">Other document</option>
-                    </>
-                  )}
-                </select>
+                <label htmlFor="doc-about" className="block font-bold text-slate-700 mb-1">From or about</label>
+                <input id="doc-about" value={formAbout} maxLength={80} onChange={(e) => setFormAbout(e.target.value)} placeholder="e.g. Supplier name, bank, government office"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500" />
               </div>
+            )}
 
+            <div className="grid grid-cols-1 gap-3">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Reference number</label>
                 <input aria-label="Reference number"

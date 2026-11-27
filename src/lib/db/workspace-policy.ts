@@ -27,7 +27,7 @@ const FEATURES: Record<WorkspaceCollection, AccessKey[]> = {
   holidays: ['p.settings_holidays'], seasonalPatterns: ['dashboard'], taskTemplates: ['p.settings_task_templates'],
   promotions: ['p.settings_promotions'], dailySummaries: ['beat_plans', 'staff_scorecards'], importHistory: ['p.settings_import'],
   influencers: ['marketing'], influencerContent: ['marketing'], sharedAccessLinks: ['p.settings_shared_links'],
-  documentTypes: ['p.settings_lists'], storeCategories: ['p.settings_lists'], recurringSchedules: ['beat_plans'],
+  documentTypes: ['p.settings_lists', 'document_handover'], storeCategories: ['p.settings_lists'], recurringSchedules: ['beat_plans'],
   workspaceConfig: ['p.settings_channels', 'p.settings_brands', 'p.settings_alerts', 'p.settings_beats', 'p.settings_follow_ups'],
   marketingSends: ['marketing'], influencerNiches: ['marketing', 'p.settings_lists'], marketingOptions: ['marketing', 'p.settings_lists'],
   failureReasons: ['orderflow', 'order_desk', 'p.settings_lists'], userPreferences: [],
@@ -55,6 +55,8 @@ export function collectionFeatures(collection: WorkspaceCollection, read = false
   if (read && collection === 'failureReasons') return ['orderflow', 'order_desk', 'settings', 'reviews', 'dashboard'];
   if (read && collection === 'stockCounts') return ['beat_plans', 'dispatches', 'stock_counts', 'stores'];
   if (read && collection === 'secondaryOrders') return ['beat_plans', 'stock_counts'];
+  // Cheques, documents and orders can be for a whole MT chain, so those who take them can see chains.
+  if (read && collection === 'distributors') return ['distributors', 'stores', 'beat_plans', 'cheque_tracker', 'document_handover', 'dispatches'];
   if (read && (collection === 'retailers' || collection === 'branches')) return ['stores', 'beat_plans', 'cheque_tracker', 'shelf_photos', 'call_tracker', 'document_handover', 'dispatches', 'stock_counts'];
   return FEATURES[collection];
 }
@@ -121,6 +123,8 @@ export function canReadWorkspaceRecord(user: User, row: StoredWorkspaceRecord, u
   if (!assigned.includes('ALL') && brands.length && !brands.every((code) => assigned.includes(code))) return false;
   if (!assigned.length && ['products', 'combos', 'orders', 'secondaryOrders', 'retailers', 'branches', 'distributors', 'cheques'].includes(row.collection)) return false;
   if (GLOBAL_CATALOG.has(row.collection)) return true;
+  // Chains and distributors are shared reference for field work (whole-chain cheques, documents and orders).
+  if (row.collection === 'distributors' && features.some((feature) => feature !== 'distributors')) return true;
   const owners = recordOwners(row);
   return features.some((feature) => {
     const scope = getScope(user, feature);

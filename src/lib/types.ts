@@ -718,8 +718,12 @@ export interface Bank {
 
 export interface Cheque {
   id: string;
-  entityType: 'BRANCH' | 'RETAILER';
+  /** DISTRIBUTOR: a distributor, or a whole MT chain (entityId = the chain). */
+  entityType: 'BRANCH' | 'RETAILER' | 'DISTRIBUTOR';
   entityId: string;
+  /** For an outlet or a whole chain: the chain. */
+  chainId?: string;
+  chainName?: string;
   brandCodes?: BrandCode[];
   storeName: string;
   officerId: string;
@@ -757,8 +761,11 @@ export interface CustodyEvent {
 
 export interface HandoverDocument {
   id: string;
-  entityType: 'BRANCH' | 'RETAILER';
+  /** GENERAL: not a store document (entityId is empty; storeName says who it is from or about). */
+  entityType: 'BRANCH' | 'RETAILER' | 'DISTRIBUTOR' | 'GENERAL';
   entityId: string;
+  chainId?: string;
+  chainName?: string;
   storeName: string;
   officerId: string;
   officerName: string;
@@ -783,6 +790,8 @@ export interface DocumentTypeConfig {
   id: string;
   name: string;
   isActive: boolean;
+  /** Collected from a store: the form asks which store (or chain, or outlet). Missing = true. */
+  storeBased?: boolean;
   createdAt?: string;
 }
 

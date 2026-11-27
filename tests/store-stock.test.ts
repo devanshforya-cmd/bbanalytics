@@ -130,3 +130,33 @@ test('banks list: Nepal banks preloaded, an added bank stays, names are not repe
   assert.equal(db.addBank('nabil bank').name, 'Nabil Bank');
   assert.equal(db.getBanks().filter((bank) => bank.name.toLowerCase() === 'nabil bank').length, 1);
 });
+
+import { targetLabel, targetOptions } from '../src/lib/store-target.ts';
+
+test('a field rep can see MT chains so a cheque or document can be for the whole chain, but cannot change them', () => {
+  const rep: any = { id: 'rep', fullName: 'Rep', assignedBrands: ['ALL'], customPermissions: { beat_plans: { access: 'FULL', scope: 'OWN', actions: ['VIEW', 'CREATE'] }, cheque_tracker: { access: 'FULL', scope: 'OWN', actions: ['VIEW', 'CREATE'] } } };
+  const chain = { collection: 'distributors' as const, id: 'd1', data: { id: 'd1', name: 'Chain', brandsCarried: [] }, created_by: 'admin', version: 1 };
+  assert.equal(canReadWorkspaceRecord(rep, chain, [], []), true);
+  assert.equal(canWriteWorkspaceRecord(rep, chain, 'EDIT', [], []), false);
+  const cheque = { collection: 'cheques' as const, id: 'c1', data: { id: 'c1', entityType: 'DISTRIBUTOR', entityId: 'd1', officerId: 'rep' }, created_by: 'rep', version: 1 };
+  assert.equal(canWriteWorkspaceRecord(rep, cheque, 'CREATE', [], [chain]), true);
+});
+
+test('store targets: chains, outlets and stores, with clear labels', () => {
+  const options = targetOptions([{ id: 'r1', name: 'Kirana', storeType: 'RETAIL' } as any], [{ id: 'b1', name: 'Kupondole', distributorId: 'd1', distributorName: 'Bhatbhateni' } as any], [{ id: 'd1', name: 'Bhatbhateni', storeType: 'CHAIN_STORE' } as any]);
+  assert.deepEqual(options.map((o) => [o.value, o.type, o.chainId ?? null]), [['d1', 'DISTRIBUTOR', 'd1'], ['b1', 'BRANCH', 'd1'], ['r1', 'RETAILER', null]]);
+  assert.equal(targetLabel({ entityType: 'DISTRIBUTOR', entityId: 'd1', name: 'Bhatbhateni', chainId: 'd1' }), 'Bhatbhateni (whole chain)');
+  assert.equal(targetLabel({ entityType: 'BRANCH', entityId: 'b1', name: 'Kupondole', chainId: 'd1', chainName: 'Bhatbhateni' }), 'Kupondole (Bhatbhateni)');
+});
+
+test('document types: defaults until changed, then add, rename, mark not-for-store and delete', () => {
+  const db = new DatabaseService({ server: true });
+  assert.equal(db.getDocumentTypes().some((t) => t.name === 'Purchase order' && t.storeBased), true);
+  const added = db.addDocumentType('Tax clearance', false);
+  assert.equal(db.getDocumentTypes().length > 5, true, 'the starting list is kept when the first type is added');
+  assert.throws(() => db.addDocumentType('tax CLEARANCE'), /already/);
+  db.updateDocumentType(added.id, { name: 'Tax clearance certificate', storeBased: true });
+  assert.equal(db.getDocumentTypes().find((t) => t.id === added.id)?.storeBased, true);
+  db.deleteDocumentType(added.id);
+  assert.equal(db.getDocumentTypes().some((t) => t.id === added.id), false);
+});

@@ -1,6 +1,8 @@
 'use client';
 
 import BankSelect from '@/components/common/BankSelect';
+import StoreTargetPicker from '@/components/stores/StoreTargetPicker';
+import { targetLabel, type StoreTarget } from '@/lib/store-target';
 
 import NumberInput from '@/components/common/NumberInput';
 import StoredPhoto from '@/components/common/StoredPhoto';
@@ -14,7 +16,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
-import { Cheque, ChequeStatus } from '@/lib/types';
+import { BrandCode, Cheque, ChequeStatus } from '@/lib/types';
 import { formatDualDate, getTodayAd, formatBsDateOnly, getTodayBs } from '@/lib/nepali-calendar';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import CameraCapture from '@/components/common/CameraCapture';
@@ -91,7 +93,8 @@ function ChequesContent() {
 
   // Add Cheque Modal
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newStoreName, setNewStoreName] = useState('');
+  const [newTarget, setNewTarget] = useState<StoreTarget | null>(null);
+  const [targetKey, setTargetKey] = useState(0);
   const [newChequeNumber, setNewChequeNumber] = useState('');
   const [newAmount, setNewAmount] = useState('');
   const [newBank, setNewBank] = useState('');
@@ -144,8 +147,7 @@ function ChequesContent() {
 
   const handleCreateCheque = () => {
     const errors: Record<string, string> = {};
-    const storeErr = validateRequired(newStoreName, 'Store name');
-    if (storeErr) errors.storeName = storeErr;
+    if (!newTarget) errors.storeName = 'Choose the store, the whole chain, or one outlet.';
 
     const chequeNumErr =
       validateRequired(newChequeNumber, 'Cheque number') ||
@@ -165,15 +167,15 @@ function ChequesContent() {
       return;
     }
 
-    const matchedStore = db.getStores().find(
-      (s) => s.name.toLowerCase() === newStoreName.trim().toLowerCase()
-    );
-
+    const target = newTarget!;
+    const brandCodes = (db.getUnifiedStoreById(target.entityId)?.brandCodes || []) as BrandCode[];
     guardedSubmit(async () => {
       db.addCheque({
-        entityType: (matchedStore?.entityType as any) || 'RETAILER',
-        entityId: matchedStore?.id || `store_${Date.now()}`,
-        storeName: newStoreName.trim(),
+        entityType: target.entityType,
+        entityId: target.entityId,
+        ...(target.chainId ? { chainId: target.chainId, chainName: target.chainName } : {}),
+        ...(brandCodes.length ? { brandCodes } : {}),
+        storeName: targetLabel(target),
         chequeNumber: newChequeNumber.trim(),
         amount: parseFloat(newAmount),
         bankName: newBank,
@@ -186,6 +188,7 @@ function ChequesContent() {
         notes: 'Collected directly during visit.',
       });
       setShowAddModal(false);
+      setNewTarget(null); setTargetKey((k) => k + 1);
       setNewChequeNumber('');
       setNewAmount('');
       setNewChequePhoto('');
@@ -740,25 +743,8 @@ function ChequesContent() {
               </button>
             </div>
 
-            <div>
-              <label htmlFor="cheques-store-distributor" className="block font-bold text-slate-700 mb-1">Store / distributor *</label>
-              <input id="cheques-store-distributor"
-                type="text"
-                value={newStoreName}
-                onChange={(e) => {
-                  setNewStoreName(e.target.value);
-                  if (formErrors.storeName) setFormErrors((prev) => ({ ...prev, storeName: '' }));
-                }}
-                className={`w-full rounded-lg border px-3 py-2 outline-none transition ${
-                  formErrors.storeName
-                    ? 'border-rose-500 bg-rose-50/20 focus:border-rose-500'
-                    : 'border-slate-300 focus:border-blue-500'
-                }`}
-              />
-              {formErrors.storeName && (
-                <p className="text-[11px] text-rose-600 mt-1 font-medium">{formErrors.storeName}</p>
-              )}
-            </div>
+            <StoreTargetPicker key={targetKey} id="cheques-store-distributor" label="Store, chain or outlet *" value={newTarget}
+              onChange={(t) => { setNewTarget(t); if (formErrors.storeName) setFormErrors((prev) => ({ ...prev, storeName: '' })); }} error={formErrors.storeName} />
 
             <div className="grid grid-cols-2 gap-3">
               <div>
