@@ -14,6 +14,8 @@ import PageGuard from '@/components/common/PageGuard';
 import { FeedbackEntry, FeedbackType, Sentiment, Priority, ComplaintStatus, BrandCode } from '@/lib/types';
 import { getTodayAd, getTodayBs } from '@/lib/nepali-calendar';
 import DynamicCheckboxes from '@/components/common/DynamicCheckboxes';
+import SearchSelect from '@/components/common/SearchSelect';
+import { productLabel } from '@/lib/sub-brands';
 import CameraCapture from '@/components/common/CameraCapture';
 import BulkActionBar from '@/components/common/BulkActionBar';
 import { toast } from '@/components/common/Toast';
@@ -103,7 +105,16 @@ function FeedbackContent() {
   const { formatDate } = useCalendarPreference();
   const [brandCode, setBrandCode] = useState<BrandCode>(() => db.getBrands('ACTIVE')[0]?.code || 'ALL');
   const products = db.getProducts();
-  const [productId, setProductId] = useState(products[0]?.id || '');
+  const [productIds, setProductIds] = useState<string[]>([]);
+  const activeBrands = db.getBrands('ACTIVE');
+  /** Each product an entry is about (older entries have one). */
+  const entryProducts = (entry: FeedbackEntry) => {
+    const ids = entry.productIds?.length ? entry.productIds : entry.productId ? [entry.productId] : [];
+    if (!ids.length) return [{ id: '', name: entry.productName || '—' }];
+    const names = entry.productName.split(', ');
+    return ids.map((id, i) => ({ id, name: products.find((p) => p.id === id)?.name || names[i] || entry.productName }));
+  };
+  const brandName = (code: string) => db.getBrands('ALL').find((b) => b.code === code)?.name || code;
   const [channel, setChannel] = useState('Instagram DM');
   const [fullText, setFullText] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -174,8 +185,8 @@ function FeedbackContent() {
     setRelatedOrder(order); setChangeOrderDetails(false);
     if (!order) return;
     setBrandCode(order.brandCode);
-    const firstProduct = order.items.map((item) => products.find((product) => product.id === item.productId)).find(Boolean);
-    if (firstProduct) setProductId(firstProduct.id);
+    // Every product in the order of that brand; remove any the review is not about.
+    setProductIds([...new Set(order.items.map((item) => item.productId).filter((id) => products.some((p) => p.id === id && p.brandCode === order.brandCode)))]);
     // An order found by its ID also identifies the customer.
     if (lookup.link !== 'LINKED') {
       const owner = db.getCustomerByPhone(order.customerPhone);
@@ -192,6 +203,7 @@ function FeedbackContent() {
 
       const textErr = validateRequired(fullText, 'Review or feedback text');
       if (textErr) errors.fullText = textErr;
+      if (products.length && !productIds.length) errors.products = 'Choose at least one product.';
 
       if (Object.keys(errors).length > 0) {
         setFormErrors(errors);
@@ -199,7 +211,7 @@ function FeedbackContent() {
         return;
       }
 
-      const prod = products.find((p) => p.id === productId);
+      const chosen = productIds.map((id) => products.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => !!p);
       const photosToSave = hasScreenshot ? [...uploadedPhotos] : [];
       const assignee = db.getUsers().find((entry) => entry.id === assignedTo);
       const unlinked = lookup.link === 'UNLINKED';
@@ -212,8 +224,9 @@ function FeedbackContent() {
         customerLink: lookup.link || 'LINKED',
         ...(unlinked ? { customerHandle: name } : {}),
         brandCode,
-        productId,
-        productName: prod?.name || '',
+        productId: chosen[0]?.id || '',
+        productIds: chosen.map((p) => p.id),
+        productName: chosen.map((p) => p.name).join(', '),
         type: entryType,
         channel,
         ...(relatedOrder ? { orderId: relatedOrder.id, orderNumber: relatedOrder.orderNumber } : {}),
@@ -221,7 +234,7 @@ function FeedbackContent() {
         dateReceivedBs: getTodayBs(),
         fullText: fullText.trim(),
         screenshotUrls: photosToSave,
-        issueCategories: selectedCategories,
+        issueCategories: entryType === 'COMPLAINT' ? selectedCategories : [],
         sentiment,
         ...(rating ? { rating } : {}),
         hasScreenshot: photosToSave.length > 0,
@@ -248,6 +261,7 @@ function FeedbackContent() {
       setChangeOrderDetails(false);
       setFullText('');
       setSelectedCategories([]);
+      setProductIds([]);
       setUploadedPhotos([]);
       setRating(0);
     });
@@ -558,14 +572,12 @@ function FeedbackContent() {
                 </div>
 
                 <div className="text-[11px] text-slate-500">
-                  Product:{' '}
-                  <Link
-                    href={`/products/${item.productId || encodeURIComponent(item.productName)}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-slate-800 font-bold hover:text-blue-600 hover:underline"
-                  >
-                    {item.productName}
-                  </Link>
+                  {entryProducts(item).length > 1 ? 'Products' : 'Product'}:{' '}
+                  {entryProducts(item).map((product, i) => (
+                    <React.Fragment key={product.id || i}>{i > 0 && ', '}
+                      <Link href={`/products/${product.id || encodeURIComponent(product.name)}`} onClick={(e) => e.stopPropagation()} className="text-slate-800 font-bold hover:text-blue-600 hover:underline">{product.name}</Link>
+                    </React.Fragment>
+                  ))}
                 </div>
 
                 <p className="text-slate-700 leading-relaxed line-clamp-3 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
@@ -676,13 +688,12 @@ function FeedbackContent() {
                     )}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    {selectedEntry.customerPhone ? <>Phone: {selectedEntry.customerPhone}</> : <span className="font-semibold text-amber-700">No customer linked</span>}{selectedEntry.orderNumber ? <> • Order {displayDocumentId(selectedEntry.orderNumber)}</> : null} • Product:{' '}
-                    <Link
-                      href={`/products/${selectedEntry.productId || encodeURIComponent(selectedEntry.productName)}`}
-                      className="font-bold text-slate-700 hover:text-blue-600 hover:underline"
-                    >
-                      {selectedEntry.productName}
-                    </Link>{' '}
+                    {selectedEntry.customerPhone ? <>Phone: {selectedEntry.customerPhone}</> : <span className="font-semibold text-amber-700">No customer linked</span>}{selectedEntry.orderNumber ? <> • Order {displayDocumentId(selectedEntry.orderNumber)}</> : null} • {entryProducts(selectedEntry).length > 1 ? 'Products' : 'Product'}:{' '}
+                    {entryProducts(selectedEntry).map((product, i) => (
+                      <React.Fragment key={product.id || i}>{i > 0 && ', '}
+                        <Link href={`/products/${product.id || encodeURIComponent(product.name)}`} className="font-bold text-slate-700 hover:text-blue-600 hover:underline">{product.name}</Link>
+                      </React.Fragment>
+                    ))}{' '}
                     • Channel: {selectedEntry.channel}
                   </p>
                 </div>
@@ -990,7 +1001,7 @@ function FeedbackContent() {
                     <button type="button" onClick={() => setChangeOrderDetails(true)} className="font-bold text-blue-700 hover:underline">Change</button>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {[['Brand', db.getBrands('ALL').find((brand) => brand.code === brandCode)?.name || brandCode], ['Product', products.find((p) => p.id === productId)?.name || relatedOrder.items[0]?.productName || '—'],
+                    {[['Brand', db.getBrands('ALL').find((brand) => brand.code === brandCode)?.name || brandCode], ['Products', productIds.map((id) => products.find((p) => p.id === id)?.name).filter(Boolean).join(', ') || '—'],
                       ['Order date', formatDate(relatedOrder.orderDateAd, relatedOrder.orderDateBs)], ['Ordered via', relatedOrder.platform]].map(([term, detail]) => (
                       <span key={term} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1"><span className="text-slate-500">{term}:</span> <strong className="text-slate-900">{detail}</strong></span>
                     ))}
@@ -998,30 +1009,54 @@ function FeedbackContent() {
                 </div>
               ) : null}
 
-              <div className="grid grid-cols-2 gap-3">
-                {(!relatedOrder || changeOrderDetails) && (
+              {(!relatedOrder || changeOrderDetails) && (
+                <div className="space-y-3 rounded-xl border border-slate-200 p-4">
                   <div>
-                    <label htmlFor="feedback-product" className="block font-bold text-slate-700 mb-1">Product *</label>
-                    {products.length === 0 ? <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-slate-500">No products are saved yet.</p> : (
-                      <select
-                        id="feedback-product"
-                        value={productId}
-                        onChange={(e) => {
-                          setProductId(e.target.value);
-                          const p = products.find((x) => x.id === e.target.value);
-                          if (p) setBrandCode(p.brandCode);
-                        }}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none"
-                      >
-                        {(relatedOrder ? products.filter((p) => relatedOrder.items.some((item) => item.productId === p.id)).concat(products.filter((p) => !relatedOrder.items.some((item) => item.productId === p.id))) : products).map((p) => (
-                          <option key={p.id} value={p.id}>
-                            [{p.brandCode}] {p.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                    <label htmlFor="feedback-brand" className="block font-bold text-slate-700 mb-1">Brand *</label>
+                    <select id="feedback-brand" value={brandCode}
+                      onChange={(e) => {
+                        const next = e.target.value as BrandCode;
+                        setBrandCode(next);
+                        // Products must be of the chosen brand.
+                        setProductIds((ids) => ids.filter((id) => products.find((p) => p.id === id)?.brandCode === next));
+                      }}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white outline-none">
+                      {activeBrands.map((b) => <option key={b.code} value={b.code}>{b.name}</option>)}
+                    </select>
                   </div>
-                )}
+                  <div>
+                    <span className="block font-bold text-slate-700 mb-1">Products * <span className="font-normal text-slate-500">(one or more)</span></span>
+                    {productIds.length > 0 && (
+                      <ul className="mb-2 flex flex-wrap gap-1.5" aria-label="Chosen products">
+                        {productIds.map((id) => {
+                          const p = products.find((x) => x.id === id);
+                          return (
+                            <li key={id} className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 py-1 pl-3 pr-1 font-semibold text-blue-900">
+                              {p ? productLabel(p) : id}
+                              <button type="button" aria-label={`Remove ${p?.name || 'product'}`} onClick={() => setProductIds((ids) => ids.filter((x) => x !== id))} className="rounded-full p-0.5 text-blue-700 hover:bg-blue-100"><X className="h-3.5 w-3.5" /></button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    {(() => {
+                      const ofBrand = products.filter((p) => p.brandCode === brandCode && !productIds.includes(p.id));
+                      if (!products.some((p) => p.brandCode === brandCode)) return <p className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-slate-500">No products for {brandName(brandCode)} yet.</p>;
+                      const inOrder = (id: string) => !!relatedOrder?.items.some((item) => item.productId === id);
+                      const options = [...ofBrand.filter((p) => inOrder(p.id)), ...ofBrand.filter((p) => !inOrder(p.id))].map((p) => ({
+                        value: p.id, label: productLabel(p), hint: [p.name !== productLabel(p) ? p.name : '', p.sku].filter(Boolean).join(' · '), group: inOrder(p.id) ? 'In this order' : brandName(brandCode),
+                      }));
+                      return (
+                        <SearchSelect id="feedback-product" options={options} value="" onChange={(v) => { if (v) { setProductIds((ids) => [...ids, v]); if (formErrors.products) setFormErrors((prev) => ({ ...prev, products: '' })); } }}
+                          placeholder={productIds.length ? 'Add another product' : `Type a ${brandName(brandCode)} product`} emptyText={ofBrand.length ? 'No product matches' : 'All products of this brand are added'} />
+                      );
+                    })()}
+                    {formErrors.products && <p className="mt-1 text-[11px] font-medium text-rose-600">{formErrors.products}</p>}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="feedback-channel" className="block font-bold text-slate-700 mb-1">Received through *</label>
                   <select
@@ -1067,13 +1102,15 @@ function FeedbackContent() {
                 )}
               </div>
 
-              {/* Dynamic Checkbox System (PRD 6.1) */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                <DynamicCheckboxes
-                  selectedCategories={selectedCategories}
-                  onChange={setSelectedCategories}
-                />
-              </div>
+              {/* Issue categories: only complaints need them. */}
+              {entryType === 'COMPLAINT' && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                  <DynamicCheckboxes
+                    selectedCategories={selectedCategories}
+                    onChange={setSelectedCategories}
+                  />
+                </div>
+              )}
 
               {/* Screenshot & Proof Photo Upload (PRD v2.2) */}
               <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 space-y-3">

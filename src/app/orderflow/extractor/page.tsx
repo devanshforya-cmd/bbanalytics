@@ -4,6 +4,8 @@ import NumberInput from '@/components/common/NumberInput';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import Money from '@/components/common/Money';
+import SearchSelect from '@/components/common/SearchSelect';
+import { productLabel } from '@/lib/sub-brands';
 import ProgressRing, { ButtonRing } from '@/components/common/ProgressRing';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -106,6 +108,14 @@ export default function ExtractorPage() {
 
   const [activeCatalogProducts, setActiveCatalogProducts] = useState(db.getProducts().filter((p) => p.active !== false));
   const [activeCatalogCombos, setActiveCatalogCombos] = useState(db.getCombos().filter(combo => isSellableCombo(combo, db.getProducts())));
+  // Typed search for adding a line: product short name, full name, SKU or brand.
+  const addOptions = useMemo(() => {
+    const brandName = (code: string) => db.getBrands('ALL').find((b) => b.code === code)?.name || code;
+    return [
+      ...activeCatalogProducts.map((p) => ({ value: `product:${p.id}`, label: productLabel(p), hint: [brandName(p.brandCode), p.name !== productLabel(p) ? p.name : '', p.sku, `Rs. ${(p.mrp || 0).toLocaleString()}`].filter(Boolean).join(' · '), group: 'Products' })),
+      ...activeCatalogCombos.map((c) => ({ value: `combo:${c.id}`, label: c.name, hint: [brandName(c.brandCode), `Rs. ${(c.comboPrice || c.comboMrp || 0).toLocaleString()}`].join(' · '), group: 'Combos' })),
+    ];
+  }, [activeCatalogProducts, activeCatalogCombos]);
 
   // Push confirmation modal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -800,25 +810,13 @@ Platform: [Instagram / TikTok / WhatsApp / Website / Messenger]`}
                     </div>
 
                     {/* Products & Combo Breakdown Table */}
-                    <div className="mt-4 border border-slate-100 rounded-xl overflow-hidden">
+                    <div className="mt-4 border border-slate-100 rounded-xl">
                       <div className="bg-slate-50 px-3 py-2 flex items-center justify-between text-xs font-bold text-slate-700">
                         <span>Extracted Line Items ({ord.products.length})</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] text-slate-500 font-normal">Add product:</span>
-                          <select
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                handleAddItemToOrder(ord.id, e.target.value);
-                                e.target.value = '';
-                              }
-                            }}
-                            className="bg-white border border-slate-200 rounded px-2 py-0.5 text-xs font-normal"
-                          >
-                            <option value="">+ Add from catalog…</option>
-                            <optgroup label="Products">{activeCatalogProducts.map(product => <option key={product.id} value={`product:${product.id}`}>{product.name} (<Money>{product.mrp}</Money>)</option>)}</optgroup>
-                            <optgroup label="Combos">{activeCatalogCombos.map(combo => <option key={combo.id} value={`combo:${combo.id}`}>{combo.name} (<Money>{combo.comboPrice || combo.comboMrp}</Money>)</option>)}</optgroup>
-                          </select>
-                        </div>
+                      </div>
+                      <div className="border-b border-slate-100 bg-white px-3 py-2">
+                        <SearchSelect id={`add_item_${ord.id}`} label="Add a product or combo" options={addOptions} value="" onChange={(value) => { if (value) handleAddItemToOrder(ord.id, value); }}
+                          placeholder="Type a product or combo name to add it" emptyText="No product or combo matches" />
                       </div>
 
                       <div className="divide-y divide-slate-100 text-xs">

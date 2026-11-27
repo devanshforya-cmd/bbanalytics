@@ -1096,8 +1096,11 @@ export interface FeedbackEntry {
   customerName: string;
   customerPhone: string;
   brandCode: BrandCode;
+  /** The first product; productIds lists every product the entry is about. */
   productId: string;
+  /** Every product's name, comma separated. */
   productName: string;
+  productIds?: string[];
   type: FeedbackType;
   channel: string;
   orderId?: string;
