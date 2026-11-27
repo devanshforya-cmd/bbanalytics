@@ -21,7 +21,7 @@ export interface LedgerEntry {
   storeName: string;
   productId: string;
   productName: string;
-  kind: 'DELIVERY' | 'COUNT' | 'OPENING';
+  kind: 'DELIVERY' | 'COUNT' | 'OPENING' | 'SALE';
   particulars: string;
   /** Units received. */
   in: number;
@@ -105,6 +105,19 @@ export function buildStoreLedger(stores: LedgerStore[], dispatches: Dispatch[], 
     for (const count of storeCounts) {
       const day = dayOf(count.dateAd || count.createdAt);
       for (const item of count.items) {
+        if (count.mode === 'SALES') {
+          // A "Sold today" entry: units sold come off the balance; it is not a count.
+          events.push({ date: day, order: 0.5, productId: item.productId, productName: item.productName, apply: () => {
+            const sum = total(item.productId, item.productName);
+            const sold = Math.max(0, item.soldQty || 0);
+            const next = (balance.get(item.productId) || 0) - sold;
+            balance.set(item.productId, next);
+            sum.sold += sold; sum.soldValue += sold * (lastPrice.get(item.productId) || 0);
+            entries.push({ date: day, storeId: store.id, storeName: store.name, productId: item.productId, productName: sum.productName, kind: 'SALE',
+              particulars: `Sold, entered by ${count.officerName || 'staff'}`, in: 0, out: sold, damaged: 0, adjustment: 0, balance: next, unitPrice: lastPrice.get(item.productId) });
+          } });
+          continue;
+        }
         events.push({ date: day, order: 1, productId: item.productId, productName: item.productName, apply: () => {
           const sum = total(item.productId, item.productName);
           const counted = item.shelfQty || 0;

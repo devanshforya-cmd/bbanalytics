@@ -19,6 +19,9 @@ import {
 import { BeatItem, SecondaryOrderItem, StoreMarginType } from '@/lib/types';
 import { db } from '@/lib/db/db-service';
 import { useSubmitGuard } from '@/hooks/useSubmitGuard';
+import SearchSelect from '@/components/common/SearchSelect';
+import PaymentTermsField from '@/components/stores/PaymentTermsField';
+import { productLabel } from '@/lib/sub-brands';
 
 export interface MultiProductOrderData {
   items: SecondaryOrderItem[];
@@ -64,15 +67,11 @@ export default function InlineOrderForm({
   }, []);
 
   // Multi-item rows
-  const [lineItems, setLineItems] = useState<DraftLineItem[]>([
-    {
-      id: 'item_1',
-      productId: products[0]?.id || '',
-      unitType: 'CASES',
-      quantity: 1,
-      scheme: 'NONE',
-    },
-  ]);
+  const blankLine = (): DraftLineItem => ({ id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`, productId: '', unitType: 'CASES', quantity: 1, scheme: 'NONE' });
+  const [lineItems, setLineItems] = useState<DraftLineItem[]>(() => [blankLine()]);
+  /** Asked when the last product is removed: cancel the order, or pick another product. */
+  const [lastLinePrompt, setLastLinePrompt] = useState(false);
+  const [storeBrands, setStoreBrands] = useState<string[]>([]);
 
   // Brand-level margins config
   const [brandMargins, setBrandMargins] = useState<
@@ -80,6 +79,7 @@ export default function InlineOrderForm({
   >({});
 
   const [paymentTerms, setPaymentTerms] = useState<string>('COD');
+  const [termsKey, setTermsKey] = useState(0);
   const [orderNotes, setOrderNotes] = useState<string>('');
   const [orderPhotoUrl, setOrderPhotoUrl] = useState<string>('');
   const [isReviewStep, setIsReviewStep] = useState<boolean>(false);
@@ -102,22 +102,24 @@ export default function InlineOrderForm({
       });
       setBrandMargins(initialMargins);
 
-      // Reset items if empty
-      if (lineItems.length === 0 && products.length > 0) {
-        setLineItems([
-          {
-            id: `item_${Date.now()}`,
-            productId: products[0].id,
-            unitType: 'CASES',
-            quantity: 1,
-            scheme: 'NONE',
-          },
-        ]);
-      }
+      // Start each order fresh, with the store's own payment terms and brands.
+      setLineItems([blankLine()]);
+      setLastLinePrompt(false);
+      setPaymentTerms(s?.paymentTerms || 'COD');
+      setTermsKey((key) => key + 1);
+      setStoreBrands(((s as any)?.brandCodes || []).map((code: string) => code.toUpperCase()));
+      setOrderNotes('');
+      setOrderPhotoUrl('');
     }
-  }, [targetBeat, isOpen, products]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetBeat?.id, targetBeat?.entityId, isOpen]);
 
   if (!isOpen || !targetBeat) return null;
+
+  // Only the brands this store was given (all brands when none are set).
+  const offered = storeBrands.length ? products.filter((p) => storeBrands.includes(String(p.brandCode).toUpperCase())) : products;
+  const brandName = (code: string) => db.getBrands('ALL').find((b) => b.code === code)?.name || code;
+  const chosenLines = lineItems.filter((item) => item.productId);
 
   // Identify distinct brands present in the selected line items
   const activeBrands = Array.from(
@@ -146,7 +148,7 @@ export default function InlineOrderForm({
 
   // Calculate totals and secondary order items
   const casePcs = (item: DraftLineItem) => item.caseSize || products.find((p) => p.id === item.productId)?.caseSize || DEFAULT_CASE;
-  const calculatedItems: SecondaryOrderItem[] = lineItems.map((item) => {
+  const calculatedItems: SecondaryOrderItem[] = chosenLines.map((item) => {
     const prod = products.find((p) => p.id === item.productId);
     const unitsPerCase = casePcs(item);
     const storePaysUnit = getStoreUnitPrice(item.productId);
@@ -180,7 +182,7 @@ export default function InlineOrderForm({
 
   const grandStoreTotal = calculatedItems.reduce((sum, it) => sum + it.totalAmount, 0);
   const grandTotalUnits = calculatedItems.reduce((sum, it) => sum + it.totalUnits, 0);
-  const grandMrpValue = lineItems.reduce((sum, it) => {
+  const grandMrpValue = chosenLines.reduce((sum, it) => {
     const prod = products.find((p) => p.id === it.productId);
     const mrp = prod?.mrp || 0;
     const upc = casePcs(it);
@@ -189,22 +191,12 @@ export default function InlineOrderForm({
   }, 0);
 
   // Line item manipulation
-  const handleAddLineItem = () => {
-    setLineItems([
-      ...lineItems,
-      {
-        id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
-        productId: products[0]?.id || '',
-        unitType: 'CASES',
-        quantity: 1,
-        scheme: 'NONE',
-      },
-    ]);
-  };
+  const handleAddLineItem = () => { setLineItems((rows) => [...rows, blankLine()]); setLastLinePrompt(false); };
 
+  /** Removing the only product would leave an empty order: ask what to do instead. */
   const handleRemoveLineItem = (id: string) => {
-    if (lineItems.length === 1) return;
-    setLineItems(lineItems.filter((it) => it.id !== id));
+    if (lineItems.length === 1) { setLastLinePrompt(true); return; }
+    setLineItems((rows) => rows.filter((it) => it.id !== id));
   };
 
   const handleUpdateLineItem = (id: string, updates: Partial<DraftLineItem>) => {
@@ -229,10 +221,12 @@ export default function InlineOrderForm({
     e.target.value = '';
   };
 
+  const emptyLine = lineItems.findIndex((item) => !item.productId);
+  const reviewBlocker = !chosenLines.length ? 'Choose a product to order.'
+    : emptyLine >= 0 ? `Choose a product for line ${emptyLine + 1}, or remove it.`
+    : grandTotalUnits === 0 ? 'Enter a quantity.' : '';
   const handleProceedToReview = () => {
-    if (lineItems.length === 0 || grandTotalUnits === 0) {
-      return;
-    }
+    if (reviewBlocker) return;
     setIsReviewStep(true);
   };
 
@@ -300,23 +294,24 @@ export default function InlineOrderForm({
         <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs">
           {!isReviewStep ? (
             <>
-              {/* 1. Multi-Item Order Table */}
+              {/* 1. Products */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="font-bold text-slate-900 text-xs ">
-                    Order Products ({lineItems.length} SKUs)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleAddLineItem}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold transition text-xs shadow-2xs"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add product</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">Products ({chosenLines.length})</h4>
+                    <p className="text-[11px] text-slate-500">{storeBrands.length ? `This store stocks ${storeBrands.map(brandName).join(', ')}.` : 'All brands.'}</p>
+                  </div>
+                  <button type="button" onClick={handleAddLineItem}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100">
+                    <Plus className="h-3.5 w-3.5" />Add product
                   </button>
                 </div>
 
-                <div className="space-y-3">
+                {offered.length === 0 && (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-900">No active products for this store&apos;s brands. Add products in Products, or change the store&apos;s brands.</p>
+                )}
+
+                <ul className="space-y-2.5">
                   {lineItems.map((item, index) => {
                     const prod = products.find((p) => p.id === item.productId);
                     const unitsPerCase = casePcs(item);
@@ -326,133 +321,88 @@ export default function InlineOrderForm({
                     const isCases = item.unitType === 'CASES';
                     const units = isCases ? item.quantity * unitsPerCase : item.quantity;
                     const lineAmount = storePaysUnit * units;
+                    const taken = new Set(lineItems.filter((other) => other.id !== item.id).map((other) => other.productId));
+                    const options = offered.filter((p) => !taken.has(p.id)).map((p) => ({ value: p.id, label: productLabel(p), hint: [brandName(p.brandCode), p.mrp ? `MRP Rs. ${p.mrp}` : '', p.sku].filter(Boolean).join(' · '), group: brandName(p.brandCode) }));
+                    const segment = (on: boolean) => `flex-1 rounded-md px-2 py-1.5 text-xs font-bold transition ${on ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`;
 
                     return (
-                      <div
-                        key={item.id}
-                        className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <label className="text-[11px] font-bold text-slate-500 ">
-                              SKU #{index + 1}
-                            </label>
-                            <select aria-label="SKU #"
-                              value={item.productId}
-                              onChange={(e) =>
-                                handleUpdateLineItem(item.id, { productId: e.target.value })
-                              }
-                              className="w-full mt-1 p-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              {products.map((p) => {
-                                const bObj = db.getBrands('ALL').find((b) => b.code === p.brandCode);
-                                const bLabel = bObj?.name || p.brandCode;
-                                return (
-                                  <option key={p.id} value={p.id}>
-                                    [{bLabel}] {p.name} (MRP: Rs. {p.mrp})
-                                  </option>
-                                );
-                              })}
-                            </select>
+                      <li key={item.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-2xs">
+                        <div className="flex items-start gap-2">
+                          <span className="mt-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-600">{index + 1}</span>
+                          <div className="min-w-0 flex-1">
+                            <SearchSelect label={`Product ${index + 1}`} options={options} value={item.productId}
+                              onChange={(value) => handleUpdateLineItem(item.id, { productId: value })} placeholder="Search product, short name or SKU" />
                           </div>
-
-                          {lineItems.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveLineItem(item.id)}
-                              className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg mt-5 transition"
-                              title="Remove item"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button type="button" onClick={() => handleRemoveLineItem(item.id)} aria-label={`Remove product ${index + 1}`} title="Remove"
+                            className="mt-6 shrink-0 rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
 
-                        {/* Quantity and Unit Mode */}
-                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 items-end">
-                          <div>
-                            <label className="text-[11px] font-bold text-slate-500 ">
-                              Unit mode
-                            </label>
-                            <select aria-label="Unit mode"
-                              value={item.unitType}
-                              disabled={prodMode !== 'BOTH'}
-                              onChange={(e) =>
-                                handleUpdateLineItem(item.id, {
-                                  unitType: e.target.value as 'CASES' | 'PIECES',
-                                })
-                              }
-                              className="w-full mt-1 p-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
-                            >
-                              <option value="CASES">Cases</option>
-                              <option value="PIECES">Pieces</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label htmlFor="inlineorderform-quantity" className="text-[11px] font-bold text-slate-500 ">
-                              Quantity ({item.unitType === 'CASES' ? 'Cases' : 'Pcs'})
-                            </label>
-                            <NumberInput id="inlineorderform-quantity"
-                              type="number"
-                              min={1}
-                              value={item.quantity}
-                              onChange={(e) =>
-                                handleUpdateLineItem(item.id, {
-                                  quantity: Math.max(1, parseInt(e.target.value) || 1),
-                                })
-                              }
-                              className="w-full mt-1 p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 text-center"
-                            />
-                          </div>
-
-                          {isCases && (
-                            <div>
-                              <label htmlFor={`case-size-${item.id}`} className="text-[11px] font-bold text-slate-500">Pcs per case</label>
-                              <NumberInput id={`case-size-${item.id}`} type="number" min={1} max={1000} inputMode="numeric"
-                                value={unitsPerCase}
-                                onChange={(e) => {
-                                  const next = Math.min(1000, Math.max(1, parseInt(e.target.value) || 1));
-                                  handleUpdateLineItem(item.id, { caseSize: next === catalogCase ? undefined : next });
-                                }}
-                                className={`w-full mt-1 p-2 bg-white border rounded-xl text-xs font-bold text-center ${unitsPerCase !== catalogCase ? 'border-amber-400 text-amber-800' : 'border-slate-200 text-slate-900'}`} />
-                              {unitsPerCase !== catalogCase && (
-                                <button type="button" onClick={() => handleUpdateLineItem(item.id, { caseSize: undefined })} className="mt-0.5 text-[11px] font-semibold text-amber-700 underline">Usual: {catalogCase}</button>
-                              )}
+                        {prod && (
+                          <div className="mt-3 space-y-2.5 pl-8">
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                              <div>
+                                <span className="text-[11px] font-bold text-slate-500">Order in</span>
+                                <div className={`mt-1 flex gap-0.5 rounded-lg bg-slate-100 p-0.5 ${prodMode !== 'BOTH' ? 'opacity-60' : ''}`} role="group" aria-label="Order in cases or pieces">
+                                  <button type="button" disabled={prodMode === 'PIECES'} aria-pressed={isCases} onClick={() => handleUpdateLineItem(item.id, { unitType: 'CASES' })} className={segment(isCases)}>Cases</button>
+                                  <button type="button" disabled={prodMode === 'CASES'} aria-pressed={!isCases} onClick={() => handleUpdateLineItem(item.id, { unitType: 'PIECES', scheme: 'NONE' })} className={segment(!isCases)}>Pieces</button>
+                                </div>
+                              </div>
+                              <label className="block">
+                                <span className="text-[11px] font-bold text-slate-500">{isCases ? 'Cases' : 'Pieces'}</span>
+                                <NumberInput type="number" min={1} inputMode="numeric" value={item.quantity}
+                                  onChange={(e) => handleUpdateLineItem(item.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+                                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-center text-sm font-bold text-slate-900" />
+                              </label>
+                              {isCases ? (
+                                <label className="block">
+                                  <span className="text-[11px] font-bold text-slate-500">Pcs per case</span>
+                                  <NumberInput type="number" min={1} max={1000} inputMode="numeric" value={unitsPerCase}
+                                    onChange={(e) => {
+                                      const next = Math.min(1000, Math.max(1, parseInt(e.target.value) || 1));
+                                      handleUpdateLineItem(item.id, { caseSize: next === catalogCase ? undefined : next });
+                                    }}
+                                    className={`mt-1 w-full rounded-lg border bg-white px-2 py-1.5 text-center text-sm font-bold ${unitsPerCase !== catalogCase ? 'border-amber-400 text-amber-800' : 'border-slate-300 text-slate-900'}`} />
+                                </label>
+                              ) : <div className="hidden sm:block" />}
                             </div>
-                          )}
-
-                          <div>
-                            <label htmlFor="inlineorderform-promotional-scheme" className="text-[11px] font-bold text-slate-500 ">
-                              Promotional scheme
-                            </label>
-                            <select id="inlineorderform-promotional-scheme"
-                              value={item.scheme}
-                              onChange={(e) =>
-                                handleUpdateLineItem(item.id, { scheme: e.target.value })
-                              }
-                              className="w-full mt-1 p-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900"
-                            >
-                              <option value="NONE">No scheme</option>
-                              <option value="BUY_2_GET_4_FREE">Buy 2c get 4pcs free</option>
-                              <option value="BUY_5_GET_1_CASE_FREE">Buy 5c get 1c free</option>
-                            </select>
+                            {isCases && unitsPerCase !== catalogCase && (
+                              <p className="text-[11px] text-amber-800">Usually {catalogCase} per case. <button type="button" onClick={() => handleUpdateLineItem(item.id, { caseSize: undefined })} className="font-semibold underline">Use {catalogCase}</button></p>
+                            )}
+                            {isCases && (
+                              <label className="flex items-center gap-2">
+                                <span className="shrink-0 text-[11px] font-bold text-slate-500">Scheme</span>
+                                <select value={item.scheme} onChange={(e) => handleUpdateLineItem(item.id, { scheme: e.target.value })}
+                                  className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-900">
+                                  <option value="NONE">No scheme</option>
+                                  <option value="BUY_2_GET_4_FREE">Buy 2 cases, get 4 pcs free</option>
+                                  <option value="BUY_5_GET_1_CASE_FREE">Buy 5 cases, get 1 case free</option>
+                                </select>
+                              </label>
+                            )}
+                            <div className="flex items-baseline justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                              <span className="text-[11px] text-slate-600">{units} pcs × Rs. {storePaysUnit.toLocaleString()}</span>
+                              <span className="text-sm font-bold text-slate-900">Rs. {lineAmount.toLocaleString()}</span>
+                            </div>
                           </div>
-
-                          <div className="p-2 bg-white border border-slate-200 rounded-xl text-right">
-                            <span className="text-[11px] text-slate-500 block">Store pays</span>
-                            <span className="font-bold text-slate-900 text-xs">
-                              Rs. {lineAmount.toLocaleString()}
-                            </span>
-                            <span className="text-[11px] text-slate-500 block font-mono">
-                              ({units} pcs @ Rs.{storePaysUnit})
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                        )}
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
+
+                {lastLinePrompt && (
+                  <div role="alertdialog" aria-labelledby="last-line-title" className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                    <p id="last-line-title" className="text-sm font-bold text-rose-900">This is the only product in the order.</p>
+                    <p className="mt-0.5 text-xs text-rose-800">Removing it leaves nothing to order. Cancel the order, or choose a different product?</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" onClick={() => { setLastLinePrompt(false); onClose(); }} className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white hover:bg-rose-700">Cancel the order</button>
+                      <button type="button" onClick={() => { setLineItems([blankLine()]); setLastLinePrompt(false); }} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50">Choose another product</button>
+                      <button type="button" onClick={() => setLastLinePrompt(false)} className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:underline">Keep it</button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 2. Brand Margins Engine (Section 4 & 9) */}
@@ -555,19 +505,8 @@ export default function InlineOrderForm({
               {/* 3. Payment Terms & Photo Upload */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="inlineorderform-payment-terms" className="block font-bold text-slate-800 mb-1.5">
-                    Payment terms
-                  </label>
-                  <select id="inlineorderform-payment-terms"
-                    value={paymentTerms}
-                    onChange={(e) => setPaymentTerms(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white"
-                  >
-                    <option value="COD">Cash on delivery (COD)</option>
-                    <option value="CREDIT_7_DAYS">7 Days credit</option>
-                    <option value="CREDIT_15_DAYS">15 Days credit</option>
-                    <option value="CREDIT_30_DAYS">30 Days credit</option>
-                  </select>
+                  <PaymentTermsField key={termsKey} idPrefix="order-terms" terms={paymentTerms} onTermsChange={setPaymentTerms} />
+                  <p className="mt-1 text-[11px] text-slate-500">Starts at the store&apos;s terms. Change it for this order only.</p>
                 </div>
 
                 <div>
@@ -652,8 +591,11 @@ export default function InlineOrderForm({
                           ) : null}
                         </div>
                       </div>
-                      <div className="text-right font-bold text-slate-900">
-                        Rs. {item.totalAmount.toLocaleString()}
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-right font-bold text-slate-900">Rs. {item.totalAmount.toLocaleString()}</span>
+                        <button type="button" aria-label={`Remove ${item.productName}`} title="Remove"
+                          onClick={() => { const line = chosenLines[idx]; if (!line) return; if (lineItems.length === 1) { setIsReviewStep(false); setLastLinePrompt(true); } else handleRemoveLineItem(line.id); }}
+                          className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </div>
                   ))}
@@ -695,11 +637,13 @@ export default function InlineOrderForm({
                 <span className="text-[11px] text-slate-500 block font-mono">
                   ({grandTotalUnits} units)
                 </span>
+                {reviewBlocker && <span className="block text-[11px] font-semibold text-amber-700">{reviewBlocker}</span>}
               </div>
               <button
                 type="button"
                 onClick={handleProceedToReview}
-                disabled={lineItems.length === 0 || grandTotalUnits === 0}
+                disabled={!!reviewBlocker}
+                title={reviewBlocker || undefined}
                 className="flex-1 sm:flex-initial sm:px-8 h-14 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-base shadow-sm transition flex items-center justify-center gap-2"
               >
                 <span>Review order with retailer</span>

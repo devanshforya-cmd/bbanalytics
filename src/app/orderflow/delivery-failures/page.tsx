@@ -4,6 +4,7 @@ import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import { confirmAction } from '@/components/common/confirm';
 import DownloadButton from '@/components/common/DownloadButton';
+import RtoPendingPanel from '@/components/tickets/RtoPendingPanel';
 import InfoTip from '@/components/common/InfoTip';
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
@@ -359,7 +360,7 @@ export default function DeliveryFailuresPage() {
               Delivery failures
 <InfoTip label="About this page">Tracks courier bottlenecks (&quot;Call not received&quot;, &quot;Address not found&quot;) without muddying product quality metrics.</InfoTip></h1>
           </div>
-          <DownloadButton datasets={['delivery_failures']} records={{ deliveryFailures: filtered } as any} />
+          <DownloadButton datasets={['delivery_failures']} records={{ deliveryFailures: filtered, returns: db.getOrderIssues('ALL') } as any} />
           
         </div>
 
@@ -371,6 +372,8 @@ export default function DeliveryFailuresPage() {
           Log delivery failure
         </button>
       </div>
+
+      <RtoPendingPanel />
 
       {/* 6b. Reason Breakdown Chart (Horizontal Bar Chart with click-to-filter) */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">

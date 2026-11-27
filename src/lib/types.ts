@@ -565,6 +565,8 @@ export interface StockCountItem {
   openingQty?: number;
   restockedQty?: number;
   damagedQty?: number;
+  /** On a "Sold today" entry: units sold. shelfQty is then the balance after the sale. */
+  soldQty?: number;
 }
 
 export interface StockCount {
@@ -578,6 +580,8 @@ export interface StockCount {
   dateAd: string;
   dateBs: string;
   items: StockCountItem[];
+  /** COUNT (default): what is on the shelf now. SALES: what the store sold that day. */
+  mode?: 'COUNT' | 'SALES';
   createdAt: string;
 }
 
@@ -702,6 +706,14 @@ export interface ChequeHistory {
   changedBy: string;
   notes?: string;
   timestamp: string;
+}
+
+export interface Bank {
+  id: string;
+  name: string;
+  isArchived: boolean;
+  createdBy?: string;
+  createdAt: string;
 }
 
 export interface Cheque {
@@ -953,6 +965,8 @@ export interface DeliveryFailure {
   remarks?: string;
   /** When the parcel was marked returned to the warehouse (AD). */
   rtoDateAd?: string;
+  /** Each time someone asked the courier where a returning parcel is. */
+  rtoChases?: { dateAd: string; byName: string; note: string }[];
   createdAt: string;
 }
 

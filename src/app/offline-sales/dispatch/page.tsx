@@ -13,7 +13,7 @@ import CameraCapture from '@/components/common/CameraCapture';
 import SearchSelect, { type SearchOption } from '@/components/common/SearchSelect';
 import Money, { canSeeMoney } from '@/components/common/Money';
 import { toast } from '@/components/common/Toast';
-import { Truck, Plus, Edit2, X, History, FileCheck, Printer, PackageCheck, Send, CheckCircle2, Ban, Search, Download } from 'lucide-react';
+import { Truck, Plus, Edit2, X, History, FileCheck, Printer, PackageCheck, Send, CheckCircle2, Ban, Search, Download, Trash2, Undo2 } from 'lucide-react';
 import PageGuard from '@/components/common/PageGuard';
 import EmptyState from '@/components/common/EmptyState';
 import ConfirmModal from '@/components/common/ConfirmModal';
@@ -21,6 +21,7 @@ import { useSubmitGuard } from '@/hooks/useSubmitGuard';
 import { canPerform } from '@/lib/permissions';
 import { canDownload } from '@/lib/download-access';
 import { productLabel } from '@/lib/sub-brands';
+import { productsForStore } from '@/lib/store-brands';
 import { channelLabel, channelOfDistributor, channelOfRetailer } from '@/lib/store-channels';
 import { DISPATCH_STATUSES, canCorrect, destinationName, dispatchStatus, dispatchUnits, dispatchValue, nextSteps, statusLabel } from '@/lib/dispatch-flow';
 import { downloadDispatchWorkbook } from '@/lib/export/record-downloads';
@@ -117,7 +118,9 @@ export default function DispatchPage() {
   const filled = lines.filter((l) => l.productId && lineUnits(l) > 0);
   const totalUnits = filled.reduce((sum, l) => sum + lineUnits(l), 0);
   const totalValue = filled.reduce((sum, l) => sum + lineUnits(l) * priceFor(l.productId), 0);
-  const productOptions: SearchOption[] = products.map((p) => ({ value: p.id, label: productLabel(p), hint: [p.alias ? p.name : '', p.sku, p.caseSize ? `${p.caseSize} per carton` : 'no carton size'].filter(Boolean).join(' · ') }));
+  const storeRecord = (id?: string) => !id ? null : db.getRetailers().find((r) => r.id === id) || db.getBranches().find((b) => b.id === id) || db.getDistributors().find((d) => d.id === id) || null;
+  const destProducts = productsForStore(products, storeRecord(destId));
+  const productOptions: SearchOption[] = destProducts.map((p) => ({ value: p.id, label: productLabel(p), hint: [p.alias ? p.name : '', p.sku, p.caseSize ? `${p.caseSize} per carton` : 'no carton size'].filter(Boolean).join(' · ') }));
 
   const resetForm = () => { setDestId(''); setAlreadySent(false); setSentDate(getTodayAd()); setNotes(''); setPhoto(''); setLines([{ productId: '', cartons: 0, units: 0 }]); };
   const review = () => {
@@ -167,14 +170,31 @@ export default function DispatchPage() {
   const [correcting, setCorrecting] = useState<string | null>(null);
   const [corrections, setCorrections] = useState<Record<string, number>>({});
   const [reason, setReason] = useState('');
+  const [removed, setRemoved] = useState<string[]>([]);
+  const [added, setAdded] = useState<{ key: string; productId: string; units: number }[]>([]);
+  const startCorrecting = (disp: Dispatch) => { setCorrecting(disp.id); setCorrections(Object.fromEntries(disp.items.map((i) => [i.productId, i.quantity]))); setReason(''); setRemoved([]); setAdded([]); };
+  const addLine = () => setAdded((rows) => [...rows, { key: `add_${Date.now()}_${rows.length}`, productId: '', units: 0 }]);
+  const correctionCount = (disp: Dispatch) => disp.items.filter((item) => !removed.includes(item.productId) && corrections[item.productId] !== item.quantity).length + removed.length + added.filter((row) => row.productId && row.units > 0).length;
   const saveCorrections = (disp: Dispatch) => {
-    const changed = disp.items.filter((item) => corrections[item.productId] !== item.quantity);
-    if (!changed.length) { setCorrecting(null); return; }
-    if (!reason.trim()) { toast.error('Say why the quantities changed. It goes in the history.'); return; }
+    const changed = disp.items.filter((item) => !removed.includes(item.productId) && corrections[item.productId] !== item.quantity);
+    const adding = added.filter((row) => row.productId);
+    const changes = changed.length + removed.length + adding.length;
+    if (!changes) { setCorrecting(null); return; }
+    if (adding.some((row) => !(row.units > 0))) { toast.error('Enter how many units of each added product to send, or remove the line.'); return; }
+    if (removed.length === disp.items.length && !adding.length) { toast.error('Every product is removed. Cancel the order, or add a product.'); return; }
+    if (!reason.trim()) { toast.error('Say why the order is changing. It goes in the history.'); return; }
     guardedSubmit(async () => {
-      for (const item of changed) db.editDispatchItem(disp.id, item.productId, Math.max(0, corrections[item.productId] || 0), reason.trim());
-      setCorrecting(null); bump();
-      toast.success(`${changed.length} ${changed.length === 1 ? 'quantity' : 'quantities'} corrected.`);
+      try {
+        // Add first, so the order is never left empty part way through.
+        for (const row of adding) {
+          const p = products.find((x) => x.id === row.productId)!;
+          db.addDispatchItem(disp.id, { productId: p.id, productName: p.name, brandCode: p.brandCode, subBrandId: p.subBrandId, quantity: row.units, quantityPcs: row.units }, reason.trim());
+        }
+        for (const item of changed) db.editDispatchItem(disp.id, item.productId, Math.max(0, corrections[item.productId] || 0), reason.trim());
+        for (const id of removed) db.removeDispatchItem(disp.id, id, reason.trim());
+        setCorrecting(null); bump();
+        toast.success(`${changes} ${changes === 1 ? 'change' : 'changes'} saved.`);
+      } catch (error) { toast.error(error instanceof Error ? error.message : 'Not saved.'); }
     });
   };
 
@@ -236,7 +256,8 @@ export default function DispatchPage() {
             const status = dispatchStatus(disp);
             const editing = correcting === disp.id;
             const value = dispatchValue(disp) || disp.totalAmount || 0;
-            const changes = editing ? disp.items.filter((item) => corrections[item.productId] !== item.quantity).length : 0;
+            const changes = editing ? correctionCount(disp) : 0;
+            const allRemoved = editing && removed.length === disp.items.length && !added.some((row) => row.productId);
             return (
               <article key={disp.id} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-label={`${disp.dispatchNumber || 'Dispatch'} to ${destinationName(disp)}`}>
                 <header className="flex flex-col gap-2 border-b border-slate-100 pb-3 sm:flex-row sm:items-start sm:justify-between">
@@ -276,7 +297,7 @@ export default function DispatchPage() {
                           <th className="py-2 text-right font-semibold">Ordered</th>
                           <th className="py-2 text-right font-semibold">Sending</th>
                           {seesMoney && <th className="py-2 text-right font-semibold">Rate</th>}
-                          {editing && <th className="py-2 pl-4 font-semibold">Corrected to</th>}
+                          {editing && <th className="py-2 pl-4 font-semibold">Send instead</th>}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -291,6 +312,12 @@ export default function DispatchPage() {
                               {seesMoney && <td className="py-2 text-right tabular-nums text-slate-600">{item.unitPrice ? item.unitPrice.toLocaleString() : '—'}</td>}
                               {editing && (
                                 <td className="py-1.5 pl-4">
+                                  {removed.includes(item.productId) ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-800">Removed</span>
+                                      <button type="button" onClick={() => setRemoved((ids) => ids.filter((id) => id !== item.productId))} className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:underline"><Undo2 className="h-3 w-3" />Undo</button>
+                                    </div>
+                                  ) : (
                                   <div className="flex items-center gap-2">
                                     <div className="inline-flex items-center rounded-lg border border-slate-300 bg-white">
                                       <button type="button" aria-label={`Fewer ${item.productName}`} onClick={() => setCorrections((c) => ({ ...c, [item.productId]: Math.max(0, next - 1) }))} className="px-2.5 py-1.5 text-slate-600 hover:bg-slate-100">−</button>
@@ -298,7 +325,9 @@ export default function DispatchPage() {
                                       <button type="button" aria-label={`More ${item.productName}`} onClick={() => setCorrections((c) => ({ ...c, [item.productId]: next + 1 }))} className="px-2.5 py-1.5 text-slate-600 hover:bg-slate-100">+</button>
                                     </div>
                                     {diff !== 0 && <span className={`text-[11px] font-bold ${diff > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{diff > 0 ? '+' : ''}{diff}</span>}
+                                    <button type="button" aria-label={`Remove ${item.productName} from the order`} title="Remove from the order" onClick={() => setRemoved((ids) => [...ids, item.productId])} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
                                   </div>
+                                  )}
                                 </td>
                               )}
                             </tr>
@@ -308,14 +337,44 @@ export default function DispatchPage() {
                     </table>
                   </div>
                   {editing && (
+                    <div className="mt-3 space-y-2">
+                      {added.map((row, idx) => {
+                        const taken = new Set([...disp.items.map((i) => i.productId), ...added.filter((other) => other.key !== row.key).map((other) => other.productId)]);
+                        const options = productsForStore(products, storeRecord(disp.storeId)).filter((p) => !taken.has(p.id)).map((p) => ({ value: p.id, label: productLabel(p), hint: [p.sku, p.caseSize ? `${p.caseSize} per carton` : ''].filter(Boolean).join(' · ') }));
+                        return (
+                          <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_88px_32px] items-end gap-2 rounded-xl border border-emerald-200 bg-white p-2">
+                            <SearchSelect label={`Added product ${idx + 1}`} options={options} value={row.productId} onChange={(v) => setAdded((rows) => rows.map((r) => r.key === row.key ? { ...r, productId: v } : r))} placeholder="Search product" />
+                            <label className="block text-[11px] font-semibold text-slate-600">Units
+                              <NumberInput type="number" min={0} value={row.units || ''} onChange={(e) => setAdded((rows) => rows.map((r) => r.key === row.key ? { ...r, units: Math.max(0, parseInt(e.target.value) || 0) } : r))} className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-center font-semibold" />
+                            </label>
+                            <button type="button" aria-label="Remove this added product" onClick={() => setAdded((rows) => rows.filter((r) => r.key !== row.key))} className="mb-1.5 rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-4 w-4" /></button>
+                          </div>
+                        );
+                      })}
+                      {allRemoved ? (
+                        <div role="alertdialog" aria-label="Every product removed" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs">
+                          <p className="font-bold text-rose-900">Every product is removed from this order.</p>
+                          <p className="mt-0.5 text-rose-800">An order needs at least one product. Cancel the whole order, or add new products?</p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {nextSteps(status).includes('CANCELLED') && <button type="button" onClick={() => { setCorrecting(null); startMove(disp, 'CANCELLED'); }} className="rounded-lg bg-rose-600 px-3 py-1.5 font-bold text-white hover:bg-rose-700">Cancel the order</button>}
+                            <button type="button" onClick={addLine} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-bold text-slate-800 hover:bg-slate-50">Add new products</button>
+                            <button type="button" onClick={() => setRemoved([])} className="px-2 py-1.5 font-semibold text-slate-600 hover:underline">Undo removals</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={addLine} className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline"><Plus className="h-3.5 w-3.5" /> Add product</button>
+                      )}
+                    </div>
+                  )}
+                  {editing && (
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
                       <label className="flex-1 text-xs">
-                        <span className="mb-1 block font-semibold text-slate-700">Why are these changing?</span>
+                        <span className="mb-1 block font-semibold text-slate-700">Why is the order changing?</span>
                         <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Only 48 in stock, rest next week" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-blue-500" />
                       </label>
                       <div className="flex gap-2">
                         <button type="button" onClick={() => setCorrecting(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-                        <button type="button" onClick={() => saveCorrections(disp)} disabled={isSubmitting || !changes || !reason.trim()} className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{changes ? `Save ${changes} ${changes === 1 ? 'correction' : 'corrections'}` : 'Save corrections'}</button>
+                        <button type="button" onClick={() => saveCorrections(disp)} disabled={isSubmitting || !changes || !reason.trim() || allRemoved} className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{changes ? `Save ${changes} ${changes === 1 ? 'change' : 'changes'}` : 'Save changes'}</button>
                       </div>
                     </div>
                   )}
@@ -337,7 +396,7 @@ export default function DispatchPage() {
                     <Link href={`/offline-sales/dispatch/challan/${encodeURIComponent(disp.id)}`} target="_blank" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"><Printer className="h-3.5 w-3.5" /> Order challan</Link>
                     {allowDownload && <button type="button" onClick={() => downloadDispatchWorkbook(disp, db.getProducts(), brands, seesMoney)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-3.5 w-3.5" /> Excel</button>}
                     {disp.documentUrl && <button type="button" onClick={() => setLightbox(disp.documentUrl || null)} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-[11px] font-semibold text-blue-700 hover:bg-blue-100"><FileCheck className="h-3.5 w-3.5" /> Signed challan</button>}
-                    {canEdit && canCorrect(status) && !editing && <button type="button" onClick={() => { setCorrecting(disp.id); setCorrections(Object.fromEntries(disp.items.map((i) => [i.productId, i.quantity]))); setReason(''); }} disabled={!!correcting} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40"><Edit2 className="h-3 w-3" /> Correct quantities</button>}
+                    {canEdit && canCorrect(status) && !editing && <button type="button" onClick={() => startCorrecting(disp)} disabled={!!correcting} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40"><Edit2 className="h-3 w-3" /> Edit products</button>}
                   </div>
                   {canEdit && (
                     <div className="flex flex-wrap items-center gap-1.5">

@@ -98,7 +98,7 @@ export const PAGES: PageDefinition[] = [
   page('p.distributors', 'Distributors & chains', 'offline', 'distributors', 'Distributor and chain head-office accounts, shown inside Stores'),
   page('p.dispatch', 'Orders & dispatch', 'offline', 'dispatches', 'Store orders as dispatch orders: received, packed, dispatched, delivered; order challans and payment terms', { href: '/offline-sales/dispatch' }),
   page('p.live_tracking', 'Live GPS tracking', 'offline', 'gps_tracking', 'Where field staff are right now', { href: '/offline-sales/live-tracking', actions: ['VIEW', 'EDIT'] }),
-  page('p.stock_counts', 'Stock counts', 'offline', 'stock_counts', 'Shelf counts at every store, and what is out or running low', { href: '/offline-sales/stock-counts' }),
+  page('p.stock_counts', 'Stock counts', 'offline', 'stock_counts', 'Shelf counts and daily sales at every store, and what is out or running low', { href: '/offline-sales/stock-counts' }),
   page('p.shelf_photos', 'Shelf photos', 'offline', 'shelf_photos', 'Before and after shelf photos', { href: '/offline-sales/shelf-photos' }),
   page('p.calls', 'Call tracker', 'offline', 'call_tracker', 'Calls to stores and their outcome', { href: '/offline-sales/calls' }),
   page('p.cheques', 'Cheque tracker', 'offline', 'cheque_tracker', 'Cheques collected, handed over and banked', { href: '/offline-sales/cheques', needs: ['s.money'] }),

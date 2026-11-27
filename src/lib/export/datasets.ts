@@ -49,6 +49,7 @@ export interface DatasetDefinition {
 }
 
 const day = (value?: string | null) => (value || '').slice(0, 10);
+const FAILURE_STATUS: Record<string, string> = { FAILED: 'Failed', REATTEMPT_SCHEDULED: 'Reattempt scheduled', DELIVERED: 'Delivered', RETURNED_TO_WAREHOUSE: 'Returned to warehouse (RTO)', CANCELLED: 'Cancelled' };
 const bs = (dateAd?: string | null, given?: string | null) => given || (day(dateAd) ? (() => { try { return adToBs(`${day(dateAd)}T12:00:00`).formatted; } catch { return ''; } })() : '');
 const inRange = (dateAd: string | undefined | null, f: ExportFilters) => { const d = day(dateAd); return (!f.fromAd || d >= f.fromAd) && (!f.toAd || d <= f.toAd); };
 const brandOf = (source: ExportSource, code?: string) => source.brands.find((b) => b.code === code)?.name || code || '';
@@ -130,9 +131,20 @@ export const DATASETS: DatasetDefinition[] = [
   },
   {
     key: 'delivery_failures', label: 'Delivery failures', group: 'Online (D2C)', dated: true, page: 'p.delivery_failures',
-    build: (s, f) => ({ name: 'Delivery failures', columns: [col('Date (AD)'), col('Date (BS)'), col('Order'), col('Brand'), col('Reason'), col('Status'), col('Attempts', 'number'), col('Delivery partner'), col('District'), col('Valley'), col('Customer'), col('Phone')],
+    build: (s, f) => ({ name: 'Delivery failures', columns: [col('Date (AD)'), col('Date (BS)'), col('Order'), col('Brand'), col('Reason'), col('Status'), col('Attempts', 'number'), col('Delivery partner'), col('District'), col('Valley'), col('Customer'), col('Phone'),
+        col('RTO'), col('RTO since (AD)'), col('Back at warehouse (AD)'), col('Days waiting', 'number'), col('Days to come back', 'number'), col('Last asked courier (AD)'), col('Courier said')],
       rows: s.deliveryFailures.filter((d) => inRange(d.dateAd, f) && (!f.brandCode || f.brandCode === 'ALL' || (() => { const order = s.orders.find((o) => o.id === d.orderId); return order ? order.items.some((line) => lineMatches(s, f, line)) : d.brandCode === f.brandCode && !f.subBrandId; })()))
-        .map((d: any) => [day(d.dateAd), bs(d.dateAd, d.dateBs), d.orderNumber || '', brandOf(s, d.brandCode), d.reason, d.status, d.attempts ?? '', d.deliveryMethod || '', d.district || '', d.valley || '', d.customerName || '', d.customerPhone || '']) }),
+        .map((d: any) => {
+          const ticket = (s.returns || []).find((entry: any) => entry.ticketType === 'RTO' && entry.deliveryFailureId === d.id);
+          const isRto = d.status === 'RETURNED_TO_WAREHOUSE' || !!ticket;
+          const since = day(d.rtoDateAd || ticket?.dateAd);
+          const back = day(ticket?.receivedDateAd);
+          const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kathmandu' });
+          const gap = (a: string, b: string) => a && b ? Math.max(0, Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000)) : '';
+          const chase = d.rtoChases?.at(-1);
+          return [day(d.dateAd), bs(d.dateAd, d.dateBs), d.orderNumber || '', brandOf(s, d.brandCode), d.reason, FAILURE_STATUS[d.status] || d.status || 'Failed', d.attempts ?? '', d.deliveryMethod || '', d.district || '', d.valley || '', d.customerName || '', d.customerPhone || '',
+            !isRto ? '' : back ? 'Back' : 'RTO pending', since, back, isRto && !back ? gap(since, today) : '', back ? gap(since, back) : '', chase?.dateAd || '', chase?.note || ''];
+        }) }),
   },
   {
     key: 'customers', label: 'Customers', group: 'Online (D2C)', dated: false, page: 'p.customers',

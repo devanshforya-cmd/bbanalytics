@@ -11,12 +11,13 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/db/db-service';
 import { analyzeStoreArea, applicableStorePromotions } from '@/lib/area-selling';
 import StoreUpsellPanel from '@/components/stores/StoreUpsellPanel';
-import StoreLedger from '@/components/stores/StoreLedger';
 import { canDownload } from '@/lib/download-access';
 import { downloadStockCountWorkbook, downloadStoreOrderWorkbook } from '@/lib/export/record-downloads';
 import { dispatchStatus, statusLabel } from '@/lib/dispatch-flow';
 import StoreDeleteButton from '@/components/stores/StoreDeleteButton';
 import SetLocationModal from '@/components/stores/SetLocationModal';
+import StoreBrandsModal from '@/components/stores/StoreBrandsModal';
+import StockBalanceSheet from '@/components/stock/StockBalanceSheet';
 import StoreAreaEditor from '@/components/stores/StoreAreaEditor';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toast } from '@/components/common/Toast';
@@ -52,7 +53,6 @@ import {
   BarChart3,
   Layers3,
   Activity,
-  BookOpen,
   Download,
   Printer,
 } from 'lucide-react';
@@ -75,7 +75,7 @@ export default function StoreDetailPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [, refresh] = useState(0);
+  const [refreshTick, refresh] = useState(0);
   useEffect(() => {
     const update = () => refresh(value => value + 1);
     window.addEventListener('bb-db-updated', update);
@@ -89,7 +89,7 @@ export default function StoreDetailPage() {
 
   const [activeTab, setActiveTab] = useState<
     'VISITS' | 'STOCK' | 'LEDGER' | 'PHOTOS' | 'CHEQUES' | 'DOCS' | 'ORDERS' | 'ANALYTICS' | 'SALES_INTELLIGENCE' | 'NOTES'
-  >(searchParams.get('tab') === 'selling' && canViewSelling ? 'SALES_INTELLIGENCE' : 'VISITS');
+  >(searchParams.get('tab') === 'selling' && canViewSelling ? 'SALES_INTELLIGENCE' : searchParams.get('tab') === 'stock' ? 'STOCK' : 'VISITS');
   const requestedSelling = searchParams.get('tab') === 'selling';
   useEffect(() => {
     if (requestedSelling && canViewSelling) setActiveTab('SALES_INTELLIGENCE');
@@ -104,8 +104,9 @@ export default function StoreDetailPage() {
 
   // Lightbox for shelf photos
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
-  const [countOpen, setCountOpen] = useState(false);
+  const [countOpen, setCountOpen] = useState<false | 'COUNT' | 'SALES'>(false);
   const [locationOpen, setLocationOpen] = useState(false);
+  const [brandsOpen, setBrandsOpen] = useState(false);
   /** For an MT chain: which outlet's records to show ('ALL' combines every outlet and the head office). */
   const [outletFilter, setOutletFilter] = useState('ALL');
 
@@ -234,24 +235,24 @@ export default function StoreDetailPage() {
 
       {/* Store Header Card */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="rounded-xl bg-blue-50 border border-blue-200 p-2 text-blue-600">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 rounded-xl border border-blue-200 bg-blue-50 p-2 text-blue-600">
                 <Store className="h-6 w-6" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-                    {store.name}
-                  </h1>
-                  <StoreDeleteButton id={store.id} name={store.name} onDeleted={() => router.push('/offline-sales/stores')} />
-                  <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-800">
-                    {store.subType}
-                  </span>
-                  {store.type === 'BRANCH' && store.distributorId && <Link href={`/offline-sales/stores/${store.distributorId}`} className="text-[11px] font-semibold text-blue-700 hover:underline">Whole chain →</Link>}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h1 className="text-xl font-bold leading-tight tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-2xl">{store.name}</h1>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-800">{store.subType}</span>
+                      {store.type === 'BRANCH' && store.distributorId && <Link href={`/offline-sales/stores/${store.distributorId}`} className="text-[11px] font-semibold text-blue-700 hover:underline">Whole chain →</Link>}
+                    </div>
+                  </div>
+                  <div className="-mt-2 shrink-0"><StoreDeleteButton id={store.id} name={store.name} onDeleted={() => router.push('/offline-sales/stores')} /></div>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs text-slate-500">
                   <MapPin className="h-3.5 w-3.5 text-slate-400" />
                   <span>{store.address}</span>
                   {store.coordinates ? (
@@ -261,6 +262,12 @@ export default function StoreDetailPage() {
                   ) : <span className="ml-1 font-semibold text-amber-700">No location</span>}
                   {(canPerform(currentUser, 'stores', 'EDIT') || canPerform(currentUser, 'distributors', 'EDIT') || (canPerform(currentUser, 'stores', 'CREATE') && store.assignedOfficerId === currentUser.id)) && (
                     <button type="button" onClick={() => setLocationOpen(true)} className="ml-1 font-semibold text-blue-700 hover:underline">{store.coordinates ? 'Edit location' : 'Add location'}</button>
+                  )}
+                </div>
+                <div className="mt-0.5 text-xs text-slate-500">
+                  Brands: <span className="font-semibold text-slate-800">{store.brandCodes?.length ? store.brandCodes.map((code) => db.getBrands('ALL').find((b) => b.code === code)?.name || code).join(', ') : 'All brands'}</span>
+                  {(canPerform(currentUser, 'stores', 'EDIT') || canPerform(currentUser, 'distributors', 'EDIT') || (canPerform(currentUser, 'stores', 'CREATE') && store.assignedOfficerId === currentUser.id)) && (
+                    <button type="button" onClick={() => setBrandsOpen(true)} className="ml-1 font-semibold text-blue-700 hover:underline">Edit brands</button>
                   )}
                 </div>
               </div>
@@ -302,10 +309,10 @@ export default function StoreDetailPage() {
                 Cheques register
               </Link>
               {(store.type === 'RETAILER' || store.type === 'BRANCH') && (
-                <button type="button" onClick={() => setCountOpen(true)}
+                <button type="button" onClick={() => setCountOpen('COUNT')}
                   className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
                   <ClipboardList className="h-3.5 w-3.5 text-blue-600" />
-                  Count shelf
+                  Update stock
                 </button>
               )}
               <DownloadButton label="Download store file" fileLabel={store.name}
@@ -631,8 +638,7 @@ export default function StoreDetailPage() {
           { key: 'VISITS', label: 'Visit history', count: visits.length, icon: Clock },
           ...(!isOfficer ? [{ key: 'ANALYTICS', label: 'Analytics & credit', icon: TrendingUp }] : []),
           ...(canViewSelling ? [{ key: 'SALES_INTELLIGENCE', label: 'Area selling assist', icon: TrendingUp }] : []),
-          { key: 'STOCK', label: 'Stock counts', count: stockCounts.length, icon: ClipboardList },
-          { key: 'LEDGER', label: 'Stock ledger', icon: BookOpen },
+          { key: 'STOCK', label: 'Stock', count: stockCounts.length, icon: ClipboardList },
           { key: 'PHOTOS', label: 'Shelf photos', count: shelfPhotos.length, icon: Camera },
           { key: 'CHEQUES', label: 'Cheques', count: cheques.length, icon: CreditCard },
           { key: 'DOCS', label: 'Documents', count: documents.length, icon: FileText },
@@ -645,7 +651,7 @@ export default function StoreDetailPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
-              className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition ${
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition ${
                 isActive
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -855,25 +861,23 @@ export default function StoreDetailPage() {
       {activeTab === 'SALES_INTELLIGENCE' && canViewSelling && <StoreUpsellPanel analysis={areaAnalysis} promotions={promotions} />}
 
       {/* TAB 2: STOCK COUNTS */}
-      {activeTab === 'LEDGER' && (
-        <StoreLedger stores={scope.map((s) => ({ id: s.id, name: s.id === store.id && isChain ? `${store.name} (head office)` : s.name, kind: s.id === store.id ? store.type : 'BRANCH' }))} downloadStoreId={store.id} fileLabel={store.name} />
+
+      {activeTab === 'STOCK' && (
+        <StockBalanceSheet storeIds={scope.map((s) => s.id)} fileLabel={store.name} version={refreshTick * 1000 + stockCounts.length}
+          title={isChain ? (outletFilter === 'ALL' ? 'Stock balance sheet: all outlets' : 'Stock balance sheet') : 'Stock balance sheet'}
+          onCount={(store.type === 'RETAILER' || store.type === 'BRANCH') ? () => setCountOpen('COUNT') : undefined} onSales={(store.type === 'RETAILER' || store.type === 'BRANCH') ? () => setCountOpen('SALES') : undefined} />
       )}
 
       {activeTab === 'STOCK' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-slate-900 text-sm">Shelf counts</h3>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-slate-500 font-medium">{stockCounts.length} {stockCounts.length === 1 ? 'count' : 'counts'}</span>
-              {(store.type === 'RETAILER' || store.type === 'BRANCH') && (
-                <button type="button" onClick={() => setCountOpen(true)} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Count shelf</button>
-              )}
-            </div>
+            <h3 className="font-bold text-slate-900 text-sm">Counts and sales entries</h3>
+            <span className="text-xs text-slate-500 font-medium">{stockCounts.length} {stockCounts.length === 1 ? 'entry' : 'entries'}</span>
           </div>
 
           {stockCounts.length === 0 ? (
             <div className="p-8 text-center text-slate-500 text-xs border border-dashed rounded-xl">
-              No shelf counts for this store yet. Use Count shelf to record the first one.
+              No counts or sales entries yet. Use “Stock on shelf now” to set the opening stock.
             </div>
           ) : (
             <div className="space-y-3">
@@ -884,7 +888,7 @@ export default function StoreDetailPage() {
                       <span className="font-bold text-slate-900">{sc.dateBs}</span>
                       <span className="text-slate-500 text-[11px] ml-1">({sc.dateAd})</span>
                     </div>
-                    <span className="flex items-center gap-2 text-slate-500">Counted by {sc.officerName || 'not recorded'}{isChain && sc.entityId !== store.id ? ` · ${sc.storeName}` : ''}
+                    <span className="flex items-center gap-2 text-slate-500"><span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${sc.mode === 'SALES' ? 'bg-violet-100 text-violet-800' : 'bg-blue-100 text-blue-800'}`}>{sc.mode === 'SALES' ? 'Sold' : 'Count'}</span>{sc.mode === 'SALES' ? 'Entered' : 'Counted'} by {sc.officerName || 'not recorded'}{isChain && sc.entityId !== store.id ? ` · ${sc.storeName}` : ''}
                       {canDownload(currentUser) && <button type="button" onClick={() => downloadStockCountWorkbook(sc, db.getProducts('ALL'), db.getBrands('ALL'))} aria-label={`Download the count of ${sc.dateBs}`} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"><Download className="h-3 w-3" /> Excel</button>}
                     </span>
                   </div>
@@ -902,7 +906,9 @@ export default function StoreDetailPage() {
                           {item.productName} ↗
                         </Link>
                         <div className="flex justify-between items-center text-[11px] mt-1 text-slate-600">
-                          <span>Shelf: <strong>{item.shelfQty}</strong> (before: {item.previousQty})</span>
+                          {sc.mode === 'SALES'
+                            ? <span>Sold: <strong>{item.soldQty || 0}</strong> (stock {item.previousQty} → {item.shelfQty})</span>
+                            : <span>Shelf: <strong>{item.shelfQty}</strong> (before: {item.previousQty})</span>}
                           {item.flaggedDrop && (
                             <span className="text-[11px] text-rose-600 font-semibold bg-rose-50 px-1 rounded">
                               &gt;50% Drop
@@ -1210,9 +1216,10 @@ export default function StoreDetailPage() {
         </div>
       )}
       </div>
+      {brandsOpen && <StoreBrandsModal target={{ type: store.type === 'BRANCH' ? 'BRANCH' : store.type === 'DISTRIBUTOR' ? 'DISTRIBUTOR' : 'RETAILER', id: store.id, name: store.name, codes: store.brandCodes || [], outletCount: chainOutlets.length }} onClose={() => setBrandsOpen(false)} onSaved={() => refresh((v) => v + 1)} />}
       {locationOpen && <SetLocationModal type={store.type === 'BRANCH' ? 'BRANCH' : store.type === 'DISTRIBUTOR' ? 'DISTRIBUTOR' : 'RETAILER'} id={store.id} name={store.name} lat={store.coordinates?.lat} lng={store.coordinates?.lng} onClose={() => setLocationOpen(false)} onSaved={() => refresh((v) => v + 1)} />}
       <ShelfCountSheet
-        target={countOpen && store && (store.type === 'RETAILER' || store.type === 'BRANCH') ? { storeId: store.id, storeName: store.name, entityType: store.type as 'RETAILER' | 'BRANCH' } : null}
+        target={countOpen && store && (store.type === 'RETAILER' || store.type === 'BRANCH') ? { storeId: store.id, storeName: store.name, entityType: store.type as 'RETAILER' | 'BRANCH', mode: countOpen } : null}
         onSaved={() => { setActiveTab('STOCK'); refresh((n) => n + 1); }}
         onClose={() => setCountOpen(false)}
       />

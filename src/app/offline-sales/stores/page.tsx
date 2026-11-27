@@ -3,8 +3,10 @@
 import NumberInput from '@/components/common/NumberInput';
 import PaymentTermsField from '@/components/stores/PaymentTermsField';
 import SetLocationModal from '@/components/stores/SetLocationModal';
+import BrandPicker from '@/components/stores/BrandPicker';
+import StoreBrandsModal, { type BrandsTarget } from '@/components/stores/StoreBrandsModal';
 import { pinnedLocation } from '@/lib/gps-validation';
-import { MapPinOff } from 'lucide-react';
+import { MapPinOff, Tags } from 'lucide-react';
 import PagedList from '@/components/common/PagedList';
 import Portal from '@/components/common/Portal';
 import InfoTip from '@/components/common/InfoTip';
@@ -165,6 +167,8 @@ export default function StoresPage() {
   const [editingStore, setEditingStore] = useState<Retailer | null>(null);
   const [locationFor, setLocationFor] = useState<{ type: 'RETAILER' | 'BRANCH' | 'DISTRIBUTOR'; id: string; name: string; lat?: number; lng?: number } | null>(null);
   const [outletSearch, setOutletSearch] = useState<Record<string, string>>({});
+  const [brandsFor, setBrandsFor] = useState<BrandsTarget | null>(null);
+  const [adminBrands, setAdminBrands] = useState<string[]>(() => systemBrands.map((b) => b.code));
   // Pinning a store: managers for any store, field staff for their own.
   const canPin = (officerId?: string) => canEditStores || canEditAccounts || canCreateStores && (!isSalesOfficer || officerId === currentUser.id);
   const [editStoreName, setEditStoreName] = useState('');
@@ -211,22 +215,6 @@ export default function StoresPage() {
     } else { toast.error('This browser does not support device GPS.'); }
   };
 
-  const handleToggleBrand = (b: BrandCode) => {
-    if (fieldBrands.includes(b)) {
-      setFieldBrands(fieldBrands.filter((x) => x !== b));
-    } else {
-      setFieldBrands([...fieldBrands, b]);
-    }
-  };
-
-  const handleSelectAllBrands = () => {
-    if (fieldBrands.length >= systemBrands.length) {
-      setFieldBrands([]);
-    } else {
-      setFieldBrands(systemBrands.map((b) => b.code));
-    }
-  };
-
   // Section 2c: Save Field Add Store
   const handleSaveFieldStore = (e: React.FormEvent) => {
     e.preventDefault();
@@ -237,6 +225,7 @@ export default function StoresPage() {
 
     // The pin is optional: a store without one can still be put on a beat. Check-in then skips the distance check.
     if (!fieldArea.trim() || !fieldCity.trim()) { toast.error('Enter the store area and city.'); return; }
+    if (systemBrands.length && !fieldBrands.length) { toast.error('Choose at least one brand for this store.'); return; }
 
     guardedSubmit(async () => {
       const contacts = fieldContacts.filter((c) => c.name.trim() || c.phone.trim());
@@ -264,7 +253,7 @@ export default function StoresPage() {
           phone: c.phone,
           isPrimary: i === 0,
         })),
-        brandsStocked: fieldBrands.length > 0 ? fieldBrands : (systemBrands[0]?.code ? [systemBrands[0].code] : []),
+        brandsStocked: fieldBrands,
         distributorId: fieldParentDistributorId || undefined,
         distributorName: fieldParentDistributorId
           ? distributors.find((d) => d.id === fieldParentDistributorId)?.name
@@ -302,6 +291,7 @@ export default function StoresPage() {
     // Latitude and longitude are optional. If one is entered, both must be, and they must be real coordinates.
     const adminHasPin = adminLat.trim() !== '' || adminLng.trim() !== '';
     if (adminHasPin && (!adminLat.trim() || !adminLng.trim() || !validGpsCoordinates(Number(adminLat), Number(adminLng)))) { toast.error('Enter both latitude and longitude as numbers, or leave both empty.'); return; }
+    if (systemBrands.length && !adminBrands.length) { toast.error('Choose at least one brand for this store.'); return; }
 
     guardedSubmit(async () => {
       if (adminStoreType === 'DISTRIBUTOR') {
@@ -317,7 +307,7 @@ export default function StoresPage() {
           contactRole: adminContactRole,
           contactPhone: adminContactPhone,
           contactEmail: '',
-          brandsCarried: systemBrands.map((b) => b.code),
+          brandsCarried: adminBrands as BrandCode[],
           creditTerms: adminPaymentTerms,
           ...(adminCreditLimit ? { creditLimit: adminCreditLimit } : {}),
           defaultMargins: adminDefaultMargins,
@@ -336,7 +326,7 @@ export default function StoresPage() {
           contactRole: adminContactRole,
           contactPhone: adminContactPhone,
           contactEmail: '',
-          brandsCarried: systemBrands.map((b) => b.code),
+          brandsCarried: adminBrands as BrandCode[],
           creditTerms: adminPaymentTerms,
           ...(adminCreditLimit ? { creditLimit: adminCreditLimit } : {}),
           defaultMargins: adminDefaultMargins,
@@ -363,7 +353,7 @@ export default function StoresPage() {
           contactRole: adminContactRole,
           contactPhone: adminContactPhone,
           contacts: adminContactName || adminContactPhone ? [{ id: `cnt_${Date.now()}`, name: adminContactName, role: adminContactRole as ContactRole, phone: adminContactPhone, isPrimary: true }] : [],
-          brandsStocked: systemBrands.map((b) => b.code),
+          brandsStocked: adminBrands as BrandCode[],
           creditTerms: adminPaymentTerms,
           ...(adminCreditLimit ? { creditLimit: adminCreditLimit } : {}),
           defaultMargins: adminDefaultMargins,
@@ -372,7 +362,7 @@ export default function StoresPage() {
       }
 
       setShowAdminAddModal(false);
-      setAdminLat(''); setAdminLng(''); setAdminArea(''); setAdminAddress(''); setAdminParentDistributorId('');
+      setAdminLat(''); setAdminLng(''); setAdminArea(''); setAdminAddress(''); setAdminParentDistributorId(''); setAdminBrands(systemBrands.map((b) => b.code));
       refreshData();
     });
   };
@@ -443,6 +433,13 @@ export default function StoresPage() {
     });
   };
 
+
+  const cardAction = 'inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold hover:bg-slate-50';
+  const brandNames = (codes?: string[]) => {
+    if (!codes?.length) return 'All brands';
+    const names = codes.map((code) => systemBrands.find((b) => b.code === code)?.name || code);
+    return names.length === systemBrands.length && systemBrands.length > 1 ? 'All brands' : names.join(', ');
+  };
 
   const pinControl = (type: 'RETAILER' | 'BRANCH' | 'DISTRIBUTOR', store: { id: string; name: string; lat?: number; lng?: number; assignedOfficerId?: string }, compact = false) => {
     const pinned = pinnedLocation(store.lat, store.lng);
@@ -643,67 +640,40 @@ export default function StoresPage() {
 
                 return (
                   <div key={dist.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Link href={`/offline-sales/stores/${dist.id}`} className="font-bold text-slate-900 text-base hover:text-blue-700 hover:underline">{dist.name}</Link><StoreDeleteButton id={dist.id} name={dist.name} onDeleted={refreshData} />
-                          <span className="rounded-full bg-blue-50 text-blue-700 px-2.5 py-0.5 text-[11px] font-bold border border-blue-200">
-                            {channelLabel(channelOfDistributor(dist))}
-                          </span>
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1">
-                          {dist.city}{dist.creditTerms ? <> · Terms: <span className="font-semibold text-slate-800">{dist.creditTerms}</span></> : <> · No payment terms set</>}
-                        </div>
-                        {channelOfDistributor(dist) === 'DISTRIBUTOR' && (
-                          <div className="mt-2 max-w-xs">
-                            {dist.parentDistributorId && !canEditAccounts ? (
-                              <p className="text-[11px] text-slate-600">Supplied by <strong>{dist.parentDistributorName}</strong></p>
-                            ) : canEditAccounts ? (
-                              <SearchSelect label="Supplied by (bigger distributor)" options={distributorOptions.filter((o) => o.value !== dist.id)} value={dist.parentDistributorId || ''} onChange={(v) => assignDistributor('distributor', dist.id, v)} allowClear clearLabel="Supplied by us directly" placeholder="Search distributors" />
-                            ) : null}
-                          </div>
-                        )}
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2">
+                        <h3 className="min-w-0 flex-1 text-base font-bold leading-snug text-slate-900 [overflow-wrap:anywhere]">
+                          <Link href={`/offline-sales/stores/${dist.id}`} className="hover:text-blue-700 hover:underline">{dist.name}</Link>
+                          <span className="ml-2 inline-block whitespace-nowrap rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 align-[2px] text-[11px] font-bold text-blue-700">{channelLabel(channelOfDistributor(dist))}</span>
+                        </h3>
+                        <div className="-mr-2 -mt-2.5 shrink-0"><StoreDeleteButton id={dist.id} name={dist.name} onDeleted={refreshData} /></div>
                       </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCommercialTermsStore({
-                              entityType: 'DISTRIBUTOR',
-                              entityId: dist.id,
-                              name: dist.name,
-                              margins: dist.defaultMargins || {},
-                              paymentTerms: dist.creditTerms || '30-day credit',
-                              creditLimit: dist.creditLimit,
-                            })
-                          }
-                          className="rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1"
-                        >
-                          <Percent className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Terms</span>
-                        </button>
-
+                      <div className="-mt-1 space-y-0.5 text-xs text-slate-500">
+                        <div>{dist.city}{dist.creditTerms ? <> · Terms: <span className="font-semibold text-slate-800">{dist.creditTerms}</span></> : <> · No payment terms set</>}</div>
+                        <div>Brands: <span className="font-semibold text-slate-800">{brandNames(dist.brandsCarried)}</span></div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button type="button" onClick={() => setCommercialTermsStore({ entityType: 'DISTRIBUTOR', entityId: dist.id, name: dist.name, margins: dist.defaultMargins || {}, paymentTerms: dist.creditTerms || '30-day credit', creditLimit: dist.creditLimit })}
+                          className={`${cardAction} text-slate-700`}><Percent className="h-3.5 w-3.5 text-slate-400" />Terms</button>
+                        {canEditAccounts && (
+                          <button type="button" onClick={() => setBrandsFor({ type: 'DISTRIBUTOR', id: dist.id, name: dist.name, codes: dist.brandsCarried || [], outletCount: distBranches.length })} className={`${cardAction} text-slate-700`}><Tags className="h-3.5 w-3.5 text-slate-400" />Brands</button>
+                        )}
                         {canPin() && (
                           <button type="button" onClick={() => setLocationFor({ type: 'DISTRIBUTOR', id: dist.id, name: dist.name, lat: dist.lat, lng: dist.lng })}
-                            className="rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-1" title={pinnedLocation(dist.lat, dist.lng) ? 'Correct the location' : 'Add the location'}>
-                            {pinnedLocation(dist.lat, dist.lng) ? <MapPin className="w-3.5 h-3.5 text-slate-400" /> : <MapPinOff className="w-3.5 h-3.5 text-amber-600" />}<span>Location</span>
-                          </button>
+                            className={`${cardAction} text-slate-700`} title={pinnedLocation(dist.lat, dist.lng) ? 'Correct the location' : 'Add the location'}>
+                            {pinnedLocation(dist.lat, dist.lng) ? <MapPin className="h-3.5 w-3.5 text-slate-400" /> : <MapPinOff className="h-3.5 w-3.5 text-amber-600" />}Location</button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setTargetStoreForContact({
-                              id: dist.id,
-                              type: 'DISTRIBUTOR',
-                              name: dist.name,
-                            })
-                          }
-                          className="rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50"
-                        >
-                          + Contact
-                        </button>
+                        <button type="button" onClick={() => setTargetStoreForContact({ id: dist.id, type: 'DISTRIBUTOR', name: dist.name })} className={`${cardAction} text-blue-700`}><UserPlus className="h-3.5 w-3.5" />Contact</button>
                       </div>
+                      {channelOfDistributor(dist) === 'DISTRIBUTOR' && (
+                        <div className="max-w-xs">
+                          {dist.parentDistributorId && !canEditAccounts ? (
+                            <p className="text-[11px] text-slate-600">Supplied by <strong>{dist.parentDistributorName}</strong></p>
+                          ) : canEditAccounts ? (
+                            <SearchSelect label="Supplied by (bigger distributor)" options={distributorOptions.filter((o) => o.value !== dist.id)} value={dist.parentDistributorId || ''} onChange={(v) => assignDistributor('distributor', dist.id, v)} allowClear clearLabel="Supplied by us directly" placeholder="Search distributors" />
+                          ) : null}
+                        </div>
+                      )}
                     </div>
 
                     {/* Section 3: Contact Directory with Primary Star & Flag */}
@@ -768,6 +738,7 @@ export default function StoresPage() {
                             </div>
                             <div className="flex shrink-0 flex-col items-end gap-1">
                               {pinControl('BRANCH', branch, true)}
+                              {(canEditAccounts || canEditStores) && <button type="button" onClick={() => setBrandsFor({ type: 'BRANCH', id: branch.id, name: branch.name, codes: branch.brandsAvailable || [] })} className="flex items-center gap-1 font-bold text-slate-500 hover:underline" title={brandNames(branch.brandsAvailable)}><Tags className="h-3.5 w-3.5" />Brands</button>}
                               <StoreDeleteButton id={branch.id} name={branch.name} onDeleted={refreshData} />
                             </div>
                           </div>
@@ -795,49 +766,25 @@ export default function StoresPage() {
               {<PagedList items={filteredRetailers} label="stores" render={(pageRows) => pageRows.map((ret) => (
                 <div key={ret.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-3.5 flex flex-col justify-between">
                   <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <Link href={`/offline-sales/stores/${ret.id}`} className="font-bold text-slate-900 text-sm hover:text-blue-700 hover:underline">{ret.name}</Link><StoreDeleteButton id={ret.id} name={ret.name} onDeleted={refreshData} />
-                        <span className="mt-0.5 flex flex-wrap gap-1">
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-bold leading-snug text-slate-900 [overflow-wrap:anywhere]"><Link href={`/offline-sales/stores/${ret.id}`} className="hover:text-blue-700 hover:underline">{ret.name}</Link></h3>
+                        <span className="mt-1 flex flex-wrap gap-1">
                           <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700">{channelLabel(channelOfRetailer(ret))}</span>
                           {(ret.category || ret.type) && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">{ret.category || ret.type}</span>}
                         </span>
                       </div>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCommercialTermsStore({
-                              entityType: 'RETAILER',
-                              entityId: ret.id,
-                              name: ret.name,
-                              margins: ret.defaultMargins || {},
-                              paymentTerms: ret.creditTerms || '15-day credit',
-                              creditLimit: ret.creditLimit,
-                            })
-                          }
-                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600"
-                          title="Commercial terms & default margins"
-                        >
-                          <Percent className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setTargetStoreForContact({
-                              id: ret.id,
-                              type: 'RETAILER',
-                              name: ret.name,
-                            })
-                          }
-                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-blue-600 font-bold text-xs"
-                          title="Add contact"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      <div className="-mr-2 -mt-2.5 shrink-0"><StoreDeleteButton id={ret.id} name={ret.name} onDeleted={refreshData} /></div>
                     </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button type="button" onClick={() => setCommercialTermsStore({ entityType: 'RETAILER', entityId: ret.id, name: ret.name, margins: ret.defaultMargins || {}, paymentTerms: ret.creditTerms || '15-day credit', creditLimit: ret.creditLimit })}
+                        className={`${cardAction} text-slate-700`} title="Payment terms and brand margins"><Percent className="h-3.5 w-3.5 text-slate-400" />Terms</button>
+                      {(canEditStores || canPin(ret.assignedOfficerId)) && (
+                        <button type="button" onClick={() => setBrandsFor({ type: 'RETAILER', id: ret.id, name: ret.name, codes: ret.brandsStocked || [] })} className={`${cardAction} text-slate-700`}><Tags className="h-3.5 w-3.5 text-slate-400" />Brands</button>
+                      )}
+                      <button type="button" onClick={() => setTargetStoreForContact({ id: ret.id, type: 'RETAILER', name: ret.name })} className={`${cardAction} text-blue-700`}><UserPlus className="h-3.5 w-3.5" />Contact</button>
+                    </div>
+                    <div className="text-xs text-slate-500">Brands: <span className="font-semibold text-slate-800">{brandNames(ret.brandsStocked)}</span></div>
 
                     <div className="text-xs text-slate-500">
                       <span className="flex items-center gap-1">
@@ -1024,43 +971,8 @@ export default function StoresPage() {
                   </div>
                 </div>
 
-                {/* Brands Stocked */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="font-bold text-slate-700">Brands stocked</label>
-                    <button
-                      type="button"
-                      onClick={handleSelectAllBrands}
-                      className="text-xs text-blue-600 font-semibold hover:underline"
-                    >
-                      {fieldBrands.length >= systemBrands.length && systemBrands.length > 0 ? 'Clear All' : 'Select All'}
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {systemBrands.length === 0 ? (
-                      <p className="text-xs text-slate-500 ">No brands configured yet. Add brands in Settings.</p>
-                    ) : (
-                      systemBrands.map((b) => (
-                        <label
-                          key={b.code}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer font-bold ${
-                            fieldBrands.includes(b.code)
-                              ? 'bg-blue-50 border-blue-300 text-blue-800'
-                              : 'bg-white border-slate-200 text-slate-600'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={fieldBrands.includes(b.code)}
-                            onChange={() => handleToggleBrand(b.code)}
-                            className="rounded text-blue-600"
-                          />
-                          <span>{b.name}</span>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
+                {/* Brands given to the store */}
+                <BrandPicker brands={systemBrands.map((b) => ({ code: b.code, name: b.name }))} value={fieldBrands} onChange={(codes) => setFieldBrands(codes as BrandCode[])} />
 
                 {/* Supplied by */}
                 <div>
@@ -1261,6 +1173,10 @@ export default function StoresPage() {
                   </>}
                 </div>
 
+                <BrandPicker brands={systemBrands.map((b) => ({ code: b.code, name: b.name }))} value={adminBrands} onChange={setAdminBrands}
+                  label={storeChannel(adminStoreType).account === 'distributors' ? 'Brands it carries' : 'Brands given to this store'}
+                  hint={adminStoreType === 'CHAIN_STORE' ? 'New outlets start with these brands. Orders show only these brands.' : undefined} />
+
                 {/* Section 4: Default Margins Per Brand */}
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
                   <div className="flex items-center justify-between">
@@ -1273,7 +1189,7 @@ export default function StoresPage() {
                     {systemBrands.length === 0 ? (
                       <p className="text-xs text-slate-500 p-2 bg-slate-50 rounded-xl">No brands configured yet. Add brands in Settings.</p>
                     ) : (
-                      systemBrands.map((b) => {
+                      systemBrands.filter((b) => adminBrands.includes(b.code)).map((b) => {
                         const brandKey = b.code;
                         const cur = adminDefaultMargins[brandKey] || { pct: 15, type: 'MARKDOWN' };
                         return (
@@ -1729,6 +1645,7 @@ export default function StoresPage() {
         )}
       </div>
       {locationFor && <SetLocationModal {...locationFor} onClose={() => setLocationFor(null)} onSaved={refreshData} />}
+      {brandsFor && <StoreBrandsModal target={brandsFor} onClose={() => setBrandsFor(null)} onSaved={refreshData} />}
       {outletChain && <AddOutletModal chain={outletChain} onClose={() => setOutletChain(null)} onSaved={refreshData} />}
     </PageGuard>
   );

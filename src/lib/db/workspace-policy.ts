@@ -33,12 +33,13 @@ const FEATURES: Record<WorkspaceCollection, AccessKey[]> = {
   failureReasons: ['orderflow', 'order_desk', 'p.settings_lists'], userPreferences: [],
   campaigns: ['p.sales_offers'],
   customerCalls: ['customer_calls'],
+  banks: ['cheque_tracker', 'beat_plans', 'p.settings_lists'],
 };
 
 const GLOBAL_CATALOG = new Set<WorkspaceCollection>([
   'products', 'combos', 'reviewCategories', 'holidays', 'seasonalPatterns', 'taskTemplates',
   'promotions', 'documentTypes', 'storeCategories', 'workspaceConfig',
-  'influencerNiches', 'marketingOptions', 'failureReasons', 'campaigns',
+  'influencerNiches', 'marketingOptions', 'failureReasons', 'campaigns', 'banks',
 ]);
 
 export function collectionFeatures(collection: WorkspaceCollection, read = false): AccessKey[] {
@@ -50,6 +51,7 @@ export function collectionFeatures(collection: WorkspaceCollection, read = false
   if (read && collection === 'holidays') return ['settings', 'beat_plans', 'tasks'];
   // Everyone who takes or reviews online orders sees the running sales; the Sales & offers page manages them.
   if (read && collection === 'campaigns') return ['p.sales_offers', 'settings', 'marketing', 'orderflow', 'order_desk', 'dashboard'];
+  if (read && collection === 'banks') return ['cheque_tracker', 'beat_plans', 'settings', 'stores', 'dashboard'];
   if (read && collection === 'failureReasons') return ['orderflow', 'order_desk', 'settings', 'reviews', 'dashboard'];
   if (read && collection === 'stockCounts') return ['beat_plans', 'dispatches', 'stock_counts', 'stores'];
   if (read && collection === 'secondaryOrders') return ['beat_plans', 'stock_counts'];

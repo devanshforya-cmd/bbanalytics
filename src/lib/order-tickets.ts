@@ -246,6 +246,7 @@ export interface RtoRow {
   courier: string; district: string; valley: string; reason: string; attempts: number;
   orderDateAd?: string; dispatchedDateAd?: string; failedDateAd: string; rtoDateAd?: string; receivedDateAd?: string;
   daysToReturn: number | null; daysWaiting: number | null; value: number; units: number; back: boolean; tracked: boolean;
+  customerPhone?: string; lastChasedAd?: string; lastChaseNote?: string; chases: number;
 }
 
 /** Every parcel marked returned-to-warehouse, with its ticket when one exists. */
@@ -265,6 +266,7 @@ export function rtoRows(failures: DeliveryFailure[], tickets: ReturnEntry[], ord
       rtoDateAd, receivedDateAd, daysToReturn: dayDiff(rtoDateAd, receivedDateAd), daysWaiting: receivedDateAd ? null : dayDiff(rtoDateAd, todayAd),
       value: order?.totalAmount || 0, units: (order?.items || []).reduce((sum, item) => sum + item.quantity, 0) || (failure.products || []).reduce((sum, item) => sum + (item.quantity || 1), 0),
       back: !!receivedDateAd, tracked: !!ticket,
+      customerPhone: failure.customerPhone, lastChasedAd: failure.rtoChases?.at(-1)?.dateAd, lastChaseNote: failure.rtoChases?.at(-1)?.note, chases: failure.rtoChases?.length || 0,
     };
   }).sort((a, b) => (b.rtoDateAd || b.failedDateAd).localeCompare(a.rtoDateAd || a.failedDateAd));
 }
