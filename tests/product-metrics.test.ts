@@ -155,3 +155,11 @@ test('combo figures: kits, buyers, linked returns, reviews and failures, share o
   assert.equal(trend.find((p) => p.key === '2026-11')!.d2c, 3);
   assert.equal(trend.find((p) => p.key === '2026-11')!.returned, 3);
 });
+
+test('a review about several products counts on each product page', () => {
+  const many = fb({ productId: 'roll', productIds: ['roll', 'wash'], productName: 'Roll, Wash' });
+  const base = { orders: [], secondaryOrders: [], combos: [], returns: [], feedback: [many] };
+  assert.equal(productMetrics('roll', base).feedback.reviews, 1);
+  assert.equal(productMetrics('wash', base).feedback.reviews, 1);
+  assert.equal(productMetrics('other', base).feedback.reviews, 0);
+});

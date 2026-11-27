@@ -46,8 +46,8 @@ function storeUnits(order: SecondaryOrder, productId: string): number {
 }
 
 /** Does this return, review or complaint concern the product (directly or as part of a combo)? */
-function concerns(entry: { productId?: string; comboId?: string }, productId: string, parts: ComboParts): boolean {
-  if (entry.productId === productId) return true;
+function concerns(entry: { productId?: string; productIds?: string[]; comboId?: string }, productId: string, parts: ComboParts): boolean {
+  if (entry.productId === productId || entry.productIds?.includes(productId)) return true;
   return !!entry.productId && !entry.comboId && !!parts.get(entry.productId)?.some((part) => part.productId === productId);
 }
 
@@ -264,7 +264,7 @@ export function comboMetrics(comboId: string, input: ProductMetricsInput & { nam
     }
   }
 
-  const feedbackEntries = input.feedback.filter((entry) => entry.productId === comboId || fromComboOrder(entry));
+  const feedbackEntries = input.feedback.filter((entry) => entry.productId === comboId || entry.productIds?.includes(comboId) || fromComboOrder(entry));
   const issues = new Map<string, number>();
   for (const entry of [...feedbackEntries, ...returnEntries]) for (const issue of entry.issueCategories || []) issues.set(issue, (issues.get(issue) || 0) + 1);
 
