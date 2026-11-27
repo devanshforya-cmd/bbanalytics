@@ -19,8 +19,8 @@ import {
   Lightbulb,
 } from 'lucide-react';
 import { db } from '@/lib/db/db-service';
+import DocumentTypesManager from '@/components/documents/DocumentTypesManager';
 import {
-  DocumentTypeConfig,
   StoreCategoryConfig,
   RecurringScheduleEntry,
 } from '@/lib/types';
@@ -28,8 +28,6 @@ import { toast } from '@/components/common/Toast';
 
 export default function FieldSalesSettings() {
   const [photoRequired, setPhotoRequired] = useState(() => db.getRequireStorePhotoAtCheckIn());
-  const [docTypes, setDocTypes] = useState<DocumentTypeConfig[]>(() => db.getDocumentTypes());
-  const [newDocTypeName, setNewDocTypeName] = useState('');
 
   const [categories, setCategories] = useState<StoreCategoryConfig[]>(() => db.getStoreCategories());
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -68,22 +66,6 @@ export default function FieldSalesSettings() {
         ? 'Store entrance photo is now required before check-in.'
         : 'Store entrance photo requirement disabled.'
     );
-  };
-
-  // Handle Document Types
-  const handleAddDocType = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newDocTypeName.trim()) return;
-    db.addDocumentType(newDocTypeName.trim());
-    setDocTypes([...db.getDocumentTypes()]);
-    setNewDocTypeName('');
-    toast.success('New document type added.');
-  };
-
-  const handleToggleDocType = (id: string) => {
-    db.toggleDocumentType(id);
-    setDocTypes([...db.getDocumentTypes()]);
-    toast.info('Document type status updated.');
   };
 
   // Handle Store Categories
@@ -174,59 +156,13 @@ export default function FieldSalesSettings() {
                 Document types &amp; handover receipts
               </h3>
               <p className="text-xs text-slate-500">
-                Configure document categories collected in the field (e.g. Purchase Orders, Invoices, Agreements).
+                Store documents ask which store, chain or outlet they came from. Other documents (supplier or company papers) do not.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Add Type Form */}
-        <form onSubmit={handleAddDocType} className="flex gap-2">
-          <input
-            type="text"
-            value={newDocTypeName}
-            onChange={(e) => setNewDocTypeName(e.target.value)}
-            placeholder="e.g. Distributor Tax Clearance Certificate, Credit Note…"
-            className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            className="btn btn-primary"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add type</span>
-          </button>
-        </form>
-
-        {/* Existing Document Types List */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
-          {docTypes.map((dt) => (
-            <div
-              key={dt.id}
-              className={`p-3 rounded-xl border flex items-center justify-between gap-2 transition ${
-                dt.isActive ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-200 opacity-60'
-              }`}
-            >
-              <div className="min-w-0">
-                <span className="text-xs font-bold text-slate-900 block truncate">{dt.name}</span>
-                <span className="text-[11px] text-slate-500">
-                  {dt.isActive ? 'Active in mobile app' : 'Deactivated'}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleToggleDocType(dt.id)}
-                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition ${
-                  dt.isActive
-                    ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                }`}
-              >
-                {dt.isActive ? 'Active' : 'Disabled'}
-              </button>
-            </div>
-          ))}
-        </div>
+        <DocumentTypesManager />
       </div>
 
       <p className="rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-600">Store categories are now in <a href="/settings?tab=lists" className="font-semibold text-blue-700 underline">Settings → Lists &amp; categories</a>.</p>

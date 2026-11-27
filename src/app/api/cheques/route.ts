@@ -27,18 +27,20 @@ export async function POST(request: Request) {
     const amount = positiveNumber(body.amount, 'amount');
     const bankName = requiredText(body.bankName, 'bankName');
     const entityId = requiredText(body.entityId, 'entityId');
-    if (body.entityType !== 'BRANCH' && body.entityType !== 'RETAILER') throw new ApiInputError('A valid entityType is required.');
+    if (!['BRANCH', 'RETAILER', 'DISTRIBUTOR'].includes(body.entityType)) throw new ApiInputError('A valid entityType is required.');
     const { db, commit } = await openServerWorkspace(auth.user);
-    const store = (body.entityType === 'BRANCH' ? db.getBranches() : db.getRetailers()).find(store => store.id === entityId);
+    const store = (body.entityType === 'BRANCH' ? db.getBranches() : body.entityType === 'DISTRIBUTOR' ? db.getDistributors() : db.getRetailers()).find(store => store.id === entityId);
     if (!store) throw new ApiInputError('The linked store does not exist.');
     const ids = scopeOfficerIds(db, auth.user, 'cheque_tracker');
-    if (ids !== null && !ids.has(store.assignedOfficerId)) throw new ApiInputError('Not found.', 404);
-    const storeBrands = 'brandsAvailable' in store ? store.brandsAvailable : store.brandsStocked;
+    const owner = 'assignedOfficerId' in store ? store.assignedOfficerId : undefined;
+    if (ids !== null && owner && !ids.has(owner)) throw new ApiInputError('Not found.', 404);
+    const storeBrands = 'brandsAvailable' in store ? store.brandsAvailable : 'brandsCarried' in store ? store.brandsCarried : store.brandsStocked;
+    const chain = 'distributorId' in store && body.entityType === 'BRANCH' ? db.getDistributors().find((d) => d.id === store.distributorId) : body.entityType === 'DISTRIBUTOR' && db.getBranches().some((b) => b.distributorId === store.id) ? store : undefined;
     const brandCodes = storeBrands.filter(code => canAccessBrand(auth.user, code));
     if (!getAssignedBrandCodes(auth.user).includes('ALL') && brandCodes.length === 0) throw new ApiInputError('Not found.', 404);
     const created = db.addCheque({
       chequeNumber, amount, bankName, entityId, entityType: body.entityType,
-      storeName: store.name, brandCodes, status: 'COLLECTED_IN_FIELD',
+      storeName: store.name, brandCodes, status: 'COLLECTED_IN_FIELD', ...(chain ? { chainId: chain.id, chainName: chain.name } : {}),
       receivedDateAd: dateAd(body.receivedDateAd, 'receivedDateAd', new Date().toISOString().slice(0, 10)), receivedDateBs: body.receivedDateBs || getTodayBs(),
       cashDateAd: dateAd(body.cashDateAd, 'cashDateAd'), cashDateBs: requiredText(body.cashDateBs, 'cashDateBs'),
       photoUrl: typeof body.photoUrl === 'string' ? body.photoUrl : '', notes: typeof body.notes === 'string' ? body.notes : '',

@@ -97,6 +97,8 @@ export default function BeatPlanPage() {
   const [chequeNumber, setChequeNumber] = useState('');
   const [chequeAmount, setChequeAmount] = useState('');
   const [chequeBank, setChequeBank] = useState('');
+  /** At an MT outlet: is the cheque for this outlet, or the whole chain (head office)? */
+  const [chequeForChain, setChequeForChain] = useState(false);
   const [chequeCashDate, setChequeCashDate] = useState('');
   const [chequePhotoUrl, setChequePhotoUrl] = useState('');
   const [chequeNotes, setChequeNotes] = useState('');
@@ -423,10 +425,14 @@ export default function BeatPlanPage() {
     }
     if (!chequeBank.trim()) { toast.error('Choose the bank the cheque is drawn on.'); return; }
 
+    const outlet = targetBeat.entityType === 'BRANCH' ? db.getBranches().find((b) => b.id === targetBeat.entityId) : undefined;
+    const chain = outlet?.distributorId ? (db.getDistributors().find((d) => d.id === outlet.distributorId) || { id: outlet.distributorId, name: outlet.distributorName || 'Chain' }) : undefined;
+    const forChain = !!chain && chequeForChain;
     db.addCheque({
-      entityType: targetBeat.entityType,
-      entityId: targetBeat.entityId,
-      storeName: targetBeat.storeName,
+      entityType: forChain ? 'DISTRIBUTOR' : targetBeat.entityType,
+      entityId: forChain ? chain!.id : targetBeat.entityId,
+      ...(chain ? { chainId: chain.id, chainName: chain.name } : {}),
+      storeName: forChain ? `${chain!.name} (whole chain)` : targetBeat.storeName,
       chequeNumber: chequeNumber.trim(),
       amount: parseFloat(chequeAmount) || 0,
       bankName: chequeBank,
@@ -445,8 +451,9 @@ export default function BeatPlanPage() {
     setChequeCashDate('');
     setChequePhotoUrl('');
     setChequeNotes('');
+    setChequeForChain(false);
     handleActionComplete('COLLECT_CHEQUE');
-    toast.success(`Cheque recorded for ${targetBeat.storeName}. Handover to office pending.`);
+    toast.success(`Cheque recorded for ${forChain ? `${chain!.name} (whole chain)` : targetBeat.storeName}. Handover to office pending.`);
   };
 
   // Shelf Photos submit
@@ -732,6 +739,18 @@ export default function BeatPlanPage() {
               </div>
 
               <div className="p-5 space-y-4 text-xs overflow-y-auto">
+                {(() => {
+                  const outlet = targetBeat.entityType === 'BRANCH' ? db.getBranches().find((b) => b.id === targetBeat.entityId) : undefined;
+                  if (!outlet?.distributorId) return null;
+                  const chainName = outlet.distributorName || 'the chain';
+                  const seg = (on: boolean) => `flex-1 rounded-lg px-3 py-2 text-left transition ${on ? 'bg-white font-bold text-slate-900 shadow-xs' : 'font-semibold text-slate-600 hover:text-slate-900'}`;
+                  return (
+                    <div role="radiogroup" aria-label="Who is the cheque for?" className="flex gap-1 rounded-xl bg-slate-100 p-1">
+                      <button type="button" role="radio" aria-checked={!chequeForChain} onClick={() => setChequeForChain(false)} className={seg(!chequeForChain)}>This outlet<span className="block text-[11px] font-normal text-slate-500">{targetBeat.storeName}</span></button>
+                      <button type="button" role="radio" aria-checked={chequeForChain} onClick={() => setChequeForChain(true)} className={seg(chequeForChain)}>Whole chain<span className="block text-[11px] font-normal text-slate-500">Head office of {chainName}</span></button>
+                    </div>
+                  );
+                })()}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="beat-plan-cheque-number" className="block font-semibold text-slate-700 mb-1">Cheque number *</label>

@@ -22,6 +22,8 @@ import { canPerform } from '@/lib/permissions';
 import { canDownload } from '@/lib/download-access';
 import { productLabel } from '@/lib/sub-brands';
 import { productsForStore } from '@/lib/store-brands';
+import StoreTargetPicker from '@/components/stores/StoreTargetPicker';
+import { targetOptions, toTarget } from '@/lib/store-target';
 import { channelLabel, channelOfDistributor, channelOfRetailer } from '@/lib/store-channels';
 import { DISPATCH_STATUSES, canCorrect, destinationName, dispatchStatus, dispatchUnits, dispatchValue, nextSteps, statusLabel } from '@/lib/dispatch-flow';
 import { downloadDispatchWorkbook } from '@/lib/export/record-downloads';
@@ -122,7 +124,9 @@ export default function DispatchPage() {
   const destProducts = productsForStore(products, storeRecord(destId));
   const productOptions: SearchOption[] = destProducts.map((p) => ({ value: p.id, label: productLabel(p), hint: [p.alias ? p.name : '', p.sku, p.caseSize ? `${p.caseSize} per carton` : 'no carton size'].filter(Boolean).join(' · ') }));
 
-  const resetForm = () => { setDestId(''); setAlreadySent(false); setSentDate(getTodayAd()); setNotes(''); setPhoto(''); setLines([{ productId: '', cartons: 0, units: 0 }]); };
+  const [destKey, setDestKey] = useState(0);
+  const destTargets = useMemo(() => targetOptions(db.getRetailers(), db.getBranches(), db.getDistributors()), [dispatches.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  const resetForm = () => { setDestId(''); setDestKey((k) => k + 1); setAlreadySent(false); setSentDate(getTodayAd()); setNotes(''); setPhoto(''); setLines([{ productId: '', cartons: 0, units: 0 }]); };
   const review = () => {
     if (!dest) { toast.error('Choose who the order is for.'); return; }
     if (!filled.length) { toast.error('Add at least one product with a quantity.'); return; }
@@ -425,7 +429,7 @@ export default function DispatchPage() {
                 <button type="button" onClick={() => setShowForm(false)} aria-label="Close" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
               </div>
               <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4 text-xs">
-                <SearchSelect label="Going to *" options={destinations} value={destId} onChange={setDestId} placeholder="Type a store, chain, outlet or area" />
+                <StoreTargetPicker key={destKey} label="Going to *" options={destTargets} value={toTarget(destTargets.find((o) => o.value === destId))} onChange={(t) => setDestId(t?.entityId || '')} />
                 {dest && (
                   <p className="-mt-3 text-[11px] text-slate-600">
                     {dest.kind === 'RETAILER' && dest.distributorName ? `Delivered by ${dest.distributorName}. ` : 'From our warehouse. '}
